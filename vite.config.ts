@@ -6,10 +6,25 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+const isGitHubPagesBuild = process.env.GITHUB_ACTIONS === "true";
+
 export default defineConfig({
+  vite: {
+    // GitHub Pages
+    // Lovable/local preview still stays at /
+    base: isGitHubPagesBuild
+      ? "/shuttle-burst-dynamic/"
+      : "/",
+  },
+
   tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
     server: { entry: "server" },
+
+    prerender: {
+      enabled: isGitHubPagesBuild,
+      autoStaticPathsDiscovery: true,
+      crawlLinks: true,
+      failOnError: true,
+    },
   },
 });
