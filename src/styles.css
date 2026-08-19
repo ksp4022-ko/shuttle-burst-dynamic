@@ -148,8 +148,10 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
   }
 }
+
 
 /* ── 羽球報名：高級運動風（深碳灰 + 金屬金 + 螢光綠） ───────────────── */
 :root {
