@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ClientOnly } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { MEETUPS } from "@/lib/mock-meetups";
@@ -123,7 +123,7 @@ function Index() {
       </div>
 
       {/* 階段 1 標題 */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center gap-1 pt-8">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col items-center gap-1 pt-8">
         <p className="font-display text-[0.65rem] tracking-[0.55em] text-accent/70 uppercase">
           badminton assembly
         </p>
@@ -131,6 +131,13 @@ function Index() {
           <p className="text-xs tracking-[0.4em] text-muted-foreground">分子聚合中…</p>
         )}
       </header>
+
+      <Link
+        to="/account"
+        className="absolute right-4 top-4 z-20 text-[0.65rem] tracking-[0.3em] text-accent underline-offset-4 hover:underline"
+      >
+        帳戶
+      </Link>
 
       {/* 階段 2：選擇聚會 */}
       {stage === "assembled" && (
