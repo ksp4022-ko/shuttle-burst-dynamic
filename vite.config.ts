@@ -11,37 +11,44 @@ const isGitHubPagesBuild = process.env.GITHUB_ACTIONS === "true";
 
 export default defineConfig({
   vite: {
-    // GitHub Pages 專案網址需要 repository base path。
-    // Lovable / local preview 則維持根目錄 /。
+    // GitHub Pages 使用 repository 子路徑。
+    // Lovable / local preview 維持原本根目錄。
     base: isGitHubPagesBuild
       ? "/shuttle-burst-dynamic/"
       : "/",
   },
 
   tanstackStart: {
-    // 保留 Lovable 原本的 server entry。
+    // 保留 Lovable 原本 server entry。
     server: {
       entry: "server",
     },
 
-    // 只有 GitHub Actions build 才切換為純靜態 SPA。
+    // GitHub Pages build 才啟用純靜態 SPA shell。
     ...(isGitHubPagesBuild
       ? {
           spa: {
             enabled: true,
             prerender: {
-              // GitHub Pages 需要真正的 index.html。
               outputPath: "/index.html",
               crawlLinks: false,
             },
           },
 
-          // GitHub Pages 不需要因額外 SSR prerender 問題
-          // 讓整個 static build 直接失敗。
           prerender: {
             failOnError: false,
           },
         }
       : {}),
   },
+
+  // 關鍵修正：
+  // GitHub Actions 建置 GitHub Pages 時不要讓 Lovable Nitro
+  // 把 server 輸出改到 .output/server。
+  // Lovable 本身的 build / preview 則維持原設定。
+  ...(isGitHubPagesBuild
+    ? {
+        nitro: false,
+      }
+    : {}),
 });
