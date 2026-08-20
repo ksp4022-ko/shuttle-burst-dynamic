@@ -1,4 +1,4 @@
-import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { MEETUPS } from "@/lib/mock-meetups";
 
@@ -229,16 +229,6 @@ function Index() {
           letter-spacing: .48em;
           text-transform: uppercase;
           color: rgba(215,179,93,.76);
-        }
-
-        .sd-account {
-          position: absolute;
-          right: 18px;
-          top: calc(env(safe-area-inset-top) + 18px);
-          z-index: 40;
-          font-size: 10px;
-          letter-spacing: .2em;
-          color: rgba(255,255,255,.58);
         }
 
         .sd-scene {
@@ -732,10 +722,6 @@ function Index() {
       <header className="sd-header">
         <p className="sd-brand">BADMINTON ASSEMBLY</p>
       </header>
-
-      <Link to="/account" className="sd-account">
-        帳戶
-      </Link>
 
       <section className="sd-scene">
         <div className={`sd-solid-layer ${solidReady ? "is-ready" : ""}`}>
