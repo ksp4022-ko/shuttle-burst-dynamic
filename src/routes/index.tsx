@@ -4,7 +4,7 @@ import { MeetupSheet, MemberSheet } from "@/components/homepage/HomepageSheets";
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { ParticleRacket } from "@/components/homepage/ParticleRacket";
 import { useHomepageFlow } from "@/hooks/use-homepage-flow";
-import type { AlphaEvent, AlphaRoster } from "@/lib/database-alpha";
+import type { AlphaEvent } from "@/lib/database-alpha";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -120,7 +120,7 @@ function Index() {
 
         {(active || rotating) && (
           <>
-            <FloatingAnnotations event={flow.selectedEvent} roster={flow.roster} />
+            <FloatingAnnotations event={flow.selectedEvent} />
             <div className="sd-metrics" aria-label="報名狀態">
               <Metric label="已報" value={metrics.reported} tone="green" />
               <Metric label="尚缺" value={metrics.missing} tone="gold" center />
@@ -239,13 +239,7 @@ function MeetupPreview({ event }: { event: AlphaEvent }) {
   );
 }
 
-function FloatingAnnotations({
-  event,
-  roster,
-}: {
-  event: AlphaEvent | null;
-  roster: AlphaRoster | null;
-}) {
+function FloatingAnnotations({ event }: { event: AlphaEvent | null }) {
   if (!event) return null;
   const note = event.eventNote || "康軒羽球館";
 
@@ -266,7 +260,7 @@ function FloatingAnnotations({
       <Annotation
         className="a-cap"
         label="上限"
-        value={`${Number(event.maxPeople || 0)} 人 | 請假 ${Number(roster?.summary.leaveCount || 0)}`}
+        value={`${Number(event.maxPeople || 0)} 人`}
       />
     </div>
   );
@@ -430,7 +424,7 @@ function HomepageStyles() {
 
       .sd-hero {
         width: min(100%, 560px);
-        min-height: 610px;
+        min-height: 530px;
         margin: 0 auto;
         isolation: isolate;
       }
@@ -641,19 +635,19 @@ function HomepageStyles() {
 
       .a-fee {
         left: 22px;
-        top: 276px;
+        top: 226px;
       }
 
       /* 用球 / 上限放到拍面左側的空白區，不再靠右。 */
       .a-ball {
         left: 22px;
-        top: 164px;
+        top: 114px;
         text-align: left;
       }
 
       .a-cap {
         left: 22px;
-        top: 220px;
+        top: 170px;
         text-align: left;
       }
 
@@ -667,7 +661,7 @@ function HomepageStyles() {
         z-index: 9;
         left: 16px;
         right: 16px;
-        top: 318px;
+        top: 238px;
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         align-items: center;
@@ -717,7 +711,7 @@ function HomepageStyles() {
         z-index: 10;
         left: 16px;
         right: 16px;
-        top: 410px;
+        top: 330px;
         display: grid;
         grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr);
         gap: clamp(30px, 10vw, 58px);
@@ -797,7 +791,7 @@ function HomepageStyles() {
         position: absolute;
         z-index: 14;
         left: 50%;
-        top: 576px;
+        top: 496px;
         transform: translateX(-50%);
         display: flex;
         align-items: center;
@@ -1142,7 +1136,7 @@ function HomepageStyles() {
       }
 
       @media (min-width: 431px) {
-        .sd-hero { min-height: 650px; }
+        .sd-hero { min-height: 570px; }
         .sd-racket-wrap {
           top: 34px;
           width: 232px;
@@ -1152,9 +1146,9 @@ function HomepageStyles() {
           transform: translate3d(-50%, 68px, 0) rotate(27deg) scale(1.42);
         }
         .sd-preview { top: 346px; }
-        .sd-metrics { top: 336px; }
-        .sd-actions { top: 432px; left: 30px; right: 30px; }
-        .sd-pending { top: 598px; }
+        .sd-metrics { top: 256px; }
+        .sd-actions { top: 352px; left: 30px; right: 30px; }
+        .sd-pending { top: 518px; }
         .sd-bottom-sheet {
           width: min(520px, calc(100% - 32px));
           margin: 0 auto 16px;
@@ -1164,7 +1158,7 @@ function HomepageStyles() {
 
       @media (max-width: 374px) {
         .sd-header p { font-size: 10px; letter-spacing: .38em; }
-        .sd-hero { min-height: 590px; }
+        .sd-hero { min-height: 510px; }
         .sd-racket-wrap {
           width: 205px;
           top: 36px;
@@ -1178,13 +1172,13 @@ function HomepageStyles() {
         .a-name { left: 14px; top: 34px; width: 58vw; }
         .a-name .sd-event-name { font-size: 17px; }
         .a-time { top: 40px; right: 12px; }
-        .a-ball { left: 16px; top: 154px; }
-        .a-cap { left: 16px; top: 206px; }
-        .a-fee { left: 16px; top: 258px; }
-        .sd-metrics { top: 300px; left: 12px; right: 12px; }
+        .a-ball { left: 16px; top: 104px; }
+        .a-cap { left: 16px; top: 156px; }
+        .a-fee { left: 16px; top: 208px; }
+        .sd-metrics { top: 220px; left: 12px; right: 12px; }
         .sd-metric strong { font-size: 34px; }
-        .sd-actions { top: 388px; left: 14px; right: 14px; gap: 26px; }
-        .sd-pending { top: 556px; }
+        .sd-actions { top: 308px; left: 14px; right: 14px; gap: 26px; }
+        .sd-pending { top: 476px; }
         .sd-action-zone button,
         .sd-action-zone input { min-height: 43px; font-size: 14px; }
       }
