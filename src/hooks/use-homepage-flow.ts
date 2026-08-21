@@ -95,7 +95,7 @@ export function useHomepageFlow() {
 
   const memberCandidates = useMemo(() => {
     if (memberPickerMode === "season-leave") {
-      return [...(roster?.fixedConfirmed || []), ...(roster?.fixedWaiting || [])];
+      return roster?.fixedConfirmed || [];
     }
     if (memberPickerMode === "season-restore") return roster?.fixedLeave || [];
     if (memberPickerMode === "casual-cancel") {

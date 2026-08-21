@@ -38,6 +38,9 @@ export function HomepageRoster({
       <div className="sd-waiting-title">候補</div>
       <RosterGroup people={waiting} lastChangedId={lastChangedId} title="候補" waiting />
 
+      <div className="sd-waiting-title">季打請假</div>
+      <RosterGroup people={roster.fixedLeave || []} lastChangedId={lastChangedId} title="請假" />
+
       <BackToHero />
     </section>
   );
