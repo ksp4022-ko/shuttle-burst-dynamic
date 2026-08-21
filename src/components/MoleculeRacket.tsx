@@ -5,6 +5,9 @@ import {
   GOLD_BRIGHT,
   HEAD_CENTER_X,
   NEON,
+  WHITE,
+  WHITE_BRIGHT,
+  WHITE_SOFT,
   getLayout,
   project,
   sampleRacketPoints,
@@ -32,13 +35,24 @@ type Particle = {
   tx: number;
   ty: number;
   size: number;
+  color: string;
   rot: number;
   vr: number;
-  neon: boolean;
   delay: number;
   phase: number;
-  tri: boolean;
 };
+
+function particleColor(index: number) {
+  const bucket = (index * 37) % 100;
+  if (bucket < 75) {
+    const whiteVariant = index % 9;
+    if (whiteVariant === 0) return WHITE_BRIGHT;
+    if (whiteVariant < 4) return WHITE_SOFT;
+    return WHITE;
+  }
+  if (bucket < 92) return GOLD;
+  return NEON;
+}
 
 export default function MoleculeRacket({
   stage,
@@ -104,13 +118,12 @@ export default function MoleculeRacket({
         vy: -4 - Math.random() * 4,
         tx: 0,
         ty: 0,
-        size: 1.4 + Math.random() * 2,
+        size: 1.1 + Math.random() * 1.4,
+        color: NEON,
         rot: Math.random() * 6,
         vr: (Math.random() - 0.5) * 0.3,
-        neon: true,
         delay: 0,
         phase: Math.random() * 6,
-        tri: Math.random() > 0.6,
       });
     }
   }, [burstKey]);
@@ -149,13 +162,12 @@ export default function MoleculeRacket({
             vy: (Math.random() - 0.5) * 1.2,
             tx: t.x,
             ty: t.y,
-            size: 1.1 + Math.random() * 1.9,
+            size: 1.1 + Math.random() * 1.4,
+            color: particleColor(i),
             rot: Math.random() * Math.PI,
             vr: (Math.random() - 0.5) * 0.06,
-            neon: Math.random() < 0.22,
             delay: Math.random() * 0.35,
             phase: Math.random() * Math.PI * 2,
-            tri: Math.random() > 0.55,
           };
         });
       } else {
@@ -180,17 +192,10 @@ export default function MoleculeRacket({
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = p.neon ? NEON : Math.random() > 0.7 ? GOLD_BRIGHT : GOLD;
-      if (p.tri) {
-        ctx.beginPath();
-        ctx.moveTo(0, -p.size);
-        ctx.lineTo(p.size, p.size);
-        ctx.lineTo(-p.size, p.size);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        ctx.fillRect(-p.size, -p.size, p.size * 2, p.size * 2);
-      }
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     };
 
