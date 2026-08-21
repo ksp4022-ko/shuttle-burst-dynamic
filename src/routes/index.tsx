@@ -366,6 +366,7 @@ function HomepageStyles() {
         inset: 0;
         width: 100%;
         height: 100%;
+        pointer-events: none;
         transition: opacity .7s ease, filter .7s ease;
       }
 
