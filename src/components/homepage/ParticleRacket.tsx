@@ -64,10 +64,10 @@ const GOLD = "#d8b45c";
 const GOLD_BRIGHT = "#f1d88d";
 const GREEN = "#b8f22e";
 const GREEN_BRIGHT = "#d9ff5f";
-const NORMAL_COUNT = 920;
-const DEGRADED_COUNT = 480;
-const REDUCED_COUNT = 320;
-const ASSEMBLY_SECONDS = 3;
+const NORMAL_COUNT = 1240;
+const DEGRADED_COUNT = 620;
+const REDUCED_COUNT = 360;
+const ASSEMBLY_SECONDS = 4.6;
 const FINISH_PULSE_SECONDS = 0.42;
 const TARGET_ANGLE = (-4.5 * Math.PI) / 180;
 
@@ -445,25 +445,28 @@ function makeSourcePoints(source: SourceGeometry, count: number) {
   ];
 }
 
-function regionProgress(point: SourcePoint) {
-  if (point.region === "handle") return clamp((0.25 - point.along) / 0.25);
-  if (point.region === "shaft") return clamp((0.56 - point.along) / 0.31);
-  return clamp((1 - point.along) / 0.44);
-}
-
 function assemblyTiming(point: SourcePoint, index: number) {
-  const progress = regionProgress(point);
+  const xProgress = clamp(point.along);
   const jitter = hash01(index * 4.91 + point.x * 0.021 + point.y * 0.017);
-  if (point.region === "handle") {
-    return { start: progress * 0.2 + jitter * 0.06, duration: 0.7 + jitter * 0.16 };
-  }
-  if (point.region === "shaft") {
-    return { start: 0.63 + progress * 0.24 + jitter * 0.08, duration: 0.75 + jitter * 0.18 };
-  }
-  if (point.region === "string") {
-    return { start: 1.2 + progress * 0.42 + jitter * 0.12, duration: 0.9 + jitter * 0.22 };
-  }
-  return { start: 1.75 + progress * 0.62 + jitter * 0.12, duration: 0.9 + jitter * 0.22 };
+  const structureLag =
+    point.region === "handle"
+      ? 0
+      : point.region === "shaft"
+        ? 0.055
+        : point.region === "string"
+          ? 0.15
+          : 0.27;
+  const duration =
+    point.region === "handle"
+      ? 0.2
+      : point.region === "shaft"
+        ? 0.21
+        : point.region === "string"
+          ? 0.25
+          : 0.27;
+  const actualDuration = duration + jitter * 0.035;
+  const start = clamp(xProgress * 0.52 + structureLag + jitter * 0.024, 0, 0.98 - actualDuration);
+  return { start, duration: actualDuration };
 }
 
 function assignColors(dots: Dot[], points: SourcePoint[]) {
@@ -530,7 +533,7 @@ function makeDots(
   const centerY = height * (width < 640 ? 0.35 : 0.365);
   const ca = Math.cos(TARGET_ANGLE);
   const sa = Math.sin(TARGET_ANGLE);
-  const baseSize = Math.max(0.95, Math.min(1.95, targetLength / 205));
+  const baseSize = Math.max(0.72, Math.min(1.42, targetLength / 255));
 
   const dots = points.map<Dot>((point, index) => {
     const long = (source.bbox.maxY - point.y - source.bbox.height / 2) * scale;
@@ -548,7 +551,7 @@ function makeDots(
       8;
     const timing = assemblyTiming(point, index);
     const regionSize =
-      point.region === "string" ? 0.76 : point.region === "shaft" ? 0.82 : point.region === "frame" ? 0.9 : 0.94;
+      point.region === "string" ? 0.66 : point.region === "shaft" ? 0.72 : point.region === "frame" ? 0.78 : 0.82;
     const size = baseSize * regionSize * (0.82 + hash01(index * 3.19 + point.x) * 0.3);
 
     return {
@@ -651,7 +654,7 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
       if (local <= 0.04 || local >= 0.94) return;
       const dx = dot.tx - dot.sx;
       const dy = dot.ty - dot.sy;
-      const length = (1 - easeInOut(local)) * (dot.region === "handle" ? 10 : 18) + 5;
+      const length = (1 - easeInOut(local)) * (dot.region === "handle" ? 7 : 12) + 3;
       const magnitude = Math.max(1, Math.hypot(dx, dy));
       const tx = x - (dx / magnitude) * length;
       const ty = y - (dy / magnitude) * length;
@@ -663,10 +666,10 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
             ? "216,180,92"
             : "245,244,238";
       gradient.addColorStop(0, `rgba(${trailColor},0)`);
-      gradient.addColorStop(1, `rgba(${trailColor},${0.2 * alpha})`);
+      gradient.addColorStop(1, `rgba(${trailColor},${0.13 * alpha})`);
       context.globalAlpha = 1;
       context.strokeStyle = gradient;
-      context.lineWidth = Math.max(0.55, dot.size * 0.52);
+      context.lineWidth = Math.max(0.38, dot.size * 0.42);
       context.beginPath();
       context.moveTo(tx, ty);
       context.lineTo(x, y);
@@ -694,28 +697,29 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
               ? WHITE_BRIGHT
               : dot.color;
 
-      context.globalAlpha = clamp(alpha * 0.2 * brightness, 0, 0.42);
+      context.globalAlpha = clamp(alpha * 0.14 * brightness, 0, 0.28);
       context.fillStyle = core;
       context.beginPath();
-      context.arc(x, y, dot.size * (2.35 + scan * 0.2 + pulse * 0.18), 0, Math.PI * 2);
+      context.arc(x, y, dot.size * (1.72 + scan * 0.16 + pulse * 0.12), 0, Math.PI * 2);
       context.fill();
 
       context.globalAlpha = clamp(alpha * brightness, 0, 1);
       context.fillStyle = core;
       context.beginPath();
-      context.arc(x, y, dot.size * (1 + pulse * 0.07 + scan * 0.04), 0, Math.PI * 2);
+      context.arc(x, y, dot.size * (0.86 + pulse * 0.05 + scan * 0.035), 0, Math.PI * 2);
       context.fill();
 
-      context.globalAlpha = clamp(alpha * 0.66 * brightness, 0, 1);
+      context.globalAlpha = clamp(alpha * 0.58 * brightness, 0, 1);
       context.fillStyle = dot.accent === "white" ? WHITE_BRIGHT : "#fffef2";
       context.beginPath();
-      context.arc(x - dot.size * 0.22, y - dot.size * 0.2, Math.max(0.36, dot.size * 0.34), 0, Math.PI * 2);
+      context.arc(x - dot.size * 0.18, y - dot.size * 0.16, Math.max(0.24, dot.size * 0.26), 0, Math.PI * 2);
       context.fill();
     };
 
     const draw = (now: number) => {
       const rect = canvas.getBoundingClientRect();
       const elapsed = (now - startedRef.current) / 1000;
+      const assemblyProgress = clamp(elapsed / ASSEMBLY_SECONDS);
       const currentPhase = phaseRef.current;
       const currentMotionMode = motionModeRef.current;
       const waiting =
@@ -727,10 +731,13 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
         currentPhase === "meetup-preview" ||
         currentPhase === "rotating-to-active" ||
         currentPhase === "active";
-      const fade = fading ? clamp(1 - (elapsed - 3.12) / 0.85) : 1;
+      const fade = fading ? clamp(1 - (elapsed - (ASSEMBLY_SECONDS + 0.12)) / 0.85) : 1;
       const pulseWindow = clamp((elapsed - ASSEMBLY_SECONDS) / FINISH_PULSE_SECONDS);
       const pulse = pulseWindow > 0 && pulseWindow < 1 ? Math.sin(pulseWindow * Math.PI) : 0;
-      const scanCycle = elapsed > 3.4 && waiting ? ((elapsed - 3.4) % 3.1) / 3.1 : -1;
+      const scanCycle =
+        elapsed > ASSEMBLY_SECONDS + 0.4 && waiting
+          ? ((elapsed - (ASSEMBLY_SECONDS + 0.4)) % 3.1) / 3.1
+          : -1;
       const frameSweepCycle =
         pulseWindow > 0 && pulseWindow < 1 ? easeInOut(pulseWindow) : -1;
       const globalScale = 1 + pulse * 0.015;
@@ -747,11 +754,13 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
 
       dotsRef.current.forEach((dot) => {
         const local =
-          currentMotionMode === "reduced" ? 1 : clamp((elapsed - dot.start) / dot.duration);
+          currentMotionMode === "reduced"
+            ? 1
+            : clamp((assemblyProgress - dot.start) / dot.duration);
         const eased = easeOutCubic(local);
         const streamCurve = Math.sin(local * Math.PI) * dot.curve * (1 - eased * 0.18);
         const arrived = easeOutCubic((local - 0.84) / 0.16);
-        const driftActive = waiting && elapsed > 3 ? arrived : 0;
+        const driftActive = waiting && elapsed > ASSEMBLY_SECONDS ? arrived : 0;
         const driftX = Math.sin(now / 1030 + dot.phase) * dot.drift * 0.42 * driftActive;
         const driftY = Math.cos(now / 1210 + dot.phase * 1.37) * dot.drift * driftActive;
         const x = dot.sx + (dot.tx - dot.sx) * eased + driftX;
