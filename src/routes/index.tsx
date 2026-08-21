@@ -1,8 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import { MeetupSheet, MemberSheet } from "@/components/homepage/HomepageSheets";
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { ParticleRacket } from "@/components/homepage/ParticleRacket";
+import {
+  HomepageToast,
+  rememberToastOrigin,
+  type ToastOrigin,
+} from "@/components/homepage/HomepageToast";
 import { useHomepageFlow } from "@/hooks/use-homepage-flow";
 import type { AlphaEvent } from "@/lib/database-alpha";
 
@@ -26,6 +31,7 @@ const ADMIN_URL =
 
 function Index() {
   const [name, setName] = useState("");
+  const toastOriginRef = useRef<ToastOrigin | null>(null);
   const flow = useHomepageFlow();
   const racketSrc = `${import.meta.env.BASE_URL}${RACKET_FILE}`;
   const active = flow.phase === "active";
@@ -55,6 +61,7 @@ function Index() {
     <main
       className={`sd-page is-${flow.phase} motion-${flow.motionMode}`}
       data-locked={flow.pendingAction ? "true" : "false"}
+      onPointerDownCapture={(event) => rememberToastOrigin(event, toastOriginRef)}
     >
       <HomepageStyles />
       <ParticleRacket phase={flow.phase} motionMode={flow.motionMode} />
@@ -196,11 +203,12 @@ function Index() {
         />
       )}
 
-      {flow.notice && (
-        <button className="sd-notice" onClick={() => flow.setNotice("")}>
-          {flow.notice}
-        </button>
-      )}
+      <HomepageToast
+        notice={flow.notice}
+        motionMode={flow.motionMode}
+        originRef={toastOriginRef}
+        setNotice={flow.setNotice}
+      />
 
       <MeetupSheet
         open={flow.meetupPickerOpen}
@@ -1044,22 +1052,6 @@ function HomepageStyles() {
         background: rgba(7,10,14,.66);
         color: var(--gold);
         backdrop-filter: blur(12px);
-      }
-
-      .sd-notice {
-        position: fixed;
-        z-index: 50;
-        left: 50%;
-        bottom: calc(env(safe-area-inset-bottom) + 18px);
-        transform: translateX(-50%);
-        width: min(calc(100% - 32px), 460px);
-        border: 1px solid rgba(216,185,94,.25);
-        border-radius: 16px;
-        background: rgba(5,8,11,.9);
-        color: rgba(255,255,255,.88);
-        padding: 12px 14px;
-        box-shadow: 0 14px 36px rgba(0,0,0,.42);
-        backdrop-filter: blur(16px);
       }
 
       .sd-sheet-layer {
