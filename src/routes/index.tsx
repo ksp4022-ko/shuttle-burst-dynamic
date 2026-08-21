@@ -21,6 +21,8 @@ export const Route = createFileRoute("/")({
 });
 
 const RACKET_FILE = "shuttle-racket-pearl.png";
+const ADMIN_URL =
+  "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/admin";
 
 function Index() {
   const [name, setName] = useState("");
@@ -60,6 +62,21 @@ function Index() {
       <header className="sd-header">
         <p>BADMINTON ASSEMBLY</p>
       </header>
+
+      {active && (
+        <a
+          className="sd-admin-shortcut"
+          href={ADMIN_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="開啟管理頁"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z" />
+            <path d="M19.14 12a7.6 7.6 0 0 0-.08-1.08l2.02-1.57-1.9-3.3-2.39.96a7.7 7.7 0 0 0-1.87-1.08L14.56 3.4h-3.8l-.36 2.53A7.7 7.7 0 0 0 8.53 7L6.14 6.05l-1.9 3.3 2.02 1.57a7.6 7.6 0 0 0 0 2.16l-2.02 1.57 1.9 3.3 2.39-.96a7.7 7.7 0 0 0 1.87 1.08l.36 2.53h3.8l.36-2.53a7.7 7.7 0 0 0 1.87-1.08l2.39.96 1.9-3.3-2.02-1.57c.05-.36.08-.72.08-1.08Z" />
+          </svg>
+        </a>
+      )}
 
       <section className="sd-hero" id="sd-hero">
         <div className={`sd-racket-wrap ${materialized ? "is-materialized" : ""}`}>
@@ -230,10 +247,15 @@ function FloatingAnnotations({
   roster: AlphaRoster | null;
 }) {
   if (!event) return null;
-  const venue = event.eventNote || "康軒羽球館";
+  const note = event.eventNote || "康軒羽球館";
+
   return (
     <div className="sd-annotations" aria-label="聚會資訊">
-      <Annotation className="a-name" label={event.name} value={`${event.eventDate} | ${venue}`} />
+      <div className="sd-annotation a-name">
+        <span className="sd-event-name">{event.name}</span>
+        <strong className="sd-event-date">{event.eventDate}</strong>
+        <small className="sd-event-note">{note}</small>
+      </div>
       <Annotation
         className="a-time"
         label="時間"
@@ -360,6 +382,34 @@ function HomepageStyles() {
         letter-spacing: .48em;
       }
 
+      .sd-admin-shortcut {
+        position: fixed;
+        z-index: 40;
+        top: calc(env(safe-area-inset-top) + 12px);
+        right: 12px;
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border: 1px solid rgba(216,185,94,.26);
+        border-radius: 50%;
+        background: rgba(7,10,14,.42);
+        color: rgba(216,185,94,.72);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        text-decoration: none;
+      }
+
+      .sd-admin-shortcut svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.35;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
       .sd-particles {
         position: fixed;
         z-index: 3;
@@ -380,36 +430,41 @@ function HomepageStyles() {
 
       .sd-hero {
         width: min(100%, 560px);
-        min-height: 712px;
+        min-height: 610px;
         margin: 0 auto;
         isolation: isolate;
       }
 
+      /*
+       * Preview racket is sized from the same 54vw-ish long-axis target as the
+       * particle assembly. 85.5deg maps the source image's vertical long axis
+       * to the particle target angle (-4.5deg). The active state then uses one
+       * continuous translate + rotate + scale transform instead of a top jump.
+       */
       .sd-racket-wrap {
         position: absolute;
         z-index: 4;
         left: 50%;
-        top: 84px;
-        width: clamp(276px, 82vw, 420px);
+        top: 40px;
+        width: clamp(205px, 54vw, 232px);
         aspect-ratio: 971 / 1619;
         opacity: 0;
-        transform: translateX(-50%) rotate(88deg) scale(.88);
+        transform: translate3d(-50%, 0, 0) rotate(85.5deg) scale(.90);
         transform-origin: 50% 52%;
         transition:
-          opacity 1.2s ease,
-          transform 1.35s cubic-bezier(.2,.9,.2,1),
-          top 1.35s cubic-bezier(.2,.9,.2,1);
+          opacity 1.05s ease,
+          transform 1.35s cubic-bezier(.2,.9,.2,1);
+        will-change: transform, opacity;
       }
 
       .sd-racket-wrap.is-materialized {
         opacity: 1;
-        transform: translateX(-50%) rotate(88deg) scale(.94);
+        transform: translate3d(-50%, 0, 0) rotate(85.5deg) scale(.94);
       }
 
       .is-rotating-to-active .sd-racket-wrap,
       .is-active .sd-racket-wrap {
-        top: 48px;
-        transform: translateX(-50%) rotate(27deg) scale(.9);
+        transform: translate3d(-50%, 74px, 0) rotate(27deg) scale(1.36);
       }
 
       .sd-racket-main,
@@ -463,7 +518,7 @@ function HomepageStyles() {
         z-index: 8;
         left: 24px;
         right: 24px;
-        top: 454px;
+        top: 326px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) 38px;
         gap: 8px;
@@ -546,21 +601,73 @@ function HomepageStyles() {
         line-height: 1.35;
       }
 
-      .a-name { left: 18px; top: 78px; }
-      .a-time { right: 16px; top: 96px; text-align: right; }
-      .a-fee { left: 24px; top: 238px; }
-      .a-ball { right: 18px; top: 245px; text-align: right; }
-      .a-cap { right: 26px; top: 336px; text-align: right; }
-      .a-time::before,
+      .a-name {
+        left: 18px;
+        top: 38px;
+        width: min(54vw, 224px);
+      }
+
+      .a-name::before {
+        top: 27px;
+        width: 88px;
+      }
+
+      .a-name .sd-event-name {
+        color: var(--gold);
+        font: 600 18px/1.15 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .08em;
+      }
+
+      .a-name .sd-event-date {
+        margin-top: 8px;
+        color: rgba(255,255,255,.88);
+        font-size: 12px;
+      }
+
+      .a-name .sd-event-note {
+        display: block;
+        margin-top: 4px;
+        color: rgba(255,255,255,.62);
+        font-size: 11px;
+        line-height: 1.35;
+        letter-spacing: .03em;
+      }
+
+      .a-time {
+        right: 14px;
+        top: 42px;
+        text-align: right;
+      }
+
+      .a-fee {
+        left: 22px;
+        top: 276px;
+      }
+
+      /* 用球 / 上限放到拍面左側的空白區，不再靠右。 */
+      .a-ball {
+        left: 22px;
+        top: 164px;
+        text-align: left;
+      }
+
+      .a-cap {
+        left: 22px;
+        top: 220px;
+        text-align: left;
+      }
+
+      .a-time::before { right: 0; transform: scaleX(-1); }
       .a-ball::before,
-      .a-cap::before { right: 0; transform: scaleX(-1); }
+      .a-cap::before,
+      .a-fee::before { left: 0; }
 
       .sd-metrics {
         position: absolute;
         z-index: 9;
         left: 16px;
         right: 16px;
-        top: 374px;
+        top: 318px;
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
         align-items: center;
@@ -610,7 +717,7 @@ function HomepageStyles() {
         z-index: 10;
         left: 16px;
         right: 16px;
-        top: 478px;
+        top: 410px;
         display: grid;
         grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr);
         gap: clamp(30px, 10vw, 58px);
@@ -690,7 +797,7 @@ function HomepageStyles() {
         position: absolute;
         z-index: 14;
         left: 50%;
-        top: 638px;
+        top: 576px;
         transform: translateX(-50%);
         display: flex;
         align-items: center;
@@ -745,7 +852,7 @@ function HomepageStyles() {
 
       .sd-roster {
         width: min(calc(100% - 32px), 560px);
-        margin: -8px auto 40px;
+        margin: 0 auto 40px;
         padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
       }
 
@@ -1035,12 +1142,19 @@ function HomepageStyles() {
       }
 
       @media (min-width: 431px) {
-        .sd-hero { min-height: 760px; }
-        .sd-racket-wrap { width: 420px; top: 80px; }
+        .sd-hero { min-height: 650px; }
+        .sd-racket-wrap {
+          top: 34px;
+          width: 232px;
+        }
         .is-rotating-to-active .sd-racket-wrap,
-        .is-active .sd-racket-wrap { top: 34px; }
-        .sd-metrics { top: 398px; }
-        .sd-actions { top: 506px; left: 30px; right: 30px; }
+        .is-active .sd-racket-wrap {
+          transform: translate3d(-50%, 68px, 0) rotate(27deg) scale(1.42);
+        }
+        .sd-preview { top: 346px; }
+        .sd-metrics { top: 336px; }
+        .sd-actions { top: 432px; left: 30px; right: 30px; }
+        .sd-pending { top: 598px; }
         .sd-bottom-sheet {
           width: min(520px, calc(100% - 32px));
           margin: 0 auto 16px;
@@ -1050,17 +1164,27 @@ function HomepageStyles() {
 
       @media (max-width: 374px) {
         .sd-header p { font-size: 10px; letter-spacing: .38em; }
-        .sd-hero { min-height: 688px; }
-        .sd-racket-wrap { width: 275px; top: 86px; }
+        .sd-hero { min-height: 590px; }
+        .sd-racket-wrap {
+          width: 205px;
+          top: 36px;
+        }
+        .is-rotating-to-active .sd-racket-wrap,
+        .is-active .sd-racket-wrap {
+          transform: translate3d(-50%, 68px, 0) rotate(27deg) scale(1.30);
+        }
+        .sd-preview { top: 312px; left: 18px; right: 18px; }
         .sd-annotation { font-size: 10px; width: 42vw; }
-        .a-name { left: 14px; top: 72px; }
-        .a-time { top: 90px; }
-        .a-fee { top: 224px; }
-        .a-ball { top: 230px; }
-        .a-cap { top: 318px; }
-        .sd-metrics { top: 358px; left: 12px; right: 12px; }
+        .a-name { left: 14px; top: 34px; width: 58vw; }
+        .a-name .sd-event-name { font-size: 17px; }
+        .a-time { top: 40px; right: 12px; }
+        .a-ball { left: 16px; top: 154px; }
+        .a-cap { left: 16px; top: 206px; }
+        .a-fee { left: 16px; top: 258px; }
+        .sd-metrics { top: 300px; left: 12px; right: 12px; }
         .sd-metric strong { font-size: 34px; }
-        .sd-actions { top: 456px; left: 14px; right: 14px; gap: 26px; }
+        .sd-actions { top: 388px; left: 14px; right: 14px; gap: 26px; }
+        .sd-pending { top: 556px; }
         .sd-action-zone button,
         .sd-action-zone input { min-height: 43px; font-size: 14px; }
       }
