@@ -42,6 +42,10 @@ type SourceGeometry = {
 type Dot = {
   sx: number;
   sy: number;
+  c1x: number;
+  c1y: number;
+  c2x: number;
+  c2y: number;
   tx: number;
   ty: number;
   color: string;
@@ -90,6 +94,11 @@ function easeOutCubic(value: number) {
 function easeInOut(value: number) {
   const t = clamp(value);
   return t * t * (3 - 2 * t);
+}
+
+function cubicPoint(p0: number, p1: number, p2: number, p3: number, t: number) {
+  const inv = 1 - t;
+  return inv * inv * inv * p0 + 3 * inv * inv * t * p1 + 3 * inv * t * t * p2 + t * t * t * p3;
 }
 
 function loadImage() {
@@ -452,20 +461,20 @@ function assemblyTiming(point: SourcePoint, index: number) {
     point.region === "handle"
       ? 0
       : point.region === "shaft"
-        ? 0.055
+        ? 0.02
         : point.region === "string"
-          ? 0.15
-          : 0.27;
+          ? 0.045
+          : 0.08;
   const duration =
     point.region === "handle"
-      ? 0.2
+      ? 0.24
       : point.region === "shaft"
-        ? 0.21
+        ? 0.25
         : point.region === "string"
-          ? 0.25
-          : 0.27;
+          ? 0.27
+          : 0.29;
   const actualDuration = duration + jitter * 0.035;
-  const start = clamp(xProgress * 0.52 + structureLag + jitter * 0.024, 0, 0.98 - actualDuration);
+  const start = clamp(xProgress * 0.64 + structureLag + jitter * 0.022, 0, 0.98 - actualDuration);
   return { start, duration: actualDuration };
 }
 
@@ -540,15 +549,23 @@ function makeDots(
     const lateral = (point.x - source.bbox.centerX) * scale;
     const tx = centerX + (long * ca - lateral * sa);
     const ty = centerY + (long * sa + lateral * ca);
-    const stream = Math.floor(hash01(index * 1.83 + 9) * 6) - 2.5;
-    const entryBias = point.region === "handle" ? 0.14 : point.region === "shaft" ? 0.28 : 0.42;
-    const sx = -34 - hash01(index * 2.29 + point.y * 0.013) * width * (0.2 + entryBias);
+    const flowIndex = Math.floor(hash01(index * 1.83 + 9) * 3);
+    const lane = flowIndex - 1;
+    const laneGap = width < 430 ? 20 : 28;
+    const sx = -42 - hash01(index * 2.29 + point.y * 0.013) * width * 0.36;
     const sy =
       centerY +
-      stream * (width < 430 ? 12 : 16) +
-      Math.sin(index * 0.83) * (width < 430 ? 8 : 12) +
-      hash01(point.x * 0.13 + index) * 16 -
-      8;
+      lane * laneGap +
+      Math.sin(point.along * Math.PI * 2.15 + flowIndex * 1.2) * (width < 430 ? 8 : 12) +
+      (hash01(point.x * 0.13 + index) - 0.5) * 12;
+    const weave = (hash01(index * 6.41 + point.x * 0.017) - 0.5) * (width < 430 ? 18 : 26);
+    const c1x = width * (0.08 + hash01(index * 0.77) * 0.1);
+    const c1y =
+      centerY +
+      lane * laneGap * 1.15 +
+      Math.sin(point.along * Math.PI * 2.4 + flowIndex) * (width < 430 ? 13 : 19);
+    const c2x = tx - Math.max(width * 0.16, Math.min(width * 0.34, Math.abs(tx - sx) * 0.32));
+    const c2y = ty + lane * (width < 430 ? 8 : 12) + weave;
     const timing = assemblyTiming(point, index);
     const regionSize =
       point.region === "string" ? 0.66 : point.region === "shaft" ? 0.72 : point.region === "frame" ? 0.78 : 0.82;
@@ -557,6 +574,10 @@ function makeDots(
     return {
       sx,
       sy,
+      c1x,
+      c1y,
+      c2x,
+      c2y,
       tx,
       ty,
       color: WHITE,
@@ -566,7 +587,7 @@ function makeDots(
       along: point.along,
       drift: 0.5 + hash01(index * 7.71 + point.y) * 1,
       phase: hash01(index * 9.43 + point.x) * Math.PI * 2,
-      curve: (hash01(index * 4.41 + point.y) - 0.5) * (width < 430 ? 28 : 38),
+      curve: (hash01(index * 4.41 + point.y) - 0.5) * (width < 430 ? 12 : 18),
       accent: "white",
       region: point.region,
     };
@@ -650,11 +671,19 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
       startedRef.current = window.performance.now();
     };
 
-    const drawTrail = (dot: Dot, x: number, y: number, local: number, alpha: number) => {
+    const drawTrail = (
+      dot: Dot,
+      x: number,
+      y: number,
+      previousX: number,
+      previousY: number,
+      local: number,
+      alpha: number,
+    ) => {
       if (local <= 0.04 || local >= 0.94) return;
-      const dx = dot.tx - dot.sx;
-      const dy = dot.ty - dot.sy;
-      const length = (1 - easeInOut(local)) * (dot.region === "handle" ? 7 : 12) + 3;
+      const dx = x - previousX;
+      const dy = y - previousY;
+      const length = (1 - easeInOut(local)) * (dot.region === "handle" ? 9 : 15) + 4;
       const magnitude = Math.max(1, Math.hypot(dx, dy));
       const tx = x - (dx / magnitude) * length;
       const ty = y - (dy / magnitude) * length;
@@ -669,7 +698,7 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
       gradient.addColorStop(1, `rgba(${trailColor},${0.13 * alpha})`);
       context.globalAlpha = 1;
       context.strokeStyle = gradient;
-      context.lineWidth = Math.max(0.38, dot.size * 0.42);
+      context.lineWidth = Math.max(0.34, dot.size * 0.4);
       context.beginPath();
       context.moveTo(tx, ty);
       context.lineTo(x, y);
@@ -758,13 +787,23 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
             ? 1
             : clamp((assemblyProgress - dot.start) / dot.duration);
         const eased = easeOutCubic(local);
-        const streamCurve = Math.sin(local * Math.PI) * dot.curve * (1 - eased * 0.18);
+        const pathT =
+          local < 0.22
+            ? easeInOut(local / 0.22) * 0.08
+            : 0.08 + easeOutCubic((local - 0.22) / 0.78) * 0.92;
+        const previousT = clamp(pathT - 0.02);
+        const streamCurve = Math.sin(local * Math.PI * 2 + dot.phase) * dot.curve * (1 - eased);
+        const crossWeave = Math.cos(local * Math.PI * 1.5 + dot.phase) * dot.curve * 0.22 * (1 - eased);
         const arrived = easeOutCubic((local - 0.84) / 0.16);
         const driftActive = waiting && elapsed > ASSEMBLY_SECONDS ? arrived : 0;
         const driftX = Math.sin(now / 1030 + dot.phase) * dot.drift * 0.42 * driftActive;
         const driftY = Math.cos(now / 1210 + dot.phase * 1.37) * dot.drift * driftActive;
-        const x = dot.sx + (dot.tx - dot.sx) * eased + driftX;
-        const y = dot.sy + (dot.ty - dot.sy) * eased + streamCurve + driftY;
+        const baseX = cubicPoint(dot.sx, dot.c1x, dot.c2x, dot.tx, pathT);
+        const baseY = cubicPoint(dot.sy, dot.c1y, dot.c2y, dot.ty, pathT);
+        const previousX = cubicPoint(dot.sx, dot.c1x, dot.c2x, dot.tx, previousT);
+        const previousY = cubicPoint(dot.sy, dot.c1y, dot.c2y, dot.ty, previousT);
+        const x = baseX + crossWeave + driftX;
+        const y = baseY + streamCurve + driftY;
         const baseAlpha = (0.12 + local * 0.88) * fade;
         const scan =
           scanCycle >= 0 ? Math.exp(-Math.pow((dot.along - scanCycle) / 0.032, 2)) : 0;
@@ -773,7 +812,7 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
             ? Math.exp(-Math.pow((dot.along - frameSweepCycle) / 0.05, 2))
             : 0;
 
-        drawTrail(dot, x, y, local, baseAlpha);
+        drawTrail(dot, x, y, previousX, previousY, local, baseAlpha);
         drawDot(dot, x, y, baseAlpha, pulse, scan, frameSweep);
       });
 
