@@ -77,7 +77,7 @@ function configuredApiBase() {
     if (fromStorage && fromStorage.trim()) return fromStorage.trim();
   }
 
-  return "/api/v6-alpha";
+  return "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/api/v7-shuttle";
 }
 
 function apiUrl(path: string, query?: Record<string, string | number | undefined>) {
