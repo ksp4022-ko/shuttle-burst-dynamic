@@ -120,7 +120,10 @@ function Index() {
 
         {(active || rotating) && (
           <>
-            <FloatingAnnotations event={flow.selectedEvent} />
+            <FloatingAnnotations
+              event={flow.selectedEvent}
+              onOpenMeetupPicker={() => flow.openMeetupPicker()}
+            />
             <div className="sd-metrics" aria-label="報名狀態">
               <Metric label="已報" value={metrics.reported} tone="green" />
               <Metric label="尚缺" value={metrics.missing} tone="gold" center />
@@ -239,15 +242,27 @@ function MeetupPreview({ event }: { event: AlphaEvent }) {
   );
 }
 
-function FloatingAnnotations({ event }: { event: AlphaEvent | null }) {
+function FloatingAnnotations({
+  event,
+  onOpenMeetupPicker,
+}: {
+  event: AlphaEvent | null;
+  onOpenMeetupPicker: () => void;
+}) {
   if (!event) return null;
   const note = event.eventNote || "康軒羽球館";
 
   return (
     <div className="sd-annotations" aria-label="聚會資訊">
       <div className="sd-annotation a-name">
-        <span className="sd-event-name">{event.name}</span>
-        <strong className="sd-event-date">{event.eventDate}</strong>
+        <button
+          className="sd-event-name sd-event-switch"
+          type="button"
+          onClick={onOpenMeetupPicker}
+          aria-label={`切換聚會，目前為 ${event.name}`}
+        >
+          {event.name}
+        </button>
         <small className="sd-event-note">{note}</small>
       </div>
       <Annotation
@@ -481,31 +496,106 @@ function HomepageStyles() {
       }
 
       .sd-racket-shadow {
+        --shadow-x: -12px;
+        --shadow-y: 9px;
+        --shadow-angle: -1deg;
+        --shadow-scale: 1.006;
+        --shadow-blur: 2.2px;
+        --shadow-brightness: .64;
+        --shadow-sepia: .28;
+        --shadow-drift-x: 2px;
+        --shadow-drift-y: -3px;
+        --shadow-sway: -.35deg;
+        --shadow-duration: 5.8s;
         position: absolute;
         inset: 0;
         border: 0;
         padding: 0;
         background: transparent;
         opacity: 0;
-        transform: translate(calc(-18px - var(--shadow-index) * 16px), calc(18px + var(--shadow-index) * 14px)) scale(calc(1 + var(--shadow-index) * .016));
-        filter: blur(3px) brightness(.55) sepia(.35);
+        transform:
+          translate(var(--shadow-x), var(--shadow-y))
+          rotate(var(--shadow-angle))
+          scale(var(--shadow-scale));
+        transform-origin: 50% 52%;
+        filter:
+          blur(var(--shadow-blur))
+          brightness(var(--shadow-brightness))
+          sepia(var(--shadow-sepia));
         pointer-events: none;
+        will-change: translate, rotate, opacity;
+      }
+
+      .sd-shadow-1 {
+        --shadow-x: -11px;
+        --shadow-y: 8px;
+        --shadow-angle: -1deg;
+        --shadow-scale: 1.006;
+        --shadow-blur: 2px;
+        --shadow-brightness: .66;
+        --shadow-sepia: .34;
+        --shadow-drift-x: 2px;
+        --shadow-drift-y: -3px;
+        --shadow-sway: -.35deg;
+        --shadow-duration: 5.8s;
+      }
+
+      .sd-shadow-2 {
+        --shadow-x: -23px;
+        --shadow-y: 16px;
+        --shadow-angle: -2deg;
+        --shadow-scale: 1.012;
+        --shadow-blur: 2.8px;
+        --shadow-brightness: .58;
+        --shadow-sepia: .28;
+        --shadow-drift-x: 3px;
+        --shadow-drift-y: -4px;
+        --shadow-sway: -.45deg;
+        --shadow-duration: 6.6s;
+      }
+
+      .sd-shadow-3 {
+        --shadow-x: -35px;
+        --shadow-y: 25px;
+        --shadow-angle: -3deg;
+        --shadow-scale: 1.018;
+        --shadow-blur: 3.7px;
+        --shadow-brightness: .50;
+        --shadow-sepia: .22;
+        --shadow-drift-x: 4px;
+        --shadow-drift-y: -4px;
+        --shadow-sway: -.55deg;
+        --shadow-duration: 7.4s;
+      }
+
+      .sd-shadow-4 {
+        --shadow-x: -47px;
+        --shadow-y: 34px;
+        --shadow-angle: -4deg;
+        --shadow-scale: 1.024;
+        --shadow-blur: 4.7px;
+        --shadow-brightness: .43;
+        --shadow-sepia: .16;
+        --shadow-drift-x: 5px;
+        --shadow-drift-y: -5px;
+        --shadow-sway: -.65deg;
+        --shadow-duration: 8.2s;
       }
 
       .is-rotating-to-active .sd-racket-shadow,
       .is-active .sd-racket-shadow {
         pointer-events: auto;
-        animation: shadow-breathe 6.4s ease-in-out infinite;
+        animation: shadow-breathe var(--shadow-duration) ease-in-out infinite;
       }
 
       .is-rotating-to-active .sd-shadow-1,
-      .is-active .sd-shadow-1 { opacity: .28; transition: opacity .3s ease .25s; }
+      .is-active .sd-shadow-1 { opacity: .27; transition: opacity .35s ease .18s; }
       .is-rotating-to-active .sd-shadow-2,
-      .is-active .sd-shadow-2 { opacity: .20; transition: opacity .3s ease .50s; }
+      .is-active .sd-shadow-2 { opacity: .19; transition: opacity .35s ease .34s; animation-delay: -.9s; }
       .is-rotating-to-active .sd-shadow-3,
-      .is-active .sd-shadow-3 { opacity: .14; transition: opacity .3s ease .75s; }
+      .is-active .sd-shadow-3 { opacity: .13; transition: opacity .35s ease .50s; animation-delay: -1.8s; }
       .is-rotating-to-active .sd-shadow-4,
-      .is-active .sd-shadow-4 { opacity: .10; transition: opacity .3s ease .90s; }
+      .is-active .sd-shadow-4 { opacity: .085; transition: opacity .35s ease .66s; animation-delay: -2.7s; }
 
       .sd-preview {
         position: absolute;
@@ -563,6 +653,7 @@ function HomepageStyles() {
         z-index: 7;
         inset: 0;
         opacity: 0;
+        pointer-events: none;
         animation: fade-in .55s ease .45s forwards;
       }
 
@@ -612,15 +703,21 @@ function HomepageStyles() {
         letter-spacing: .08em;
       }
 
-      .a-name .sd-event-date {
-        margin-top: 8px;
-        color: rgba(255,255,255,.88);
-        font-size: 12px;
+      .sd-event-switch {
+        display: block;
+        appearance: none;
+        -webkit-appearance: none;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        text-align: left;
+        pointer-events: auto;
+        cursor: pointer;
       }
 
       .a-name .sd-event-note {
         display: block;
-        margin-top: 4px;
+        margin-top: 7px;
         color: rgba(255,255,255,.62);
         font-size: 11px;
         line-height: 1.35;
@@ -1112,8 +1209,20 @@ function HomepageStyles() {
       }
 
       @keyframes shadow-breathe {
-        0%, 100% { translate: 0 0; }
-        50% { translate: 2px -5px; }
+        0%, 100% {
+          translate: 0 0;
+          rotate: 0deg;
+        }
+        38% {
+          translate:
+            calc(var(--shadow-drift-x) * .55)
+            calc(var(--shadow-drift-y) * .45);
+          rotate: calc(var(--shadow-sway) * .55);
+        }
+        68% {
+          translate: var(--shadow-drift-x) var(--shadow-drift-y);
+          rotate: var(--shadow-sway);
+        }
       }
 
       @keyframes preview-line {
