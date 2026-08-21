@@ -481,7 +481,7 @@ function HomepageStyles() {
 
       .is-rotating-to-active .sd-racket-wrap,
       .is-active .sd-racket-wrap {
-        transform: translate3d(-50%, 74px, 0) rotate(27deg) scale(1.36);
+        transform: translate3d(-51.5%, 74px, 0) rotate(18deg) scale(1.36);
       }
 
       .sd-racket-main,
@@ -818,18 +818,18 @@ function HomepageStyles() {
         right: 16px;
         top: 330px;
         display: grid;
-        grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr);
-        gap: clamp(30px, 10vw, 58px);
+        grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
+        gap: clamp(32px, 8.5vw, 48px);
       }
 
       .sd-actions::before {
         content: "";
         position: absolute;
-        left: 42%;
+        left: 47%;
         top: -16px;
         width: 1px;
         height: 194px;
-        transform: rotate(27deg);
+        transform: rotate(18deg);
         background: linear-gradient(180deg, transparent, rgba(216,185,94,.38), transparent);
       }
 
@@ -853,6 +853,7 @@ function HomepageStyles() {
       .sd-action-zone button,
       .sd-action-zone input {
         width: 100%;
+        height: 46px;
         min-height: 46px;
         border-radius: 999px;
         font-size: 15px;
@@ -1322,7 +1323,7 @@ function HomepageStyles() {
         }
         .is-rotating-to-active .sd-racket-wrap,
         .is-active .sd-racket-wrap {
-          transform: translate3d(-50%, 68px, 0) rotate(27deg) scale(1.42);
+          transform: translate3d(-51.5%, 68px, 0) rotate(18deg) scale(1.42);
         }
         .sd-preview { top: 346px; }
         .sd-metrics { top: 256px; }
@@ -1344,7 +1345,7 @@ function HomepageStyles() {
         }
         .is-rotating-to-active .sd-racket-wrap,
         .is-active .sd-racket-wrap {
-          transform: translate3d(-50%, 68px, 0) rotate(27deg) scale(1.30);
+          transform: translate3d(-51%, 68px, 0) rotate(18deg) scale(1.30);
         }
         .sd-preview { top: 312px; left: 18px; right: 18px; }
         .sd-annotation { font-size: 10px; width: 42vw; }
@@ -1356,10 +1357,10 @@ function HomepageStyles() {
         .a-fee { left: 16px; top: 208px; }
         .sd-metrics { top: 220px; left: 12px; right: 12px; }
         .sd-metric strong { font-size: 34px; }
-        .sd-actions { top: 308px; left: 14px; right: 14px; gap: 26px; }
+        .sd-actions { top: 308px; left: 14px; right: 14px; gap: 28px; }
         .sd-pending { top: 476px; }
         .sd-action-zone button,
-        .sd-action-zone input { min-height: 43px; font-size: 14px; }
+        .sd-action-zone input { font-size: 14px; }
       }
 
       .motion-reduced .sd-racket-wrap,
