@@ -252,7 +252,7 @@ function Index() {
   }, [flow.pendingSwitchEventId, flow.selectedEventId, flow.setPendingSwitchEventId, preview]);
 
   useEffect(() => {
-    if (!preview || flow.pendingAction) return;
+    if (!preview || flow.pendingAction || !flow.selectedEventId) return;
     const timer = window.setTimeout(enterPreviewSelection, PREVIEW_IDLE_MS);
     return () => window.clearTimeout(timer);
   }, [
@@ -438,6 +438,14 @@ function Index() {
             <span className="sd-racket-scan-line" />
           </span>
           <span ref={racketFaceAnchorRef} className="sd-racket-face-anchor" aria-hidden="true" />
+          {active && flow.events.length > 1 ? (
+            <button
+              type="button"
+              className="sd-racket-main-switch"
+              onClick={() => flow.openMeetupPicker()}
+              aria-label={`切換聚會，目前為 ${flow.selectedEvent?.name || "目前聚會"}`}
+            />
+          ) : null}
           {flow.shadowEvents.map((event, index) => (
             <button
               key={event.id}
@@ -451,6 +459,17 @@ function Index() {
           ))}
         </div>
 
+        {active && flow.events.length > 1 ? (
+          <button
+            type="button"
+            className="sd-racket-switch-bubble"
+            onClick={() => flow.openMeetupPicker()}
+            aria-label="切換聚會"
+          >
+            切換聚會
+          </button>
+        ) : null}
+
         {flow.phase === "load-error" && (
           <section className="sd-load-error">
             <h1>database-alpha 讀取失敗</h1>
@@ -462,35 +481,44 @@ function Index() {
         {preview && (
           <section className="sd-hero-meetup-picker" aria-label="選擇聚會">
             <div className="sd-hero-ticket-stack-wrap">
-              <MeetupTicketStack
-                events={flow.events}
-                selectedEventId={flow.selectedEventId}
-                pendingEventId={flow.pendingSwitchEventId || flow.selectedEventId}
-                onSelect={(eventId) => {
-                  flow.setPendingSwitchEventId(eventId);
-                  markPreviewInteraction();
-                }}
-                disabled={Boolean(flow.pendingAction)}
-                variant="hero"
-                onInteract={markPreviewInteraction}
-              />
+              {flow.events.length ? (
+                <MeetupTicketStack
+                  events={flow.events}
+                  selectedEventId={flow.selectedEventId}
+                  pendingEventId={flow.pendingSwitchEventId || flow.selectedEventId}
+                  onSelect={(eventId) => {
+                    flow.setPendingSwitchEventId(eventId);
+                    markPreviewInteraction();
+                  }}
+                  disabled={Boolean(flow.pendingAction)}
+                  variant="hero"
+                  onInteract={markPreviewInteraction}
+                />
+              ) : (
+                <div className="sd-hero-no-events" role="status">
+                  目前沒有開放聚會
+                </div>
+              )}
             </div>
-            <footer className="sd-hero-picker-footer">
-              <span>
-                已選：<strong>{previewPickedEvent?.name || "聚會"}</strong>
-              </span>
-              <button
-                type="button"
-                disabled={Boolean(flow.pendingAction) || !previewPickedEvent}
-                onClick={() => {
-                  markPreviewInteraction();
-                  enterPreviewSelection();
-                }}
-              >
-                進入報名
-              </button>
-              <small>20 秒無操作將自動進入目前選定聚會</small>
-            </footer>
+            {flow.events.length > 1 ? <PreviewSwipeHint /> : null}
+            {flow.events.length ? (
+              <footer className="sd-hero-picker-footer">
+                <span>
+                  已選：<strong>{previewPickedEvent?.name || "聚會"}</strong>
+                </span>
+                <button
+                  type="button"
+                  disabled={Boolean(flow.pendingAction) || !previewPickedEvent}
+                  onClick={() => {
+                    markPreviewInteraction();
+                    enterPreviewSelection();
+                  }}
+                >
+                  進入報名
+                </button>
+                <small>20 秒無操作將自動進入目前選定聚會</small>
+              </footer>
+            ) : null}
           </section>
         )}
 
@@ -994,6 +1022,25 @@ function RacketImage({ src, className = "" }: { src: string; className?: string 
   return <img className={className} src={src} alt="" aria-hidden="true" draggable={false} />;
 }
 
+function PreviewSwipeHint() {
+  return (
+    <span className="sd-preview-swipe-hint" aria-label="上滑切換下一個聚會" role="img">
+      <svg viewBox="0 0 80 110" aria-hidden="true">
+        <path className="sd-preview-swipe-base" d="M66 101 C43 91 23 69 28 31" />
+        <path className="sd-preview-swipe-head" d="M17 42 L28 30 L41 39" />
+        <path className="sd-preview-swipe-light" d="M66 101 C43 91 23 69 28 31" />
+      </svg>
+    </span>
+  );
+}
+
+function shortEventDate(value: string) {
+  const [, month = "", day = ""] = String(value || "").split("-");
+  const monthNumber = Number(month);
+  const dayNumber = Number(day);
+  return monthNumber > 0 && dayNumber > 0 ? `${monthNumber}/${dayNumber}` : value;
+}
+
 function FloatingAnnotations({
   event,
   titleRef,
@@ -1004,7 +1051,7 @@ function FloatingAnnotations({
   onOpenMeetupPicker: () => void;
 }) {
   if (!event) return null;
-  const note = event.eventNote || "康軒羽球館";
+  const note = event.eventNote?.trim() || "—";
 
   return (
     <div className="sd-annotations" aria-label="聚會資訊">
@@ -1016,15 +1063,10 @@ function FloatingAnnotations({
           onClick={onOpenMeetupPicker}
           aria-label={`切換聚會，目前為 ${event.name}`}
         >
-          {event.name}
+          {shortEventDate(event.eventDate)} {event.name}
         </button>
         <small className="sd-event-note">{note}</small>
       </div>
-      <Annotation
-        className="a-time"
-        label="時間"
-        value={event.hours ? `${event.hours} 小時` : "待公告"}
-      />
       <Annotation className="a-fee" label="費用" value={`$${Number(event.tempFee || 0)}`} />
       <Annotation className="a-ball" label="用球" value={event.ballType || "依現場公告"} />
       <Annotation
@@ -1684,6 +1726,21 @@ function HomepageStyles() {
         pointer-events: none;
       }
 
+      .sd-racket-main-switch {
+        position: absolute;
+        z-index: 8;
+        left: 7%;
+        right: 7%;
+        top: 1%;
+        height: 45%;
+        border: 0;
+        border-radius: 48%;
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+
       .sd-racket-main,
       .sd-racket-shadow img {
         position: absolute;
@@ -1894,6 +1951,60 @@ function HomepageStyles() {
       .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero.has-2 { top: 54px; }
       .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero.has-3 { top: 0; }
 
+      .sd-hero-no-events {
+        height: 100%;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        color: rgba(247,246,239,.72);
+        font-size: 14px;
+        letter-spacing: .08em;
+        text-align: center;
+      }
+
+      .sd-preview-swipe-hint {
+        position: absolute;
+        z-index: 12;
+        right: -2px;
+        top: 246px;
+        width: 72px;
+        height: 100px;
+        opacity: 0;
+        pointer-events: none;
+        filter: drop-shadow(0 0 8px rgba(216,185,94,.22));
+        animation: preview-swipe-cycle 6s ease .65s infinite both;
+      }
+
+      .sd-preview-swipe-hint svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      .sd-preview-swipe-base,
+      .sd-preview-swipe-head,
+      .sd-preview-swipe-light {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .sd-preview-swipe-base,
+      .sd-preview-swipe-head {
+        stroke: rgba(216,185,94,.48);
+        stroke-width: 2.8px;
+      }
+
+      .sd-preview-swipe-light {
+        stroke: rgba(248,238,188,.98);
+        stroke-width: 4px;
+        stroke-dasharray: 16 104;
+        stroke-dashoffset: 120;
+        filter: drop-shadow(0 0 5px rgba(216,185,94,.8));
+        animation: preview-swipe-light 1s linear infinite;
+      }
+
       .sd-hero-picker-footer {
         position: relative;
         z-index: 7;
@@ -2023,12 +2134,6 @@ function HomepageStyles() {
         letter-spacing: .03em;
       }
 
-      .a-time {
-        right: 14px;
-        top: 28px;
-        text-align: right;
-      }
-
       .a-fee {
         left: 18px;
         top: 176px;
@@ -2047,12 +2152,45 @@ function HomepageStyles() {
         text-align: left;
       }
 
-      .a-time::before { right: 0; transform: scaleX(-1); }
       .a-ball::before,
       .a-cap::before,
       .a-fee::before { left: 0; }
 
       .a-fee strong { font-size: 17px; }
+
+      .sd-racket-switch-bubble {
+        position: absolute;
+        z-index: 14;
+        top: 84px;
+        right: 12px;
+        min-height: 30px;
+        border: 1px solid rgba(216,185,94,.38);
+        border-radius: 12px;
+        background: rgba(6,9,12,.72);
+        color: rgba(239,205,111,.94);
+        padding: 5px 10px 6px;
+        font: 650 11px/1.1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .08em;
+        box-shadow: 0 8px 22px rgba(0,0,0,.28), 0 0 14px rgba(216,185,94,.08);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        opacity: 0;
+        cursor: pointer;
+        animation: racket-switch-bubble-cycle 6s ease-in-out .8s infinite both;
+      }
+
+      .sd-racket-switch-bubble::after {
+        content: "";
+        position: absolute;
+        left: -4px;
+        bottom: 7px;
+        width: 8px;
+        height: 8px;
+        border-left: 1px solid rgba(216,185,94,.38);
+        border-bottom: 1px solid rgba(216,185,94,.38);
+        background: rgba(6,9,12,.72);
+        transform: rotate(45deg);
+      }
 
       .sd-metrics {
         position: absolute;
@@ -3036,6 +3174,24 @@ function HomepageStyles() {
         to { opacity: 0; translate: 0 -5px; }
       }
 
+      @keyframes preview-swipe-cycle {
+        0% { opacity: 0; transform: translateY(6px); }
+        8%, 48% { opacity: .88; transform: translateY(0); }
+        58%, 100% { opacity: 0; transform: translateY(-3px); }
+      }
+
+      @keyframes preview-swipe-light {
+        from { stroke-dashoffset: 120; }
+        to { stroke-dashoffset: 0; }
+      }
+
+      @keyframes racket-switch-bubble-cycle {
+        0%, 8% { opacity: 0; transform: translateY(4px) scale(.98); }
+        16%, 46% { opacity: .82; transform: translateY(0) scale(1); }
+        27% { opacity: 1; transform: translateY(-1px) scale(1.02); }
+        58%, 100% { opacity: 0; transform: translateY(-2px) scale(.99); }
+      }
+
       @keyframes scroll-cue-wave {
         0%, 100% { opacity: .18; translate: 0 -2px; }
         38% { opacity: .96; translate: 0 2px; }
@@ -3106,7 +3262,6 @@ function HomepageStyles() {
         .sd-annotation { font-size: 10px; width: 42vw; }
         .a-name { left: 14px; top: 16px; width: 61vw; }
         .a-name .sd-event-name { font-size: 19px; }
-        .a-time { top: 26px; right: 12px; }
         .a-ball { left: 16px; top: 68px; }
         .a-cap { left: 24px; top: 114px; }
         .a-fee { left: 14px; top: 160px; }
@@ -3114,6 +3269,8 @@ function HomepageStyles() {
         .sd-metric strong { font-size: 34px; }
         .sd-actions { top: 308px; left: 14px; right: 14px; gap: 28px; }
         .sd-pending { top: 476px; }
+        .sd-preview-swipe-hint { right: -5px; top: 238px; width: 68px; }
+        .sd-racket-switch-bubble { top: 76px; right: 7px; font-size: 10.5px; }
         .sd-timing-lab { left: 6px; width: min(214px, calc(100vw - 12px)); }
         .sd-event-ticket { left: 4px; right: 4px; padding-left: 15px; padding-right: 12px; }
         .sd-ticket-identity { left: 13px; right: 10px; gap: 6px; }
@@ -3141,9 +3298,22 @@ function HomepageStyles() {
       .motion-reduced .sd-ticket-scan,
       .motion-reduced .sd-scroll-cue span,
       .motion-reduced .sd-annotations,
+      .motion-reduced .sd-preview-swipe-hint,
+      .motion-reduced .sd-preview-swipe-light,
+      .motion-reduced .sd-racket-switch-bubble,
       .motion-reduced .sd-pending span {
         animation: none !important;
         transition-duration: .01ms !important;
+      }
+
+      .motion-reduced .sd-preview-swipe-hint,
+      .motion-reduced .sd-racket-switch-bubble {
+        opacity: .76 !important;
+        transform: none !important;
+      }
+
+      .motion-reduced .sd-preview-swipe-light {
+        opacity: 0 !important;
       }
 
       .motion-reduced .sd-racket-reveal {

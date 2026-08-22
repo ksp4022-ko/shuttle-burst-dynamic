@@ -149,14 +149,20 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   const loadInitial = useCallback(async () => {
     setError("");
     const nextEvents = await listAlphaEvents(todayString(), 20);
-    if (!nextEvents.length) throw new Error("目前沒有開放中的聚會。");
+    setEvents(nextEvents);
+
+    if (!nextEvents.length) {
+      setSelectedEventId("");
+      setRoster(null);
+      return false;
+    }
 
     const nextEvent = chooseNearestEvent(nextEvents);
     if (!nextEvent) throw new Error("找不到最近聚會。");
 
-    setEvents(nextEvents);
     setSelectedEventId(nextEvent.id);
     await loadRoster(nextEvent.id, { silent: true });
+    return true;
   }, [loadRoster]);
 
   useEffect(() => {
@@ -168,7 +174,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     let cancelled = false;
 
     loadInitial()
-      .then(() => {
+      .then((hasEvents) => {
         const remaining = Math.max(
           0,
           PARTICLE_ASSEMBLY_MS - (window.performance.now() - startedAt),
@@ -182,7 +188,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
             setPhase("materializing");
             window.setTimeout(() => {
               if (cancelled) return;
-              if (detectMotionMode() === "reduced") {
+              if (detectMotionMode() === "reduced" && hasEvents) {
                 setPhase("active");
                 return;
               }
