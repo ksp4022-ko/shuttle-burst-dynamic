@@ -24,7 +24,7 @@ export function HomepageRoster({
   return (
     <section className="sd-roster" id="sd-roster">
       <div className="sd-roster-title">
-        <h2>報名名單</h2>
+        <h2>正取名單</h2>
         <span>
           {confirmed.length} / {maxPeople}
         </span>

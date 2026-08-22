@@ -514,7 +514,7 @@ function Index() {
                     enterPreviewSelection();
                   }}
                 >
-                  進入報名
+                  確認聚會
                 </button>
                 <small>20 秒無操作將自動進入目前選定聚會</small>
               </footer>
@@ -1965,13 +1965,13 @@ function HomepageStyles() {
       .sd-preview-swipe-hint {
         position: absolute;
         z-index: 12;
-        right: -2px;
-        top: 246px;
-        width: 72px;
-        height: 100px;
+        right: 46px;
+        top: 212px;
+        width: 68px;
+        height: 96px;
         opacity: 0;
         pointer-events: none;
-        filter: drop-shadow(0 0 8px rgba(216,185,94,.22));
+        filter: drop-shadow(0 0 9px rgba(157,244,22,.28));
         animation: preview-swipe-cycle 6s ease .65s infinite both;
       }
 
@@ -1992,16 +1992,16 @@ function HomepageStyles() {
 
       .sd-preview-swipe-base,
       .sd-preview-swipe-head {
-        stroke: rgba(216,185,94,.48);
+        stroke: rgba(157,244,22,.58);
         stroke-width: 2.8px;
       }
 
       .sd-preview-swipe-light {
-        stroke: rgba(248,238,188,.98);
+        stroke: rgba(210,255,126,.98);
         stroke-width: 4px;
         stroke-dasharray: 16 104;
         stroke-dashoffset: 120;
-        filter: drop-shadow(0 0 5px rgba(216,185,94,.8));
+        filter: drop-shadow(0 0 6px rgba(157,244,22,.86));
         animation: preview-swipe-light 1s linear infinite;
       }
 
@@ -2162,7 +2162,8 @@ function HomepageStyles() {
         position: absolute;
         z-index: 14;
         top: 84px;
-        right: 12px;
+        left: 148px;
+        right: auto;
         min-height: 30px;
         border: 1px solid rgba(216,185,94,.38);
         border-radius: 12px;
@@ -2533,15 +2534,16 @@ function HomepageStyles() {
 
       .sd-back-top {
         position: fixed;
-        right: 18px;
-        bottom: calc(env(safe-area-inset-bottom) + 18px);
+        right: 12px;
+        bottom: calc(env(safe-area-inset-bottom) + 74px);
         z-index: 30;
-        width: 42px;
-        height: 42px;
-        border: 1px solid rgba(216,185,94,.28);
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgba(157,244,22,.48);
         border-radius: 50%;
-        background: rgba(7,10,14,.66);
-        color: var(--gold);
+        background: rgba(7,10,14,.72);
+        color: var(--green);
+        box-shadow: 0 0 16px rgba(157,244,22,.10);
         backdrop-filter: blur(12px);
         opacity: 0;
         transform: translateY(10px) scale(.94);
@@ -3269,8 +3271,8 @@ function HomepageStyles() {
         .sd-metric strong { font-size: 34px; }
         .sd-actions { top: 308px; left: 14px; right: 14px; gap: 28px; }
         .sd-pending { top: 476px; }
-        .sd-preview-swipe-hint { right: -5px; top: 238px; width: 68px; }
-        .sd-racket-switch-bubble { top: 76px; right: 7px; font-size: 10.5px; }
+        .sd-preview-swipe-hint { right: 38px; top: 206px; width: 64px; }
+        .sd-racket-switch-bubble { top: 76px; left: 134px; right: auto; font-size: 10.5px; }
         .sd-timing-lab { left: 6px; width: min(214px, calc(100vw - 12px)); }
         .sd-event-ticket { left: 4px; right: 4px; padding-left: 15px; padding-right: 12px; }
         .sd-ticket-identity { left: 13px; right: 10px; gap: 6px; }
