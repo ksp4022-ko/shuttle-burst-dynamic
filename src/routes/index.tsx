@@ -88,7 +88,7 @@ function Index() {
   const [handoffTiming, setHandoffTiming] = useState<HandoffTiming>(DEFAULT_HANDOFF_TIMING);
   const [freezeParticles, setFreezeParticles] = useState(true);
   const [handoffReplayPhase, setHandoffReplayPhase] = useState<HandoffReplayPhase>("idle");
-  const [timingLabExpanded, setTimingLabExpanded] = useState(true);
+  const [timingLabExpanded, setTimingLabExpanded] = useState(false);
   const [previewActivityKey, setPreviewActivityKey] = useState(0);
   const [rosterVisible, setRosterVisible] = useState(false);
   const replayTimersRef = useRef<number[]>([]);
@@ -768,8 +768,15 @@ function HandoffTimingLab({
           <strong>HANDOFF TIMING</strong>
           <small>X -8 / Y -6</small>
         </span>
-        <button type="button" onClick={onToggleExpanded} aria-expanded={expanded}>
-          {expanded ? "收合" : "展開"}
+        <button
+          type="button"
+          className="sd-timing-lab-toggle"
+          onClick={onToggleExpanded}
+          aria-expanded={expanded}
+          aria-label={expanded ? "隱藏 Handoff Timing Lab" : "開啟 Handoff Timing Lab"}
+          title={expanded ? "隱藏 Handoff Timing Lab" : "Handoff Timing Lab"}
+        >
+          <span aria-hidden="true">{expanded ? "收合" : "◇"}</span>
         </button>
       </div>
 
@@ -1173,6 +1180,35 @@ function HomepageStyles() {
         overflow: hidden;
       }
 
+      .sd-timing-lab:not(.is-expanded) {
+        width: 26px;
+        height: 26px;
+        border-color: rgba(216,185,94,.16);
+        border-radius: 50%;
+        background: rgba(5,8,11,.20);
+        box-shadow: none;
+        opacity: .34;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+
+      .sd-timing-lab:not(.is-expanded):hover,
+      .sd-timing-lab:not(.is-expanded):focus-within {
+        border-color: rgba(216,185,94,.34);
+        opacity: .72;
+      }
+
+      .sd-timing-lab:not(.is-expanded) .sd-timing-lab-head {
+        min-height: 24px;
+        padding: 0;
+        display: grid;
+        place-items: center;
+      }
+
+      .sd-timing-lab:not(.is-expanded) .sd-timing-lab-head > span {
+        display: none;
+      }
+
       .sd-timing-lab-head {
         min-height: 44px;
         display: flex;
@@ -1213,6 +1249,23 @@ function HomepageStyles() {
         min-height: 30px;
         padding: 0 9px;
         font-size: 10px;
+      }
+
+      .sd-timing-lab-toggle span {
+        display: inline-block;
+      }
+
+      .sd-timing-lab:not(.is-expanded) .sd-timing-lab-toggle {
+        width: 24px;
+        min-width: 24px;
+        height: 24px;
+        min-height: 24px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: rgba(216,185,94,.72);
+        font-size: 13px;
+        line-height: 1;
       }
 
       .sd-timing-lab-body {
