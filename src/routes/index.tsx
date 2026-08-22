@@ -62,13 +62,13 @@ type HandoffNumericKey = Exclude<keyof HandoffTiming, "scanEnabled">;
 type HandoffReplayPhase = "idle" | "prehold" | "materializing" | "fading";
 
 const DEFAULT_HANDOFF_TIMING: HandoffTiming = {
-  preHold: 700,
+  preHold: 300,
   realFade: 1200,
   particleHold: 1000,
   particleFade: 1100,
   fadeBlur: 0,
   revealDelay: 150,
-  revealDuration: 1050,
+  revealDuration: 1750,
   revealFeather: 18,
   tailBias: 65,
   scanEnabled: true,
@@ -86,7 +86,7 @@ function Index() {
   const signupButtonRef = useRef<HTMLButtonElement | null>(null);
   const [particleMatchTop, setParticleMatchTop] = useState(46);
   const [handoffTiming, setHandoffTiming] = useState<HandoffTiming>(DEFAULT_HANDOFF_TIMING);
-  const [freezeParticles, setFreezeParticles] = useState(false);
+  const [freezeParticles, setFreezeParticles] = useState(true);
   const [handoffReplayPhase, setHandoffReplayPhase] = useState<HandoffReplayPhase>("idle");
   const [timingLabExpanded, setTimingLabExpanded] = useState(true);
   const [previewActivityKey, setPreviewActivityKey] = useState(0);
@@ -415,6 +415,17 @@ function Index() {
       )}
 
       <section className="sd-hero" id="sd-hero">
+        {(preview || rotating) && (
+          <div className={`sd-preview-system-title ${rotating ? "is-leaving" : ""}`}>
+            <strong>羽球報名系統</strong>
+            <span>
+              <i />
+              BADMINTON SIGNUP SYSTEM
+              <i />
+            </span>
+          </div>
+        )}
+
         <div
           ref={racketWrapRef}
           className={`sd-racket-wrap ${materialized ? "is-materialized" : ""}`}
@@ -519,7 +530,7 @@ function Index() {
                   onKeyDown={(event) => {
                     if (event.key === "Enter") void submit(signupButtonRef.current);
                   }}
-                  placeholder="姓名"
+                  placeholder="Name"
                   disabled={Boolean(flow.pendingAction)}
                 />
                 <button
@@ -648,21 +659,37 @@ function ParticleHandoffOverlay({
 
   useLayoutEffect(() => {
     if (phase !== "particle-ready" || motionMode === "reduced") return;
-    captureSnapshot();
-  }, [captureSnapshot, motionMode, phase]);
+    const overlay = overlayRef.current;
+    const source = document.querySelector<HTMLCanvasElement>(".sd-particles");
+    if (!overlay || !source || !captureSnapshot()) return;
+
+    // Freeze the exact completed particle silhouette before ParticleRacket's
+    // finish pulse/drift can become visible. The handoff now reads as:
+    // complete particles -> steady hold -> handle-to-head reveal.
+    clearInitialTimers();
+    source.classList.add("is-handoff-source-hidden");
+    overlay.classList.remove(
+      "is-fading",
+      "is-drifting",
+      "is-replay-visible",
+      "is-replay-fading",
+      "is-replay-drifting",
+    );
+    overlay.classList.add("is-visible");
+  }, [captureSnapshot, clearInitialTimers, motionMode, phase]);
 
   useLayoutEffect(() => {
     if (phase !== "materializing" || motionMode === "reduced") return;
     const overlay = overlayRef.current;
     const source = document.querySelector<HTMLCanvasElement>(".sd-particles");
     if (!overlay || !source) return;
-    if (!captureSnapshot() && !hasSnapshotRef.current) return;
+    if (!hasSnapshotRef.current && !captureSnapshot()) return;
 
     clearInitialTimers();
     source.classList.add("is-handoff-source-hidden");
     overlay.classList.remove("is-fading", "is-replay-visible", "is-replay-fading");
     overlay.classList.add("is-visible");
-    overlay.classList.toggle("is-drifting", !freezeParticles);
+    overlay.classList.remove("is-drifting");
 
     const fadeTimer = window.setTimeout(() => {
       overlay.classList.add("is-fading");
@@ -1739,6 +1766,58 @@ function HomepageStyles() {
       .is-rotating-to-active .sd-shadow-4,
       .is-active .sd-shadow-4 { opacity: .06; transition: opacity .35s ease .68s; animation-delay: -4.1s; }
 
+      .sd-preview-system-title {
+        position: absolute;
+        z-index: 8;
+        top: 12px;
+        left: 18px;
+        right: 18px;
+        display: grid;
+        justify-items: center;
+        gap: 7px;
+        color: var(--gold);
+        text-align: center;
+        pointer-events: none;
+        animation: preview-system-title-in .48s cubic-bezier(.2,.82,.18,1) both;
+      }
+
+      .sd-preview-system-title strong {
+        color: rgba(239,205,111,.96);
+        font: 700 clamp(22px, 6vw, 28px)/1.08 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .16em;
+        text-indent: .16em;
+        text-shadow:
+          0 2px 16px rgba(0,0,0,.38),
+          0 0 16px rgba(216,185,94,.08);
+      }
+
+      .sd-preview-system-title span {
+        display: grid;
+        grid-template-columns: 28px auto 28px;
+        gap: 9px;
+        align-items: center;
+        color: rgba(216,185,94,.48);
+        font: 650 8.5px/1 "Chakra Petch", sans-serif;
+        letter-spacing: .24em;
+        text-indent: .24em;
+        white-space: nowrap;
+      }
+
+      .sd-preview-system-title i {
+        display: block;
+        width: 28px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(216,185,94,.42));
+      }
+
+      .sd-preview-system-title i:last-child {
+        transform: scaleX(-1);
+      }
+
+      .sd-preview-system-title.is-leaving {
+        animation: preview-system-title-out .22s ease both;
+      }
+
       .sd-hero-meetup-picker {
         position: absolute;
         z-index: 8;
@@ -2031,6 +2110,7 @@ function HomepageStyles() {
         background: rgba(5,8,11,.42);
         color: #fff;
         padding: 0 14px;
+        text-align: center;
         outline: none;
       }
 
@@ -2083,15 +2163,16 @@ function HomepageStyles() {
         z-index: 18;
         left: 50%;
         bottom: 12px;
-        width: 52px;
-        height: 54px;
+        width: 58px;
+        height: 42px;
         transform: translateX(-50%);
-        display: grid;
-        place-items: center;
-        gap: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         border: 0;
         background: transparent;
-        padding: 4px 0;
+        padding: 3px 0;
         color: var(--green);
         cursor: pointer;
       }
@@ -2099,28 +2180,35 @@ function HomepageStyles() {
       .sd-scroll-cue span {
         position: relative;
         display: block;
-        width: 18px;
-        height: 9px;
+        flex: 0 0 7px;
+        width: 28px;
+        height: 7px;
         opacity: .24;
         filter: drop-shadow(0 0 5px rgba(157,244,22,.30));
         animation: scroll-cue-wave 1.7s ease-in-out infinite;
       }
 
+      .sd-scroll-cue span + span { margin-top: -1px; }
+
       .sd-scroll-cue span::before,
       .sd-scroll-cue span::after {
         content: "";
         position: absolute;
-        top: 3px;
-        width: 11px;
+        top: 1px;
+        width: 14px;
         height: 2px;
         border-radius: 999px;
         background: currentColor;
       }
 
-      .sd-scroll-cue span::before { left: 0; transform: rotate(28deg); transform-origin: right center; }
-      .sd-scroll-cue span::after { right: 0; transform: rotate(-28deg); transform-origin: left center; }
-      .sd-scroll-cue span:nth-child(2) { width: 16px; animation-delay: .16s; }
-      .sd-scroll-cue span:nth-child(3) { width: 13px; animation-delay: .32s; }
+      .sd-scroll-cue span::before { left: 0; transform: rotate(17deg); transform-origin: right center; }
+      .sd-scroll-cue span::after { right: 0; transform: rotate(-17deg); transform-origin: left center; }
+      .sd-scroll-cue span:nth-child(2) { width: 25px; animation-delay: .16s; }
+      .sd-scroll-cue span:nth-child(2)::before,
+      .sd-scroll-cue span:nth-child(2)::after { width: 12.5px; }
+      .sd-scroll-cue span:nth-child(3) { width: 22px; animation-delay: .32s; }
+      .sd-scroll-cue span:nth-child(3)::before,
+      .sd-scroll-cue span:nth-child(3)::after { width: 11px; }
 
       .is-roster-visible .sd-scroll-cue {
         opacity: 0;
@@ -2486,6 +2574,8 @@ function HomepageStyles() {
         --ticket-drag: var(--ticket-drag-main);
         z-index: 4;
         background:
+          linear-gradient(135deg, transparent 43%, var(--ticket-frame) 47% 55%, transparent 59%) 0 0 / 11px 11px no-repeat,
+          linear-gradient(135deg, transparent 40%, var(--ticket-frame) 46% 56%, transparent 62%) 100% 100% / 8px 8px no-repeat,
           radial-gradient(78% 120% at 92% 8%, rgba(216,185,94,.085), transparent 61%),
           linear-gradient(145deg, rgba(17,22,21,.99), rgba(5,8,11,.995));
         filter: drop-shadow(0 19px 24px rgba(0,0,0,.34));
@@ -2498,6 +2588,8 @@ function HomepageStyles() {
         --ticket-frame: rgba(216,185,94,.20);
         --ticket-top-start: rgba(216,185,94,.46);
         background:
+          linear-gradient(135deg, transparent 43%, var(--ticket-frame) 47% 55%, transparent 59%) 0 0 / 11px 11px no-repeat,
+          linear-gradient(135deg, transparent 40%, var(--ticket-frame) 46% 56%, transparent 62%) 100% 100% / 8px 8px no-repeat,
           radial-gradient(72% 110% at 10% 0%, rgba(255,255,255,.026), transparent 58%),
           linear-gradient(145deg, rgba(18,23,21,.98), rgba(7,11,12,.995));
         filter: drop-shadow(0 13px 18px rgba(0,0,0,.27));
@@ -2510,9 +2602,29 @@ function HomepageStyles() {
         --ticket-frame: rgba(216,185,94,.16);
         --ticket-top-start: rgba(216,185,94,.34);
         background:
+          linear-gradient(135deg, transparent 43%, var(--ticket-frame) 47% 55%, transparent 59%) 0 0 / 11px 11px no-repeat,
+          linear-gradient(135deg, transparent 40%, var(--ticket-frame) 46% 56%, transparent 62%) 100% 100% / 8px 8px no-repeat,
           radial-gradient(72% 100% at 84% 0%, rgba(157,244,22,.025), transparent 60%),
           linear-gradient(145deg, rgba(10,15,16,.99), rgba(5,8,11,.995));
         filter: drop-shadow(0 9px 14px rgba(0,0,0,.22));
+      }
+
+      /* Hero preview: keep alternate meetups readable but subordinate to the racket. */
+      .sd-ticket-stack-hero .sd-ticket-slot-1 {
+        opacity: .52;
+        filter:
+          brightness(.78)
+          saturate(.82)
+          drop-shadow(0 10px 15px rgba(0,0,0,.22));
+      }
+
+      .sd-ticket-stack-hero .sd-ticket-slot-2 {
+        opacity: .30;
+        filter:
+          brightness(.68)
+          saturate(.72)
+          blur(.18px)
+          drop-shadow(0 7px 11px rgba(0,0,0,.18));
       }
 
       .sd-event-ticket-stack.has-1 .sd-ticket-slot-0 { --ticket-y: 0px; }
@@ -2861,6 +2973,16 @@ function HomepageStyles() {
         100% { opacity: 1; translate: 0 0; scale: 1; }
       }
 
+      @keyframes preview-system-title-in {
+        0% { opacity: 0; translate: 0 8px; }
+        100% { opacity: 1; translate: 0 0; }
+      }
+
+      @keyframes preview-system-title-out {
+        from { opacity: 1; translate: 0 0; }
+        to { opacity: 0; translate: 0 -5px; }
+      }
+
       @keyframes scroll-cue-wave {
         0%, 100% { opacity: .18; translate: 0 -2px; }
         38% { opacity: .96; translate: 0 2px; }
@@ -2960,6 +3082,7 @@ function HomepageStyles() {
       .motion-reduced .sd-racket-main,
       .motion-reduced .sd-racket-shadow,
       .motion-reduced .sd-hero-meetup-picker,
+      .motion-reduced .sd-preview-system-title,
       .motion-reduced .sd-event-ticket,
       .motion-reduced .sd-event-ticket-stack,
       .motion-reduced .sd-ticket-scan,
