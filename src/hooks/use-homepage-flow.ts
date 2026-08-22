@@ -57,6 +57,20 @@ function detectMotionMode(): MotionMode {
   return coarse && narrow ? "degraded" : "normal";
 }
 
+function signupOrderValue(signup: AlphaSignup) {
+  const value = Number(signup.orderNo);
+  return Number.isFinite(value) && value > 0 ? value : Number.MAX_SAFE_INTEGER;
+}
+
+function sortSignupsByOrder(signups: AlphaSignup[]) {
+  return [...signups].sort(
+    (a, b) =>
+      signupOrderValue(a) - signupOrderValue(b) ||
+      String(a.createdAt || "").localeCompare(String(b.createdAt || "")) ||
+      a.id.localeCompare(b.id),
+  );
+}
+
 export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   const [phase, setPhase] = useState<HomepagePhase>("loading-particles");
   const [motionMode, setMotionMode] = useState<MotionMode>("normal");
@@ -96,18 +110,26 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   );
 
   const confirmed = useMemo(
-    () => [...(roster?.fixedConfirmed || []), ...(roster?.tempConfirmed || [])],
+    () =>
+      sortSignupsByOrder([
+        ...(roster?.fixedConfirmed || []),
+        ...(roster?.tempConfirmed || []),
+      ]),
     [roster],
   );
 
   const waiting = useMemo(
-    () => [...(roster?.fixedWaiting || []), ...(roster?.tempWaiting || [])],
+    () =>
+      sortSignupsByOrder([
+        ...(roster?.fixedWaiting || []),
+        ...(roster?.tempWaiting || []),
+      ]),
     [roster],
   );
 
   const memberCandidates = useMemo(() => {
     if (memberPickerMode === "season-leave") {
-      return [...(roster?.fixedConfirmed || []), ...(roster?.fixedWaiting || [])];
+      return roster?.fixedConfirmed || [];
     }
     if (memberPickerMode === "season-restore") return roster?.fixedLeave || [];
     if (memberPickerMode === "casual-cancel") {
@@ -188,7 +210,6 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     setPhase("rotating-to-active");
     window.setTimeout(() => setPhase("active"), ROTATE_MS);
   }, [motionMode]);
-
 
   const refresh = useCallback(
     async (options?: { silent?: boolean }) => {
