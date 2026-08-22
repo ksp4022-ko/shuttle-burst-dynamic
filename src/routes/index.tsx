@@ -1,11 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import { MeetupSheet, MemberSheet } from "@/components/homepage/HomepageSheets";
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { ParticleRacket } from "@/components/homepage/ParticleRacket";
 import {
   HomepageToast,
-  rememberToastOrigin,
+  clearToastOrigin,
+  rememberToastOriginFromElement,
   type ToastOrigin,
 } from "@/components/homepage/HomepageToast";
 import { useHomepageFlow } from "@/hooks/use-homepage-flow";
@@ -32,6 +40,11 @@ const ADMIN_URL =
 function Index() {
   const [name, setName] = useState("");
   const toastOriginRef = useRef<ToastOrigin | null>(null);
+  const eventTitleRef = useRef<HTMLElement | null>(null);
+  const racketWrapRef = useRef<HTMLDivElement | null>(null);
+  const racketFaceAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const signupButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [particleMatchTop, setParticleMatchTop] = useState(46);
   const flow = useHomepageFlow();
   const racketSrc = `${import.meta.env.BASE_URL}${RACKET_FILE}`;
   const active = flow.phase === "active";
@@ -40,6 +53,29 @@ function Index() {
   const materialized = ["materializing", "meetup-preview", "rotating-to-active", "active"].includes(
     flow.phase,
   );
+
+  useLayoutEffect(() => {
+    const alignMaterializedRacket = () => {
+      const hero = document.getElementById("sd-hero");
+      const wrap = racketWrapRef.current;
+      if (!hero || !wrap) return;
+
+      const heroTop = hero.getBoundingClientRect().top;
+      const particleRect = document
+        .querySelector<HTMLCanvasElement>(".sd-particles")
+        ?.getBoundingClientRect();
+      const canvasTop = particleRect?.top ?? 0;
+      const canvasHeight = particleRect?.height ?? window.innerHeight;
+      const targetCenterY =
+        canvasTop + canvasHeight * (window.innerWidth < 640 ? 0.35 : 0.365);
+      const nextTop = targetCenterY - heroTop - wrap.offsetHeight / 2;
+      setParticleMatchTop(nextTop);
+    };
+
+    alignMaterializedRacket();
+    window.addEventListener("resize", alignMaterializedRacket);
+    return () => window.removeEventListener("resize", alignMaterializedRacket);
+  }, []);
 
   const metrics = useMemo(() => {
     const summary = flow.roster?.summary;
@@ -52,19 +88,40 @@ function Index() {
     };
   }, [flow.roster, flow.selectedEvent]);
 
-  const submit = async () => {
+  const submit = async (originElement: HTMLElement | null = signupButtonRef.current) => {
+    rememberToastOriginFromElement(originElement, toastOriginRef, "toast");
     const ok = await flow.submitSignup(name);
     if (ok) setName("");
+  };
+
+  const openMemberPickerFrom = (
+    element: HTMLElement | null,
+    mode: "season-leave" | "season-restore" | "casual-cancel",
+  ) => {
+    rememberToastOriginFromElement(element, toastOriginRef, "toast");
+    flow.openMemberPicker(mode);
+  };
+
+  const confirmMeetupSwitch = () => {
+    if (
+      flow.pendingSwitchEventId &&
+      flow.pendingSwitchEventId !== flow.selectedEventId
+    ) {
+      rememberToastOriginFromElement(racketFaceAnchorRef.current, toastOriginRef, "event-title");
+    } else {
+      clearToastOrigin(toastOriginRef);
+    }
+    void flow.switchMeetup();
   };
 
   return (
     <main
       className={`sd-page is-${flow.phase} motion-${flow.motionMode}`}
       data-locked={flow.pendingAction ? "true" : "false"}
-      onPointerDownCapture={(event) => rememberToastOrigin(event, toastOriginRef)}
     >
       <HomepageStyles />
       <ParticleRacket phase={flow.phase} motionMode={flow.motionMode} />
+      <ParticleHandoffOverlay phase={flow.phase} motionMode={flow.motionMode} />
 
       <header className="sd-header">
         <p>BADMINTON ASSEMBLY</p>
@@ -86,8 +143,13 @@ function Index() {
       )}
 
       <section className="sd-hero" id="sd-hero">
-        <div className={`sd-racket-wrap ${materialized ? "is-materialized" : ""}`}>
+        <div
+          ref={racketWrapRef}
+          className={`sd-racket-wrap ${materialized ? "is-materialized" : ""}`}
+          style={{ "--sd-particle-match-top": `${particleMatchTop}px` } as CSSProperties}
+        >
           <RacketImage className="sd-racket-main" src={racketSrc} />
+          <span ref={racketFaceAnchorRef} className="sd-racket-face-anchor" aria-hidden="true" />
           {flow.shadowEvents.map((event, index) => (
             <button
               key={event.id}
@@ -111,17 +173,28 @@ function Index() {
 
         {preview && flow.selectedEvent && (
           <button className="sd-preview" onClick={flow.enterActive}>
-            <MeetupPreview event={flow.selectedEvent} />
+            <MeetupPreview event={flow.selectedEvent} titleRef={eventTitleRef} />
             <span
-              className="sd-more"
+              className="sd-preview-switch-rail"
+              role="button"
+              tabIndex={0}
+              aria-label="選擇其他聚會"
               onClick={(event) => {
                 event.stopPropagation();
                 flow.openMeetupPicker();
               }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                event.stopPropagation();
+                flow.openMeetupPicker();
+              }}
             >
-              ...
+              <i />
+              <i />
+              <i />
+              <b />
             </span>
-            <span className="sd-preview-line" />
           </button>
         )}
 
@@ -129,6 +202,7 @@ function Index() {
           <>
             <FloatingAnnotations
               event={flow.selectedEvent}
+              titleRef={eventTitleRef}
               onOpenMeetupPicker={() => flow.openMeetupPicker()}
             />
             <div className="sd-metrics" aria-label="報名狀態">
@@ -141,13 +215,13 @@ function Index() {
                 <h2>季打</h2>
                 <button
                   disabled={Boolean(flow.pendingAction)}
-                  onClick={() => flow.openMemberPicker("season-leave")}
+                  onClick={(event) => openMemberPickerFrom(event.currentTarget, "season-leave")}
                 >
                   請假
                 </button>
                 <button
                   disabled={Boolean(flow.pendingAction)}
-                  onClick={() => flow.openMemberPicker("season-restore")}
+                  onClick={(event) => openMemberPickerFrom(event.currentTarget, "season-restore")}
                 >
                   消假
                 </button>
@@ -158,22 +232,23 @@ function Index() {
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter") submit();
+                    if (event.key === "Enter") void submit(signupButtonRef.current);
                   }}
                   placeholder="姓名"
                   disabled={Boolean(flow.pendingAction)}
                 />
                 <button
+                  ref={signupButtonRef}
                   className="sd-submit"
                   disabled={!name.trim() || Boolean(flow.pendingAction)}
-                  onClick={submit}
+                  onClick={(event) => void submit(event.currentTarget)}
                 >
                   報名
                 </button>
                 <button
                   className="sd-cancel"
                   disabled={Boolean(flow.pendingAction)}
-                  onClick={() => flow.openMemberPicker("casual-cancel")}
+                  onClick={(event) => openMemberPickerFrom(event.currentTarget, "casual-cancel")}
                 >
                   取消
                 </button>
@@ -207,6 +282,7 @@ function Index() {
         notice={flow.notice}
         motionMode={flow.motionMode}
         originRef={toastOriginRef}
+        eventTitleRef={eventTitleRef}
         setNotice={flow.setNotice}
       />
 
@@ -216,8 +292,11 @@ function Index() {
         selectedEventId={flow.selectedEventId}
         pendingEventId={flow.pendingSwitchEventId}
         onSelect={flow.setPendingSwitchEventId}
-        onClose={flow.closeMeetupPicker}
-        onConfirm={flow.switchMeetup}
+        onClose={() => {
+          clearToastOrigin(toastOriginRef);
+          flow.closeMeetupPicker();
+        }}
+        onConfirm={confirmMeetupSwitch}
         disabled={Boolean(flow.pendingAction)}
       />
 
@@ -226,7 +305,10 @@ function Index() {
         candidates={flow.memberCandidates}
         selectedMemberId={flow.selectedMemberId}
         onSelect={flow.setSelectedMemberId}
-        onClose={flow.closeMemberPicker}
+        onClose={() => {
+          clearToastOrigin(toastOriginRef);
+          flow.closeMemberPicker();
+        }}
         onConfirm={flow.confirmMemberAction}
         disabled={Boolean(flow.pendingAction)}
       />
@@ -234,17 +316,67 @@ function Index() {
   );
 }
 
+function ParticleHandoffOverlay({
+  phase,
+  motionMode,
+}: {
+  phase: ReturnType<typeof useHomepageFlow>["phase"];
+  motionMode: ReturnType<typeof useHomepageFlow>["motionMode"];
+}) {
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
+
+  useLayoutEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay || phase !== "materializing" || motionMode === "reduced") return;
+    const source = document.querySelector<HTMLCanvasElement>(".sd-particles");
+    if (!source || !source.width || !source.height) return;
+    const context = overlay.getContext("2d");
+    if (!context) return;
+
+    overlay.width = source.width;
+    overlay.height = source.height;
+    context.clearRect(0, 0, overlay.width, overlay.height);
+    context.drawImage(source, 0, 0);
+    overlay.classList.remove("is-fading");
+    overlay.classList.add("is-visible");
+
+    let frame = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => overlay.classList.add("is-fading"));
+    });
+    const timer = window.setTimeout(() => {
+      overlay.classList.remove("is-visible", "is-fading");
+      context.clearRect(0, 0, overlay.width, overlay.height);
+    }, 930);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [motionMode, phase]);
+
+  return <canvas ref={overlayRef} className="sd-particle-handoff" aria-hidden="true" />;
+}
+
 function RacketImage({ src, className = "" }: { src: string; className?: string }) {
   return <img className={className} src={src} alt="" aria-hidden="true" draggable={false} />;
 }
 
-function MeetupPreview({ event }: { event: AlphaEvent }) {
+function MeetupPreview({
+  event,
+  titleRef,
+}: {
+  event: AlphaEvent;
+  titleRef: RefObject<HTMLElement | null>;
+}) {
   return (
     <>
-      <strong>{event.name}</strong>
-      <span>
-        {shortDate(event.eventDate)} {weekday(event.eventDate)} |{" "}
-        {event.hours ? `${event.hours} 小時` : "時間待公告"}
+      <span className="sd-preview-topline">
+        <strong ref={titleRef}>{event.name}</strong>
+        <em>{meetupStatus(event)}</em>
+      </span>
+      {event.eventNote ? <span className="sd-preview-note">{event.eventNote}</span> : null}
+      <span className="sd-preview-meta">
+        臨打 ${Number(event.tempFee || 0)}｜上限 {Number(event.maxPeople || 0)}
       </span>
     </>
   );
@@ -252,9 +384,11 @@ function MeetupPreview({ event }: { event: AlphaEvent }) {
 
 function FloatingAnnotations({
   event,
+  titleRef,
   onOpenMeetupPicker,
 }: {
   event: AlphaEvent | null;
+  titleRef: RefObject<HTMLElement | null>;
   onOpenMeetupPicker: () => void;
 }) {
   if (!event) return null;
@@ -264,6 +398,7 @@ function FloatingAnnotations({
     <div className="sd-annotations" aria-label="聚會資訊">
       <div className="sd-annotation a-name">
         <button
+          ref={titleRef as RefObject<HTMLButtonElement | null>}
           className="sd-event-name sd-event-switch"
           type="button"
           onClick={onOpenMeetupPicker}
@@ -278,7 +413,7 @@ function FloatingAnnotations({
         label="時間"
         value={event.hours ? `${event.hours} 小時` : "待公告"}
       />
-      <Annotation className="a-fee" label="費用" value={`NT$${Number(event.tempFee || 0)}`} />
+      <Annotation className="a-fee" label="費用" value={`$${Number(event.tempFee || 0)}`} />
       <Annotation className="a-ball" label="用球" value={event.ballType || "依現場公告"} />
       <Annotation
         className="a-cap"
@@ -326,14 +461,10 @@ function Metric({
   );
 }
 
-function shortDate(value: string) {
-  const [, month = "", day = ""] = value.split("-");
-  return `${Number(month)}/${Number(day)}`;
-}
-
-function weekday(value: string) {
-  const date = new Date(`${value}T00:00:00+08:00`);
-  return ["週日", "週一", "週二", "週三", "週四", "週五", "週六"][date.getDay()];
+function meetupStatus(event: AlphaEvent) {
+  if (Number(event.waitingCount || 0) > 0) return `候補 ${Number(event.waitingCount || 0)}`;
+  if (Number(event.remainCount || 0) <= 0) return "額滿 可報候補";
+  return `尚缺 ${Number(event.remainCount || 0)}`;
 }
 
 function HomepageStyles() {
@@ -434,16 +565,35 @@ function HomepageStyles() {
         width: 100%;
         height: 100%;
         pointer-events: none;
-        transition: opacity .7s ease, filter .7s ease;
+        transition: opacity .9s ease, filter .9s ease;
       }
 
-      .is-materializing .sd-particles,
+      /* Keep the completed particle racket visible during the materialization overlap. */
+      .is-materializing .sd-particles {
+        opacity: 1;
+        filter: none;
+      }
+
       .is-meetup-preview .sd-particles,
       .is-rotating-to-active .sd-particles,
       .is-active .sd-particles {
         opacity: 0;
         filter: blur(8px);
       }
+
+      .sd-particle-handoff {
+        position: fixed;
+        z-index: 3;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .9s ease;
+      }
+
+      .sd-particle-handoff.is-visible { opacity: 1; }
+      .sd-particle-handoff.is-visible.is-fading { opacity: 0; }
 
       .sd-hero {
         width: min(100%, 560px);
@@ -462,14 +612,14 @@ function HomepageStyles() {
         position: absolute;
         z-index: 4;
         left: 50%;
-        top: 40px;
+        top: var(--sd-particle-match-top, 46px);
         width: clamp(205px, 54vw, 232px);
         aspect-ratio: 971 / 1619;
         opacity: 0;
         transform: translate3d(-50%, 0, 0) rotate(85.5deg) scale(.90);
         transform-origin: 50% 52%;
         transition:
-          opacity 1.05s ease,
+          opacity 1.2s ease,
           transform 1.35s cubic-bezier(.2,.9,.2,1);
         will-change: transform, opacity;
       }
@@ -481,7 +631,19 @@ function HomepageStyles() {
 
       .is-rotating-to-active .sd-racket-wrap,
       .is-active .sd-racket-wrap {
-        transform: translate3d(-51.5%, 74px, 0) rotate(18deg) scale(1.36);
+        top: 40px;
+        transform: translate3d(-43%, 74px, 0) rotate(18deg) scale(1.50);
+      }
+
+      .sd-racket-face-anchor {
+        position: absolute;
+        z-index: 1;
+        left: 50%;
+        top: 26%;
+        width: 2px;
+        height: 2px;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
       }
 
       .sd-racket-main,
@@ -512,7 +674,7 @@ function HomepageStyles() {
         --shadow-brightness: .70;
         --shadow-sepia: .34;
         --shadow-drift-x: 2px;
-        --shadow-drift-y: -3px;
+        --shadow-drift-y: -7px;
         --shadow-sway: -.25deg;
         --shadow-duration: 5.9s;
         position: absolute;
@@ -543,21 +705,21 @@ function HomepageStyles() {
         --shadow-brightness: .70;
         --shadow-sepia: .34;
         --shadow-drift-x: 2px;
-        --shadow-drift-y: -3px;
+        --shadow-drift-y: -7px;
         --shadow-sway: -.25deg;
         --shadow-duration: 5.9s;
       }
 
       .sd-shadow-2 {
-        --shadow-x: -28px;
-        --shadow-y: 20px;
+        --shadow-x: 24px;
+        --shadow-y: 16px;
         --shadow-angle: -2.7deg;
         --shadow-scale: 1.016;
         --shadow-blur: 3.1px;
         --shadow-brightness: .56;
         --shadow-sepia: .27;
         --shadow-drift-x: 4px;
-        --shadow-drift-y: -2px;
+        --shadow-drift-y: 10px;
         --shadow-sway: -.55deg;
         --shadow-duration: 6.8s;
       }
@@ -571,7 +733,7 @@ function HomepageStyles() {
         --shadow-brightness: .47;
         --shadow-sepia: .18;
         --shadow-drift-x: -2px;
-        --shadow-drift-y: -5px;
+        --shadow-drift-y: -11px;
         --shadow-sway: .70deg;
         --shadow-duration: 7.7s;
       }
@@ -585,7 +747,7 @@ function HomepageStyles() {
         --shadow-brightness: .38;
         --shadow-sepia: .12;
         --shadow-drift-x: 5px;
-        --shadow-drift-y: -1px;
+        --shadow-drift-y: 8px;
         --shadow-sway: -.82deg;
         --shadow-duration: 8.9s;
       }
@@ -612,48 +774,108 @@ function HomepageStyles() {
         right: 24px;
         top: 326px;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 38px;
-        gap: 8px;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 7px;
         align-items: center;
         border: 1px solid rgba(216,185,94,.26);
         border-radius: 22px;
         background: rgba(5,8,11,.46);
         color: #fff;
-        padding: 14px 16px;
+        padding: 15px 16px 14px;
         text-align: left;
         backdrop-filter: blur(12px);
+        overflow: hidden;
+      }
+
+      .sd-preview-topline {
+        display: flex !important;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 !important;
       }
 
       .sd-preview strong {
         display: block;
+        min-width: 0;
         color: var(--gold);
-        font-size: 18px;
-        letter-spacing: .08em;
+        font-size: 20px;
+        line-height: 1.25;
+        letter-spacing: .06em;
       }
 
-      .sd-preview span {
-        display: block;
-        margin-top: 4px;
-        color: rgba(255,255,255,.68);
+      .sd-preview-topline em {
+        flex: 0 0 auto;
+        margin-top: -1px;
+        border: 1px solid rgba(216,185,94,.30);
+        border-radius: 999px;
+        background: rgba(216,185,94,.08);
+        color: rgba(240,189,92,.94);
+        padding: 5px 9px;
         font-size: 12px;
+        line-height: 1.15;
+        font-style: normal;
+        font-weight: 700;
+        letter-spacing: .02em;
       }
 
-      .sd-preview .sd-more {
-        display: grid;
-        place-items: center;
-        width: 34px;
-        height: 34px;
-        border-radius: 50%;
+      .sd-preview-note,
+      .sd-preview-meta {
+        display: block;
+        margin: 0 !important;
+      }
+
+      .sd-preview-note {
+        color: rgba(255,255,255,.53);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .sd-preview-meta {
+        color: rgba(255,255,255,.72);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .sd-preview-switch-rail {
+        position: relative;
+        display: grid !important;
+        grid-template-columns: 4px 4px 4px minmax(54px, 1fr);
+        align-items: center;
+        gap: 4px;
+        width: min(68%, 220px);
+        height: 18px;
+        margin: 3px 0 -2px !important;
         color: var(--green);
-        border: 1px solid rgba(157,244,22,.35);
+        cursor: pointer;
+        outline: none;
       }
 
-      .sd-preview-line {
-        grid-column: 1 / -1;
+      .sd-preview-switch-rail i {
+        display: block;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 7px rgba(157,244,22,.38);
+        opacity: .82;
+      }
+
+      .sd-preview-switch-rail i:nth-child(2) { opacity: .54; transform: translateY(2px); }
+      .sd-preview-switch-rail i:nth-child(3) { opacity: .32; transform: translateY(-1px); }
+
+      .sd-preview-switch-rail b {
+        display: block;
         height: 1px;
-        margin-top: 10px !important;
-        background: linear-gradient(90deg, transparent, rgba(157,244,22,.7), transparent);
-        animation: preview-line 2.8s linear forwards;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(157,244,22,.82), rgba(157,244,22,.20), transparent);
+        box-shadow: 0 0 8px rgba(157,244,22,.10);
+        transform-origin: left center;
+        animation: preview-rail 2.8s cubic-bezier(.2,.8,.2,1) both;
+      }
+
+      .sd-preview-switch-rail:focus-visible {
+        filter: drop-shadow(0 0 7px rgba(157,244,22,.34));
       }
 
       .sd-annotations {
@@ -668,8 +890,8 @@ function HomepageStyles() {
       .sd-annotation {
         position: absolute;
         width: min(43vw, 190px);
-        color: rgba(255,255,255,.84);
-        font-size: 11px;
+        color: rgba(255,255,255,.86);
+        font-size: 11.5px;
       }
 
       .sd-annotation::before {
@@ -689,25 +911,26 @@ function HomepageStyles() {
 
       .sd-annotation strong {
         display: block;
-        margin-top: 4px;
-        font-weight: 500;
-        line-height: 1.35;
+        margin-top: 5px;
+        font-size: 15px;
+        font-weight: 550;
+        line-height: 1.42;
       }
 
       .a-name {
         left: 18px;
-        top: 38px;
-        width: min(54vw, 224px);
+        top: 18px;
+        width: min(58vw, 238px);
       }
 
       .a-name::before {
-        top: 27px;
-        width: 88px;
+        top: 31px;
+        width: 92px;
       }
 
       .a-name .sd-event-name {
         color: var(--gold);
-        font: 600 18px/1.15 "Chakra Petch", "Noto Sans TC", sans-serif;
+        font: 600 21px/1.28 "Chakra Petch", "Noto Sans TC", sans-serif;
         letter-spacing: .08em;
       }
 
@@ -725,34 +948,34 @@ function HomepageStyles() {
 
       .a-name .sd-event-note {
         display: block;
-        margin-top: 7px;
+        margin-top: 8px;
         color: rgba(255,255,255,.62);
-        font-size: 11px;
-        line-height: 1.35;
+        font-size: 12px;
+        line-height: 1.48;
         letter-spacing: .03em;
       }
 
       .a-time {
         right: 14px;
-        top: 42px;
+        top: 28px;
         text-align: right;
       }
 
       .a-fee {
-        left: 22px;
-        top: 226px;
+        left: 18px;
+        top: 176px;
       }
 
       /* 用球 / 上限放到拍面左側的空白區，不再靠右。 */
       .a-ball {
         left: 22px;
-        top: 114px;
+        top: 78px;
         text-align: left;
       }
 
       .a-cap {
-        left: 22px;
-        top: 170px;
+        left: 30px;
+        top: 128px;
         text-align: left;
       }
 
@@ -760,6 +983,8 @@ function HomepageStyles() {
       .a-ball::before,
       .a-cap::before,
       .a-fee::before { left: 0; }
+
+      .a-fee strong { font-size: 17px; }
 
       .sd-metrics {
         position: absolute;
@@ -1296,7 +1521,7 @@ function HomepageStyles() {
         }
       }
 
-      @keyframes preview-line {
+      @keyframes preview-rail {
         from { transform: scaleX(0); transform-origin: left; }
         to { transform: scaleX(1); transform-origin: left; }
       }
@@ -1317,13 +1542,11 @@ function HomepageStyles() {
 
       @media (min-width: 431px) {
         .sd-hero { min-height: 570px; }
-        .sd-racket-wrap {
-          top: 34px;
-          width: 232px;
-        }
+        .sd-racket-wrap { width: 232px; }
         .is-rotating-to-active .sd-racket-wrap,
         .is-active .sd-racket-wrap {
-          transform: translate3d(-51.5%, 68px, 0) rotate(18deg) scale(1.42);
+          top: 34px;
+          transform: translate3d(-43%, 68px, 0) rotate(18deg) scale(1.57);
         }
         .sd-preview { top: 346px; }
         .sd-metrics { top: 256px; }
@@ -1339,22 +1562,20 @@ function HomepageStyles() {
       @media (max-width: 374px) {
         .sd-header p { font-size: 10px; letter-spacing: .38em; }
         .sd-hero { min-height: 510px; }
-        .sd-racket-wrap {
-          width: 205px;
-          top: 36px;
-        }
+        .sd-racket-wrap { width: 205px; }
         .is-rotating-to-active .sd-racket-wrap,
         .is-active .sd-racket-wrap {
-          transform: translate3d(-51%, 68px, 0) rotate(18deg) scale(1.30);
+          top: 36px;
+          transform: translate3d(-43%, 68px, 0) rotate(18deg) scale(1.43);
         }
         .sd-preview { top: 312px; left: 18px; right: 18px; }
         .sd-annotation { font-size: 10px; width: 42vw; }
-        .a-name { left: 14px; top: 34px; width: 58vw; }
-        .a-name .sd-event-name { font-size: 17px; }
-        .a-time { top: 40px; right: 12px; }
-        .a-ball { left: 16px; top: 104px; }
-        .a-cap { left: 16px; top: 156px; }
-        .a-fee { left: 16px; top: 208px; }
+        .a-name { left: 14px; top: 16px; width: 61vw; }
+        .a-name .sd-event-name { font-size: 19px; }
+        .a-time { top: 26px; right: 12px; }
+        .a-ball { left: 16px; top: 68px; }
+        .a-cap { left: 24px; top: 114px; }
+        .a-fee { left: 14px; top: 160px; }
         .sd-metrics { top: 220px; left: 12px; right: 12px; }
         .sd-metric strong { font-size: 34px; }
         .sd-actions { top: 308px; left: 14px; right: 14px; gap: 28px; }
@@ -1363,10 +1584,11 @@ function HomepageStyles() {
         .sd-action-zone input { font-size: 14px; }
       }
 
+      .motion-reduced .sd-particle-handoff,
       .motion-reduced .sd-racket-wrap,
       .motion-reduced .sd-racket-main,
       .motion-reduced .sd-racket-shadow,
-      .motion-reduced .sd-preview-line,
+      .motion-reduced .sd-preview-switch-rail b,
       .motion-reduced .sd-annotations,
       .motion-reduced .sd-pending span {
         animation: none !important;

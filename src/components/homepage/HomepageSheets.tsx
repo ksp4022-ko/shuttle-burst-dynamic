@@ -35,8 +35,8 @@ function confirmLabel(mode: MemberPickerMode | null) {
 }
 
 function eventStatus(event: AlphaEvent) {
-  if (event.remainCount <= 0 && event.waitingCount > 0) return `後補 ${event.waitingCount}`;
-  if (event.remainCount <= 0) return "額滿";
+  if (event.waitingCount > 0) return `候補 ${event.waitingCount}`;
+  if (event.remainCount <= 0) return "額滿 可報候補";
   return `尚缺 ${event.remainCount}`;
 }
 
@@ -80,7 +80,7 @@ export function MeetupSheet({
                 >
                   <span className="sd-event-topline">
                     <strong>{event.name}</strong>
-                    <em>{active ? "目前" : eventStatus(event)}</em>
+                    <em>{eventStatus(event)}</em>
                   </span>
                   <span>
                     {event.eventDate} | {weekday(event.eventDate)} |{" "}

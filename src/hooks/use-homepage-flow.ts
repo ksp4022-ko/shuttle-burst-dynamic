@@ -30,8 +30,10 @@ export type PendingAction = {
   label: string;
 };
 
-const MIN_PARTICLE_MS = 3200;
-const MATERIALIZE_MS = 1400;
+// ParticleRacket assembles for ~4.6s. Hold the completed shape for ~0.7s
+// before the real racket begins its 1.2s materialization crossfade.
+const MIN_PARTICLE_MS = 5300;
+const MATERIALIZE_MS = 1200;
 const PREVIEW_MS = 2800;
 const ROTATE_MS = 1300;
 const POLL_MS = 25000;
@@ -150,7 +152,7 @@ export function useHomepageFlow() {
               }
               setPhase("meetup-preview");
             }, MATERIALIZE_MS);
-          }, 160);
+          }, 16);
         }, remaining);
       })
       .catch((reason: unknown) => {

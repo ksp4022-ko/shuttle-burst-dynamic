@@ -4,20 +4,23 @@ import {
   useState,
   type Dispatch,
   type MutableRefObject,
-  type PointerEvent as ReactPointerEvent,
+  type RefObject,
   type SetStateAction,
 } from "react";
 import type { MotionMode } from "@/hooks/use-homepage-flow";
 
-const TOAST_LIFETIME_MS = 2350;
-const TOAST_ORIGIN_FRESH_MS = 4000;
-const FLIGHT_DURATION_MS = 760;
-const FLIGHT_TOTAL_MS = 940;
+const TOAST_LIFETIME_MS = 4070;
+const TOAST_ORIGIN_FRESH_MS = 600000;
+const FLIGHT_DURATION_MS = 1250;
+const FLIGHT_TOTAL_MS = 1450;
+
+export type ToastFlightTarget = "toast" | "event-title";
 
 export type ToastOrigin = {
   x: number;
   y: number;
   at: number;
+  target: ToastFlightTarget;
 };
 
 type ScreenPoint = { x: number; y: number };
@@ -25,6 +28,7 @@ type ToastFlight = {
   id: number;
   start: ScreenPoint;
   end: ScreenPoint;
+  target: ToastFlightTarget;
 };
 
 type NoticeTone = "success" | "error";
@@ -33,6 +37,7 @@ type HomepageToastProps = {
   notice: string;
   motionMode: MotionMode;
   originRef: MutableRefObject<ToastOrigin | null>;
+  eventTitleRef: RefObject<HTMLElement | null>;
   setNotice: Dispatch<SetStateAction<string>>;
 };
 
@@ -48,25 +53,32 @@ function noticeTone(message: string): NoticeTone {
   return SUCCESS_NOTICE_MARKERS.some((marker) => message.includes(marker)) ? "success" : "error";
 }
 
-export function rememberToastOrigin(
-  event: ReactPointerEvent<HTMLElement>,
+export function rememberToastOriginFromElement(
+  element: HTMLElement | null,
   originRef: MutableRefObject<ToastOrigin | null>,
+  target: ToastFlightTarget = "toast",
 ) {
-  const target = event.target;
-  if (!(target instanceof Element)) return;
-  const button = target.closest("button");
-  if (!(button instanceof HTMLButtonElement) || button.disabled) return;
-  if (button.classList.contains("sd-notice")) return;
-
-  const rect = button.getBoundingClientRect();
+  if (!element) return;
+  const rect = element.getBoundingClientRect();
   originRef.current = {
     x: rect.left + rect.width / 2,
     y: rect.top + rect.height / 2,
     at: window.performance.now(),
+    target,
   };
 }
 
-export function HomepageToast({ notice, motionMode, originRef, setNotice }: HomepageToastProps) {
+export function clearToastOrigin(originRef: MutableRefObject<ToastOrigin | null>) {
+  originRef.current = null;
+}
+
+export function HomepageToast({
+  notice,
+  motionMode,
+  originRef,
+  eventTitleRef,
+  setNotice,
+}: HomepageToastProps) {
   const toastRef = useRef<HTMLButtonElement | null>(null);
   const [flight, setFlight] = useState<ToastFlight | null>(null);
 
@@ -79,24 +91,29 @@ export function HomepageToast({ notice, motionMode, originRef, setNotice }: Home
     const dismissTimer = window.setTimeout(() => setNotice(""), TOAST_LIFETIME_MS);
     const frame = window.requestAnimationFrame(() => {
       const origin = originRef.current;
-      const toastRect = toastRef.current?.getBoundingClientRect();
       const freshOrigin =
         origin && window.performance.now() - origin.at <= TOAST_ORIGIN_FRESH_MS ? origin : null;
 
-      if (
-        freshOrigin &&
-        toastRect &&
-        noticeTone(notice) === "success" &&
-        motionMode !== "reduced"
-      ) {
-        setFlight({
-          id: Date.now(),
-          start: { x: freshOrigin.x, y: freshOrigin.y },
-          end: {
-            x: toastRect.left + 28,
-            y: toastRect.top + toastRect.height / 2,
-          },
-        });
+      if (freshOrigin && noticeTone(notice) === "success" && motionMode !== "reduced") {
+        const toastRect = toastRef.current?.getBoundingClientRect();
+        const titleRect = eventTitleRef.current?.getBoundingClientRect();
+        const end =
+          freshOrigin.target === "event-title"
+            ? titleRect
+              ? { x: titleRect.left + titleRect.width / 2, y: titleRect.top + titleRect.height / 2 }
+              : null
+            : toastRect
+              ? { x: toastRect.left + 28, y: toastRect.top + toastRect.height / 2 }
+              : null;
+
+        if (end) {
+          setFlight({
+            id: Date.now(),
+            start: { x: freshOrigin.x, y: freshOrigin.y },
+            end,
+            target: freshOrigin.target,
+          });
+        }
       }
 
       originRef.current = null;
@@ -106,7 +123,7 @@ export function HomepageToast({ notice, motionMode, originRef, setNotice }: Home
       window.clearTimeout(dismissTimer);
       window.cancelAnimationFrame(frame);
     };
-  }, [motionMode, notice, originRef, setNotice]);
+  }, [eventTitleRef, motionMode, notice, originRef, setNotice]);
 
   if (!notice) return null;
 
@@ -115,7 +132,23 @@ export function HomepageToast({ notice, motionMode, originRef, setNotice }: Home
   return (
     <>
       <ToastStyles />
-      {flight && <ToastFlightEffect key={flight.id} flight={flight} />}
+      {flight && (
+        <ToastFlightEffect
+          key={flight.id}
+          flight={flight}
+          onArrive={() => {
+            if (flight.target !== "event-title") return;
+            eventTitleRef.current?.animate(
+              [
+                { filter: "brightness(1)", textShadow: "0 0 0 rgba(157,244,22,0)" },
+                { filter: "brightness(1.35)", textShadow: "0 0 13px rgba(157,244,22,.58)" },
+                { filter: "brightness(1)", textShadow: "0 0 0 rgba(157,244,22,0)" },
+              ],
+              { duration: 450, easing: "ease-out" },
+            );
+          }}
+        />
+      )}
       <button
         key={notice}
         ref={toastRef}
@@ -134,10 +167,22 @@ export function HomepageToast({ notice, motionMode, originRef, setNotice }: Home
   );
 }
 
-function ToastFlightEffect({ flight }: { flight: ToastFlight }) {
+function ToastFlightEffect({
+  flight,
+  onArrive,
+}: {
+  flight: ToastFlight;
+  onArrive: () => void;
+}) {
   const shuttleRef = useRef<HTMLSpanElement | null>(null);
   const particleRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const arrivedRef = useRef(false);
+  const onArriveRef = useRef(onArrive);
   const [finished, setFinished] = useState(false);
+
+  useEffect(() => {
+    onArriveRef.current = onArrive;
+  }, [onArrive]);
 
   useEffect(() => {
     const startedAt = window.performance.now();
@@ -165,7 +210,7 @@ function ToastFlightEffect({ flight }: { flight: ToastFlight }) {
       y: 2 * (1 - t) * (control.y - start.y) + 2 * t * (end.y - control.y),
     });
 
-    const ease = (value: number) => 1 - Math.pow(1 - value, 2.35);
+    const ease = (value: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, value)), 3);
     let animationFrame = 0;
 
     const animate = (now: number) => {
@@ -199,6 +244,11 @@ function ToastFlightEffect({ flight }: { flight: ToastFlight }) {
         particle.style.opacity = String(Math.max(0, 0.72 * endFade * depthFade));
         particle.style.transform = `translate3d(${particlePoint.x - 2}px, ${particlePoint.y - 2}px, 0) scale(${1 - index * 0.045})`;
       });
+
+      if (elapsed >= FLIGHT_DURATION_MS && !arrivedRef.current) {
+        arrivedRef.current = true;
+        onArriveRef.current();
+      }
 
       if (elapsed < FLIGHT_TOTAL_MS) {
         animationFrame = window.requestAnimationFrame(animate);
@@ -337,7 +387,7 @@ function ToastStyles() {
         -webkit-backdrop-filter: blur(18px);
         transform-origin: center bottom;
         touch-action: manipulation;
-        animation: toast-life 2.35s cubic-bezier(.22,.8,.24,1) forwards;
+        animation: toast-life 4.07s cubic-bezier(.22,.8,.24,1) forwards;
       }
 
       .sd-notice::after {
@@ -421,11 +471,11 @@ function ToastStyles() {
           opacity: 0;
           transform: translate(-50%, 10px) scale(.96);
         }
-        8% {
+        5.5% {
           opacity: 1;
           transform: translate(-50%, 0) scale(1.018);
         }
-        15%, 82% {
+        11%, 91.4% {
           opacity: 1;
           transform: translate(-50%, 0) scale(1);
         }
