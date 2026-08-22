@@ -48,8 +48,17 @@ type HandoffTiming = {
   particleHold: number;
   particleFade: number;
   fadeBlur: number;
+  revealDelay: number;
+  revealDuration: number;
+  revealFeather: number;
+  tailBias: number;
+  scanEnabled: boolean;
+  scanWidth: number;
+  scanIntensity: number;
+  scanSoftness: number;
 };
 
+type HandoffNumericKey = Exclude<keyof HandoffTiming, "scanEnabled">;
 type HandoffReplayPhase = "idle" | "prehold" | "materializing" | "fading";
 
 const DEFAULT_HANDOFF_TIMING: HandoffTiming = {
@@ -58,6 +67,14 @@ const DEFAULT_HANDOFF_TIMING: HandoffTiming = {
   particleHold: 1000,
   particleFade: 1100,
   fadeBlur: 0,
+  revealDelay: 150,
+  revealDuration: 1050,
+  revealFeather: 18,
+  tailBias: 65,
+  scanEnabled: true,
+  scanWidth: 10,
+  scanIntensity: 48,
+  scanSoftness: 5,
 };
 
 function Index() {
@@ -75,9 +92,13 @@ function Index() {
   const [previewActivityKey, setPreviewActivityKey] = useState(0);
   const [rosterVisible, setRosterVisible] = useState(false);
   const replayTimersRef = useRef<number[]>([]);
+  const materializeWindowMs = Math.max(
+    handoffTiming.realFade,
+    handoffTiming.revealDelay + handoffTiming.revealDuration,
+  );
   const flow = useHomepageFlow({
     preHoldMs: handoffTiming.preHold,
-    realFadeMs: handoffTiming.realFade,
+    realFadeMs: materializeWindowMs,
   });
   const racketSrc = `${import.meta.env.BASE_URL}${RACKET_FILE}`;
   const active = flow.phase === "active";
@@ -131,6 +152,42 @@ function Index() {
           DEFAULT_HANDOFF_TIMING.particleFade,
         ),
         fadeBlur: clampTiming(parsed.fadeBlur, 0, 12, DEFAULT_HANDOFF_TIMING.fadeBlur),
+        revealDelay: clampTiming(
+          parsed.revealDelay,
+          0,
+          1200,
+          DEFAULT_HANDOFF_TIMING.revealDelay,
+        ),
+        revealDuration: clampTiming(
+          parsed.revealDuration,
+          300,
+          2500,
+          DEFAULT_HANDOFF_TIMING.revealDuration,
+        ),
+        revealFeather: clampTiming(
+          parsed.revealFeather,
+          0,
+          48,
+          DEFAULT_HANDOFF_TIMING.revealFeather,
+        ),
+        tailBias: clampTiming(parsed.tailBias, 0, 100, DEFAULT_HANDOFF_TIMING.tailBias),
+        scanEnabled:
+          typeof parsed.scanEnabled === "boolean"
+            ? parsed.scanEnabled
+            : DEFAULT_HANDOFF_TIMING.scanEnabled,
+        scanWidth: clampTiming(parsed.scanWidth, 2, 30, DEFAULT_HANDOFF_TIMING.scanWidth),
+        scanIntensity: clampTiming(
+          parsed.scanIntensity,
+          0,
+          100,
+          DEFAULT_HANDOFF_TIMING.scanIntensity,
+        ),
+        scanSoftness: clampTiming(
+          parsed.scanSoftness,
+          0,
+          20,
+          DEFAULT_HANDOFF_TIMING.scanSoftness,
+        ),
       });
     } catch {
       setHandoffTiming(DEFAULT_HANDOFF_TIMING);
@@ -221,12 +278,16 @@ function Index() {
     );
     const fadeTimer = window.setTimeout(
       () => setHandoffReplayPhase("fading"),
-      handoffTiming.preHold + handoffTiming.particleHold,
+      handoffTiming.preHold + handoffTiming.revealDelay + handoffTiming.particleHold,
     );
     const finishTimer = window.setTimeout(
       () => setHandoffReplayPhase("idle"),
       handoffTiming.preHold +
-        Math.max(handoffTiming.realFade, handoffTiming.particleHold + handoffTiming.particleFade) +
+        Math.max(
+          handoffTiming.realFade,
+          handoffTiming.revealDelay + handoffTiming.revealDuration,
+          handoffTiming.revealDelay + handoffTiming.particleHold + handoffTiming.particleFade,
+        ) +
         120,
     );
     replayTimersRef.current = [materializeTimer, fadeTimer, finishTimer];
@@ -295,6 +356,14 @@ function Index() {
           "--sd-real-fade": `${handoffTiming.realFade}ms`,
           "--sd-particle-fade": `${handoffTiming.particleFade}ms`,
           "--sd-fade-blur": `${handoffTiming.fadeBlur}px`,
+          "--sd-reveal-delay": `${handoffTiming.revealDelay}ms`,
+          "--sd-reveal-duration": `${handoffTiming.revealDuration}ms`,
+          "--sd-reveal-feather": `${handoffTiming.revealFeather}px`,
+          "--sd-tail-bias": `${handoffTiming.tailBias}%`,
+          "--sd-scan-width": `${handoffTiming.scanWidth}px`,
+          "--sd-scan-intensity": `${handoffTiming.scanIntensity / 100}`,
+          "--sd-scan-softness": `${handoffTiming.scanSoftness}px`,
+          "--sd-scan-enabled": `${handoffTiming.scanEnabled ? 1 : 0}`,
         } as CSSProperties
       }
     >
@@ -322,6 +391,9 @@ function Index() {
           onChange={(key, value) =>
             setHandoffTiming((current) => ({ ...current, [key]: value }))
           }
+          onToggleScan={() =>
+            setHandoffTiming((current) => ({ ...current, scanEnabled: !current.scanEnabled }))
+          }
           onReplay={replayHandoff}
           onReset={() => setHandoffTiming(DEFAULT_HANDOFF_TIMING)}
         />
@@ -348,7 +420,12 @@ function Index() {
           className={`sd-racket-wrap ${materialized ? "is-materialized" : ""}`}
           style={{ "--sd-particle-match-top": `${particleMatchTop}px` } as CSSProperties}
         >
-          <RacketImage className="sd-racket-main" src={racketSrc} />
+          <span className="sd-racket-reveal" aria-hidden="true">
+            <span className="sd-racket-reveal-clip">
+              <RacketImage className="sd-racket-main" src={racketSrc} />
+            </span>
+            <span className="sd-racket-scan-line" />
+          </span>
           <span ref={racketFaceAnchorRef} className="sd-racket-face-anchor" aria-hidden="true" />
           {flow.shadowEvents.map((event, index) => (
             <button
@@ -589,12 +666,12 @@ function ParticleHandoffOverlay({
 
     const fadeTimer = window.setTimeout(() => {
       overlay.classList.add("is-fading");
-    }, timing.particleHold);
+    }, timing.revealDelay + timing.particleHold);
 
     const finishTimer = window.setTimeout(() => {
       overlay.classList.remove("is-visible", "is-fading", "is-drifting");
       source.classList.remove("is-handoff-source-hidden");
-    }, timing.particleHold + timing.particleFade + 80);
+    }, timing.revealDelay + timing.particleHold + timing.particleFade + 80);
 
     initialTimersRef.current = [fadeTimer, finishTimer];
   }, [
@@ -605,6 +682,7 @@ function ParticleHandoffOverlay({
     phase,
     timing.particleFade,
     timing.particleHold,
+    timing.revealDelay,
   ]);
 
   useLayoutEffect(() => {
@@ -642,6 +720,7 @@ function HandoffTimingLab({
   onToggleExpanded,
   onToggleFreeze,
   onChange,
+  onToggleScan,
   onReplay,
   onReset,
 }: {
@@ -650,7 +729,8 @@ function HandoffTimingLab({
   expanded: boolean;
   onToggleExpanded: () => void;
   onToggleFreeze: () => void;
-  onChange: (key: keyof HandoffTiming, value: number) => void;
+  onChange: (key: HandoffNumericKey, value: number) => void;
+  onToggleScan: () => void;
   onReplay: () => void;
   onReset: () => void;
 }) {
@@ -718,6 +798,87 @@ function HandoffTimingLab({
             unit="px"
             onChange={(value) => onChange("fadeBlur", value)}
           />
+          <TimingControl
+            label="REVEAL DELAY"
+            description="實拍開始後，延遲掃描顯影"
+            value={timing.revealDelay}
+            min={0}
+            max={1200}
+            step={50}
+            unit="ms"
+            onChange={(value) => onChange("revealDelay", value)}
+          />
+          <TimingControl
+            label="REVEAL DURATION"
+            description="拍柄 → 拍頭完整顯影時間"
+            value={timing.revealDuration}
+            min={300}
+            max={2500}
+            step={100}
+            unit="ms"
+            onChange={(value) => onChange("revealDuration", value)}
+          />
+          <TimingControl
+            label="REVEAL FEATHER"
+            description="顯影前緣柔和寬度"
+            value={timing.revealFeather}
+            min={0}
+            max={48}
+            step={2}
+            unit="px"
+            onChange={(value) => onChange("revealFeather", value)}
+          />
+          <TimingControl
+            label="TAIL BIAS"
+            description="越高＝拍頭粒子相對留更久"
+            value={timing.tailBias}
+            min={0}
+            max={100}
+            step={5}
+            unit="%"
+            onChange={(value) => onChange("tailBias", value)}
+          />
+
+          <div className="sd-timing-scan-head">
+            <span>SCAN LIGHT</span>
+            <button
+              type="button"
+              className={timing.scanEnabled ? "is-on" : ""}
+              onClick={onToggleScan}
+            >
+              {timing.scanEnabled ? "ON" : "OFF"}
+            </button>
+          </div>
+          <TimingControl
+            label="SCAN WIDTH"
+            description="顯影前緣光帶厚度"
+            value={timing.scanWidth}
+            min={2}
+            max={30}
+            step={2}
+            unit="px"
+            onChange={(value) => onChange("scanWidth", value)}
+          />
+          <TimingControl
+            label="SCAN INTENSITY"
+            description="光帶亮度"
+            value={timing.scanIntensity}
+            min={0}
+            max={100}
+            step={5}
+            unit="%"
+            onChange={(value) => onChange("scanIntensity", value)}
+          />
+          <TimingControl
+            label="SCAN SOFTNESS"
+            description="光帶邊緣柔化程度"
+            value={timing.scanSoftness}
+            min={0}
+            max={20}
+            step={1}
+            unit="px"
+            onChange={(value) => onChange("scanSoftness", value)}
+          />
 
           <div className="sd-timing-summary">
             <span>OVERLAP</span>
@@ -758,7 +919,7 @@ function TimingControl({
   min: number;
   max: number;
   step: number;
-  unit: "ms" | "px";
+  unit: "ms" | "px" | "%";
   onChange: (value: number) => void;
 }) {
   const change = (next: number) => onChange(clampTiming(next, min, max, value));
@@ -1028,7 +1189,7 @@ function HomepageStyles() {
       }
 
       .sd-timing-lab-body {
-        max-height: min(58svh, 440px);
+        max-height: min(62svh, 520px);
         overflow-y: auto;
         overscroll-behavior: contain;
         padding: 0 9px 9px;
@@ -1107,6 +1268,36 @@ function HomepageStyles() {
         color: rgba(255,255,255,.34);
         font-size: 9px;
         pointer-events: none;
+      }
+
+      .sd-timing-scan-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 9px 2px 2px;
+      }
+
+      .sd-timing-scan-head span {
+        color: rgba(216,185,94,.72);
+        font: 700 9px/1 "Chakra Petch", monospace;
+        letter-spacing: .12em;
+      }
+
+      .sd-timing-scan-head button {
+        min-width: 44px;
+        min-height: 27px;
+        border: 1px solid rgba(216,185,94,.24);
+        border-radius: 999px;
+        background: rgba(255,255,255,.035);
+        color: rgba(255,255,255,.52);
+        font: 700 9px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-timing-scan-head button.is-on {
+        border-color: rgba(157,244,22,.42);
+        color: var(--green);
+        background: rgba(157,244,22,.055);
       }
 
       .sd-timing-summary {
@@ -1211,6 +1402,18 @@ function HomepageStyles() {
       .sd-particle-handoff.is-replay-visible.is-replay-fading {
         opacity: 0;
         filter: blur(var(--sd-fade-blur, 0px));
+        -webkit-mask-image: linear-gradient(
+          90deg,
+          rgba(0,0,0,.16) 0%,
+          rgba(0,0,0,.58) calc(100% - var(--sd-tail-bias, 65%)),
+          #000 100%
+        );
+        mask-image: linear-gradient(
+          90deg,
+          rgba(0,0,0,.16) 0%,
+          rgba(0,0,0,.58) calc(100% - var(--sd-tail-bias, 65%)),
+          #000 100%
+        );
       }
 
       .sd-particle-handoff.is-replay-visible {
@@ -1263,6 +1466,93 @@ function HomepageStyles() {
           scale(.94);
       }
 
+      .sd-racket-reveal {
+        position: absolute;
+        z-index: 2;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 0;
+        overflow: visible;
+        pointer-events: none;
+      }
+
+      .sd-racket-reveal-clip {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .is-materializing .sd-racket-reveal,
+      .is-handoff-replay-materializing .sd-racket-reveal,
+      .is-handoff-replay-fading .sd-racket-reveal {
+        animation: racket-handle-to-head var(--sd-reveal-duration, 1050ms) linear var(--sd-reveal-delay, 150ms) both;
+      }
+
+      .is-materializing .sd-racket-reveal-clip,
+      .is-handoff-replay-materializing .sd-racket-reveal-clip,
+      .is-handoff-replay-fading .sd-racket-reveal-clip {
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          #000 var(--sd-reveal-feather, 18px),
+          #000 100%
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          #000 var(--sd-reveal-feather, 18px),
+          #000 100%
+        );
+      }
+
+      .is-meetup-preview .sd-racket-reveal,
+      .is-rotating-to-active .sd-racket-reveal,
+      .is-active .sd-racket-reveal {
+        height: 100%;
+      }
+
+      .sd-racket-scan-line {
+        position: absolute;
+        z-index: 5;
+        left: 7%;
+        right: 7%;
+        top: 0;
+        height: var(--sd-scan-width, 10px);
+        transform: translateY(-50%);
+        opacity: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(216,185,94,.42) 22%,
+          rgba(247,239,199,.96) 49%,
+          rgba(157,244,22,.72) 62%,
+          transparent 100%
+        );
+        filter: blur(var(--sd-scan-softness, 5px));
+        box-shadow:
+          0 0 10px rgba(216,185,94,.26),
+          0 0 16px rgba(157,244,22,.12);
+        pointer-events: none;
+      }
+
+      .is-materializing .sd-racket-scan-line,
+      .is-handoff-replay-materializing .sd-racket-scan-line,
+      .is-handoff-replay-fading .sd-racket-scan-line {
+        animation: racket-scan-edge var(--sd-reveal-duration, 1050ms) linear var(--sd-reveal-delay, 150ms) both;
+      }
+
+      .is-meetup-preview .sd-racket-scan-line,
+      .is-rotating-to-active .sd-racket-scan-line,
+      .is-active .sd-racket-scan-line {
+        opacity: 0;
+      }
+
+      .is-handoff-replay-materializing .sd-racket-scan-line,
+      .is-handoff-replay-fading .sd-racket-scan-line {
+        animation: racket-scan-edge var(--sd-reveal-duration, 1050ms) linear var(--sd-reveal-delay, 150ms) both;
+      }
+
       .is-rotating-to-active .sd-racket-wrap,
       .is-active .sd-racket-wrap {
         top: 40px;
@@ -1289,6 +1579,11 @@ function HomepageStyles() {
         transition: none !important;
       }
 
+      .is-handoff-replay-prehold .sd-racket-reveal {
+        height: 0 !important;
+        animation: none !important;
+      }
+
       .is-handoff-replay-materializing .sd-racket-wrap,
       .is-handoff-replay-fading .sd-racket-wrap {
         opacity: 1 !important;
@@ -1310,15 +1605,25 @@ function HomepageStyles() {
       }
 
       .sd-racket-main,
-      .sd-racket-shadow img,
-      .sd-racket-wrap > img {
+      .sd-racket-shadow img {
         position: absolute;
-        inset: 0;
         width: 100%;
-        height: 100%;
         object-fit: contain;
         user-select: none;
         -webkit-user-drag: none;
+      }
+
+      .sd-racket-shadow img {
+        inset: 0;
+        height: 100%;
+      }
+
+      .sd-racket-reveal-clip .sd-racket-main {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        height: auto;
       }
 
       .sd-racket-main {
@@ -1326,6 +1631,10 @@ function HomepageStyles() {
           drop-shadow(0 22px 38px rgba(0,0,0,.54))
           drop-shadow(0 0 16px rgba(216,185,94,.12));
         animation: racket-breathe 5.6s ease-in-out infinite;
+      }
+
+      .is-materializing .sd-racket-main {
+        animation: none;
       }
 
       .sd-racket-shadow {
@@ -1442,7 +1751,7 @@ function HomepageStyles() {
 
       .sd-hero-ticket-stack-wrap {
         position: relative;
-        height: 298px;
+        height: 314px;
       }
 
       .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero {
@@ -1458,10 +1767,10 @@ function HomepageStyles() {
         z-index: 7;
         display: grid;
         grid-template-columns: minmax(0, 1fr) 132px;
-        gap: 7px 10px;
+        gap: 9px 12px;
         align-items: center;
-        margin: -4px 4px 0;
-        padding: 9px 10px 8px;
+        margin: 12px 6px 0;
+        padding: 11px 11px 10px;
         border-top: 1px solid rgba(216,185,94,.14);
         background: linear-gradient(180deg, rgba(5,8,11,.20), rgba(5,8,11,.58));
         backdrop-filter: blur(8px);
@@ -2087,14 +2396,14 @@ function HomepageStyles() {
         --ticket-drag-back: 0px;
         position: relative;
         width: 100%;
-        height: 298px;
+        height: 312px;
         touch-action: none;
         user-select: none;
         -webkit-user-select: none;
       }
 
       .sd-event-ticket-stack.has-1 { height: 168px; }
-      .sd-event-ticket-stack.has-2 { height: 226px; }
+      .sd-event-ticket-stack.has-2 { height: 230px; }
 
       .sd-event-ticket {
         --ticket-x: 0px;
@@ -2173,7 +2482,7 @@ function HomepageStyles() {
       }
 
       .sd-ticket-slot-0 {
-        --ticket-y: 112px;
+        --ticket-y: 120px;
         --ticket-drag: var(--ticket-drag-main);
         z-index: 4;
         background:
@@ -2183,7 +2492,7 @@ function HomepageStyles() {
       }
 
       .sd-ticket-slot-1 {
-        --ticket-y: 54px;
+        --ticket-y: 58px;
         --ticket-drag: var(--ticket-drag-mid);
         z-index: 3;
         --ticket-frame: rgba(216,185,94,.20);
@@ -2208,7 +2517,7 @@ function HomepageStyles() {
 
       .sd-event-ticket-stack.has-1 .sd-ticket-slot-0 { --ticket-y: 0px; }
       .sd-event-ticket-stack.has-2 .sd-ticket-slot-1 { --ticket-y: 0px; }
-      .sd-event-ticket-stack.has-2 .sd-ticket-slot-0 { --ticket-y: 58px; }
+      .sd-event-ticket-stack.has-2 .sd-ticket-slot-0 { --ticket-y: 62px; }
 
       .sd-event-ticket.is-current:not(.is-picked) {
         --ticket-frame: rgba(216,185,94,.42);
@@ -2232,46 +2541,86 @@ function HomepageStyles() {
       .sd-event-ticket:disabled { opacity: 1; }
 
       .sd-ticket-identity {
-        position: relative;
-        z-index: 3;
+        position: absolute;
+        z-index: 5;
+        left: 16px;
+        right: 14px;
+        top: 9px;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
-        gap: 8px;
+        gap: 9px;
         align-items: center;
-        min-height: 34px;
+        min-height: 38px;
+      }
+
+      .sd-ticket-slot-1 .sd-ticket-identity,
+      .sd-ticket-slot-2 .sd-ticket-identity {
+        top: 7px;
+        left: 15px;
+        right: 12px;
+        min-height: 42px;
+        padding: 4px 5px 5px;
+        border-radius: 6px;
+        background: linear-gradient(180deg, rgba(5,8,10,.68), rgba(5,8,10,.18));
       }
 
       .sd-ticket-date {
-        color: #efc96b;
-        font: 750 20px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
-        letter-spacing: -.02em;
+        color: #f0c968;
+        font: 780 23px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: -.025em;
         white-space: nowrap;
+        text-shadow: 0 1px 8px rgba(0,0,0,.42);
       }
 
       .sd-ticket-name {
         min-width: 0;
         overflow: hidden;
-        color: rgba(248,246,238,.96);
-        font-size: 19px;
-        line-height: 1.1;
-        font-weight: 720;
-        letter-spacing: .025em;
+        color: rgba(250,248,240,.98);
+        font-size: 22px;
+        line-height: 1.05;
+        font-weight: 760;
+        letter-spacing: .018em;
         text-overflow: ellipsis;
         white-space: nowrap;
+        text-shadow: 0 1px 8px rgba(0,0,0,.46);
       }
 
       .sd-ticket-identity em {
         flex: 0 0 auto;
-        border: 1px solid rgba(216,185,94,.30);
+        border: 1px solid rgba(216,185,94,.38);
         border-radius: 999px;
-        background: rgba(216,185,94,.075);
-        color: rgba(240,199,112,.96);
-        padding: 6px 8px;
-        font-size: 10px;
+        background: rgba(216,185,94,.095);
+        color: rgba(245,204,116,.98);
+        padding: 8px 10px;
+        font-size: 13px;
         line-height: 1;
         font-style: normal;
-        font-weight: 800;
+        font-weight: 850;
         white-space: nowrap;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+      }
+
+      .sd-ticket-slot-0 .sd-ticket-date { font-size: 26px; }
+      .sd-ticket-slot-0 .sd-ticket-name { font-size: 24px; }
+      .sd-ticket-slot-0 .sd-ticket-identity em { font-size: 14px; padding: 8px 10px; }
+
+      .sd-ticket-slot-1 .sd-ticket-date,
+      .sd-ticket-slot-2 .sd-ticket-date {
+        font-size: 22px;
+        color: rgba(240,201,104,.96);
+      }
+
+      .sd-ticket-slot-1 .sd-ticket-name,
+      .sd-ticket-slot-2 .sd-ticket-name {
+        font-size: 21px;
+        color: rgba(249,247,239,.93);
+      }
+
+      .sd-ticket-slot-1 .sd-ticket-identity em,
+      .sd-ticket-slot-2 .sd-ticket-identity em {
+        font-size: 12px;
+        padding: 7px 9px;
+        color: rgba(244,203,116,.95);
       }
 
       .sd-ticket-note {
@@ -2279,11 +2628,11 @@ function HomepageStyles() {
         z-index: 3;
         left: 18px;
         right: 18px;
-        top: 59px;
+        top: 55px;
         display: -webkit-box;
         overflow: hidden;
         color: rgba(255,255,255,.52);
-        font-size: 12.5px;
+        font-size: 13.5px;
         line-height: 1.35;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
@@ -2294,10 +2643,10 @@ function HomepageStyles() {
         z-index: 3;
         left: 18px;
         right: 20px;
-        bottom: 13px;
+        bottom: 14px;
         display: flex;
         align-items: flex-end;
-        gap: 30px;
+        gap: 34px;
         padding-top: 9px;
       }
 
@@ -2311,7 +2660,7 @@ function HomepageStyles() {
         background: linear-gradient(90deg, rgba(216,185,94,.22), transparent);
       }
 
-      .sd-ticket-secondary.is-note-empty { bottom: 24px; }
+      .sd-ticket-secondary.is-note-empty { bottom: 25px; }
 
       .sd-ticket-secondary > span {
         display: grid;
@@ -2322,13 +2671,13 @@ function HomepageStyles() {
 
       .sd-ticket-secondary small {
         color: rgba(216,185,94,.58);
-        font-size: 10px;
+        font-size: 11px;
         letter-spacing: .10em;
       }
 
       .sd-ticket-secondary strong {
         color: rgba(247,246,239,.95);
-        font: 750 18px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        font: 780 21px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
       }
 
       .sd-ticket-scan {
@@ -2357,7 +2706,7 @@ function HomepageStyles() {
       .sd-ticket-more-root {
         position: absolute;
         z-index: 1;
-        top: 264px;
+        top: 282px;
         right: 26px;
         min-width: 82px;
         height: 30px;
@@ -2465,6 +2814,18 @@ function HomepageStyles() {
       @keyframes handoff-snapshot-drift {
         0%, 100% { transform: translate3d(0, 0, 0); }
         50% { transform: translate3d(1px, -1px, 0); }
+      }
+
+      @keyframes racket-handle-to-head {
+        from { height: 0%; }
+        to { height: 100%; }
+      }
+
+      @keyframes racket-scan-edge {
+        0% { opacity: 0; }
+        4% { opacity: calc(var(--sd-scan-enabled, 1) * var(--sd-scan-intensity, .48)); }
+        88% { opacity: calc(var(--sd-scan-enabled, 1) * var(--sd-scan-intensity, .48)); }
+        100% { opacity: 0; }
       }
 
       @keyframes racket-breathe {
@@ -2580,10 +2941,16 @@ function HomepageStyles() {
         .sd-pending { top: 476px; }
         .sd-timing-lab { left: 6px; width: min(214px, calc(100vw - 12px)); }
         .sd-event-ticket { left: 4px; right: 4px; padding-left: 15px; padding-right: 12px; }
-        .sd-ticket-date { font-size: 18px; }
-        .sd-ticket-name { font-size: 17px; }
-        .sd-ticket-identity { gap: 6px; }
-        .sd-ticket-identity em { padding-left: 6px; padding-right: 6px; font-size: 9px; }
+        .sd-ticket-identity { left: 13px; right: 10px; gap: 6px; }
+        .sd-ticket-slot-0 .sd-ticket-date { font-size: 23px; }
+        .sd-ticket-slot-0 .sd-ticket-name { font-size: 21px; }
+        .sd-ticket-slot-0 .sd-ticket-identity em { padding: 7px 7px; font-size: 11px; }
+        .sd-ticket-slot-1 .sd-ticket-date,
+        .sd-ticket-slot-2 .sd-ticket-date { font-size: 20px; }
+        .sd-ticket-slot-1 .sd-ticket-name,
+        .sd-ticket-slot-2 .sd-ticket-name { font-size: 19px; }
+        .sd-ticket-slot-1 .sd-ticket-identity em,
+        .sd-ticket-slot-2 .sd-ticket-identity em { padding: 6px 7px; font-size: 10.5px; }
         .sd-action-zone button,
         .sd-action-zone input { font-size: 14px; }
       }
@@ -2601,6 +2968,15 @@ function HomepageStyles() {
       .motion-reduced .sd-pending span {
         animation: none !important;
         transition-duration: .01ms !important;
+      }
+
+      .motion-reduced .sd-racket-reveal {
+        height: 100% !important;
+        animation: none !important;
+      }
+
+      .motion-reduced .sd-racket-scan-line {
+        display: none;
       }
 
       .motion-reduced .sd-racket-shadow {
