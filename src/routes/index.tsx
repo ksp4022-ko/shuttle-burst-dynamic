@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -8,7 +9,7 @@ import {
   type CSSProperties,
   type RefObject,
 } from "react";
-import { MeetupSheet, MemberSheet } from "@/components/homepage/HomepageSheets";
+import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepage/HomepageSheets";
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { ParticleRacket } from "@/components/homepage/ParticleRacket";
 import {
@@ -37,8 +38,27 @@ export const Route = createFileRoute("/")({
 const RACKET_FILE = "shuttle-racket-pearl.png";
 const ADMIN_URL =
   "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/admin";
-const HANDOFF_STORAGE_KEY = "shuttle-racket-handoff-offset";
-const DEFAULT_HANDOFF_OFFSET = { x: 0, y: 0 };
+const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
+const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
+const PREVIEW_IDLE_MS = 20000;
+
+type HandoffTiming = {
+  preHold: number;
+  realFade: number;
+  particleHold: number;
+  particleFade: number;
+  fadeBlur: number;
+};
+
+type HandoffReplayPhase = "idle" | "prehold" | "materializing" | "fading";
+
+const DEFAULT_HANDOFF_TIMING: HandoffTiming = {
+  preHold: 700,
+  realFade: 1200,
+  particleHold: 1000,
+  particleFade: 1100,
+  fadeBlur: 0,
+};
 
 function Index() {
   const [name, setName] = useState("");
@@ -48,10 +68,17 @@ function Index() {
   const racketFaceAnchorRef = useRef<HTMLSpanElement | null>(null);
   const signupButtonRef = useRef<HTMLButtonElement | null>(null);
   const [particleMatchTop, setParticleMatchTop] = useState(46);
-  const [handoffOffset, setHandoffOffset] = useState(DEFAULT_HANDOFF_OFFSET);
-  const [handoffCalibration, setHandoffCalibration] = useState(false);
+  const [handoffTiming, setHandoffTiming] = useState<HandoffTiming>(DEFAULT_HANDOFF_TIMING);
+  const [freezeParticles, setFreezeParticles] = useState(false);
+  const [handoffReplayPhase, setHandoffReplayPhase] = useState<HandoffReplayPhase>("idle");
+  const [timingLabExpanded, setTimingLabExpanded] = useState(true);
+  const [previewActivityKey, setPreviewActivityKey] = useState(0);
   const [rosterVisible, setRosterVisible] = useState(false);
-  const flow = useHomepageFlow();
+  const replayTimersRef = useRef<number[]>([]);
+  const flow = useHomepageFlow({
+    preHoldMs: handoffTiming.preHold,
+    realFadeMs: handoffTiming.realFade,
+  });
   const racketSrc = `${import.meta.env.BASE_URL}${RACKET_FILE}`;
   const active = flow.phase === "active";
   const rotating = flow.phase === "rotating-to-active";
@@ -85,25 +112,38 @@ function Index() {
 
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem(HANDOFF_STORAGE_KEY);
+      const saved = window.localStorage.getItem(HANDOFF_TIMING_STORAGE_KEY);
       if (!saved) return;
-      const parsed = JSON.parse(saved) as Partial<typeof DEFAULT_HANDOFF_OFFSET>;
-      setHandoffOffset({
-        x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : 0,
-        y: Number.isFinite(Number(parsed.y)) ? Number(parsed.y) : 0,
+      const parsed = JSON.parse(saved) as Partial<HandoffTiming>;
+      setHandoffTiming({
+        preHold: clampTiming(parsed.preHold, 0, 2000, DEFAULT_HANDOFF_TIMING.preHold),
+        realFade: clampTiming(parsed.realFade, 300, 2500, DEFAULT_HANDOFF_TIMING.realFade),
+        particleHold: clampTiming(
+          parsed.particleHold,
+          0,
+          2500,
+          DEFAULT_HANDOFF_TIMING.particleHold,
+        ),
+        particleFade: clampTiming(
+          parsed.particleFade,
+          200,
+          2500,
+          DEFAULT_HANDOFF_TIMING.particleFade,
+        ),
+        fadeBlur: clampTiming(parsed.fadeBlur, 0, 12, DEFAULT_HANDOFF_TIMING.fadeBlur),
       });
     } catch {
-      setHandoffOffset(DEFAULT_HANDOFF_OFFSET);
+      setHandoffTiming(DEFAULT_HANDOFF_TIMING);
     }
   }, []);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(HANDOFF_STORAGE_KEY, JSON.stringify(handoffOffset));
+      window.localStorage.setItem(HANDOFF_TIMING_STORAGE_KEY, JSON.stringify(handoffTiming));
     } catch {
-      // Calibration still works if storage is unavailable.
+      // The lab still works if storage is unavailable.
     }
-  }, [handoffOffset]);
+  }, [handoffTiming]);
 
   useEffect(() => {
     if (!active && !rotating) {
@@ -120,6 +160,79 @@ function Index() {
     observer.observe(roster);
     return () => observer.disconnect();
   }, [active, rotating]);
+
+  const previewPickedEvent = useMemo(() => {
+    const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+    return flow.events.find((event) => event.id === targetId) || flow.selectedEvent;
+  }, [flow.events, flow.pendingSwitchEventId, flow.selectedEvent, flow.selectedEventId]);
+
+  const markPreviewInteraction = useCallback(() => {
+    setPreviewActivityKey((value) => value + 1);
+  }, []);
+
+  const enterPreviewSelection = useCallback(() => {
+    if (flow.pendingAction) return;
+    const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+    if (!targetId) return;
+    if (targetId === flow.selectedEventId) {
+      flow.setPendingSwitchEventId("");
+      flow.enterActive();
+      return;
+    }
+    void flow.switchMeetup();
+  }, [
+    flow.enterActive,
+    flow.pendingAction,
+    flow.pendingSwitchEventId,
+    flow.selectedEventId,
+    flow.setPendingSwitchEventId,
+    flow.switchMeetup,
+  ]);
+
+  useEffect(() => {
+    if (!preview || flow.pendingSwitchEventId || !flow.selectedEventId) return;
+    flow.setPendingSwitchEventId(flow.selectedEventId);
+  }, [flow.pendingSwitchEventId, flow.selectedEventId, flow.setPendingSwitchEventId, preview]);
+
+  useEffect(() => {
+    if (!preview || flow.pendingAction) return;
+    const timer = window.setTimeout(enterPreviewSelection, PREVIEW_IDLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [
+    enterPreviewSelection,
+    flow.pendingAction,
+    flow.pendingSwitchEventId,
+    preview,
+    previewActivityKey,
+  ]);
+
+  const clearReplayTimers = useCallback(() => {
+    replayTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    replayTimersRef.current = [];
+  }, []);
+
+  const replayHandoff = useCallback(() => {
+    clearReplayTimers();
+    setHandoffReplayPhase("prehold");
+
+    const materializeTimer = window.setTimeout(
+      () => setHandoffReplayPhase("materializing"),
+      handoffTiming.preHold,
+    );
+    const fadeTimer = window.setTimeout(
+      () => setHandoffReplayPhase("fading"),
+      handoffTiming.preHold + handoffTiming.particleHold,
+    );
+    const finishTimer = window.setTimeout(
+      () => setHandoffReplayPhase("idle"),
+      handoffTiming.preHold +
+        Math.max(handoffTiming.realFade, handoffTiming.particleHold + handoffTiming.particleFade) +
+        120,
+    );
+    replayTimersRef.current = [materializeTimer, fadeTimer, finishTimer];
+  }, [clearReplayTimers, handoffTiming]);
+
+  useEffect(() => () => clearReplayTimers(), [clearReplayTimers]);
 
   const metrics = useMemo(() => {
     const summary = flow.roster?.summary;
@@ -169,12 +282,19 @@ function Index() {
     <main
       className={`sd-page is-${flow.phase} motion-${flow.motionMode} ${
         rosterVisible ? "is-roster-visible" : ""
-      } ${handoffCalibration ? "is-handoff-calibrating" : ""}`}
+      } ${
+        handoffReplayPhase !== "idle"
+          ? `is-handoff-replaying is-handoff-replay-${handoffReplayPhase}`
+          : ""
+      }`}
       data-locked={flow.pendingAction ? "true" : "false"}
       style={
         {
-          "--sd-handoff-x": `${handoffOffset.x}px`,
-          "--sd-handoff-y": `${handoffOffset.y}px`,
+          "--sd-handoff-x": `${HANDOFF_OFFSET.x}px`,
+          "--sd-handoff-y": `${HANDOFF_OFFSET.y}px`,
+          "--sd-real-fade": `${handoffTiming.realFade}ms`,
+          "--sd-particle-fade": `${handoffTiming.particleFade}ms`,
+          "--sd-fade-blur": `${handoffTiming.fadeBlur}px`,
         } as CSSProperties
       }
     >
@@ -183,22 +303,27 @@ function Index() {
       <ParticleHandoffOverlay
         phase={flow.phase}
         motionMode={flow.motionMode}
-        calibrationMode={handoffCalibration}
+        timing={handoffTiming}
+        freezeParticles={freezeParticles}
+        replayPhase={handoffReplayPhase}
       />
 
       <header className="sd-header">
         <p>BADMINTON ASSEMBLY</p>
       </header>
 
-      {materialized && (
-        <HandoffCalibrationPanel
-          offset={handoffOffset}
-          calibrationMode={handoffCalibration}
-          onToggleCalibration={() => setHandoffCalibration((value) => !value)}
-          onChange={(axis, value) =>
-            setHandoffOffset((current) => ({ ...current, [axis]: value }))
+      {(preview || rotating || active) && (
+        <HandoffTimingLab
+          timing={handoffTiming}
+          freezeParticles={freezeParticles}
+          expanded={timingLabExpanded}
+          onToggleExpanded={() => setTimingLabExpanded((value) => !value)}
+          onToggleFreeze={() => setFreezeParticles((value) => !value)}
+          onChange={(key, value) =>
+            setHandoffTiming((current) => ({ ...current, [key]: value }))
           }
-          onReset={() => setHandoffOffset(DEFAULT_HANDOFF_OFFSET)}
+          onReplay={replayHandoff}
+          onReset={() => setHandoffTiming(DEFAULT_HANDOFF_TIMING)}
         />
       )}
 
@@ -246,31 +371,39 @@ function Index() {
           </section>
         )}
 
-        {preview && flow.selectedEvent && (
-          <button className="sd-preview" onClick={flow.enterActive}>
-            <MeetupPreview event={flow.selectedEvent} titleRef={eventTitleRef} />
-            <span
-              className="sd-preview-switch-rail"
-              role="button"
-              tabIndex={0}
-              aria-label="選擇其他聚會"
-              onClick={(event) => {
-                event.stopPropagation();
-                flow.openMeetupPicker();
-              }}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter" && event.key !== " ") return;
-                event.preventDefault();
-                event.stopPropagation();
-                flow.openMeetupPicker();
-              }}
-            >
-              <i />
-              <i />
-              <i />
-              <b />
-            </span>
-          </button>
+        {preview && (
+          <section className="sd-hero-meetup-picker" aria-label="選擇聚會">
+            <div className="sd-hero-ticket-stack-wrap">
+              <MeetupTicketStack
+                events={flow.events}
+                selectedEventId={flow.selectedEventId}
+                pendingEventId={flow.pendingSwitchEventId || flow.selectedEventId}
+                onSelect={(eventId) => {
+                  flow.setPendingSwitchEventId(eventId);
+                  markPreviewInteraction();
+                }}
+                disabled={Boolean(flow.pendingAction)}
+                variant="hero"
+                onInteract={markPreviewInteraction}
+              />
+            </div>
+            <footer className="sd-hero-picker-footer">
+              <span>
+                已選：<strong>{previewPickedEvent?.name || "聚會"}</strong>
+              </span>
+              <button
+                type="button"
+                disabled={Boolean(flow.pendingAction) || !previewPickedEvent}
+                onClick={() => {
+                  markPreviewInteraction();
+                  enterPreviewSelection();
+                }}
+              >
+                進入報名
+              </button>
+              <small>20 秒無操作將自動進入目前選定聚會</small>
+            </footer>
+          </section>
         )}
 
         {(active || rotating) && (
@@ -402,144 +535,268 @@ function Index() {
 function ParticleHandoffOverlay({
   phase,
   motionMode,
-  calibrationMode,
+  timing,
+  freezeParticles,
+  replayPhase,
 }: {
   phase: ReturnType<typeof useHomepageFlow>["phase"];
   motionMode: ReturnType<typeof useHomepageFlow>["motionMode"];
-  calibrationMode: boolean;
+  timing: HandoffTiming;
+  freezeParticles: boolean;
+  replayPhase: HandoffReplayPhase;
 }) {
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
   const hasSnapshotRef = useRef(false);
+  const initialTimersRef = useRef<number[]>([]);
 
-  useLayoutEffect(() => {
+  const captureSnapshot = useCallback(() => {
     const overlay = overlayRef.current;
-    if (!overlay || phase !== "materializing" || motionMode === "reduced") return;
     const source = document.querySelector<HTMLCanvasElement>(".sd-particles");
-    if (!source || !source.width || !source.height) return;
+    if (!overlay || !source || !source.width || !source.height) return false;
     const context = overlay.getContext("2d");
-    if (!context) return;
+    if (!context) return false;
 
     overlay.width = source.width;
     overlay.height = source.height;
     context.clearRect(0, 0, overlay.width, overlay.height);
     context.drawImage(source, 0, 0);
     hasSnapshotRef.current = true;
-    overlay.classList.remove("is-fading");
+    return true;
+  }, []);
+
+  const clearInitialTimers = useCallback(() => {
+    initialTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    initialTimersRef.current = [];
+  }, []);
+
+  useLayoutEffect(() => {
+    if (phase !== "particle-ready" || motionMode === "reduced") return;
+    captureSnapshot();
+  }, [captureSnapshot, motionMode, phase]);
+
+  useLayoutEffect(() => {
+    if (phase !== "materializing" || motionMode === "reduced") return;
+    const overlay = overlayRef.current;
+    const source = document.querySelector<HTMLCanvasElement>(".sd-particles");
+    if (!overlay || !source) return;
+    if (!captureSnapshot() && !hasSnapshotRef.current) return;
+
+    clearInitialTimers();
+    source.classList.add("is-handoff-source-hidden");
+    overlay.classList.remove("is-fading", "is-replay-visible", "is-replay-fading");
     overlay.classList.add("is-visible");
+    overlay.classList.toggle("is-drifting", !freezeParticles);
 
-    let frame = window.requestAnimationFrame(() => {
-      frame = window.requestAnimationFrame(() => overlay.classList.add("is-fading"));
-    });
-    const timer = window.setTimeout(() => {
-      overlay.classList.remove("is-visible", "is-fading");
-    }, 930);
+    const fadeTimer = window.setTimeout(() => {
+      overlay.classList.add("is-fading");
+    }, timing.particleHold);
 
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(timer);
-    };
-  }, [motionMode, phase]);
+    const finishTimer = window.setTimeout(() => {
+      overlay.classList.remove("is-visible", "is-fading", "is-drifting");
+      source.classList.remove("is-handoff-source-hidden");
+    }, timing.particleHold + timing.particleFade + 80);
+
+    initialTimersRef.current = [fadeTimer, finishTimer];
+  }, [
+    captureSnapshot,
+    clearInitialTimers,
+    freezeParticles,
+    motionMode,
+    phase,
+    timing.particleFade,
+    timing.particleHold,
+  ]);
 
   useLayoutEffect(() => {
     const overlay = overlayRef.current;
     if (!overlay) return;
-    if (calibrationMode && hasSnapshotRef.current) {
-      overlay.classList.add("is-calibrating");
+
+    if (replayPhase === "idle") {
+      overlay.classList.remove("is-replay-visible", "is-replay-fading", "is-replay-drifting");
       return;
     }
-    overlay.classList.remove("is-calibrating");
-  }, [calibrationMode]);
+
+    if (!hasSnapshotRef.current && !captureSnapshot()) return;
+    overlay.classList.add("is-replay-visible");
+    overlay.classList.toggle("is-replay-fading", replayPhase === "fading");
+    overlay.classList.toggle("is-replay-drifting", !freezeParticles);
+  }, [captureSnapshot, freezeParticles, replayPhase]);
+
+  useEffect(
+    () => () => {
+      clearInitialTimers();
+      document
+        .querySelector<HTMLCanvasElement>(".sd-particles")
+        ?.classList.remove("is-handoff-source-hidden");
+    },
+    [clearInitialTimers],
+  );
 
   return <canvas ref={overlayRef} className="sd-particle-handoff" aria-hidden="true" />;
 }
 
-function HandoffCalibrationPanel({
-  offset,
-  calibrationMode,
-  onToggleCalibration,
+function HandoffTimingLab({
+  timing,
+  freezeParticles,
+  expanded,
+  onToggleExpanded,
+  onToggleFreeze,
   onChange,
+  onReplay,
   onReset,
 }: {
-  offset: { x: number; y: number };
-  calibrationMode: boolean;
-  onToggleCalibration: () => void;
-  onChange: (axis: "x" | "y", value: number) => void;
+  timing: HandoffTiming;
+  freezeParticles: boolean;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+  onToggleFreeze: () => void;
+  onChange: (key: keyof HandoffTiming, value: number) => void;
+  onReplay: () => void;
   onReset: () => void;
 }) {
   return (
-    <aside className="sd-handoff-calibrator" aria-label="球拍銜接校正">
-      <div className="sd-calibrator-head">
-        <strong>HANDOFF</strong>
-        <button
-          type="button"
-          className={calibrationMode ? "is-on" : ""}
-          onClick={onToggleCalibration}
-        >
-          {calibrationMode ? "疊合中" : "校正模式"}
+    <aside className={`sd-timing-lab ${expanded ? "is-expanded" : ""}`} aria-label="球拍銜接時間測試">
+      <div className="sd-timing-lab-head">
+        <span>
+          <strong>HANDOFF TIMING</strong>
+          <small>X -8 / Y -6</small>
+        </span>
+        <button type="button" onClick={onToggleExpanded} aria-expanded={expanded}>
+          {expanded ? "收合" : "展開"}
         </button>
       </div>
-      <CalibrationAxis axis="x" label="X" value={offset.x} onChange={onChange} />
-      <CalibrationAxis axis="y" label="Y" value={offset.y} onChange={onChange} />
-      <div className="sd-calibrator-foot">
-        <code>X {offset.x >= 0 ? "+" : ""}{offset.x} / Y {offset.y >= 0 ? "+" : ""}{offset.y}</code>
-        <button type="button" onClick={onReset}>歸零</button>
-      </div>
+
+      {expanded ? (
+        <div className="sd-timing-lab-body">
+          <TimingControl
+            label="PRE HOLD"
+            description="粒子完成 → 實拍開始"
+            value={timing.preHold}
+            min={0}
+            max={2000}
+            step={100}
+            unit="ms"
+            onChange={(value) => onChange("preHold", value)}
+          />
+          <TimingControl
+            label="REAL FADE"
+            description="實拍透明 → 完整顯示"
+            value={timing.realFade}
+            min={300}
+            max={2500}
+            step={100}
+            unit="ms"
+            onChange={(value) => onChange("realFade", value)}
+          />
+          <TimingControl
+            label="PARTICLE HOLD"
+            description="實拍開始後，粒子完整停留"
+            value={timing.particleHold}
+            min={0}
+            max={2500}
+            step={100}
+            unit="ms"
+            onChange={(value) => onChange("particleHold", value)}
+          />
+          <TimingControl
+            label="PARTICLE FADE"
+            description="粒子退場 → 完全消失"
+            value={timing.particleFade}
+            min={200}
+            max={2500}
+            step={100}
+            unit="ms"
+            onChange={(value) => onChange("particleFade", value)}
+          />
+          <TimingControl
+            label="FADE BLUR"
+            description="退場模糊；0 最清楚"
+            value={timing.fadeBlur}
+            min={0}
+            max={12}
+            step={1}
+            unit="px"
+            onChange={(value) => onChange("fadeBlur", value)}
+          />
+
+          <div className="sd-timing-summary">
+            <span>OVERLAP</span>
+            <strong>{timing.particleHold + timing.particleFade} ms</strong>
+          </div>
+
+          <button
+            type="button"
+            className={`sd-timing-freeze ${freezeParticles ? "is-on" : ""}`}
+            onClick={onToggleFreeze}
+          >
+            {freezeParticles ? "✓ 凍結完成粒子" : "凍結完成粒子"}
+          </button>
+
+          <div className="sd-timing-actions">
+            <button type="button" className="is-primary" onClick={onReplay}>只重播 Handoff</button>
+            <button type="button" onClick={onReset}>重設預設</button>
+          </div>
+        </div>
+      ) : null}
     </aside>
   );
 }
 
-function CalibrationAxis({
-  axis,
+function TimingControl({
   label,
+  description,
   value,
+  min,
+  max,
+  step,
+  unit,
   onChange,
 }: {
-  axis: "x" | "y";
   label: string;
+  description: string;
   value: number;
-  onChange: (axis: "x" | "y", value: number) => void;
+  min: number;
+  max: number;
+  step: number;
+  unit: "ms" | "px";
+  onChange: (value: number) => void;
 }) {
+  const change = (next: number) => onChange(clampTiming(next, min, max, value));
   return (
-    <div className="sd-calibrator-axis">
-      <span>{label}</span>
-      <button type="button" onClick={() => onChange(axis, value - 1)} aria-label={`${label} 減 1`}>−</button>
-      <input
-        type="number"
-        inputMode="numeric"
-        step="1"
-        value={value}
-        onChange={(event) => onChange(axis, Number(event.target.value || 0))}
-        aria-label={`${label} 位移像素`}
-      />
-      <button type="button" onClick={() => onChange(axis, value + 1)} aria-label={`${label} 加 1`}>＋</button>
+    <div className="sd-timing-control">
+      <div className="sd-timing-control-copy">
+        <strong>{label}</strong>
+        <small>{description}</small>
+      </div>
+      <div className="sd-timing-control-inputs">
+        <button type="button" onClick={() => change(value - step)} aria-label={`${label} 減少`}>−</button>
+        <label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(event) => change(Number(event.target.value))}
+            aria-label={`${label} 數值`}
+          />
+          <span>{unit}</span>
+        </label>
+        <button type="button" onClick={() => change(value + step)} aria-label={`${label} 增加`}>＋</button>
+      </div>
     </div>
   );
 }
 
-function RacketImage({ src, className = "" }: { src: string; className?: string }) {
-  return <img className={className} src={src} alt="" aria-hidden="true" draggable={false} />;
+function clampTiming(value: unknown, min: number, max: number, fallback: number) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(number)));
 }
 
-function MeetupPreview({
-  event,
-  titleRef,
-}: {
-  event: AlphaEvent;
-  titleRef: RefObject<HTMLElement | null>;
-}) {
-  return (
-    <>
-      <span className="sd-preview-topline">
-        <strong ref={titleRef}>{event.name}</strong>
-        <em>{meetupStatus(event)}</em>
-      </span>
-      <span className="sd-preview-date">{formatTicketDate(event.eventDate)}</span>
-      {event.eventNote ? <span className="sd-preview-note">{event.eventNote}</span> : null}
-      <span className="sd-preview-meta">
-        臨打 ${Number(event.tempFee || 0)}｜上限 {Number(event.maxPeople || 0)}
-      </span>
-    </>
-  );
+function RacketImage({ src, className = "" }: { src: string; className?: string }) {
+  return <img className={className} src={src} alt="" aria-hidden="true" draggable={false} />;
 }
 
 function FloatingAnnotations({
@@ -619,17 +876,6 @@ function Metric({
       <i />
     </div>
   );
-}
-
-function formatTicketDate(value: string) {
-  const [year = "", month = "", day = ""] = value.split("-");
-  return `${year}.${String(Number(month)).padStart(2, "0")}.${String(Number(day)).padStart(2, "0")}`;
-}
-
-function meetupStatus(event: AlphaEvent) {
-  if (Number(event.waitingCount || 0) > 0) return `候補 ${Number(event.waitingCount || 0)}`;
-  if (Number(event.remainCount || 0) <= 0) return "額滿 可報候補";
-  return `尚缺 ${Number(event.remainCount || 0)}`;
 }
 
 function HomepageStyles() {
@@ -723,99 +969,194 @@ function HomepageStyles() {
         stroke-linejoin: round;
       }
 
-      .sd-handoff-calibrator {
+      .sd-timing-lab {
         position: fixed;
         z-index: 65;
-        top: calc(env(safe-area-inset-top) + 64px);
-        right: 10px;
-        width: 178px;
-        border: 1px solid rgba(216,185,94,.34);
+        left: 8px;
+        bottom: calc(env(safe-area-inset-bottom) + 8px);
+        width: min(226px, calc(100vw - 18px));
+        border: 1px solid rgba(216,185,94,.30);
         border-radius: 16px;
-        background: rgba(5,8,11,.91);
+        background: rgba(5,8,11,.93);
         color: rgba(255,255,255,.90);
-        padding: 9px;
-        box-shadow: 0 16px 36px rgba(0,0,0,.38);
+        box-shadow: 0 18px 42px rgba(0,0,0,.42);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
+        overflow: hidden;
       }
 
-      .sd-calibrator-head,
-      .sd-calibrator-foot {
+      .sd-timing-lab-head {
+        min-height: 44px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 8px;
+        padding: 8px 9px 8px 11px;
       }
 
-      .sd-calibrator-head { margin-bottom: 7px; }
+      .sd-timing-lab-head > span {
+        display: grid;
+        gap: 3px;
+        min-width: 0;
+      }
 
-      .sd-calibrator-head strong {
+      .sd-timing-lab-head strong {
         color: var(--gold);
         font: 700 10px/1 "Chakra Petch", monospace;
-        letter-spacing: .16em;
+        letter-spacing: .12em;
       }
 
-      .sd-calibrator-head button,
-      .sd-calibrator-foot button {
-        min-height: 28px;
-        border: 1px solid rgba(216,185,94,.28);
+      .sd-timing-lab-head small {
+        color: rgba(157,244,22,.70);
+        font: 700 9px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-timing-lab-head button,
+      .sd-timing-actions button,
+      .sd-timing-freeze {
+        border: 1px solid rgba(216,185,94,.24);
         border-radius: 999px;
         background: rgba(255,255,255,.035);
-        color: rgba(216,185,94,.86);
+        color: rgba(247,246,239,.82);
+      }
+
+      .sd-timing-lab-head button {
+        min-width: 48px;
+        min-height: 30px;
         padding: 0 9px;
         font-size: 10px;
       }
 
-      .sd-calibrator-head button.is-on {
-        border-color: rgba(157,244,22,.58);
-        color: var(--green);
-        box-shadow: 0 0 14px rgba(157,244,22,.12);
+      .sd-timing-lab-body {
+        max-height: min(58svh, 440px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 0 9px 9px;
+        border-top: 1px solid rgba(255,255,255,.06);
       }
 
-      .sd-calibrator-axis {
+      .sd-timing-control {
         display: grid;
-        grid-template-columns: 20px 32px 58px 32px;
-        gap: 5px;
+        gap: 6px;
+        padding: 8px 1px;
+        border-bottom: 1px solid rgba(255,255,255,.055);
+      }
+
+      .sd-timing-control-copy {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .sd-timing-control-copy strong {
+        color: rgba(216,185,94,.86);
+        font: 700 9.5px/1 "Chakra Petch", monospace;
+        letter-spacing: .06em;
+        white-space: nowrap;
+      }
+
+      .sd-timing-control-copy small {
+        min-width: 0;
+        color: rgba(255,255,255,.46);
+        font-size: 9px;
+        line-height: 1.2;
+        text-align: right;
+      }
+
+      .sd-timing-control-inputs {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) 34px;
+        gap: 6px;
         align-items: center;
-        margin-top: 6px;
       }
 
-      .sd-calibrator-axis > span {
-        color: rgba(216,185,94,.72);
-        font: 700 11px/1 "Chakra Petch", monospace;
-      }
-
-      .sd-calibrator-axis button {
-        height: 30px;
-        border: 1px solid rgba(255,255,255,.15);
+      .sd-timing-control-inputs > button {
+        height: 32px;
+        border: 1px solid rgba(255,255,255,.13);
         border-radius: 9px;
-        background: rgba(255,255,255,.045);
+        background: rgba(255,255,255,.04);
         color: #fff;
         font-size: 17px;
         line-height: 1;
       }
 
-      .sd-calibrator-axis input {
-        width: 58px;
-        height: 30px;
-        border: 1px solid rgba(216,185,94,.25);
+      .sd-timing-control-inputs label {
+        position: relative;
+        display: block;
+      }
+
+      .sd-timing-control-inputs input {
+        width: 100%;
+        height: 32px;
+        border: 1px solid rgba(216,185,94,.24);
         border-radius: 9px;
-        background: rgba(0,0,0,.35);
+        background: rgba(0,0,0,.34);
         color: #fff;
-        text-align: center;
+        padding: 0 29px 0 8px;
+        text-align: right;
         font: 700 12px/1 "Chakra Petch", monospace;
         outline: none;
       }
 
-      .sd-calibrator-foot {
-        margin-top: 8px;
-        padding-top: 7px;
-        border-top: 1px solid rgba(255,255,255,.07);
+      .sd-timing-control-inputs label span {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255,255,255,.34);
+        font-size: 9px;
+        pointer-events: none;
       }
 
-      .sd-calibrator-foot code {
-        color: rgba(157,244,22,.78);
+      .sd-timing-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 9px 2px 6px;
+      }
+
+      .sd-timing-summary span {
+        color: rgba(255,255,255,.42);
+        font: 700 9px/1 "Chakra Petch", monospace;
+        letter-spacing: .12em;
+      }
+
+      .sd-timing-summary strong {
+        color: rgba(157,244,22,.84);
+        font: 700 11px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-timing-freeze {
+        width: 100%;
+        min-height: 34px;
+        margin: 1px 0 7px;
+        font-size: 11px;
+      }
+
+      .sd-timing-freeze.is-on {
+        border-color: rgba(157,244,22,.48);
+        color: var(--green);
+        background: rgba(157,244,22,.055);
+      }
+
+      .sd-timing-actions {
+        display: grid;
+        grid-template-columns: 1fr .78fr;
+        gap: 6px;
+      }
+
+      .sd-timing-actions button {
+        min-height: 38px;
+        padding: 0 8px;
         font-size: 10px;
+      }
+
+      .sd-timing-actions button.is-primary {
+        border-color: rgba(157,244,22,.46);
+        color: #101607;
+        background: linear-gradient(180deg, #b8ff18, #83cb08);
+        font-weight: 800;
       }
 
       .sd-particles {
@@ -825,10 +1166,11 @@ function HomepageStyles() {
         width: 100%;
         height: 100%;
         pointer-events: none;
-        transition: opacity .9s ease, filter .9s ease;
+        transition:
+          opacity var(--sd-particle-fade, 1100ms) ease,
+          filter var(--sd-particle-fade, 1100ms) ease;
       }
 
-      /* Keep the completed particle racket visible during the materialization overlap. */
       .is-materializing .sd-particles {
         opacity: 1;
         filter: none;
@@ -838,7 +1180,12 @@ function HomepageStyles() {
       .is-rotating-to-active .sd-particles,
       .is-active .sd-particles {
         opacity: 0;
-        filter: blur(8px);
+        filter: blur(var(--sd-fade-blur, 0px));
+      }
+
+      .sd-particles.is-handoff-source-hidden,
+      .is-handoff-replaying .sd-particles {
+        opacity: 0 !important;
       }
 
       .sd-particle-handoff {
@@ -848,19 +1195,32 @@ function HomepageStyles() {
         width: 100%;
         height: 100%;
         opacity: 0;
+        filter: none;
         pointer-events: none;
-        transition: opacity .9s ease;
+        transition:
+          opacity var(--sd-particle-fade, 1100ms) ease,
+          filter var(--sd-particle-fade, 1100ms) ease;
       }
 
-      .sd-particle-handoff.is-visible { opacity: 1; }
-      .sd-particle-handoff.is-visible.is-fading { opacity: 0; }
-      .sd-particle-handoff.is-calibrating {
+      .sd-particle-handoff.is-visible,
+      .sd-particle-handoff.is-replay-visible {
+        opacity: 1;
+      }
+
+      .sd-particle-handoff.is-visible.is-fading,
+      .sd-particle-handoff.is-replay-visible.is-replay-fading {
+        opacity: 0;
+        filter: blur(var(--sd-fade-blur, 0px));
+      }
+
+      .sd-particle-handoff.is-replay-visible {
         z-index: 19;
-        opacity: 1 !important;
-        transition: none;
       }
 
-      .is-handoff-calibrating .sd-particles { opacity: 0 !important; }
+      .sd-particle-handoff.is-drifting,
+      .sd-particle-handoff.is-replay-drifting {
+        animation: handoff-snapshot-drift 2.4s ease-in-out infinite;
+      }
 
       .sd-hero {
         width: min(100%, 560px);
@@ -886,7 +1246,7 @@ function HomepageStyles() {
         transform: translate3d(-50%, 0, 0) rotate(85.5deg) scale(.90);
         transform-origin: 50% 52%;
         transition:
-          opacity 1.2s ease,
+          opacity var(--sd-real-fade, 1200ms) ease,
           transform 1.35s cubic-bezier(.2,.9,.2,1);
         will-change: transform, opacity;
       }
@@ -911,11 +1271,9 @@ function HomepageStyles() {
 
       .is-meetup-preview .sd-racket-wrap { z-index: 9; }
 
-      .is-handoff-calibrating .sd-racket-wrap {
+      .is-handoff-replaying .sd-racket-wrap {
         z-index: 20 !important;
         top: var(--sd-particle-match-top, 46px) !important;
-        opacity: .52 !important;
-        transition: none !important;
         transform:
           translate3d(
             calc(-50% + var(--sd-handoff-x, 0px)),
@@ -926,8 +1284,19 @@ function HomepageStyles() {
           scale(.94) !important;
       }
 
-      .is-handoff-calibrating .sd-racket-main { animation: none !important; }
-      .is-handoff-calibrating .sd-racket-shadow { display: none !important; }
+      .is-handoff-replay-prehold .sd-racket-wrap {
+        opacity: 0 !important;
+        transition: none !important;
+      }
+
+      .is-handoff-replay-materializing .sd-racket-wrap,
+      .is-handoff-replay-fading .sd-racket-wrap {
+        opacity: 1 !important;
+        transition: opacity var(--sd-real-fade, 1200ms) ease !important;
+      }
+
+      .is-handoff-replaying .sd-racket-main { animation: none !important; }
+      .is-handoff-replaying .sd-racket-shadow { display: none !important; }
 
       .sd-racket-face-anchor {
         position: absolute;
@@ -1061,152 +1430,79 @@ function HomepageStyles() {
       .is-rotating-to-active .sd-shadow-4,
       .is-active .sd-shadow-4 { opacity: .06; transition: opacity .35s ease .68s; animation-delay: -4.1s; }
 
-      .sd-preview {
+      .sd-hero-meetup-picker {
         position: absolute;
         z-index: 8;
-        left: 30px;
-        right: 16px;
-        top: 286px;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 6px;
-        align-items: center;
-        border: 1px solid rgba(216,185,94,.42);
-        border-radius: 18px 28px 20px 26px;
-        background:
-          radial-gradient(72% 120% at 86% 12%, rgba(216,185,94,.10), transparent 62%),
-          linear-gradient(145deg, rgba(18,22,22,.92), rgba(5,8,11,.93));
+        left: 12px;
+        right: 12px;
+        top: 154px;
         color: #fff;
-        padding: 15px 17px 14px 20px;
-        text-align: left;
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        overflow: visible;
-        transform: rotate(-.42deg);
-        transform-origin: 42% 50%;
-        box-shadow:
-          0 22px 42px rgba(0,0,0,.34),
-          10px 12px 0 -8px rgba(216,185,94,.08),
-          inset 0 1px 0 rgba(255,255,255,.035);
-      }
-
-      .sd-preview::before,
-      .sd-preview::after {
-        content: "";
-        position: absolute;
-        top: 57%;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        background: #080b0f;
-        box-shadow: 0 0 0 1px rgba(216,185,94,.25);
-        pointer-events: none;
-      }
-
-      .sd-preview::before { left: -9px; }
-      .sd-preview::after { right: -9px; }
-
-      .is-meetup-preview .sd-preview {
         animation: hero-ticket-in .48s cubic-bezier(.2,.82,.18,1) both;
       }
 
-      .sd-preview-topline {
-        display: flex !important;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
-        margin: 0 !important;
-      }
-
-      .sd-preview strong {
-        display: block;
-        min-width: 0;
-        color: var(--gold);
-        font-size: 20px;
-        line-height: 1.25;
-        letter-spacing: .06em;
-      }
-
-      .sd-preview-topline em {
-        flex: 0 0 auto;
-        margin-top: -1px;
-        border: 1px solid rgba(216,185,94,.30);
-        border-radius: 999px;
-        background: rgba(216,185,94,.08);
-        color: rgba(240,189,92,.94);
-        padding: 5px 9px;
-        font-size: 12px;
-        line-height: 1.15;
-        font-style: normal;
-        font-weight: 700;
-        letter-spacing: .02em;
-      }
-
-      .sd-preview-date {
-        display: block;
-        margin: -1px 0 1px !important;
-        color: rgba(216,185,94,.62);
-        font: 600 11px/1.2 "Chakra Petch", "Noto Sans TC", sans-serif;
-        letter-spacing: .12em;
-      }
-
-      .sd-preview-note,
-      .sd-preview-meta {
-        display: block;
-        margin: 0 !important;
-      }
-
-      .sd-preview-note {
-        color: rgba(255,255,255,.53);
-        font-size: 12px;
-        line-height: 1.45;
-      }
-
-      .sd-preview-meta {
-        color: rgba(255,255,255,.72);
-        font-size: 13px;
-        line-height: 1.4;
-      }
-
-      .sd-preview-switch-rail {
+      .sd-hero-ticket-stack-wrap {
         position: relative;
-        display: grid !important;
-        grid-template-columns: 4px 4px 4px minmax(54px, 1fr);
+        height: 298px;
+      }
+
+      .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero {
+        position: relative;
+      }
+
+      .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero.has-1 { top: 112px; }
+      .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero.has-2 { top: 54px; }
+      .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero.has-3 { top: 0; }
+
+      .sd-hero-picker-footer {
+        position: relative;
+        z-index: 7;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 132px;
+        gap: 7px 10px;
         align-items: center;
-        gap: 4px;
-        width: min(68%, 220px);
-        height: 18px;
-        margin: 3px 0 -2px !important;
-        color: var(--green);
-        cursor: pointer;
-        outline: none;
+        margin: -4px 4px 0;
+        padding: 9px 10px 8px;
+        border-top: 1px solid rgba(216,185,94,.14);
+        background: linear-gradient(180deg, rgba(5,8,11,.20), rgba(5,8,11,.58));
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
       }
 
-      .sd-preview-switch-rail i {
-        display: block;
-        width: 3px;
-        height: 3px;
-        border-radius: 50%;
-        background: currentColor;
-        box-shadow: 0 0 7px rgba(157,244,22,.38);
-        opacity: .82;
+      .sd-hero-picker-footer > span {
+        min-width: 0;
+        overflow: hidden;
+        color: rgba(255,255,255,.54);
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .sd-preview-switch-rail i:nth-child(2) { opacity: .54; transform: translateY(2px); }
-      .sd-preview-switch-rail i:nth-child(3) { opacity: .32; transform: translateY(-1px); }
+      .sd-hero-picker-footer > span strong {
+        color: rgba(247,246,239,.94);
+        font-size: 13px;
+        font-weight: 650;
+      }
 
-      .sd-preview-switch-rail b {
-        display: block;
-        height: 1px;
+      .sd-hero-picker-footer > button {
+        min-height: 46px;
+        border: 0;
         border-radius: 999px;
-        background: linear-gradient(90deg, rgba(157,244,22,.82), rgba(157,244,22,.20), transparent);
-        box-shadow: 0 0 8px rgba(157,244,22,.10);
-        transform-origin: left center;
-        animation: preview-rail 2.8s cubic-bezier(.2,.8,.2,1) both;
+        background: linear-gradient(180deg, #b8ff18, #83cb08);
+        color: #101607;
+        font-weight: 850;
+        font-size: 14px;
+        box-shadow: 0 0 24px rgba(157,244,22,.18);
       }
 
-      .sd-preview-switch-rail:focus-visible {
-        filter: drop-shadow(0 0 7px rgba(157,244,22,.34));
+      .sd-hero-picker-footer > button:disabled {
+        opacity: .45;
+      }
+
+      .sd-hero-picker-footer > small {
+        grid-column: 1 / -1;
+        color: rgba(255,255,255,.32);
+        font-size: 9.5px;
+        letter-spacing: .03em;
       }
 
       .sd-annotations {
@@ -1791,30 +2087,40 @@ function HomepageStyles() {
         --ticket-drag-back: 0px;
         position: relative;
         width: 100%;
-        height: 352px;
+        height: 298px;
         touch-action: none;
         user-select: none;
         -webkit-user-select: none;
       }
 
-      .sd-event-ticket-stack.has-1 { height: 194px; }
-      .sd-event-ticket-stack.has-2 { height: 266px; }
+      .sd-event-ticket-stack.has-1 { height: 168px; }
+      .sd-event-ticket-stack.has-2 { height: 226px; }
 
       .sd-event-ticket {
         --ticket-x: 0px;
         --ticket-angle: 0deg;
         --ticket-y: 0px;
         --ticket-drag: 0px;
+        --ticket-frame: rgba(216,185,94,.25);
+        --ticket-top-start: rgba(216,185,94,.62);
         position: absolute;
         left: 8px;
         right: 8px;
         top: 0;
         display: block;
-        height: 174px;
-        border: 1px solid rgba(216,185,94,.24);
-        border-radius: 20px 29px 21px 27px;
+        height: 160px;
+        border: 1px solid var(--ticket-frame);
+        border-radius: 3px 15px 7px 15px;
+        clip-path: polygon(
+          11px 0,
+          100% 0,
+          100% calc(100% - 8px),
+          calc(100% - 8px) 100%,
+          0 100%,
+          0 11px
+        );
         color: rgba(247,246,239,.94);
-        padding: 15px 17px 16px 20px;
+        padding: 13px 15px 14px 18px;
         text-align: left;
         overflow: hidden;
         transform:
@@ -1825,206 +2131,249 @@ function HomepageStyles() {
           )
           rotate(var(--ticket-angle));
         transform-origin: 48% 44%;
+        filter: drop-shadow(0 12px 18px rgba(0,0,0,.24));
         transition:
           transform .46s cubic-bezier(.2,.82,.18,1),
           filter .18s ease,
           border-color .22s ease,
-          box-shadow .28s ease;
+          background .28s ease;
         will-change: transform, filter;
         -webkit-tap-highlight-color: transparent;
       }
 
-      .sd-event-ticket::before,
-      .sd-event-ticket::after {
+      .sd-event-ticket::before {
         content: "";
         position: absolute;
-        top: 58%;
-        width: 17px;
-        height: 17px;
-        border-radius: 50%;
-        background: #0a0d10;
-        box-shadow: 0 0 0 1px rgba(216,185,94,.22);
+        z-index: 1;
+        left: 14px;
+        right: 12px;
+        top: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          var(--ticket-top-start) 0 28%,
+          rgba(216,185,94,.24) 34% 54%,
+          rgba(255,255,255,.07) 70%,
+          transparent
+        );
         pointer-events: none;
       }
 
-      .sd-event-ticket::before { left: -10px; }
-      .sd-event-ticket::after { right: -10px; }
+      .sd-event-ticket::after {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        left: 5px;
+        top: 17px;
+        width: 1px;
+        height: 28px;
+        background: linear-gradient(180deg, var(--ticket-top-start), transparent);
+        opacity: .80;
+        pointer-events: none;
+      }
 
       .sd-ticket-slot-0 {
-        --ticket-y: 144px;
+        --ticket-y: 112px;
         --ticket-drag: var(--ticket-drag-main);
         z-index: 4;
         background:
-          radial-gradient(80% 130% at 90% 12%, rgba(216,185,94,.10), transparent 62%),
-          linear-gradient(145deg, rgba(18,23,21,.98), rgba(5,8,11,.99));
-        box-shadow:
-          0 24px 42px rgba(0,0,0,.42),
-          0 0 0 1px rgba(255,255,255,.018) inset;
+          radial-gradient(78% 120% at 92% 8%, rgba(216,185,94,.085), transparent 61%),
+          linear-gradient(145deg, rgba(17,22,21,.99), rgba(5,8,11,.995));
+        filter: drop-shadow(0 19px 24px rgba(0,0,0,.34));
       }
 
       .sd-ticket-slot-1 {
-        --ticket-y: 72px;
+        --ticket-y: 54px;
         --ticket-drag: var(--ticket-drag-mid);
         z-index: 3;
+        --ticket-frame: rgba(216,185,94,.20);
+        --ticket-top-start: rgba(216,185,94,.46);
         background:
-          radial-gradient(80% 120% at 12% 0%, rgba(255,255,255,.035), transparent 58%),
-          linear-gradient(145deg, rgba(24,25,24,.97), rgba(9,12,14,.99));
-        border-color: rgba(216,185,94,.21);
-        box-shadow: 0 16px 30px rgba(0,0,0,.30);
+          radial-gradient(72% 110% at 10% 0%, rgba(255,255,255,.026), transparent 58%),
+          linear-gradient(145deg, rgba(18,23,21,.98), rgba(7,11,12,.995));
+        filter: drop-shadow(0 13px 18px rgba(0,0,0,.27));
       }
 
       .sd-ticket-slot-2 {
         --ticket-y: 0px;
         --ticket-drag: var(--ticket-drag-back);
         z-index: 2;
+        --ticket-frame: rgba(216,185,94,.16);
+        --ticket-top-start: rgba(216,185,94,.34);
         background:
-          radial-gradient(72% 100% at 84% 0%, rgba(157,244,22,.035), transparent 60%),
-          linear-gradient(145deg, rgba(11,16,17,.98), rgba(6,9,12,.99));
-        border-color: rgba(216,185,94,.17);
-        box-shadow: 0 12px 24px rgba(0,0,0,.24);
+          radial-gradient(72% 100% at 84% 0%, rgba(157,244,22,.025), transparent 60%),
+          linear-gradient(145deg, rgba(10,15,16,.99), rgba(5,8,11,.995));
+        filter: drop-shadow(0 9px 14px rgba(0,0,0,.22));
       }
 
-      .sd-event-ticket-stack.has-1 .sd-ticket-slot-0 { --ticket-y: 8px; }
-      .sd-event-ticket-stack.has-2 .sd-ticket-slot-1 { --ticket-y: 4px; }
-      .sd-event-ticket-stack.has-2 .sd-ticket-slot-0 { --ticket-y: 80px; }
+      .sd-event-ticket-stack.has-1 .sd-ticket-slot-0 { --ticket-y: 0px; }
+      .sd-event-ticket-stack.has-2 .sd-ticket-slot-1 { --ticket-y: 0px; }
+      .sd-event-ticket-stack.has-2 .sd-ticket-slot-0 { --ticket-y: 58px; }
 
       .sd-event-ticket.is-current:not(.is-picked) {
-        border-color: rgba(216,185,94,.46);
+        --ticket-frame: rgba(216,185,94,.42);
       }
 
       .sd-event-ticket.is-picked {
-        border-color: rgba(157,244,22,.82);
-        box-shadow:
-          0 24px 44px rgba(0,0,0,.44),
-          0 0 0 1px rgba(157,244,22,.15),
-          0 0 24px rgba(157,244,22,.10);
+        --ticket-frame: rgba(216,185,94,.62);
+        --ticket-top-start: rgba(157,244,22,.92);
+        filter:
+          drop-shadow(0 19px 24px rgba(0,0,0,.35))
+          drop-shadow(0 0 10px rgba(157,244,22,.07));
       }
 
       .sd-event-ticket.is-pressed {
         scale: .985;
-        filter: brightness(1.08);
+        filter:
+          drop-shadow(0 15px 20px rgba(0,0,0,.32))
+          brightness(1.07);
       }
 
       .sd-event-ticket:disabled { opacity: 1; }
 
-      .sd-ticket-topline {
+      .sd-ticket-identity {
         position: relative;
-        z-index: 2;
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
-      }
-
-      .sd-ticket-title {
+        z-index: 3;
         display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        min-height: 34px;
+      }
+
+      .sd-ticket-date {
+        color: #efc96b;
+        font: 750 20px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: -.02em;
+        white-space: nowrap;
+      }
+
+      .sd-ticket-name {
         min-width: 0;
-        gap: 5px;
-      }
-
-      .sd-ticket-title strong {
-        min-width: 0;
-        color: var(--gold);
-        font-size: 20px;
-        line-height: 1.18;
-        letter-spacing: .035em;
-      }
-
-      .sd-ticket-title small {
-        color: rgba(255,255,255,.50);
-        font: 600 11px/1.2 "Chakra Petch", monospace;
-        letter-spacing: .07em;
-      }
-
-      .sd-ticket-slot-1 .sd-ticket-title strong,
-      .sd-ticket-slot-2 .sd-ticket-title strong {
         overflow: hidden;
+        color: rgba(248,246,238,.96);
+        font-size: 19px;
+        line-height: 1.1;
+        font-weight: 720;
+        letter-spacing: .025em;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
-      .sd-ticket-topline em {
+      .sd-ticket-identity em {
         flex: 0 0 auto;
-        align-self: start;
         border: 1px solid rgba(216,185,94,.30);
         border-radius: 999px;
-        background: rgba(216,185,94,.08);
-        color: rgba(240,189,92,.94);
-        padding: 6px 9px;
-        font-size: 11px;
-        line-height: 1.1;
+        background: rgba(216,185,94,.075);
+        color: rgba(240,199,112,.96);
+        padding: 6px 8px;
+        font-size: 10px;
+        line-height: 1;
         font-style: normal;
         font-weight: 800;
         white-space: nowrap;
       }
 
-      .sd-ticket-secondary {
+      .sd-ticket-note {
         position: absolute;
-        left: 20px;
-        right: 22px;
-        bottom: 18px;
-        display: flex;
-        align-items: flex-end;
-        gap: 34px;
-      }
-
-      .sd-ticket-secondary > span {
-        display: grid;
-        gap: 3px;
-      }
-
-      .sd-ticket-secondary small {
-        color: rgba(216,185,94,.62);
-        font-size: 10px;
-        letter-spacing: .16em;
-      }
-
-      .sd-ticket-secondary strong {
-        color: rgba(247,246,239,.94);
-        font: 700 18px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
-      }
-
-      .sd-ticket-perf {
-        position: absolute;
+        z-index: 3;
         left: 18px;
         right: 18px;
-        bottom: 57px;
-        height: 1px;
-        border-top: 1px dashed rgba(216,185,94,.18);
-        pointer-events: none;
+        top: 59px;
+        display: -webkit-box;
+        overflow: hidden;
+        color: rgba(255,255,255,.52);
+        font-size: 12.5px;
+        line-height: 1.35;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
       }
 
-      .sd-event-ticket.is-picked .sd-ticket-perf::after {
+      .sd-ticket-secondary {
+        position: absolute;
+        z-index: 3;
+        left: 18px;
+        right: 20px;
+        bottom: 13px;
+        display: flex;
+        align-items: flex-end;
+        gap: 30px;
+        padding-top: 9px;
+      }
+
+      .sd-ticket-secondary::before {
         content: "";
         position: absolute;
         left: 0;
-        top: -1px;
-        width: 36%;
+        top: 0;
+        width: min(62%, 180px);
         height: 1px;
-        background: linear-gradient(90deg, transparent, var(--green), transparent);
-        box-shadow: 0 0 8px rgba(157,244,22,.34);
-        animation: ticket-confirm-scan .42s ease-out 1;
+        background: linear-gradient(90deg, rgba(216,185,94,.22), transparent);
+      }
+
+      .sd-ticket-secondary.is-note-empty { bottom: 24px; }
+
+      .sd-ticket-secondary > span {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 5px;
+        align-items: baseline;
+      }
+
+      .sd-ticket-secondary small {
+        color: rgba(216,185,94,.58);
+        font-size: 10px;
+        letter-spacing: .10em;
+      }
+
+      .sd-ticket-secondary strong {
+        color: rgba(247,246,239,.95);
+        font: 750 18px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+      }
+
+      .sd-ticket-scan {
+        position: absolute;
+        z-index: 2;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 42%;
+        opacity: 0;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(157,244,22,.02),
+          rgba(157,244,22,.12),
+          transparent
+        );
+        transform: translateX(-160%);
+        pointer-events: none;
+      }
+
+      .sd-event-ticket.is-picked .sd-ticket-scan {
+        animation: ticket-confirm-scan .40s ease-out 1;
       }
 
       .sd-ticket-more-root {
         position: absolute;
         z-index: 1;
-        top: 314px;
-        right: 28px;
+        top: 264px;
+        right: 26px;
         min-width: 82px;
-        height: 31px;
-        border: 1px solid rgba(216,185,94,.20);
-        border-radius: 11px 15px 10px 14px;
-        background: rgba(8,12,13,.92);
+        height: 30px;
+        border: 1px solid rgba(216,185,94,.18);
+        border-radius: 3px 12px 6px 12px;
+        clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 8px);
+        background: rgba(7,11,12,.96);
         color: rgba(216,185,94,.70);
         font: 700 11px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
         transform: rotate(2.1deg) translateX(5px);
-        box-shadow: 0 8px 16px rgba(0,0,0,.18);
+        filter: drop-shadow(0 8px 12px rgba(0,0,0,.20));
       }
 
       .sd-ticket-hint {
-        margin: 2px 0 0;
-        color: rgba(255,255,255,.34);
+        margin: 1px 0 0;
+        color: rgba(255,255,255,.32);
         text-align: center;
         font-size: 10px;
         letter-spacing: .08em;
@@ -2113,6 +2462,11 @@ function HomepageStyles() {
         opacity: 1;
       }
 
+      @keyframes handoff-snapshot-drift {
+        0%, 100% { transform: translate3d(0, 0, 0); }
+        50% { transform: translate3d(1px, -1px, 0); }
+      }
+
       @keyframes racket-breathe {
         0%, 100% { transform: translateY(0) scale(1); }
         50% { transform: translateY(-3px) scale(1.01); }
@@ -2165,9 +2519,9 @@ function HomepageStyles() {
       }
 
       @keyframes ticket-confirm-scan {
-        0% { transform: translateX(-120%); opacity: 0; }
+        0% { transform: translateX(-160%); opacity: 0; }
         18% { opacity: 1; }
-        100% { transform: translateX(280%); opacity: 0; }
+        100% { transform: translateX(320%); opacity: 0; }
       }
 
       @keyframes fade-in {
@@ -2192,7 +2546,7 @@ function HomepageStyles() {
           top: 34px;
           transform: translate3d(-39%, 68px, 0) rotate(18deg) scale(1.57);
         }
-        .sd-preview { top: 306px; left: 34px; right: 18px; }
+        .sd-hero-meetup-picker { top: 164px; left: 20px; right: 20px; }
         .sd-metrics { top: 256px; }
         .sd-actions { top: 352px; left: 30px; right: 30px; }
         .sd-pending { top: 518px; }
@@ -2212,7 +2566,7 @@ function HomepageStyles() {
           top: 36px;
           transform: translate3d(-39%, 68px, 0) rotate(18deg) scale(1.43);
         }
-        .sd-preview { top: 276px; left: 20px; right: 12px; }
+        .sd-hero-meetup-picker { top: 146px; left: 8px; right: 8px; }
         .sd-annotation { font-size: 10px; width: 42vw; }
         .a-name { left: 14px; top: 16px; width: 61vw; }
         .a-name .sd-event-name { font-size: 19px; }
@@ -2224,9 +2578,12 @@ function HomepageStyles() {
         .sd-metric strong { font-size: 34px; }
         .sd-actions { top: 308px; left: 14px; right: 14px; gap: 28px; }
         .sd-pending { top: 476px; }
-        .sd-handoff-calibrator { right: 7px; width: 168px; }
-        .sd-event-ticket { left: 4px; right: 4px; padding-left: 17px; padding-right: 14px; }
-        .sd-ticket-title strong { font-size: 18px; }
+        .sd-timing-lab { left: 6px; width: min(214px, calc(100vw - 12px)); }
+        .sd-event-ticket { left: 4px; right: 4px; padding-left: 15px; padding-right: 12px; }
+        .sd-ticket-date { font-size: 18px; }
+        .sd-ticket-name { font-size: 17px; }
+        .sd-ticket-identity { gap: 6px; }
+        .sd-ticket-identity em { padding-left: 6px; padding-right: 6px; font-size: 9px; }
         .sd-action-zone button,
         .sd-action-zone input { font-size: 14px; }
       }
@@ -2235,11 +2592,10 @@ function HomepageStyles() {
       .motion-reduced .sd-racket-wrap,
       .motion-reduced .sd-racket-main,
       .motion-reduced .sd-racket-shadow,
-      .motion-reduced .sd-preview,
-      .motion-reduced .sd-preview-switch-rail b,
+      .motion-reduced .sd-hero-meetup-picker,
       .motion-reduced .sd-event-ticket,
       .motion-reduced .sd-event-ticket-stack,
-      .motion-reduced .sd-ticket-perf::after,
+      .motion-reduced .sd-ticket-scan,
       .motion-reduced .sd-scroll-cue span,
       .motion-reduced .sd-annotations,
       .motion-reduced .sd-pending span {

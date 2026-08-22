@@ -30,11 +30,14 @@ export type PendingAction = {
   label: string;
 };
 
-// ParticleRacket assembles for ~4.6s. Hold the completed shape for ~0.7s
-// before the real racket begins its 1.2s materialization crossfade.
-const MIN_PARTICLE_MS = 5300;
-const MATERIALIZE_MS = 1200;
-const PREVIEW_MS = 2800;
+export type HomepageHandoffTiming = {
+  preHoldMs: number;
+  realFadeMs: number;
+};
+
+const PARTICLE_ASSEMBLY_MS = 4600;
+const DEFAULT_PRE_HOLD_MS = 700;
+const DEFAULT_REAL_FADE_MS = 1200;
 const ROTATE_MS = 1300;
 const POLL_MS = 25000;
 
@@ -54,7 +57,7 @@ function detectMotionMode(): MotionMode {
   return coarse && narrow ? "degraded" : "normal";
 }
 
-export function useHomepageFlow() {
+export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   const [phase, setPhase] = useState<HomepagePhase>("loading-particles");
   const [motionMode, setMotionMode] = useState<MotionMode>("normal");
   const [events, setEvents] = useState<AlphaEvent[]>([]);
@@ -69,8 +72,15 @@ export function useHomepageFlow() {
   const [error, setError] = useState("");
   const [lastChangedId, setLastChangedId] = useState("");
   const [burstKey, setBurstKey] = useState(0);
-  const [previewCancelled, setPreviewCancelled] = useState(false);
   const didInit = useRef(false);
+  const handoffTimingRef = useRef<HomepageHandoffTiming>({
+    preHoldMs: DEFAULT_PRE_HOLD_MS,
+    realFadeMs: DEFAULT_REAL_FADE_MS,
+  });
+  handoffTimingRef.current = {
+    preHoldMs: Math.max(0, Number(handoffTiming?.preHoldMs ?? DEFAULT_PRE_HOLD_MS)),
+    realFadeMs: Math.max(0, Number(handoffTiming?.realFadeMs ?? DEFAULT_REAL_FADE_MS)),
+  };
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedEventId) || roster?.event || null,
@@ -137,10 +147,14 @@ export function useHomepageFlow() {
 
     loadInitial()
       .then(() => {
-        const remaining = Math.max(0, MIN_PARTICLE_MS - (window.performance.now() - startedAt));
+        const remaining = Math.max(
+          0,
+          PARTICLE_ASSEMBLY_MS - (window.performance.now() - startedAt),
+        );
         window.setTimeout(() => {
           if (cancelled) return;
           setPhase("particle-ready");
+          const { preHoldMs, realFadeMs } = handoffTimingRef.current;
           window.setTimeout(() => {
             if (cancelled) return;
             setPhase("materializing");
@@ -151,8 +165,8 @@ export function useHomepageFlow() {
                 return;
               }
               setPhase("meetup-preview");
-            }, MATERIALIZE_MS);
-          }, 16);
+            }, realFadeMs);
+          }, preHoldMs);
         }, remaining);
       })
       .catch((reason: unknown) => {
@@ -167,7 +181,6 @@ export function useHomepageFlow() {
   }, [loadInitial]);
 
   const enterActive = useCallback(() => {
-    setPreviewCancelled(true);
     if (motionMode === "reduced") {
       setPhase("active");
       return;
@@ -176,11 +189,6 @@ export function useHomepageFlow() {
     window.setTimeout(() => setPhase("active"), ROTATE_MS);
   }, [motionMode]);
 
-  useEffect(() => {
-    if (phase !== "meetup-preview" || previewCancelled) return;
-    const timer = window.setTimeout(enterActive, PREVIEW_MS);
-    return () => window.clearTimeout(timer);
-  }, [enterActive, phase, previewCancelled]);
 
   const refresh = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -204,7 +212,6 @@ export function useHomepageFlow() {
 
   const openMeetupPicker = useCallback(
     (eventId?: string) => {
-      setPreviewCancelled(true);
       setPendingSwitchEventId(eventId || selectedEventId);
       setMeetupPickerOpen(true);
     },

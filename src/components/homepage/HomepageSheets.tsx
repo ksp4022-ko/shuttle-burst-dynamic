@@ -8,6 +8,18 @@ import {
 import type { AlphaEvent, AlphaSignup } from "@/lib/database-alpha";
 import { personRole, type MemberPickerMode } from "@/hooks/use-homepage-flow";
 
+type MeetupTicketStackProps = {
+  events: AlphaEvent[];
+  selectedEventId: string;
+  pendingEventId: string;
+  onSelect: (eventId: string) => void;
+  disabled: boolean;
+  variant?: "sheet" | "hero";
+  onInteract?: () => void;
+  onFocusIndexChange?: (index: number) => void;
+  onTransitioningChange?: (transitioning: boolean) => void;
+};
+
 type MeetupSheetProps = {
   open: boolean;
   events: AlphaEvent[];
@@ -67,16 +79,17 @@ function ticketVisual(index: number, slot: number) {
   } as CSSProperties;
 }
 
-export function MeetupSheet({
-  open,
+export function MeetupTicketStack({
   events,
   selectedEventId,
   pendingEventId,
   onSelect,
-  onClose,
-  onConfirm,
   disabled,
-}: MeetupSheetProps) {
+  variant = "sheet",
+  onInteract,
+  onFocusIndexChange,
+  onTransitioningChange,
+}: MeetupTicketStackProps) {
   const [focusIndex, setFocusIndex] = useState(0);
   const [dragY, setDragY] = useState(0);
   const [pressedId, setPressedId] = useState("");
@@ -86,13 +99,15 @@ export function MeetupSheet({
   const transitionTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!open || !events.length) return;
+    if (!events.length) return;
     const focusId = pendingEventId || selectedEventId;
     const nextIndex = events.findIndex((event) => event.id === focusId);
-    setFocusIndex(nextIndex >= 0 ? nextIndex : 0);
+    const resolvedIndex = nextIndex >= 0 ? nextIndex : 0;
+    setFocusIndex(resolvedIndex);
     setDragY(0);
     setPressedId("");
-  }, [events, open, pendingEventId, selectedEventId]);
+    onFocusIndexChange?.(resolvedIndex);
+  }, [events, onFocusIndexChange, pendingEventId, selectedEventId]);
 
   useEffect(
     () => () => {
@@ -101,9 +116,6 @@ export function MeetupSheet({
     [],
   );
 
-  if (!open) return null;
-
-  const pickedEvent = events.find((event) => event.id === pendingEventId) || null;
   const visibleCount = Math.min(3, events.length);
   const visibleIndexes =
     visibleCount <= 1
@@ -125,19 +137,27 @@ export function MeetupSheet({
     const nextEvent = events[nextIndex];
     if (!nextEvent) return;
 
+    onInteract?.();
     if (nextIndex === focusIndex) {
       onSelect(nextEvent.id);
+      onFocusIndexChange?.(nextIndex);
       return;
     }
 
     setTransitioning(true);
+    onTransitioningChange?.(true);
     setFocusIndex(nextIndex);
     onSelect(nextEvent.id);
+    onFocusIndexChange?.(nextIndex);
     if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
-    transitionTimerRef.current = window.setTimeout(() => setTransitioning(false), 500);
+    transitionTimerRef.current = window.setTimeout(() => {
+      setTransitioning(false);
+      onTransitioningChange?.(false);
+    }, 500);
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    onInteract?.();
     if (transitioning || disabled || events.length < 2) return;
     pointerStartRef.current = { pointerId: event.pointerId, y: event.clientY };
     suppressClickRef.current = false;
@@ -174,6 +194,107 @@ export function MeetupSheet({
     "--ticket-drag-back": `${dragY * 0.1}px`,
   } as CSSProperties;
 
+  if (!events.length) return <p className="sd-empty">目前沒有可選擇的聚會</p>;
+
+  return (
+    <div
+      className={`sd-event-ticket-stack sd-ticket-stack-${variant} has-${visibleCount} ${
+        transitioning ? "is-transitioning" : ""
+      }`}
+      style={stackStyle}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPointer}
+      onPointerCancel={finishPointer}
+    >
+      {hiddenCount > 0 ? (
+        <button
+          type="button"
+          className="sd-ticket-more-root"
+          disabled={disabled || transitioning}
+          onClick={() => activateIndex(focusIndex + 1)}
+          aria-label={`還有 ${hiddenCount} 場聚會，顯示下一張`}
+        >
+          +{hiddenCount} 場
+        </button>
+      ) : null}
+
+      {[...visibleIndexes].reverse().map((eventIndex) => {
+        const event = events[eventIndex];
+        const slot = visibleIndexes.indexOf(eventIndex);
+        const picked = event.id === (pendingEventId || selectedEventId);
+        const current = event.id === selectedEventId;
+        const pressed = pressedId === event.id;
+        return (
+          <button
+            key={event.id}
+            type="button"
+            className={`sd-event-ticket sd-ticket-slot-${slot} ${
+              picked ? "is-picked" : ""
+            } ${current ? "is-current" : ""} ${pressed ? "is-pressed" : ""}`}
+            style={ticketVisual(eventIndex, slot)}
+            disabled={disabled || transitioning}
+            onPointerDown={() => setPressedId(event.id)}
+            onPointerUp={() => setPressedId("")}
+            onPointerCancel={() => setPressedId("")}
+            onClick={() => {
+              setPressedId("");
+              if (suppressClickRef.current) return;
+              activateIndex(eventIndex);
+            }}
+            aria-label={`選擇 ${event.name}，${ticketDateFull(event.eventDate)}，${eventStatus(event)}`}
+          >
+            <span className="sd-ticket-identity">
+              <span className="sd-ticket-date">{ticketDateShort(event.eventDate)}</span>
+              <strong className="sd-ticket-name">{event.name}</strong>
+              <em>{eventStatus(event)}</em>
+            </span>
+            {slot === 0 ? (
+              <>
+                {event.eventNote ? (
+                  <span className="sd-ticket-note">{event.eventNote}</span>
+                ) : null}
+                <span className={`sd-ticket-secondary ${event.eventNote ? "" : "is-note-empty"}`} aria-hidden="true">
+                  <span>
+                    <small>臨打</small>
+                    <strong>${Number(event.tempFee || 0)}</strong>
+                  </span>
+                  <span>
+                    <small>上限</small>
+                    <strong>{Number(event.maxPeople || 0)}</strong>
+                  </span>
+                </span>
+              </>
+            ) : null}
+            <span className="sd-ticket-scan" aria-hidden="true" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function MeetupSheet({
+  open,
+  events,
+  selectedEventId,
+  pendingEventId,
+  onSelect,
+  onClose,
+  onConfirm,
+  disabled,
+}: MeetupSheetProps) {
+  const [focusIndex, setFocusIndex] = useState(0);
+  const [ticketTransitioning, setTicketTransitioning] = useState(false);
+
+  useEffect(() => {
+    if (!open) setTicketTransitioning(false);
+  }, [open]);
+
+  if (!open) return null;
+
+  const pickedEvent = events.find((event) => event.id === pendingEventId) || null;
+
   return (
     <div className="sd-sheet-layer" role="dialog" aria-modal="true" aria-label="選擇聚會">
       <button className="sd-sheet-backdrop" aria-label="關閉" onClick={onClose} />
@@ -191,81 +312,16 @@ export function MeetupSheet({
         </header>
 
         <div className="sd-sheet-scroll sd-ticket-scroll">
-          {events.length ? (
-            <div
-              className={`sd-event-ticket-stack has-${visibleCount} ${
-                transitioning ? "is-transitioning" : ""
-              }`}
-              style={stackStyle}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={finishPointer}
-              onPointerCancel={finishPointer}
-            >
-              {hiddenCount > 0 ? (
-                <button
-                  type="button"
-                  className="sd-ticket-more-root"
-                  disabled={disabled || transitioning}
-                  onClick={() => activateIndex(focusIndex + 1)}
-                  aria-label={`還有 ${hiddenCount} 場聚會，顯示下一張`}
-                >
-                  +{hiddenCount} 場
-                </button>
-              ) : null}
-
-              {[...visibleIndexes].reverse().map((eventIndex) => {
-                const event = events[eventIndex];
-                const slot = visibleIndexes.indexOf(eventIndex);
-                const picked = event.id === pendingEventId;
-                const current = event.id === selectedEventId;
-                const pressed = pressedId === event.id;
-                return (
-                  <button
-                    key={event.id}
-                    type="button"
-                    className={`sd-event-ticket sd-ticket-slot-${slot} ${
-                      picked ? "is-picked" : ""
-                    } ${current ? "is-current" : ""} ${pressed ? "is-pressed" : ""}`}
-                    style={ticketVisual(eventIndex, slot)}
-                    disabled={disabled || transitioning}
-                    onPointerDown={() => setPressedId(event.id)}
-                    onPointerUp={() => setPressedId("")}
-                    onPointerCancel={() => setPressedId("")}
-                    onClick={() => {
-                      setPressedId("");
-                      if (suppressClickRef.current) return;
-                      activateIndex(eventIndex);
-                    }}
-                    aria-label={`選擇 ${event.name}，${ticketDate(event.eventDate)}，${eventStatus(event)}`}
-                  >
-                    <span className="sd-ticket-topline">
-                      <span className="sd-ticket-title">
-                        <strong>{event.name}</strong>
-                        <small>{ticketDate(event.eventDate)}</small>
-                      </span>
-                      <em>{eventStatus(event)}</em>
-                    </span>
-                    {slot === 0 ? (
-                      <span className="sd-ticket-secondary" aria-hidden="true">
-                        <span>
-                          <small>臨打</small>
-                          <strong>${Number(event.tempFee || 0)}</strong>
-                        </span>
-                        <span>
-                          <small>上限</small>
-                          <strong>{Number(event.maxPeople || 0)}</strong>
-                        </span>
-                      </span>
-                    ) : null}
-                    <span className="sd-ticket-perf" aria-hidden="true" />
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="sd-empty">目前沒有可選擇的聚會</p>
-          )}
+          <MeetupTicketStack
+            events={events}
+            selectedEventId={selectedEventId}
+            pendingEventId={pendingEventId}
+            onSelect={onSelect}
+            disabled={disabled}
+            variant="sheet"
+            onFocusIndexChange={setFocusIndex}
+            onTransitioningChange={setTicketTransitioning}
+          />
           {events.length > 1 ? (
             <p className="sd-ticket-hint" aria-hidden="true">點票券或上下滑動切換</p>
           ) : null}
@@ -283,7 +339,7 @@ export function MeetupSheet({
           </span>
           <button
             className="sd-sheet-confirm"
-            disabled={disabled || transitioning || !pendingEventId}
+            disabled={disabled || ticketTransitioning || !pendingEventId}
             onClick={onConfirm}
           >
             切換聚會
@@ -363,7 +419,12 @@ export function MemberSheet({
   );
 }
 
-function ticketDate(value: string) {
+function ticketDateShort(value: string) {
+  const [, month = "", day = ""] = value.split("-");
+  return `${Number(month)}/${Number(day)}`;
+}
+
+function ticketDateFull(value: string) {
   const [year = "", month = "", day = ""] = value.split("-");
   return `${year}.${String(Number(month)).padStart(2, "0")}.${String(Number(day)).padStart(2, "0")}`;
 }
