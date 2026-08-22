@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -36,6 +37,8 @@ export const Route = createFileRoute("/")({
 const RACKET_FILE = "shuttle-racket-pearl.png";
 const ADMIN_URL =
   "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/admin";
+const HANDOFF_STORAGE_KEY = "shuttle-racket-handoff-offset";
+const DEFAULT_HANDOFF_OFFSET = { x: 0, y: 0 };
 
 function Index() {
   const [name, setName] = useState("");
@@ -45,6 +48,9 @@ function Index() {
   const racketFaceAnchorRef = useRef<HTMLSpanElement | null>(null);
   const signupButtonRef = useRef<HTMLButtonElement | null>(null);
   const [particleMatchTop, setParticleMatchTop] = useState(46);
+  const [handoffOffset, setHandoffOffset] = useState(DEFAULT_HANDOFF_OFFSET);
+  const [handoffCalibration, setHandoffCalibration] = useState(false);
+  const [rosterVisible, setRosterVisible] = useState(false);
   const flow = useHomepageFlow();
   const racketSrc = `${import.meta.env.BASE_URL}${RACKET_FILE}`;
   const active = flow.phase === "active";
@@ -76,6 +82,44 @@ function Index() {
     window.addEventListener("resize", alignMaterializedRacket);
     return () => window.removeEventListener("resize", alignMaterializedRacket);
   }, []);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(HANDOFF_STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as Partial<typeof DEFAULT_HANDOFF_OFFSET>;
+      setHandoffOffset({
+        x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : 0,
+        y: Number.isFinite(Number(parsed.y)) ? Number(parsed.y) : 0,
+      });
+    } catch {
+      setHandoffOffset(DEFAULT_HANDOFF_OFFSET);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(HANDOFF_STORAGE_KEY, JSON.stringify(handoffOffset));
+    } catch {
+      // Calibration still works if storage is unavailable.
+    }
+  }, [handoffOffset]);
+
+  useEffect(() => {
+    if (!active && !rotating) {
+      setRosterVisible(false);
+      return;
+    }
+
+    const roster = document.querySelector<HTMLElement>(".sd-roster");
+    if (!roster || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setRosterVisible(Boolean(entry?.isIntersecting)),
+      { threshold: 0.08 },
+    );
+    observer.observe(roster);
+    return () => observer.disconnect();
+  }, [active, rotating]);
 
   const metrics = useMemo(() => {
     const summary = flow.roster?.summary;
@@ -114,18 +158,49 @@ function Index() {
     void flow.switchMeetup();
   };
 
+  const scrollToRoster = () => {
+    document.querySelector<HTMLElement>(".sd-roster")?.scrollIntoView({
+      behavior: flow.motionMode === "reduced" ? "auto" : "smooth",
+      block: "start",
+    });
+  };
+
   return (
     <main
-      className={`sd-page is-${flow.phase} motion-${flow.motionMode}`}
+      className={`sd-page is-${flow.phase} motion-${flow.motionMode} ${
+        rosterVisible ? "is-roster-visible" : ""
+      } ${handoffCalibration ? "is-handoff-calibrating" : ""}`}
       data-locked={flow.pendingAction ? "true" : "false"}
+      style={
+        {
+          "--sd-handoff-x": `${handoffOffset.x}px`,
+          "--sd-handoff-y": `${handoffOffset.y}px`,
+        } as CSSProperties
+      }
     >
       <HomepageStyles />
       <ParticleRacket phase={flow.phase} motionMode={flow.motionMode} />
-      <ParticleHandoffOverlay phase={flow.phase} motionMode={flow.motionMode} />
+      <ParticleHandoffOverlay
+        phase={flow.phase}
+        motionMode={flow.motionMode}
+        calibrationMode={handoffCalibration}
+      />
 
       <header className="sd-header">
         <p>BADMINTON ASSEMBLY</p>
       </header>
+
+      {materialized && (
+        <HandoffCalibrationPanel
+          offset={handoffOffset}
+          calibrationMode={handoffCalibration}
+          onToggleCalibration={() => setHandoffCalibration((value) => !value)}
+          onChange={(axis, value) =>
+            setHandoffOffset((current) => ({ ...current, [axis]: value }))
+          }
+          onReset={() => setHandoffOffset(DEFAULT_HANDOFF_OFFSET)}
+        />
+      )}
 
       {active && (
         <a
@@ -265,6 +340,14 @@ function Index() {
             {flow.pendingAction.label}
           </div>
         )}
+
+        {(active || rotating) && (
+          <button className="sd-scroll-cue" type="button" onClick={scrollToRoster} aria-label="往下查看報名名單">
+            <span />
+            <span />
+            <span />
+          </button>
+        )}
       </section>
 
       {(active || rotating) && (
@@ -319,11 +402,14 @@ function Index() {
 function ParticleHandoffOverlay({
   phase,
   motionMode,
+  calibrationMode,
 }: {
   phase: ReturnType<typeof useHomepageFlow>["phase"];
   motionMode: ReturnType<typeof useHomepageFlow>["motionMode"];
+  calibrationMode: boolean;
 }) {
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
+  const hasSnapshotRef = useRef(false);
 
   useLayoutEffect(() => {
     const overlay = overlayRef.current;
@@ -337,6 +423,7 @@ function ParticleHandoffOverlay({
     overlay.height = source.height;
     context.clearRect(0, 0, overlay.width, overlay.height);
     context.drawImage(source, 0, 0);
+    hasSnapshotRef.current = true;
     overlay.classList.remove("is-fading");
     overlay.classList.add("is-visible");
 
@@ -345,7 +432,6 @@ function ParticleHandoffOverlay({
     });
     const timer = window.setTimeout(() => {
       overlay.classList.remove("is-visible", "is-fading");
-      context.clearRect(0, 0, overlay.width, overlay.height);
     }, 930);
 
     return () => {
@@ -354,7 +440,80 @@ function ParticleHandoffOverlay({
     };
   }, [motionMode, phase]);
 
+  useLayoutEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    if (calibrationMode && hasSnapshotRef.current) {
+      overlay.classList.add("is-calibrating");
+      return;
+    }
+    overlay.classList.remove("is-calibrating");
+  }, [calibrationMode]);
+
   return <canvas ref={overlayRef} className="sd-particle-handoff" aria-hidden="true" />;
+}
+
+function HandoffCalibrationPanel({
+  offset,
+  calibrationMode,
+  onToggleCalibration,
+  onChange,
+  onReset,
+}: {
+  offset: { x: number; y: number };
+  calibrationMode: boolean;
+  onToggleCalibration: () => void;
+  onChange: (axis: "x" | "y", value: number) => void;
+  onReset: () => void;
+}) {
+  return (
+    <aside className="sd-handoff-calibrator" aria-label="球拍銜接校正">
+      <div className="sd-calibrator-head">
+        <strong>HANDOFF</strong>
+        <button
+          type="button"
+          className={calibrationMode ? "is-on" : ""}
+          onClick={onToggleCalibration}
+        >
+          {calibrationMode ? "疊合中" : "校正模式"}
+        </button>
+      </div>
+      <CalibrationAxis axis="x" label="X" value={offset.x} onChange={onChange} />
+      <CalibrationAxis axis="y" label="Y" value={offset.y} onChange={onChange} />
+      <div className="sd-calibrator-foot">
+        <code>X {offset.x >= 0 ? "+" : ""}{offset.x} / Y {offset.y >= 0 ? "+" : ""}{offset.y}</code>
+        <button type="button" onClick={onReset}>歸零</button>
+      </div>
+    </aside>
+  );
+}
+
+function CalibrationAxis({
+  axis,
+  label,
+  value,
+  onChange,
+}: {
+  axis: "x" | "y";
+  label: string;
+  value: number;
+  onChange: (axis: "x" | "y", value: number) => void;
+}) {
+  return (
+    <div className="sd-calibrator-axis">
+      <span>{label}</span>
+      <button type="button" onClick={() => onChange(axis, value - 1)} aria-label={`${label} 減 1`}>−</button>
+      <input
+        type="number"
+        inputMode="numeric"
+        step="1"
+        value={value}
+        onChange={(event) => onChange(axis, Number(event.target.value || 0))}
+        aria-label={`${label} 位移像素`}
+      />
+      <button type="button" onClick={() => onChange(axis, value + 1)} aria-label={`${label} 加 1`}>＋</button>
+    </div>
+  );
 }
 
 function RacketImage({ src, className = "" }: { src: string; className?: string }) {
@@ -374,6 +533,7 @@ function MeetupPreview({
         <strong ref={titleRef}>{event.name}</strong>
         <em>{meetupStatus(event)}</em>
       </span>
+      <span className="sd-preview-date">{formatTicketDate(event.eventDate)}</span>
       {event.eventNote ? <span className="sd-preview-note">{event.eventNote}</span> : null}
       <span className="sd-preview-meta">
         臨打 ${Number(event.tempFee || 0)}｜上限 {Number(event.maxPeople || 0)}
@@ -461,6 +621,11 @@ function Metric({
   );
 }
 
+function formatTicketDate(value: string) {
+  const [year = "", month = "", day = ""] = value.split("-");
+  return `${year}.${String(Number(month)).padStart(2, "0")}.${String(Number(day)).padStart(2, "0")}`;
+}
+
 function meetupStatus(event: AlphaEvent) {
   if (Number(event.waitingCount || 0) > 0) return `候補 ${Number(event.waitingCount || 0)}`;
   if (Number(event.remainCount || 0) <= 0) return "額滿 可報候補";
@@ -492,12 +657,12 @@ function HomepageStyles() {
 
       .sd-page::before {
         z-index: 0;
-        opacity: .36;
+        opacity: .50;
         background-image:
-          linear-gradient(128deg, transparent 0 35%, rgba(216,185,94,.10) 35.2% 35.45%, transparent 35.7%),
-          linear-gradient(133deg, transparent 0 64%, rgba(255,255,255,.055) 64.1% 64.25%, transparent 64.5%),
-          repeating-linear-gradient(135deg, rgba(255,255,255,.026) 0 1px, transparent 1px 13px),
-          repeating-linear-gradient(45deg, transparent 0 17px, rgba(255,255,255,.018) 17px 18px);
+          linear-gradient(128deg, transparent 0 35%, rgba(216,185,94,.16) 35.2% 35.48%, transparent 35.76%),
+          linear-gradient(133deg, transparent 0 64%, rgba(255,255,255,.075) 64.1% 64.27%, transparent 64.55%),
+          repeating-linear-gradient(135deg, rgba(255,255,255,.040) 0 1px, transparent 1px 13px),
+          repeating-linear-gradient(45deg, transparent 0 17px, rgba(216,185,94,.030) 17px 18px);
       }
 
       .sd-page::after {
@@ -558,6 +723,101 @@ function HomepageStyles() {
         stroke-linejoin: round;
       }
 
+      .sd-handoff-calibrator {
+        position: fixed;
+        z-index: 65;
+        top: calc(env(safe-area-inset-top) + 64px);
+        right: 10px;
+        width: 178px;
+        border: 1px solid rgba(216,185,94,.34);
+        border-radius: 16px;
+        background: rgba(5,8,11,.91);
+        color: rgba(255,255,255,.90);
+        padding: 9px;
+        box-shadow: 0 16px 36px rgba(0,0,0,.38);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+      }
+
+      .sd-calibrator-head,
+      .sd-calibrator-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .sd-calibrator-head { margin-bottom: 7px; }
+
+      .sd-calibrator-head strong {
+        color: var(--gold);
+        font: 700 10px/1 "Chakra Petch", monospace;
+        letter-spacing: .16em;
+      }
+
+      .sd-calibrator-head button,
+      .sd-calibrator-foot button {
+        min-height: 28px;
+        border: 1px solid rgba(216,185,94,.28);
+        border-radius: 999px;
+        background: rgba(255,255,255,.035);
+        color: rgba(216,185,94,.86);
+        padding: 0 9px;
+        font-size: 10px;
+      }
+
+      .sd-calibrator-head button.is-on {
+        border-color: rgba(157,244,22,.58);
+        color: var(--green);
+        box-shadow: 0 0 14px rgba(157,244,22,.12);
+      }
+
+      .sd-calibrator-axis {
+        display: grid;
+        grid-template-columns: 20px 32px 58px 32px;
+        gap: 5px;
+        align-items: center;
+        margin-top: 6px;
+      }
+
+      .sd-calibrator-axis > span {
+        color: rgba(216,185,94,.72);
+        font: 700 11px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-calibrator-axis button {
+        height: 30px;
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 9px;
+        background: rgba(255,255,255,.045);
+        color: #fff;
+        font-size: 17px;
+        line-height: 1;
+      }
+
+      .sd-calibrator-axis input {
+        width: 58px;
+        height: 30px;
+        border: 1px solid rgba(216,185,94,.25);
+        border-radius: 9px;
+        background: rgba(0,0,0,.35);
+        color: #fff;
+        text-align: center;
+        font: 700 12px/1 "Chakra Petch", monospace;
+        outline: none;
+      }
+
+      .sd-calibrator-foot {
+        margin-top: 8px;
+        padding-top: 7px;
+        border-top: 1px solid rgba(255,255,255,.07);
+      }
+
+      .sd-calibrator-foot code {
+        color: rgba(157,244,22,.78);
+        font-size: 10px;
+      }
+
       .sd-particles {
         position: fixed;
         z-index: 3;
@@ -594,10 +854,17 @@ function HomepageStyles() {
 
       .sd-particle-handoff.is-visible { opacity: 1; }
       .sd-particle-handoff.is-visible.is-fading { opacity: 0; }
+      .sd-particle-handoff.is-calibrating {
+        z-index: 19;
+        opacity: 1 !important;
+        transition: none;
+      }
+
+      .is-handoff-calibrating .sd-particles { opacity: 0 !important; }
 
       .sd-hero {
         width: min(100%, 560px);
-        min-height: 530px;
+        min-height: max(610px, calc(100svh - 72px));
         margin: 0 auto;
         isolation: isolate;
       }
@@ -626,14 +893,41 @@ function HomepageStyles() {
 
       .sd-racket-wrap.is-materialized {
         opacity: 1;
-        transform: translate3d(-50%, 0, 0) rotate(85.5deg) scale(.94);
+        transform:
+          translate3d(
+            calc(-50% + var(--sd-handoff-x, 0px)),
+            var(--sd-handoff-y, 0px),
+            0
+          )
+          rotate(85.5deg)
+          scale(.94);
       }
 
       .is-rotating-to-active .sd-racket-wrap,
       .is-active .sd-racket-wrap {
         top: 40px;
-        transform: translate3d(-43%, 74px, 0) rotate(18deg) scale(1.50);
+        transform: translate3d(-39%, 74px, 0) rotate(18deg) scale(1.50);
       }
+
+      .is-meetup-preview .sd-racket-wrap { z-index: 9; }
+
+      .is-handoff-calibrating .sd-racket-wrap {
+        z-index: 20 !important;
+        top: var(--sd-particle-match-top, 46px) !important;
+        opacity: .52 !important;
+        transition: none !important;
+        transform:
+          translate3d(
+            calc(-50% + var(--sd-handoff-x, 0px)),
+            var(--sd-handoff-y, 0px),
+            0
+          )
+          rotate(85.5deg)
+          scale(.94) !important;
+      }
+
+      .is-handoff-calibrating .sd-racket-main { animation: none !important; }
+      .is-handoff-calibrating .sd-racket-shadow { display: none !important; }
 
       .sd-racket-face-anchor {
         position: absolute;
@@ -770,21 +1064,50 @@ function HomepageStyles() {
       .sd-preview {
         position: absolute;
         z-index: 8;
-        left: 24px;
-        right: 24px;
-        top: 326px;
+        left: 30px;
+        right: 16px;
+        top: 286px;
         display: grid;
         grid-template-columns: minmax(0, 1fr);
-        gap: 7px;
+        gap: 6px;
         align-items: center;
-        border: 1px solid rgba(216,185,94,.26);
-        border-radius: 22px;
-        background: rgba(5,8,11,.46);
+        border: 1px solid rgba(216,185,94,.42);
+        border-radius: 18px 28px 20px 26px;
+        background:
+          radial-gradient(72% 120% at 86% 12%, rgba(216,185,94,.10), transparent 62%),
+          linear-gradient(145deg, rgba(18,22,22,.92), rgba(5,8,11,.93));
         color: #fff;
-        padding: 15px 16px 14px;
+        padding: 15px 17px 14px 20px;
         text-align: left;
-        backdrop-filter: blur(12px);
-        overflow: hidden;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        overflow: visible;
+        transform: rotate(-.42deg);
+        transform-origin: 42% 50%;
+        box-shadow:
+          0 22px 42px rgba(0,0,0,.34),
+          10px 12px 0 -8px rgba(216,185,94,.08),
+          inset 0 1px 0 rgba(255,255,255,.035);
+      }
+
+      .sd-preview::before,
+      .sd-preview::after {
+        content: "";
+        position: absolute;
+        top: 57%;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #080b0f;
+        box-shadow: 0 0 0 1px rgba(216,185,94,.25);
+        pointer-events: none;
+      }
+
+      .sd-preview::before { left: -9px; }
+      .sd-preview::after { right: -9px; }
+
+      .is-meetup-preview .sd-preview {
+        animation: hero-ticket-in .48s cubic-bezier(.2,.82,.18,1) both;
       }
 
       .sd-preview-topline {
@@ -817,6 +1140,14 @@ function HomepageStyles() {
         font-style: normal;
         font-weight: 700;
         letter-spacing: .02em;
+      }
+
+      .sd-preview-date {
+        display: block;
+        margin: -1px 0 1px !important;
+        color: rgba(216,185,94,.62);
+        font: 600 11px/1.2 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .12em;
       }
 
       .sd-preview-note,
@@ -1142,6 +1473,56 @@ function HomepageStyles() {
       .sd-pending span:nth-child(2) { animation-delay: .14s; }
       .sd-pending span:nth-child(3) { animation-delay: .28s; }
 
+      .sd-scroll-cue {
+        position: absolute;
+        z-index: 18;
+        left: 50%;
+        bottom: 12px;
+        width: 52px;
+        height: 54px;
+        transform: translateX(-50%);
+        display: grid;
+        place-items: center;
+        gap: 0;
+        border: 0;
+        background: transparent;
+        padding: 4px 0;
+        color: var(--green);
+        cursor: pointer;
+      }
+
+      .sd-scroll-cue span {
+        position: relative;
+        display: block;
+        width: 18px;
+        height: 9px;
+        opacity: .24;
+        filter: drop-shadow(0 0 5px rgba(157,244,22,.30));
+        animation: scroll-cue-wave 1.7s ease-in-out infinite;
+      }
+
+      .sd-scroll-cue span::before,
+      .sd-scroll-cue span::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        width: 11px;
+        height: 2px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .sd-scroll-cue span::before { left: 0; transform: rotate(28deg); transform-origin: right center; }
+      .sd-scroll-cue span::after { right: 0; transform: rotate(-28deg); transform-origin: left center; }
+      .sd-scroll-cue span:nth-child(2) { width: 16px; animation-delay: .16s; }
+      .sd-scroll-cue span:nth-child(3) { width: 13px; animation-delay: .32s; }
+
+      .is-roster-visible .sd-scroll-cue {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .22s ease;
+      }
+
       .sd-load-error {
         position: absolute;
         z-index: 9;
@@ -1278,6 +1659,16 @@ function HomepageStyles() {
         background: rgba(7,10,14,.66);
         color: var(--gold);
         backdrop-filter: blur(12px);
+        opacity: 0;
+        transform: translateY(10px) scale(.94);
+        pointer-events: none;
+        transition: opacity .26s ease, transform .32s cubic-bezier(.2,.82,.2,1);
+      }
+
+      .is-roster-visible .sd-back-top {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
       }
 
       .sd-sheet-layer {
@@ -1351,12 +1742,10 @@ function HomepageStyles() {
         padding: 14px 16px 12px;
       }
 
-      .sd-event-list,
       .sd-person-list {
         min-height: min-content;
       }
 
-      .sd-event-card,
       .sd-person-card {
         width: 100%;
         border: 1px solid rgba(216,185,94,.18);
@@ -1367,25 +1756,8 @@ function HomepageStyles() {
         box-shadow: inset 0 1px 0 rgba(255,255,255,.018);
       }
 
-      .sd-event-card {
-        display: grid;
-        gap: 8px;
-        min-height: 112px;
-        padding: 16px;
-      }
+      .sd-person-card + .sd-person-card { margin-top: 9px; }
 
-      .sd-event-card > span:not(.sd-event-topline) {
-        color: rgba(255,255,255,.60);
-        font-size: 13px;
-        line-height: 1.35;
-      }
-
-      .sd-event-card + .sd-event-card,
-      .sd-person-card + .sd-person-card {
-        margin-top: 9px;
-      }
-
-      .sd-event-card.is-picked,
       .sd-person-card.is-picked {
         border-color: rgba(157,244,22,.78);
         background: rgba(157,244,22,.055);
@@ -1394,35 +1766,277 @@ function HomepageStyles() {
           0 0 24px rgba(157,244,22,.08);
       }
 
-      .sd-event-card.is-current:not(.is-picked) {
-        border-color: rgba(216,185,94,.34);
+      .sd-ticket-sheet .sd-sheet-header {
+        padding-right: 148px;
       }
 
-      .sd-event-topline {
+      .sd-ticket-counter {
+        position: absolute;
+        right: 82px;
+        top: 24px;
+        color: rgba(216,185,94,.62);
+        font: 700 11px/1 "Chakra Petch", monospace;
+        letter-spacing: .08em;
+      }
+
+      .sd-ticket-scroll {
+        overflow: hidden;
+        padding: 10px 16px 8px;
+        touch-action: none;
+      }
+
+      .sd-event-ticket-stack {
+        --ticket-drag-main: 0px;
+        --ticket-drag-mid: 0px;
+        --ticket-drag-back: 0px;
+        position: relative;
+        width: 100%;
+        height: 352px;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      .sd-event-ticket-stack.has-1 { height: 194px; }
+      .sd-event-ticket-stack.has-2 { height: 266px; }
+
+      .sd-event-ticket {
+        --ticket-x: 0px;
+        --ticket-angle: 0deg;
+        --ticket-y: 0px;
+        --ticket-drag: 0px;
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        top: 0;
+        display: block;
+        height: 174px;
+        border: 1px solid rgba(216,185,94,.24);
+        border-radius: 20px 29px 21px 27px;
+        color: rgba(247,246,239,.94);
+        padding: 15px 17px 16px 20px;
+        text-align: left;
+        overflow: hidden;
+        transform:
+          translate3d(
+            var(--ticket-x),
+            calc(var(--ticket-y) + var(--ticket-drag)),
+            0
+          )
+          rotate(var(--ticket-angle));
+        transform-origin: 48% 44%;
+        transition:
+          transform .46s cubic-bezier(.2,.82,.18,1),
+          filter .18s ease,
+          border-color .22s ease,
+          box-shadow .28s ease;
+        will-change: transform, filter;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .sd-event-ticket::before,
+      .sd-event-ticket::after {
+        content: "";
+        position: absolute;
+        top: 58%;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        background: #0a0d10;
+        box-shadow: 0 0 0 1px rgba(216,185,94,.22);
+        pointer-events: none;
+      }
+
+      .sd-event-ticket::before { left: -10px; }
+      .sd-event-ticket::after { right: -10px; }
+
+      .sd-ticket-slot-0 {
+        --ticket-y: 144px;
+        --ticket-drag: var(--ticket-drag-main);
+        z-index: 4;
+        background:
+          radial-gradient(80% 130% at 90% 12%, rgba(216,185,94,.10), transparent 62%),
+          linear-gradient(145deg, rgba(18,23,21,.98), rgba(5,8,11,.99));
+        box-shadow:
+          0 24px 42px rgba(0,0,0,.42),
+          0 0 0 1px rgba(255,255,255,.018) inset;
+      }
+
+      .sd-ticket-slot-1 {
+        --ticket-y: 72px;
+        --ticket-drag: var(--ticket-drag-mid);
+        z-index: 3;
+        background:
+          radial-gradient(80% 120% at 12% 0%, rgba(255,255,255,.035), transparent 58%),
+          linear-gradient(145deg, rgba(24,25,24,.97), rgba(9,12,14,.99));
+        border-color: rgba(216,185,94,.21);
+        box-shadow: 0 16px 30px rgba(0,0,0,.30);
+      }
+
+      .sd-ticket-slot-2 {
+        --ticket-y: 0px;
+        --ticket-drag: var(--ticket-drag-back);
+        z-index: 2;
+        background:
+          radial-gradient(72% 100% at 84% 0%, rgba(157,244,22,.035), transparent 60%),
+          linear-gradient(145deg, rgba(11,16,17,.98), rgba(6,9,12,.99));
+        border-color: rgba(216,185,94,.17);
+        box-shadow: 0 12px 24px rgba(0,0,0,.24);
+      }
+
+      .sd-event-ticket-stack.has-1 .sd-ticket-slot-0 { --ticket-y: 8px; }
+      .sd-event-ticket-stack.has-2 .sd-ticket-slot-1 { --ticket-y: 4px; }
+      .sd-event-ticket-stack.has-2 .sd-ticket-slot-0 { --ticket-y: 80px; }
+
+      .sd-event-ticket.is-current:not(.is-picked) {
+        border-color: rgba(216,185,94,.46);
+      }
+
+      .sd-event-ticket.is-picked {
+        border-color: rgba(157,244,22,.82);
+        box-shadow:
+          0 24px 44px rgba(0,0,0,.44),
+          0 0 0 1px rgba(157,244,22,.15),
+          0 0 24px rgba(157,244,22,.10);
+      }
+
+      .sd-event-ticket.is-pressed {
+        scale: .985;
+        filter: brightness(1.08);
+      }
+
+      .sd-event-ticket:disabled { opacity: 1; }
+
+      .sd-ticket-topline {
+        position: relative;
+        z-index: 2;
         display: flex;
-        justify-content: space-between;
-        gap: 10px;
         align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
       }
 
-      .sd-event-topline strong {
+      .sd-ticket-title {
+        display: grid;
+        min-width: 0;
+        gap: 5px;
+      }
+
+      .sd-ticket-title strong {
         min-width: 0;
         color: var(--gold);
         font-size: 20px;
-        line-height: 1.25;
+        line-height: 1.18;
+        letter-spacing: .035em;
       }
 
-      .sd-event-topline em {
+      .sd-ticket-title small {
+        color: rgba(255,255,255,.50);
+        font: 600 11px/1.2 "Chakra Petch", monospace;
+        letter-spacing: .07em;
+      }
+
+      .sd-ticket-slot-1 .sd-ticket-title strong,
+      .sd-ticket-slot-2 .sd-ticket-title strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .sd-ticket-topline em {
         flex: 0 0 auto;
         align-self: start;
-        border: 1px solid rgba(216,185,94,.26);
+        border: 1px solid rgba(216,185,94,.30);
         border-radius: 999px;
         background: rgba(216,185,94,.08);
-        color: rgba(240,189,92,.92);
-        padding: 5px 9px;
-        font-size: 12px;
+        color: rgba(240,189,92,.94);
+        padding: 6px 9px;
+        font-size: 11px;
+        line-height: 1.1;
         font-style: normal;
-        font-weight: 700;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .sd-ticket-secondary {
+        position: absolute;
+        left: 20px;
+        right: 22px;
+        bottom: 18px;
+        display: flex;
+        align-items: flex-end;
+        gap: 34px;
+      }
+
+      .sd-ticket-secondary > span {
+        display: grid;
+        gap: 3px;
+      }
+
+      .sd-ticket-secondary small {
+        color: rgba(216,185,94,.62);
+        font-size: 10px;
+        letter-spacing: .16em;
+      }
+
+      .sd-ticket-secondary strong {
+        color: rgba(247,246,239,.94);
+        font: 700 18px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+      }
+
+      .sd-ticket-perf {
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        bottom: 57px;
+        height: 1px;
+        border-top: 1px dashed rgba(216,185,94,.18);
+        pointer-events: none;
+      }
+
+      .sd-event-ticket.is-picked .sd-ticket-perf::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: -1px;
+        width: 36%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--green), transparent);
+        box-shadow: 0 0 8px rgba(157,244,22,.34);
+        animation: ticket-confirm-scan .42s ease-out 1;
+      }
+
+      .sd-ticket-more-root {
+        position: absolute;
+        z-index: 1;
+        top: 314px;
+        right: 28px;
+        min-width: 82px;
+        height: 31px;
+        border: 1px solid rgba(216,185,94,.20);
+        border-radius: 11px 15px 10px 14px;
+        background: rgba(8,12,13,.92);
+        color: rgba(216,185,94,.70);
+        font: 700 11px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        transform: rotate(2.1deg) translateX(5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,.18);
+      }
+
+      .sd-ticket-hint {
+        margin: 2px 0 0;
+        color: rgba(255,255,255,.34);
+        text-align: center;
+        font-size: 10px;
+        letter-spacing: .08em;
+      }
+
+      .sd-event-ticket-stack.is-transitioning .sd-ticket-slot-0 {
+        animation: ticket-promote .50s cubic-bezier(.18,.84,.2,1) both;
+      }
+
+      .sd-event-ticket-stack.is-transitioning .sd-ticket-slot-1,
+      .sd-event-ticket-stack.is-transitioning .sd-ticket-slot-2 {
+        animation: ticket-settle .34s cubic-bezier(.2,.8,.2,1) both;
       }
 
       .sd-person-card {
@@ -1526,6 +2140,36 @@ function HomepageStyles() {
         to { transform: scaleX(1); transform-origin: left; }
       }
 
+      @keyframes hero-ticket-in {
+        0% { opacity: 0; translate: 0 12px; scale: .985; }
+        62% { opacity: 1; translate: 0 -2px; scale: 1.008; }
+        100% { opacity: 1; translate: 0 0; scale: 1; }
+      }
+
+      @keyframes scroll-cue-wave {
+        0%, 100% { opacity: .18; translate: 0 -2px; }
+        38% { opacity: .96; translate: 0 2px; }
+        72% { opacity: .34; translate: 0 5px; }
+      }
+
+      @keyframes ticket-promote {
+        0% { translate: 0 7px; scale: .985; filter: brightness(.98); }
+        54% { translate: 0 -11px; scale: 1.014; filter: brightness(1.08); }
+        100% { translate: 0 0; scale: 1; filter: brightness(1); }
+      }
+
+      @keyframes ticket-settle {
+        0% { translate: 0 3px; }
+        55% { translate: 0 -3px; }
+        100% { translate: 0 0; }
+      }
+
+      @keyframes ticket-confirm-scan {
+        0% { transform: translateX(-120%); opacity: 0; }
+        18% { opacity: 1; }
+        100% { transform: translateX(280%); opacity: 0; }
+      }
+
       @keyframes fade-in {
         to { opacity: 1; }
       }
@@ -1541,14 +2185,14 @@ function HomepageStyles() {
       }
 
       @media (min-width: 431px) {
-        .sd-hero { min-height: 570px; }
+        .sd-hero { min-height: max(630px, calc(100svh - 72px)); }
         .sd-racket-wrap { width: 232px; }
         .is-rotating-to-active .sd-racket-wrap,
         .is-active .sd-racket-wrap {
           top: 34px;
-          transform: translate3d(-43%, 68px, 0) rotate(18deg) scale(1.57);
+          transform: translate3d(-39%, 68px, 0) rotate(18deg) scale(1.57);
         }
-        .sd-preview { top: 346px; }
+        .sd-preview { top: 306px; left: 34px; right: 18px; }
         .sd-metrics { top: 256px; }
         .sd-actions { top: 352px; left: 30px; right: 30px; }
         .sd-pending { top: 518px; }
@@ -1561,14 +2205,14 @@ function HomepageStyles() {
 
       @media (max-width: 374px) {
         .sd-header p { font-size: 10px; letter-spacing: .38em; }
-        .sd-hero { min-height: 510px; }
+        .sd-hero { min-height: max(590px, calc(100svh - 72px)); }
         .sd-racket-wrap { width: 205px; }
         .is-rotating-to-active .sd-racket-wrap,
         .is-active .sd-racket-wrap {
           top: 36px;
-          transform: translate3d(-43%, 68px, 0) rotate(18deg) scale(1.43);
+          transform: translate3d(-39%, 68px, 0) rotate(18deg) scale(1.43);
         }
-        .sd-preview { top: 312px; left: 18px; right: 18px; }
+        .sd-preview { top: 276px; left: 20px; right: 12px; }
         .sd-annotation { font-size: 10px; width: 42vw; }
         .a-name { left: 14px; top: 16px; width: 61vw; }
         .a-name .sd-event-name { font-size: 19px; }
@@ -1580,6 +2224,9 @@ function HomepageStyles() {
         .sd-metric strong { font-size: 34px; }
         .sd-actions { top: 308px; left: 14px; right: 14px; gap: 28px; }
         .sd-pending { top: 476px; }
+        .sd-handoff-calibrator { right: 7px; width: 168px; }
+        .sd-event-ticket { left: 4px; right: 4px; padding-left: 17px; padding-right: 14px; }
+        .sd-ticket-title strong { font-size: 18px; }
         .sd-action-zone button,
         .sd-action-zone input { font-size: 14px; }
       }
@@ -1588,7 +2235,12 @@ function HomepageStyles() {
       .motion-reduced .sd-racket-wrap,
       .motion-reduced .sd-racket-main,
       .motion-reduced .sd-racket-shadow,
+      .motion-reduced .sd-preview,
       .motion-reduced .sd-preview-switch-rail b,
+      .motion-reduced .sd-event-ticket,
+      .motion-reduced .sd-event-ticket-stack,
+      .motion-reduced .sd-ticket-perf::after,
+      .motion-reduced .sd-scroll-cue span,
       .motion-reduced .sd-annotations,
       .motion-reduced .sd-pending span {
         animation: none !important;
