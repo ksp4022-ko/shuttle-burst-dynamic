@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as KangxuanRouteImport } from './routes/kangxuan'
+import { Route as RianRouteImport } from './routes/rian'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KangxuanRoute = KangxuanRouteImport.update({
+  id: '/kangxuan',
+  path: '/kangxuan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RianRoute = RianRouteImport.update({
+  id: '/rian',
+  path: '/rian',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/kangxuan': typeof KangxuanRoute
+  '/rian': typeof RianRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/kangxuan': typeof KangxuanRoute
+  '/rian': typeof RianRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/kangxuan': typeof KangxuanRoute
+  '/rian': typeof RianRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/kangxuan' | '/rian'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/kangxuan' | '/rian'
+  id: '__root__' | '/' | '/kangxuan' | '/rian'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  KangxuanRoute: typeof KangxuanRoute
+  RianRoute: typeof RianRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/kangxuan': {
+      id: '/kangxuan'
+      path: '/kangxuan'
+      fullPath: '/kangxuan'
+      preLoaderRoute: typeof KangxuanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rian': {
+      id: '/rian'
+      path: '/rian'
+      fullPath: '/rian'
+      preLoaderRoute: typeof RianRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  KangxuanRoute: KangxuanRoute,
+  RianRoute: RianRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

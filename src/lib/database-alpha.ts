@@ -60,7 +60,8 @@ type AlphaResponse<T> = {
   };
 };
 
-export const DATABASE_ALPHA_SITE_ID = "kangxuan";
+const DEFAULT_DATABASE_ALPHA_SITE_ID = "kangxuan";
+const DATABASE_ALPHA_SITE_STORAGE_KEY = "shuttle-database-alpha-site-id";
 
 const API_BASE_STORAGE_KEY = "shuttle-database-alpha-api-base";
 
@@ -78,6 +79,40 @@ function configuredApiBase() {
   }
 
   return "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/api/v7-shuttle";
+}
+
+function normalizeSiteId(value: unknown) {
+  const siteId = String(value || "").trim().toLowerCase();
+  return siteId === "rian" || siteId === "kangxuan" ? siteId : "";
+}
+
+export function configuredSiteId() {
+  const fromEnv = normalizeSiteId(import.meta.env["VITE_DATABASE_ALPHA_SITE_ID"]);
+  if (fromEnv) return fromEnv;
+
+  if (typeof window !== "undefined") {
+    const runtime = window as Window & { __SHUTTLE_DATABASE_ALPHA_SITE_ID__?: string };
+    const fromWindow = normalizeSiteId(runtime.__SHUTTLE_DATABASE_ALPHA_SITE_ID__);
+    if (fromWindow) return fromWindow;
+
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = normalizeSiteId(params.get("site") || params.get("siteId"));
+    if (fromQuery) {
+      window.localStorage.setItem(DATABASE_ALPHA_SITE_STORAGE_KEY, fromQuery);
+      return fromQuery;
+    }
+
+    const firstPath = normalizeSiteId(window.location.pathname.split("/").filter(Boolean)[0]);
+    if (firstPath) {
+      window.localStorage.setItem(DATABASE_ALPHA_SITE_STORAGE_KEY, firstPath);
+      return firstPath;
+    }
+
+    const fromStorage = normalizeSiteId(window.localStorage.getItem(DATABASE_ALPHA_SITE_STORAGE_KEY));
+    if (fromStorage) return fromStorage;
+  }
+
+  return DEFAULT_DATABASE_ALPHA_SITE_ID;
 }
 
 function apiUrl(path: string, query?: Record<string, string | number | undefined>) {
@@ -116,8 +151,9 @@ async function alphaFetch<T>(
 }
 
 export function listAlphaEvents(from: string, limit = 20) {
+  const siteId = configuredSiteId();
   return alphaFetch<AlphaEvent[]>(
-    `/sites/${encodeURIComponent(DATABASE_ALPHA_SITE_ID)}/events`,
+    `/sites/${encodeURIComponent(siteId)}/events`,
     undefined,
     {
       status: "open",
@@ -132,12 +168,13 @@ export function getAlphaRoster(eventId: string) {
 }
 
 export function createAlphaTempSignup(eventId: string, name: string) {
+  const siteId = configuredSiteId();
   return alphaFetch<{ signupId: string; status: string; position: number }>(
     `/events/${encodeURIComponent(eventId)}/temp-signups`,
     {
       method: "POST",
       body: JSON.stringify({
-        siteId: DATABASE_ALPHA_SITE_ID,
+        siteId,
         name,
       }),
     },
@@ -145,12 +182,13 @@ export function createAlphaTempSignup(eventId: string, name: string) {
 }
 
 export function cancelAlphaTempSignup(eventId: string, signupId: string) {
+  const siteId = configuredSiteId();
   return alphaFetch<{ cancelledSignupId: string }>(
     `/events/${encodeURIComponent(eventId)}/temp-signups/${encodeURIComponent(signupId)}/cancel`,
     {
       method: "POST",
       body: JSON.stringify({
-        siteId: DATABASE_ALPHA_SITE_ID,
+        siteId,
         reason: "homepage_v3_cancel",
       }),
     },
@@ -158,21 +196,23 @@ export function cancelAlphaTempSignup(eventId: string, signupId: string) {
 }
 
 export function fixedAlphaLeave(eventId: string, signupId: string) {
+  const siteId = configuredSiteId();
   return alphaFetch<{ signupId: string; status: string }>(
     `/events/${encodeURIComponent(eventId)}/fixed-signups/${encodeURIComponent(signupId)}/leave`,
     {
       method: "POST",
-      body: JSON.stringify({ siteId: DATABASE_ALPHA_SITE_ID }),
+      body: JSON.stringify({ siteId }),
     },
   );
 }
 
 export function fixedAlphaReturn(eventId: string, signupId: string) {
+  const siteId = configuredSiteId();
   return alphaFetch<{ signupId: string; status: string }>(
     `/events/${encodeURIComponent(eventId)}/fixed-signups/${encodeURIComponent(signupId)}/return`,
     {
       method: "POST",
-      body: JSON.stringify({ siteId: DATABASE_ALPHA_SITE_ID }),
+      body: JSON.stringify({ siteId }),
     },
   );
 }

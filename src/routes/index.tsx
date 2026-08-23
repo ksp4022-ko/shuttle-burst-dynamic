@@ -77,7 +77,7 @@ const DEFAULT_HANDOFF_TIMING: HandoffTiming = {
   scanSoftness: 5,
 };
 
-function Index() {
+export function Index() {
   const [name, setName] = useState("");
   const toastOriginRef = useRef<ToastOrigin | null>(null);
   const eventTitleRef = useRef<HTMLElement | null>(null);
