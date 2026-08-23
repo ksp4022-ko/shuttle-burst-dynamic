@@ -460,14 +460,24 @@ export function Index() {
         </div>
 
         {active && flow.events.length > 1 ? (
-          <button
-            type="button"
-            className="sd-racket-switch-bubble"
-            onClick={() => flow.openMeetupPicker()}
-            aria-label="切換聚會"
-          >
-            切換聚會
-          </button>
+          <>
+            <button
+              type="button"
+              className="sd-racket-switch-bubble"
+              onClick={() => flow.openMeetupPicker()}
+              aria-label="切換聚會"
+            >
+              切換聚會
+            </button>
+            <button
+              type="button"
+              className="sd-racket-tap-bubble"
+              onClick={() => flow.openMeetupPicker()}
+              aria-label="點拍面切換聚會"
+            >
+              點這
+            </button>
+          </>
         ) : null}
 
         {flow.phase === "load-error" && (
@@ -1025,10 +1035,14 @@ function RacketImage({ src, className = "" }: { src: string; className?: string 
 function PreviewSwipeHint() {
   return (
     <span className="sd-preview-swipe-hint" aria-label="上滑切換下一個聚會" role="img">
-      <svg viewBox="0 0 80 110" aria-hidden="true">
-        <path className="sd-preview-swipe-base" d="M66 101 C43 91 23 69 28 31" />
-        <path className="sd-preview-swipe-head" d="M17 42 L28 30 L41 39" />
-        <path className="sd-preview-swipe-light" d="M66 101 C43 91 23 69 28 31" />
+      <svg viewBox="0 0 72 96" aria-hidden="true">
+        <path className="sd-preview-swipe-base" d="M60 88 C49 83 41 74 38 63 C34 50 37 38 47 27" />
+        <path className="sd-preview-swipe-head" d="M35 34 L47 26 L55 39" />
+        <path className="sd-preview-swipe-light" d="M60 88 C49 83 41 74 38 63 C34 50 37 38 47 27" />
+        <text className="sd-preview-swipe-finger" x="-6" y="5">
+          ☝︎
+          <animateMotion dur="1s" begin=".08s" repeatCount="indefinite" path="M60 88 C49 83 41 74 38 63 C34 50 37 38 47 27" />
+        </text>
       </svg>
     </span>
   );
@@ -1965,13 +1979,13 @@ function HomepageStyles() {
       .sd-preview-swipe-hint {
         position: absolute;
         z-index: 12;
-        right: 46px;
-        top: 212px;
-        width: 68px;
-        height: 96px;
+        right: 104px;
+        top: 170px;
+        width: 62px;
+        height: 86px;
         opacity: 0;
         pointer-events: none;
-        filter: drop-shadow(0 0 9px rgba(157,244,22,.28));
+        filter: drop-shadow(0 0 7px rgba(157,244,22,.20));
         animation: preview-swipe-cycle 6s ease .65s infinite both;
       }
 
@@ -1990,19 +2004,31 @@ function HomepageStyles() {
         stroke-linejoin: round;
       }
 
-      .sd-preview-swipe-base,
+      .sd-preview-swipe-base {
+        stroke: rgba(157,244,22,.42);
+        stroke-width: 2.2px;
+      }
+
       .sd-preview-swipe-head {
-        stroke: rgba(157,244,22,.58);
-        stroke-width: 2.8px;
+        stroke: rgba(181,255,58,.78);
+        stroke-width: 2.4px;
       }
 
       .sd-preview-swipe-light {
-        stroke: rgba(210,255,126,.98);
-        stroke-width: 4px;
-        stroke-dasharray: 16 104;
-        stroke-dashoffset: 120;
-        filter: drop-shadow(0 0 6px rgba(157,244,22,.86));
+        stroke: rgba(210,255,126,.94);
+        stroke-width: 3px;
+        stroke-dasharray: 13 92;
+        stroke-dashoffset: 106;
+        filter: drop-shadow(0 0 5px rgba(157,244,22,.68));
         animation: preview-swipe-light 1s linear infinite;
+      }
+
+      .sd-preview-swipe-finger {
+        fill: rgba(210,255,126,.78);
+        font-family: Arial, "Noto Sans Symbols 2", sans-serif;
+        font-size: 13px;
+        font-weight: 400;
+        filter: drop-shadow(0 0 4px rgba(157,244,22,.42));
       }
 
       .sd-hero-picker-footer {
@@ -2183,13 +2209,48 @@ function HomepageStyles() {
       .sd-racket-switch-bubble::after {
         content: "";
         position: absolute;
-        left: -4px;
+        left: auto;
+        right: -4px;
         bottom: 7px;
         width: 8px;
         height: 8px;
-        border-left: 1px solid rgba(216,185,94,.38);
-        border-bottom: 1px solid rgba(216,185,94,.38);
+        border-top: 1px solid rgba(216,185,94,.38);
+        border-right: 1px solid rgba(216,185,94,.38);
         background: rgba(6,9,12,.72);
+        transform: rotate(45deg);
+      }
+
+      .sd-racket-tap-bubble {
+        position: absolute;
+        z-index: 14;
+        top: 48px;
+        right: 44px;
+        min-height: 29px;
+        border: 1px solid rgba(216,185,94,.34);
+        border-radius: 11px;
+        background: rgba(6,9,12,.70);
+        color: rgba(239,205,111,.92);
+        padding: 5px 9px 6px;
+        font: 650 10.5px/1.1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .10em;
+        box-shadow: 0 8px 20px rgba(0,0,0,.24), 0 0 12px rgba(216,185,94,.07);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        opacity: 0;
+        cursor: pointer;
+        animation: racket-tap-bubble-cycle 6s ease-in-out .8s infinite both;
+      }
+
+      .sd-racket-tap-bubble::after {
+        content: "";
+        position: absolute;
+        left: 11px;
+        bottom: -4px;
+        width: 8px;
+        height: 8px;
+        border-right: 1px solid rgba(216,185,94,.34);
+        border-bottom: 1px solid rgba(216,185,94,.34);
+        background: rgba(6,9,12,.70);
         transform: rotate(45deg);
       }
 
@@ -2304,6 +2365,7 @@ function HomepageStyles() {
         padding: 0 14px;
         text-align: center;
         outline: none;
+        font-size: 16px;
       }
 
       .sd-casual input::placeholder { color: rgba(255,255,255,.44); }
@@ -2534,26 +2596,75 @@ function HomepageStyles() {
 
       .sd-back-top {
         position: fixed;
-        right: 12px;
-        bottom: calc(env(safe-area-inset-bottom) + 74px);
+        left: 50%;
+        right: auto;
+        bottom: calc(env(safe-area-inset-bottom) + 66px);
         z-index: 30;
-        width: 38px;
-        height: 38px;
-        border: 1px solid rgba(157,244,22,.48);
-        border-radius: 50%;
-        background: rgba(7,10,14,.72);
+        width: 58px;
+        height: 42px;
+        transform: translate(-50%, 10px) scale(.94);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(7,10,14,.18);
+        padding: 3px 0;
         color: var(--green);
-        box-shadow: 0 0 16px rgba(157,244,22,.10);
-        backdrop-filter: blur(12px);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
         opacity: 0;
-        transform: translateY(10px) scale(.94);
         pointer-events: none;
         transition: opacity .26s ease, transform .32s cubic-bezier(.2,.82,.2,1);
       }
 
+      .sd-back-top span {
+        position: relative;
+        display: block;
+        flex: 0 0 7px;
+        width: 28px;
+        height: 7px;
+        opacity: .24;
+        filter: drop-shadow(0 0 5px rgba(157,244,22,.30));
+        animation: back-top-wave 1.7s ease-in-out infinite;
+      }
+
+      .sd-back-top span + span { margin-top: -1px; }
+
+      .sd-back-top span::before,
+      .sd-back-top span::after {
+        content: "";
+        position: absolute;
+        top: 4px;
+        width: 14px;
+        height: 2px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .sd-back-top span::before {
+        left: 0;
+        transform: rotate(-17deg);
+        transform-origin: right center;
+      }
+
+      .sd-back-top span::after {
+        right: 0;
+        transform: rotate(17deg);
+        transform-origin: left center;
+      }
+
+      .sd-back-top span:nth-child(2) { width: 25px; animation-delay: .16s; }
+      .sd-back-top span:nth-child(2)::before,
+      .sd-back-top span:nth-child(2)::after { width: 12.5px; }
+      .sd-back-top span:nth-child(3) { width: 22px; animation-delay: .32s; }
+      .sd-back-top span:nth-child(3)::before,
+      .sd-back-top span:nth-child(3)::after { width: 11px; }
+
       .is-roster-visible .sd-back-top {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+        opacity: .92;
+        transform: translate(-50%, 0) scale(1);
         pointer-events: auto;
       }
 
@@ -3189,15 +3300,28 @@ function HomepageStyles() {
 
       @keyframes racket-switch-bubble-cycle {
         0%, 8% { opacity: 0; transform: translateY(4px) scale(.98); }
-        16%, 46% { opacity: .82; transform: translateY(0) scale(1); }
+        16%, 42% { opacity: .82; transform: translateY(0) scale(1); }
         27% { opacity: 1; transform: translateY(-1px) scale(1.02); }
-        58%, 100% { opacity: 0; transform: translateY(-2px) scale(.99); }
+        50%, 100% { opacity: 0; transform: translateY(-2px) scale(.99); }
+      }
+
+      @keyframes racket-tap-bubble-cycle {
+        0%, 46% { opacity: 0; transform: translateY(3px) scale(.98); }
+        54%, 78% { opacity: .80; transform: translateY(0) scale(1); }
+        66% { opacity: .96; transform: translateY(-1px) scale(1.02); }
+        88%, 100% { opacity: 0; transform: translateY(-2px) scale(.99); }
       }
 
       @keyframes scroll-cue-wave {
         0%, 100% { opacity: .18; translate: 0 -2px; }
         38% { opacity: .96; translate: 0 2px; }
         72% { opacity: .34; translate: 0 5px; }
+      }
+
+      @keyframes back-top-wave {
+        0%, 100% { opacity: .18; translate: 0 2px; }
+        38% { opacity: .96; translate: 0 -2px; }
+        72% { opacity: .34; translate: 0 -5px; }
       }
 
       @keyframes ticket-promote {
@@ -3271,8 +3395,9 @@ function HomepageStyles() {
         .sd-metric strong { font-size: 34px; }
         .sd-actions { top: 308px; left: 14px; right: 14px; gap: 28px; }
         .sd-pending { top: 476px; }
-        .sd-preview-swipe-hint { right: 38px; top: 206px; width: 64px; }
+        .sd-preview-swipe-hint { right: 88px; top: 166px; width: 58px; }
         .sd-racket-switch-bubble { top: 76px; left: 134px; right: auto; font-size: 10.5px; }
+        .sd-racket-tap-bubble { top: 46px; right: 30px; font-size: 10px; }
         .sd-timing-lab { left: 6px; width: min(214px, calc(100vw - 12px)); }
         .sd-event-ticket { left: 4px; right: 4px; padding-left: 15px; padding-right: 12px; }
         .sd-ticket-identity { left: 13px; right: 10px; gap: 6px; }
@@ -3286,7 +3411,7 @@ function HomepageStyles() {
         .sd-ticket-slot-1 .sd-ticket-identity em,
         .sd-ticket-slot-2 .sd-ticket-identity em { padding: 6px 7px; font-size: 10.5px; }
         .sd-action-zone button,
-        .sd-action-zone input { font-size: 14px; }
+        .sd-action-zone input { font-size: 16px; }
       }
 
       .motion-reduced .sd-particle-handoff,
@@ -3299,22 +3424,26 @@ function HomepageStyles() {
       .motion-reduced .sd-event-ticket-stack,
       .motion-reduced .sd-ticket-scan,
       .motion-reduced .sd-scroll-cue span,
+      .motion-reduced .sd-back-top span,
       .motion-reduced .sd-annotations,
       .motion-reduced .sd-preview-swipe-hint,
       .motion-reduced .sd-preview-swipe-light,
       .motion-reduced .sd-racket-switch-bubble,
+      .motion-reduced .sd-racket-tap-bubble,
       .motion-reduced .sd-pending span {
         animation: none !important;
         transition-duration: .01ms !important;
       }
 
       .motion-reduced .sd-preview-swipe-hint,
-      .motion-reduced .sd-racket-switch-bubble {
+      .motion-reduced .sd-racket-switch-bubble,
+      .motion-reduced .sd-racket-tap-bubble {
         opacity: .76 !important;
         transform: none !important;
       }
 
-      .motion-reduced .sd-preview-swipe-light {
+      .motion-reduced .sd-preview-swipe-light,
+      .motion-reduced .sd-preview-swipe-finger {
         opacity: 0 !important;
       }
 

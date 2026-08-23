@@ -83,7 +83,9 @@ function BackToHero() {
         document.getElementById("sd-hero")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }}
     >
-      ↑
+      <span aria-hidden="true" />
+      <span aria-hidden="true" />
+      <span aria-hidden="true" />
     </button>
   );
 }
