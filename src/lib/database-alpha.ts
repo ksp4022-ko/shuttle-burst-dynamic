@@ -86,6 +86,13 @@ function normalizeSiteId(value: unknown) {
   return siteId === "rian" || siteId === "kangxuan" ? siteId : "";
 }
 
+function siteIdFromPathname(pathname: string) {
+  return pathname
+    .split("/")
+    .map((segment) => normalizeSiteId(segment))
+    .find(Boolean) || "";
+}
+
 export function configuredSiteId() {
   const fromEnv = normalizeSiteId(import.meta.env["VITE_DATABASE_ALPHA_SITE_ID"]);
   if (fromEnv) return fromEnv;
@@ -102,10 +109,10 @@ export function configuredSiteId() {
       return fromQuery;
     }
 
-    const firstPath = normalizeSiteId(window.location.pathname.split("/").filter(Boolean)[0]);
-    if (firstPath) {
-      window.localStorage.setItem(DATABASE_ALPHA_SITE_STORAGE_KEY, firstPath);
-      return firstPath;
+    const fromPath = siteIdFromPathname(window.location.pathname);
+    if (fromPath) {
+      window.localStorage.setItem(DATABASE_ALPHA_SITE_STORAGE_KEY, fromPath);
+      return fromPath;
     }
 
     const fromStorage = normalizeSiteId(window.localStorage.getItem(DATABASE_ALPHA_SITE_STORAGE_KEY));
