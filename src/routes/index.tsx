@@ -19,7 +19,7 @@ import {
   rememberToastOriginFromElement,
   type ToastOrigin,
 } from "@/components/homepage/HomepageToast";
-import { useHomepageFlow } from "@/hooks/use-homepage-flow";
+import { useHomepageFlow, type MotionMode } from "@/hooks/use-homepage-flow";
 import type { AlphaEvent } from "@/lib/database-alpha";
 
 export const Route = createFileRoute("/")({
@@ -246,6 +246,7 @@ export function Index() {
   const [tutorialStep, setTutorialStep] = useState<TutorialStep>("step1");
   const [tutorialCloseVisible, setTutorialCloseVisible] = useState(false);
   const [tutorialReplayKey, setTutorialReplayKey] = useState(0);
+  const [tutorialDemoPulse, setTutorialDemoPulse] = useState(0);
   const [spotlightRect, setSpotlightRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
   const [countdownKey, setCountdownKey] = useState(0);
@@ -480,6 +481,7 @@ export function Index() {
     for (let index = 0; index < demos; index += 1) {
       const timer = window.setTimeout(() => {
         const next = flow.events[(selectedIndex + index + 1) % flow.events.length];
+        if (!next) return;
         flow.setPendingSwitchEventId(next.id);
         setTutorialDemoPulse((value) => value + 1);
         updateTutorialSpotlight();
