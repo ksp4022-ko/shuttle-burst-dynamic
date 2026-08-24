@@ -8,10 +8,11 @@ import {
   useState,
   type CSSProperties,
   type RefObject,
+  type ReactNode,
 } from "react";
 import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepage/HomepageSheets";
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
-import { ParticleRacket } from "@/components/homepage/ParticleRacket";
+import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
 import {
   HomepageToast,
   clearToastOrigin,
@@ -40,7 +41,7 @@ const ADMIN_URL =
   "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/admin";
 const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
 const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
-const PREVIEW_IDLE_MS = 20000;
+const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
 
 type HandoffTiming = {
   preHold: number;
@@ -76,6 +77,107 @@ const DEFAULT_HANDOFF_TIMING: HandoffTiming = {
   scanIntensity: 48,
   scanSoftness: 5,
 };
+type TutorialStep = "step1" | "transition" | "step2";
+type TuningSectionId =
+  | "opening"
+  | "tutorial-step1"
+  | "tutorial-transition"
+  | "tutorial-step2"
+  | "countdown"
+  | "visual"
+  | "master";
+
+type TutorialTuning = {
+  enabled: boolean;
+  step1StartDelay: number;
+  demoCount: number;
+  singleDemoDuration: number;
+  gapBetweenDemos: number;
+  gestureDistance: number;
+  handXOffset: number;
+  handYOffset: number;
+  trajectorySpeed: number;
+  step1EndingHold: number;
+  step1FadeDuration: number;
+  transitionWait: number;
+  autoScrollDuration: number;
+  postScrollHold: number;
+  step2FadeInDuration: number;
+  step2TextTiming: number;
+  borderFlowLoopDuration: number;
+  borderFlowLoopCount: number;
+  borderBrightness: number;
+  borderWidth: number;
+  glowStrength: number;
+  closeButtonDelay: number;
+};
+
+type CountdownTuning = {
+  seconds: number;
+  showCountdown: boolean;
+  autoEnterAtZero: boolean;
+  resetOnMeetupChange: boolean;
+  showSelectedInfo: boolean;
+};
+
+type VisualTuning = {
+  overlayOpacity: number;
+  spotlightStrength: number;
+  spotlightSoftness: number;
+  headingSize: number;
+  textSize: number;
+  handIconSize: number;
+  arrowSize: number;
+  skipVisible: boolean;
+};
+
+type TutorialNumericKey = Exclude<keyof TutorialTuning, "enabled">;
+type CountdownNumericKey = "seconds";
+type VisualNumericKey = Exclude<keyof VisualTuning, "skipVisible">;
+
+const DEFAULT_TUTORIAL_TUNING: TutorialTuning = {
+  enabled: true,
+  step1StartDelay: 520,
+  demoCount: 3,
+  singleDemoDuration: 860,
+  gapBetweenDemos: 280,
+  gestureDistance: 54,
+  handXOffset: 13,
+  handYOffset: 0,
+  trajectorySpeed: 1000,
+  step1EndingHold: 560,
+  step1FadeDuration: 360,
+  transitionWait: 180,
+  autoScrollDuration: 640,
+  postScrollHold: 260,
+  step2FadeInDuration: 300,
+  step2TextTiming: 520,
+  borderFlowLoopDuration: 1200,
+  borderFlowLoopCount: 2,
+  borderBrightness: 70,
+  borderWidth: 2,
+  glowStrength: 70,
+  closeButtonDelay: 260,
+};
+
+const DEFAULT_COUNTDOWN_TUNING: CountdownTuning = {
+  seconds: 10,
+  showCountdown: true,
+  autoEnterAtZero: true,
+  resetOnMeetupChange: false,
+  showSelectedInfo: true,
+};
+
+const DEFAULT_VISUAL_TUNING: VisualTuning = {
+  overlayOpacity: 78,
+  spotlightStrength: 72,
+  spotlightSoftness: 34,
+  headingSize: 22,
+  textSize: 14,
+  handIconSize: 17,
+  arrowSize: 1,
+  skipVisible: true,
+};
 
 export function Index() {
   const [name, setName] = useState("");
@@ -84,14 +186,30 @@ export function Index() {
   const racketWrapRef = useRef<HTMLDivElement | null>(null);
   const racketFaceAnchorRef = useRef<HTMLSpanElement | null>(null);
   const signupButtonRef = useRef<HTMLButtonElement | null>(null);
+  const confirmMeetupButtonRef = useRef<HTMLButtonElement | null>(null);
   const [particleMatchTop, setParticleMatchTop] = useState(46);
   const [handoffTiming, setHandoffTiming] = useState<HandoffTiming>(DEFAULT_HANDOFF_TIMING);
+  const [particleTuning, setParticleTuning] = useState<ParticleTuning>(DEFAULT_PARTICLE_TUNING);
+  const [tutorialTuning, setTutorialTuning] = useState<TutorialTuning>(DEFAULT_TUTORIAL_TUNING);
+  const [countdownTuning, setCountdownTuning] = useState<CountdownTuning>(DEFAULT_COUNTDOWN_TUNING);
+  const [visualTuning, setVisualTuning] = useState<VisualTuning>(DEFAULT_VISUAL_TUNING);
   const [freezeParticles, setFreezeParticles] = useState(true);
   const [handoffReplayPhase, setHandoffReplayPhase] = useState<HandoffReplayPhase>("idle");
   const [timingLabExpanded, setTimingLabExpanded] = useState(false);
+  const [activeTuningSection, setActiveTuningSection] = useState<TuningSectionId>("opening");
   const [previewActivityKey, setPreviewActivityKey] = useState(0);
+  const [particleReplayKey, setParticleReplayKey] = useState(0);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState<TutorialStep>("step1");
+  const [tutorialCloseVisible, setTutorialCloseVisible] = useState(false);
+  const [tutorialReplayKey, setTutorialReplayKey] = useState(0);
+  const [spotlightRect, setSpotlightRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
+  const [countdownKey, setCountdownKey] = useState(0);
   const [rosterVisible, setRosterVisible] = useState(false);
   const replayTimersRef = useRef<number[]>([]);
+  const tutorialTimersRef = useRef<number[]>([]);
+  const tutorialAutoShownRef = useRef(false);
   const materializeWindowMs = Math.max(
     handoffTiming.realFade,
     handoffTiming.revealDelay + handoffTiming.revealDuration,
@@ -135,72 +253,43 @@ export function Index() {
     try {
       const saved = window.localStorage.getItem(HANDOFF_TIMING_STORAGE_KEY);
       if (!saved) return;
-      const parsed = JSON.parse(saved) as Partial<HandoffTiming>;
-      setHandoffTiming({
-        preHold: clampTiming(parsed.preHold, 0, 2000, DEFAULT_HANDOFF_TIMING.preHold),
-        realFade: clampTiming(parsed.realFade, 300, 2500, DEFAULT_HANDOFF_TIMING.realFade),
-        particleHold: clampTiming(
-          parsed.particleHold,
-          0,
-          2500,
-          DEFAULT_HANDOFF_TIMING.particleHold,
-        ),
-        particleFade: clampTiming(
-          parsed.particleFade,
-          200,
-          2500,
-          DEFAULT_HANDOFF_TIMING.particleFade,
-        ),
-        fadeBlur: clampTiming(parsed.fadeBlur, 0, 12, DEFAULT_HANDOFF_TIMING.fadeBlur),
-        revealDelay: clampTiming(
-          parsed.revealDelay,
-          0,
-          1200,
-          DEFAULT_HANDOFF_TIMING.revealDelay,
-        ),
-        revealDuration: clampTiming(
-          parsed.revealDuration,
-          300,
-          2500,
-          DEFAULT_HANDOFF_TIMING.revealDuration,
-        ),
-        revealFeather: clampTiming(
-          parsed.revealFeather,
-          0,
-          48,
-          DEFAULT_HANDOFF_TIMING.revealFeather,
-        ),
-        tailBias: clampTiming(parsed.tailBias, 0, 100, DEFAULT_HANDOFF_TIMING.tailBias),
-        scanEnabled:
-          typeof parsed.scanEnabled === "boolean"
-            ? parsed.scanEnabled
-            : DEFAULT_HANDOFF_TIMING.scanEnabled,
-        scanWidth: clampTiming(parsed.scanWidth, 2, 30, DEFAULT_HANDOFF_TIMING.scanWidth),
-        scanIntensity: clampTiming(
-          parsed.scanIntensity,
-          0,
-          100,
-          DEFAULT_HANDOFF_TIMING.scanIntensity,
-        ),
-        scanSoftness: clampTiming(
-          parsed.scanSoftness,
-          0,
-          20,
-          DEFAULT_HANDOFF_TIMING.scanSoftness,
-        ),
-      });
+      const parsed = JSON.parse(saved) as {
+        handoff?: Partial<HandoffTiming>;
+        particle?: Partial<ParticleTuning>;
+        tutorial?: Partial<TutorialTuning>;
+        countdown?: Partial<CountdownTuning>;
+        visual?: Partial<VisualTuning>;
+      } & Partial<HandoffTiming>;
+      setHandoffTiming(normalizeHandoffTiming(parsed.handoff || parsed));
+      if (parsed.particle) setParticleTuning(normalizeParticleTuning(parsed.particle));
+      if (parsed.tutorial) setTutorialTuning(normalizeTutorialTuning(parsed.tutorial));
+      if (parsed.countdown) setCountdownTuning(normalizeCountdownTuning(parsed.countdown));
+      if (parsed.visual) setVisualTuning(normalizeVisualTuning(parsed.visual));
     } catch {
       setHandoffTiming(DEFAULT_HANDOFF_TIMING);
+      setParticleTuning(DEFAULT_PARTICLE_TUNING);
+      setTutorialTuning(DEFAULT_TUTORIAL_TUNING);
+      setCountdownTuning(DEFAULT_COUNTDOWN_TUNING);
+      setVisualTuning(DEFAULT_VISUAL_TUNING);
     }
   }, []);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(HANDOFF_TIMING_STORAGE_KEY, JSON.stringify(handoffTiming));
+      window.localStorage.setItem(
+        HANDOFF_TIMING_STORAGE_KEY,
+        JSON.stringify({
+          handoff: handoffTiming,
+          particle: particleTuning,
+          tutorial: tutorialTuning,
+          countdown: countdownTuning,
+          visual: visualTuning,
+        }),
+      );
     } catch {
       // The lab still works if storage is unavailable.
     }
-  }, [handoffTiming]);
+  }, [handoffTiming, particleTuning, tutorialTuning, countdownTuning, visualTuning]);
 
   useEffect(() => {
     if (!active && !rotating) {
@@ -223,14 +312,20 @@ export function Index() {
     return flow.events.find((event) => event.id === targetId) || flow.selectedEvent;
   }, [flow.events, flow.pendingSwitchEventId, flow.selectedEvent, flow.selectedEventId]);
 
+  const selectedMeetupLabel = formatPreviewEventLabel(previewPickedEvent);
+
   const markPreviewInteraction = useCallback(() => {
     setPreviewActivityKey((value) => value + 1);
-  }, []);
+    if (countdownTuning.resetOnMeetupChange) {
+      setCountdownKey((value) => value + 1);
+    }
+  }, [countdownTuning.resetOnMeetupChange]);
 
   const enterPreviewSelection = useCallback(() => {
     if (flow.pendingAction) return;
     const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
     if (!targetId) return;
+    setCountdownRemaining(null);
     if (targetId === flow.selectedEventId) {
       flow.setPendingSwitchEventId("");
       flow.enterActive();
@@ -240,7 +335,6 @@ export function Index() {
   }, [
     flow.enterActive,
     flow.pendingAction,
-    flow.pendingSwitchEventId,
     flow.selectedEventId,
     flow.setPendingSwitchEventId,
     flow.switchMeetup,
@@ -251,16 +345,187 @@ export function Index() {
     flow.setPendingSwitchEventId(flow.selectedEventId);
   }, [flow.pendingSwitchEventId, flow.selectedEventId, flow.setPendingSwitchEventId, preview]);
 
+  const clearTutorialTimers = useCallback(() => {
+    tutorialTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    tutorialTimersRef.current = [];
+  }, []);
+
+  const closeTutorial = useCallback(() => {
+    clearTutorialTimers();
+    try {
+      window.localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
+    } catch {
+      // Tutorial can still close without storage.
+    }
+    setTutorialOpen(false);
+    setTutorialCloseVisible(false);
+    setCountdownKey((value) => value + 1);
+  }, [clearTutorialTimers]);
+
+  const startTutorial = useCallback(() => {
+    clearTutorialTimers();
+    setTutorialStep("step1");
+    setTutorialCloseVisible(false);
+    setTutorialReplayKey((value) => value + 1);
+    setTutorialOpen(true);
+  }, [clearTutorialTimers]);
+
   useEffect(() => {
-    if (!preview || flow.pendingAction || !flow.selectedEventId) return;
-    const timer = window.setTimeout(enterPreviewSelection, PREVIEW_IDLE_MS);
-    return () => window.clearTimeout(timer);
+    if (!preview || !flow.events.length || flow.pendingAction || !tutorialTuning.enabled) return;
+    if (tutorialAutoShownRef.current) return;
+    try {
+      if (window.localStorage.getItem(TUTORIAL_SEEN_KEY) === "1") return;
+    } catch {
+      // If storage is blocked, show the tutorial for this session.
+    }
+    tutorialAutoShownRef.current = true;
+    startTutorial();
+  }, [flow.events.length, flow.pendingAction, preview, startTutorial, tutorialTuning.enabled]);
+
+  const updateTutorialSpotlight = useCallback(() => {
+    if (!tutorialOpen) return;
+    const target =
+      tutorialStep === "step2"
+        ? confirmMeetupButtonRef.current
+        : document.querySelector<HTMLElement>(".sd-hero-meetup-picker");
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    setSpotlightRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+  }, [tutorialOpen, tutorialStep]);
+
+  useLayoutEffect(() => {
+    updateTutorialSpotlight();
+    if (!tutorialOpen) return;
+    window.addEventListener("resize", updateTutorialSpotlight);
+    window.addEventListener("scroll", updateTutorialSpotlight, true);
+    return () => {
+      window.removeEventListener("resize", updateTutorialSpotlight);
+      window.removeEventListener("scroll", updateTutorialSpotlight, true);
+    };
+  }, [tutorialOpen, updateTutorialSpotlight]);
+
+  useEffect(() => {
+    if (!tutorialOpen || tutorialStep !== "step1") return;
+    clearTutorialTimers();
+    const demos = Math.max(0, Math.round(tutorialTuning.demoCount));
+    const selectedIndex = Math.max(
+      0,
+      flow.events.findIndex((event) => event.id === flow.selectedEventId),
+    );
+    for (let index = 0; index < demos; index += 1) {
+      const timer = window.setTimeout(() => {
+        if (flow.events.length < 2) return;
+        const next = flow.events[(selectedIndex + index + 1) % flow.events.length];
+        flow.setPendingSwitchEventId(next.id);
+        updateTutorialSpotlight();
+      }, tutorialTuning.step1StartDelay + index * (tutorialTuning.singleDemoDuration + tutorialTuning.gapBetweenDemos));
+      tutorialTimersRef.current.push(timer);
+    }
+    const finishAt =
+      tutorialTuning.step1StartDelay +
+      demos * tutorialTuning.singleDemoDuration +
+      Math.max(0, demos - 1) * tutorialTuning.gapBetweenDemos +
+      tutorialTuning.step1EndingHold;
+    const finishTimer = window.setTimeout(() => setTutorialStep("transition"), finishAt);
+    tutorialTimersRef.current.push(finishTimer);
+    return clearTutorialTimers;
   }, [
+    clearTutorialTimers,
+    flow.events,
+    flow.selectedEventId,
+    flow.setPendingSwitchEventId,
+    tutorialOpen,
+    tutorialReplayKey,
+    tutorialStep,
+    tutorialTuning.demoCount,
+    tutorialTuning.gapBetweenDemos,
+    tutorialTuning.singleDemoDuration,
+    tutorialTuning.step1EndingHold,
+    tutorialTuning.step1StartDelay,
+    updateTutorialSpotlight,
+  ]);
+
+  useEffect(() => {
+    if (!tutorialOpen || tutorialStep !== "transition") return;
+    clearTutorialTimers();
+    const scrollTimer = window.setTimeout(() => {
+      confirmMeetupButtonRef.current?.scrollIntoView({
+        behavior: flow.motionMode === "reduced" ? "auto" : "smooth",
+        block: "center",
+      });
+    }, tutorialTuning.step1FadeDuration + tutorialTuning.transitionWait);
+    const step2Timer = window.setTimeout(
+      () => setTutorialStep("step2"),
+      tutorialTuning.step1FadeDuration +
+        tutorialTuning.transitionWait +
+        tutorialTuning.autoScrollDuration +
+        tutorialTuning.postScrollHold,
+    );
+    tutorialTimersRef.current.push(scrollTimer, step2Timer);
+    return clearTutorialTimers;
+  }, [
+    clearTutorialTimers,
+    flow.motionMode,
+    tutorialOpen,
+    tutorialStep,
+    tutorialTuning.autoScrollDuration,
+    tutorialTuning.postScrollHold,
+    tutorialTuning.step1FadeDuration,
+    tutorialTuning.transitionWait,
+  ]);
+
+  useEffect(() => {
+    if (!tutorialOpen || tutorialStep !== "step2") return;
+    setTutorialCloseVisible(false);
+    const closeTimer = window.setTimeout(
+      () => setTutorialCloseVisible(true),
+      tutorialTuning.step2TextTiming +
+        tutorialTuning.borderFlowLoopDuration * Math.max(1, tutorialTuning.borderFlowLoopCount) +
+        tutorialTuning.closeButtonDelay,
+    );
+    tutorialTimersRef.current.push(closeTimer);
+    return () => window.clearTimeout(closeTimer);
+  }, [
+    tutorialOpen,
+    tutorialStep,
+    tutorialTuning.borderFlowLoopCount,
+    tutorialTuning.borderFlowLoopDuration,
+    tutorialTuning.closeButtonDelay,
+    tutorialTuning.step2TextTiming,
+  ]);
+
+  useEffect(() => {
+    if (!preview || !flow.events.length || tutorialOpen || flow.pendingAction) {
+      setCountdownRemaining(null);
+      return;
+    }
+    if (!countdownTuning.showCountdown && !countdownTuning.autoEnterAtZero) {
+      setCountdownRemaining(null);
+      return;
+    }
+    const seconds = Math.max(0, Math.round(countdownTuning.seconds));
+    const startedAt = window.performance.now();
+    setCountdownRemaining(countdownTuning.showCountdown ? seconds : null);
+    const timer = window.setInterval(() => {
+      const elapsedSeconds = Math.floor((window.performance.now() - startedAt) / 1000);
+      const remaining = Math.max(0, seconds - elapsedSeconds);
+      if (countdownTuning.showCountdown) setCountdownRemaining(remaining);
+      if (remaining <= 0) {
+        window.clearInterval(timer);
+        if (countdownTuning.autoEnterAtZero) enterPreviewSelection();
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [
+    countdownKey,
+    countdownTuning.autoEnterAtZero,
+    countdownTuning.seconds,
+    countdownTuning.showCountdown,
     enterPreviewSelection,
+    flow.events.length,
     flow.pendingAction,
-    flow.pendingSwitchEventId,
     preview,
-    previewActivityKey,
+    tutorialOpen,
   ]);
 
   const clearReplayTimers = useCallback(() => {
@@ -364,11 +629,28 @@ export function Index() {
           "--sd-scan-intensity": `${handoffTiming.scanIntensity / 100}`,
           "--sd-scan-softness": `${handoffTiming.scanSoftness}px`,
           "--sd-scan-enabled": `${handoffTiming.scanEnabled ? 1 : 0}`,
+          "--sd-tutorial-overlay": `${visualTuning.overlayOpacity / 100}`,
+          "--sd-tutorial-spotlight": `${visualTuning.spotlightStrength / 100}`,
+          "--sd-tutorial-softness": `${visualTuning.spotlightSoftness}px`,
+          "--sd-tutorial-heading": `${visualTuning.headingSize}px`,
+          "--sd-tutorial-text": `${visualTuning.textSize}px`,
+          "--sd-tutorial-hand": `${visualTuning.handIconSize}px`,
+          "--sd-tutorial-arrow-scale": `${visualTuning.arrowSize}`,
+          "--sd-border-loop": `${tutorialTuning.borderFlowLoopDuration}ms`,
+          "--sd-border-loops": `${tutorialTuning.borderFlowLoopCount}`,
+          "--sd-border-brightness": `${tutorialTuning.borderBrightness / 100}`,
+          "--sd-border-width": `${tutorialTuning.borderWidth}px`,
+          "--sd-border-glow": `${tutorialTuning.glowStrength / 100}`,
         } as CSSProperties
       }
     >
       <HomepageStyles />
-      <ParticleRacket phase={flow.phase} motionMode={flow.motionMode} />
+      <ParticleRacket
+        phase={flow.phase}
+        motionMode={flow.motionMode}
+        tuning={particleTuning}
+        replayKey={particleReplayKey}
+      />
       <ParticleHandoffOverlay
         phase={flow.phase}
         motionMode={flow.motionMode}
@@ -384,20 +666,85 @@ export function Index() {
       {(preview || rotating || active) && (
         <HandoffTimingLab
           timing={handoffTiming}
+          particle={particleTuning}
+          tutorial={tutorialTuning}
+          countdown={countdownTuning}
+          visual={visualTuning}
           freezeParticles={freezeParticles}
           expanded={timingLabExpanded}
+          activeSection={activeTuningSection}
           onToggleExpanded={() => setTimingLabExpanded((value) => !value)}
+          onSetSection={setActiveTuningSection}
           onToggleFreeze={() => setFreezeParticles((value) => !value)}
-          onChange={(key, value) =>
+          onHandoffChange={(key, value) =>
             setHandoffTiming((current) => ({ ...current, [key]: value }))
           }
           onToggleScan={() =>
             setHandoffTiming((current) => ({ ...current, scanEnabled: !current.scanEnabled }))
           }
-          onReplay={replayHandoff}
-          onReset={() => setHandoffTiming(DEFAULT_HANDOFF_TIMING)}
+          onParticleChange={(key, value) =>
+            setParticleTuning((current) => ({ ...current, [key]: value }))
+          }
+          onTutorialChange={(key, value) =>
+            setTutorialTuning((current) => ({ ...current, [key]: value }))
+          }
+          onToggleTutorial={() =>
+            setTutorialTuning((current) => ({ ...current, enabled: !current.enabled }))
+          }
+          onCountdownChange={(key, value) =>
+            setCountdownTuning((current) => ({ ...current, [key]: value }))
+          }
+          onCountdownToggle={(key) =>
+            setCountdownTuning((current) => ({ ...current, [key]: !current[key] }))
+          }
+          onVisualChange={(key, value) =>
+            setVisualTuning((current) => ({ ...current, [key]: value }))
+          }
+          onToggleSkip={() =>
+            setVisualTuning((current) => ({ ...current, skipVisible: !current.skipVisible }))
+          }
+          onReplayHandoff={replayHandoff}
+          onReplayParticles={() => setParticleReplayKey((value) => value + 1)}
+          onReplayTutorial={startTutorial}
+          onJumpStep1={() => {
+            startTutorial();
+            setTutorialStep("step1");
+          }}
+          onJumpStep2={() => {
+            startTutorial();
+            setTutorialStep("step2");
+          }}
+          onCloseTutorial={() => {
+            clearTutorialTimers();
+            setTutorialOpen(false);
+          }}
+          onClearSeen={() => {
+            window.localStorage.removeItem(TUTORIAL_SEEN_KEY);
+            tutorialAutoShownRef.current = false;
+          }}
+          onTestCountdown={() => setCountdownKey((value) => value + 1)}
+          onReset={() => {
+            setHandoffTiming(DEFAULT_HANDOFF_TIMING);
+            setParticleTuning(DEFAULT_PARTICLE_TUNING);
+            setTutorialTuning(DEFAULT_TUTORIAL_TUNING);
+            setCountdownTuning(DEFAULT_COUNTDOWN_TUNING);
+            setVisualTuning(DEFAULT_VISUAL_TUNING);
+          }}
         />
       )}
+
+      {tutorialOpen ? (
+        <TutorialOverlay
+          step={tutorialStep}
+          tuning={tutorialTuning}
+          visual={visualTuning}
+          spotlightRect={spotlightRect}
+          closeVisible={tutorialCloseVisible}
+          motionMode={flow.motionMode}
+          onSkip={closeTutorial}
+          onClose={closeTutorial}
+        />
+      ) : null}
 
       {active && (
         <a
@@ -510,14 +857,32 @@ export function Index() {
                 </div>
               )}
             </div>
-            {flow.events.length > 1 ? <PreviewSwipeHint /> : null}
+            {flow.events.length > 1 ? (
+              <PreviewSwipeHint
+                handX={tutorialTuning.handXOffset}
+                handY={tutorialTuning.handYOffset}
+                gestureDistance={tutorialTuning.gestureDistance}
+                trajectorySpeed={tutorialTuning.trajectorySpeed}
+                handSize={visualTuning.handIconSize}
+                arrowScale={visualTuning.arrowSize}
+              />
+            ) : null}
             {flow.events.length ? (
               <footer className="sd-hero-picker-footer">
-                <span>
-                  已選：<strong>{previewPickedEvent?.name || "聚會"}</strong>
+                <span className="sd-selected-meetup">
+                  {countdownTuning.showSelectedInfo ? (
+                    <span>
+                      已選：<strong>{selectedMeetupLabel}</strong>
+                    </span>
+                  ) : null}
+                  {countdownTuning.showCountdown ? (
+                    <small>自動進入 {countdownRemaining ?? countdownTuning.seconds}</small>
+                  ) : null}
                 </span>
                 <button
+                  ref={confirmMeetupButtonRef}
                   type="button"
+                  className={tutorialOpen && tutorialStep === "step2" ? "is-tutorial-focus" : ""}
                   disabled={Boolean(flow.pendingAction) || !previewPickedEvent}
                   onClick={() => {
                     markPreviewInteraction();
@@ -526,7 +891,6 @@ export function Index() {
                 >
                   確認聚會
                 </button>
-                <small>20 秒無操作將自動進入目前選定聚會</small>
               </footer>
             ) : null}
           </section>
@@ -780,39 +1144,84 @@ function ParticleHandoffOverlay({
 
 function HandoffTimingLab({
   timing,
+  particle,
+  tutorial,
+  countdown,
+  visual,
   freezeParticles,
   expanded,
+  activeSection,
   onToggleExpanded,
+  onSetSection,
   onToggleFreeze,
-  onChange,
+  onHandoffChange,
   onToggleScan,
-  onReplay,
+  onParticleChange,
+  onTutorialChange,
+  onToggleTutorial,
+  onCountdownChange,
+  onCountdownToggle,
+  onVisualChange,
+  onToggleSkip,
+  onReplayHandoff,
+  onReplayParticles,
+  onReplayTutorial,
+  onJumpStep1,
+  onJumpStep2,
+  onCloseTutorial,
+  onClearSeen,
+  onTestCountdown,
   onReset,
 }: {
   timing: HandoffTiming;
+  particle: ParticleTuning;
+  tutorial: TutorialTuning;
+  countdown: CountdownTuning;
+  visual: VisualTuning;
   freezeParticles: boolean;
   expanded: boolean;
+  activeSection: TuningSectionId;
   onToggleExpanded: () => void;
+  onSetSection: (section: TuningSectionId) => void;
   onToggleFreeze: () => void;
-  onChange: (key: HandoffNumericKey, value: number) => void;
+  onHandoffChange: (key: HandoffNumericKey, value: number) => void;
   onToggleScan: () => void;
-  onReplay: () => void;
+  onParticleChange: (key: keyof ParticleTuning, value: number) => void;
+  onTutorialChange: (key: TutorialNumericKey, value: number) => void;
+  onToggleTutorial: () => void;
+  onCountdownChange: (key: CountdownNumericKey, value: number) => void;
+  onCountdownToggle: (key: Exclude<keyof CountdownTuning, "seconds">) => void;
+  onVisualChange: (key: VisualNumericKey, value: number) => void;
+  onToggleSkip: () => void;
+  onReplayHandoff: () => void;
+  onReplayParticles: () => void;
+  onReplayTutorial: () => void;
+  onJumpStep1: () => void;
+  onJumpStep2: () => void;
+  onCloseTutorial: () => void;
+  onClearSeen: () => void;
+  onTestCountdown: () => void;
   onReset: () => void;
 }) {
+  const copyCurrentSettings = () => {
+    const payload = JSON.stringify({ handoff: timing, particle, tutorial, countdown, visual });
+    void navigator.clipboard?.writeText(payload);
+  };
+
   return (
-    <aside className={`sd-timing-lab ${expanded ? "is-expanded" : ""}`} aria-label="球拍銜接時間測試">
+    <aside className={`sd-timing-lab ${expanded ? "is-expanded" : ""}`} aria-label="開場動畫與教學調校">
       <div className="sd-timing-lab-head">
         <span>
-          <strong>HANDOFF TIMING</strong>
-          <small>X -8 / Y -6</small>
+          <strong>OPENING LAB</strong>
+          <small>Unified x2g tuning</small>
         </span>
         <button
           type="button"
           className="sd-timing-lab-toggle"
           onClick={onToggleExpanded}
           aria-expanded={expanded}
-          aria-label={expanded ? "隱藏 Handoff Timing Lab" : "開啟 Handoff Timing Lab"}
-          title={expanded ? "隱藏 Handoff Timing Lab" : "Handoff Timing Lab"}
+          aria-label={expanded ? "隱藏開場調校面板" : "開啟開場調校面板"}
+          title={expanded ? "隱藏開場調校面板" : "開場調校"}
         >
           <span aria-hidden="true">{expanded ? "收合" : "◇"}</span>
         </button>
@@ -820,161 +1229,156 @@ function HandoffTimingLab({
 
       {expanded ? (
         <div className="sd-timing-lab-body">
-          <TimingControl
-            label="PRE HOLD"
-            description="粒子完成 → 實拍開始"
-            value={timing.preHold}
-            min={0}
-            max={2000}
-            step={100}
-            unit="ms"
-            onChange={(value) => onChange("preHold", value)}
-          />
-          <TimingControl
-            label="REAL FADE"
-            description="實拍透明 → 完整顯示"
-            value={timing.realFade}
-            min={300}
-            max={2500}
-            step={100}
-            unit="ms"
-            onChange={(value) => onChange("realFade", value)}
-          />
-          <TimingControl
-            label="PARTICLE HOLD"
-            description="實拍開始後，粒子完整停留"
-            value={timing.particleHold}
-            min={0}
-            max={2500}
-            step={100}
-            unit="ms"
-            onChange={(value) => onChange("particleHold", value)}
-          />
-          <TimingControl
-            label="PARTICLE FADE"
-            description="粒子退場 → 完全消失"
-            value={timing.particleFade}
-            min={200}
-            max={2500}
-            step={100}
-            unit="ms"
-            onChange={(value) => onChange("particleFade", value)}
-          />
-          <TimingControl
-            label="FADE BLUR"
-            description="退場模糊；0 最清楚"
-            value={timing.fadeBlur}
-            min={0}
-            max={12}
-            step={1}
-            unit="px"
-            onChange={(value) => onChange("fadeBlur", value)}
-          />
-          <TimingControl
-            label="REVEAL DELAY"
-            description="實拍開始後，延遲掃描顯影"
-            value={timing.revealDelay}
-            min={0}
-            max={1200}
-            step={50}
-            unit="ms"
-            onChange={(value) => onChange("revealDelay", value)}
-          />
-          <TimingControl
-            label="REVEAL DURATION"
-            description="拍柄 → 拍頭完整顯影時間"
-            value={timing.revealDuration}
-            min={300}
-            max={2500}
-            step={100}
-            unit="ms"
-            onChange={(value) => onChange("revealDuration", value)}
-          />
-          <TimingControl
-            label="REVEAL FEATHER"
-            description="顯影前緣柔和寬度"
-            value={timing.revealFeather}
-            min={0}
-            max={48}
-            step={2}
-            unit="px"
-            onChange={(value) => onChange("revealFeather", value)}
-          />
-          <TimingControl
-            label="TAIL BIAS"
-            description="越高＝拍頭粒子相對留更久"
-            value={timing.tailBias}
-            min={0}
-            max={100}
-            step={5}
-            unit="%"
-            onChange={(value) => onChange("tailBias", value)}
-          />
+          <TuningSection id="opening" title="① 開場動畫" active={activeSection} onSelect={onSetSection}>
+            <div className="sd-timing-subgroup">A. 粒子進場 / 位置 / 曲線</div>
+            <TimingControl label="SOURCE X" description="來源 X；% 可為負" value={particle.sourceX} min={-45} max={20} step={1} unit="%" onChange={(value) => onParticleChange("sourceX", value)} />
+            <TimingControl label="SOURCE Y" description="來源 Y；偏上方" value={particle.sourceY} min={0} max={60} step={1} unit="%" onChange={(value) => onParticleChange("sourceY", value)} />
+            <TimingControl label="ENTRY ANGLE" description="進場角度" value={particle.entryAngle} min={-16} max={26} step={1} unit="deg" onChange={(value) => onParticleChange("entryAngle", value)} />
+            <TimingControl label="STREAMS" description="曲線流數量" value={particle.streamCount} min={2} max={3} step={1} unit="" onChange={(value) => onParticleChange("streamCount", value)} />
+            <TimingControl label="STREAM GAP" description="流線高低差" value={particle.streamVerticalSpacing} min={8} max={54} step={1} unit="px" onChange={(value) => onParticleChange("streamVerticalSpacing", value)} />
+            <TimingControl label="CURVE AMP" description="曲線振幅" value={particle.curveAmplitude} min={0} max={44} step={1} unit="px" onChange={(value) => onParticleChange("curveAmplitude", value)} />
+            <TimingControl label="INTERWEAVE" description="交織量" value={particle.interweaveAmount} min={0} max={44} step={1} unit="px" onChange={(value) => onParticleChange("interweaveAmount", value)} />
+            <TimingControl label="CONVERGE X" description="吸附前匯流位置" value={particle.convergencePosition} min={18} max={58} step={1} unit="%" onChange={(value) => onParticleChange("convergencePosition", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onReplayParticles}>Replay particle inflow</button></div>
 
-          <div className="sd-timing-scan-head">
-            <span>SCAN LIGHT</span>
-            <button
-              type="button"
-              className={timing.scanEnabled ? "is-on" : ""}
-              onClick={onToggleScan}
-            >
-              {timing.scanEnabled ? "ON" : "OFF"}
-            </button>
-          </div>
-          <TimingControl
-            label="SCAN WIDTH"
-            description="顯影前緣光帶厚度"
-            value={timing.scanWidth}
-            min={2}
-            max={30}
-            step={2}
-            unit="px"
-            onChange={(value) => onChange("scanWidth", value)}
-          />
-          <TimingControl
-            label="SCAN INTENSITY"
-            description="光帶亮度"
-            value={timing.scanIntensity}
-            min={0}
-            max={100}
-            step={5}
-            unit="%"
-            onChange={(value) => onChange("scanIntensity", value)}
-          />
-          <TimingControl
-            label="SCAN SOFTNESS"
-            description="光帶邊緣柔化程度"
-            value={timing.scanSoftness}
-            min={0}
-            max={20}
-            step={1}
-            unit="px"
-            onChange={(value) => onChange("scanSoftness", value)}
-          />
+            <div className="sd-timing-subgroup">B. 粒子流動 / 吸附</div>
+            <TimingControl label="INITIAL SPEED" description="初段流入速度" value={particle.initialInflowSpeed} min={45} max={180} step={5} unit="%" onChange={(value) => onParticleChange("initialInflowSpeed", value)} />
+            <TimingControl label="DRIFT SPEED" description="曲線漂移速度" value={particle.curvedDriftSpeed} min={40} max={180} step={5} unit="%" onChange={(value) => onParticleChange("curvedDriftSpeed", value)} />
+            <TimingControl label="DECEL" description="接近目標減速" value={particle.approachDeceleration} min={20} max={160} step={5} unit="%" onChange={(value) => onParticleChange("approachDeceleration", value)} />
+            <TimingControl label="ATTACH SPEED" description="吸附速度" value={particle.attachmentSpeed} min={40} max={180} step={5} unit="%" onChange={(value) => onParticleChange("attachmentSpeed", value)} />
+            <TimingControl label="ATTRACT" description="吸附強度" value={particle.attractionStrength} min={20} max={160} step={5} unit="%" onChange={(value) => onParticleChange("attractionStrength", value)} />
+            <TimingControl label="SUPPLY UNTIL" description="供粒持續到成形%" value={particle.supplyUntilFormation} min={55} max={100} step={1} unit="%" onChange={(value) => onParticleChange("supplyUntilFormation", value)} />
+            <TimingControl label="TRAIL LEN" description="尾流長度" value={particle.trailLength} min={15} max={160} step={5} unit="%" onChange={(value) => onParticleChange("trailLength", value)} />
+            <TimingControl label="TRAIL BRIGHT" description="尾流亮度" value={particle.trailBrightness} min={0} max={150} step={5} unit="%" onChange={(value) => onParticleChange("trailBrightness", value)} />
 
-          <div className="sd-timing-summary">
-            <span>OVERLAP</span>
-            <strong>{timing.particleHold + timing.particleFade} ms</strong>
-          </div>
+            <div className="sd-timing-subgroup">C. 球拍成形 / Timing</div>
+            <TimingControl label="TOTAL" description="總成形時間" value={particle.totalFormationDuration} min={1800} max={7200} step={100} unit="ms" onChange={(value) => onParticleChange("totalFormationDuration", value)} />
+            <TimingControl label="X SPEED" description="左到右推進" value={particle.leftToRightSpeed} min={45} max={180} step={5} unit="%" onChange={(value) => onParticleChange("leftToRightSpeed", value)} />
+            <TimingControl label="X WEIGHT" description="X 位置權重" value={particle.xTimingWeight} min={20} max={95} step={1} unit="%" onChange={(value) => onParticleChange("xTimingWeight", value)} />
+            <TimingControl label="STRUCT WEIGHT" description="結構分組權重" value={particle.structureTimingWeight} min={0} max={60} step={1} unit="%" onChange={(value) => onParticleChange("structureTimingWeight", value)} />
+            <TimingControl label="JITTER" description="時間錯落" value={particle.timingJitter} min={0} max={50} step={1} unit="%" onChange={(value) => onParticleChange("timingJitter", value)} />
+            <TimingControl label="FRAME DELAY" description="最後封框延遲" value={particle.finalFrameDelay} min={0} max={25} step={1} unit="%" onChange={(value) => onParticleChange("finalFrameDelay", value)} />
+            <TimingControl label="PULSE" description="完成脈衝" value={particle.completionPulseDuration} min={100} max={1000} step={20} unit="ms" onChange={(value) => onParticleChange("completionPulseDuration", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onReplayParticles}>Replay complete formation</button></div>
 
-          <button
-            type="button"
-            className={`sd-timing-freeze ${freezeParticles ? "is-on" : ""}`}
-            onClick={onToggleFreeze}
-          >
-            {freezeParticles ? "✓ 凍結完成粒子" : "凍結完成粒子"}
-          </button>
+            <div className="sd-timing-subgroup">D. 粒子畫質</div>
+            <TimingControl label="NORMAL COUNT" description="一般粒子數" value={particle.normalParticleCount} min={700} max={1600} step={20} unit="" onChange={(value) => onParticleChange("normalParticleCount", value)} />
+            <TimingControl label="DEGRADED COUNT" description="降級粒子數" value={particle.degradedParticleCount} min={320} max={760} step={20} unit="" onChange={(value) => onParticleChange("degradedParticleCount", value)} />
+            <TimingControl label="CORE" description="核心大小" value={particle.particleCoreSize} min={45} max={140} step={5} unit="%" onChange={(value) => onParticleChange("particleCoreSize", value)} />
+            <TimingControl label="GLOW SIZE" description="外光大小" value={particle.glowSize} min={35} max={160} step={5} unit="%" onChange={(value) => onParticleChange("glowSize", value)} />
+            <TimingControl label="GLOW" description="外光強度" value={particle.glowStrength} min={0} max={150} step={5} unit="%" onChange={(value) => onParticleChange("glowStrength", value)} />
+            <TimingControl label="DRIFT" description="完成微漂移" value={particle.localDriftAmount} min={0} max={150} step={5} unit="%" onChange={(value) => onParticleChange("localDriftAmount", value)} />
+            <TimingControl label="IDLE SCAN" description="等待掃描速度" value={particle.idleScanSpeed} min={35} max={180} step={5} unit="%" onChange={(value) => onParticleChange("idleScanSpeed", value)} />
+          </TuningSection>
 
-          <div className="sd-timing-actions">
-            <button type="button" className="is-primary" onClick={onReplay}>只重播 Handoff</button>
-            <button type="button" onClick={onReset}>重設預設</button>
-          </div>
+          <TuningSection id="tutorial-step1" title="② 系統教學｜Step 1 選擇聚會" active={activeSection} onSelect={onSetSection}>
+            <TimingControl label="START DELAY" description="Step 1 開始延遲" value={tutorial.step1StartDelay} min={0} max={2500} step={50} unit="ms" onChange={(value) => onTutorialChange("step1StartDelay", value)} />
+            <TimingControl label="DEMO COUNT" description="自動示範次數" value={tutorial.demoCount} min={1} max={6} step={1} unit="" onChange={(value) => onTutorialChange("demoCount", value)} />
+            <TimingControl label="DEMO DURATION" description="單次撥動時間" value={tutorial.singleDemoDuration} min={300} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("singleDemoDuration", value)} />
+            <TimingControl label="DEMO GAP" description="示範間隔" value={tutorial.gapBetweenDemos} min={0} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("gapBetweenDemos", value)} />
+            <TimingControl label="TRAVEL" description="手勢距離" value={tutorial.gestureDistance} min={20} max={120} step={2} unit="px" onChange={(value) => onTutorialChange("gestureDistance", value)} />
+            <TimingControl label="HAND X" description="手指向右偏移" value={tutorial.handXOffset} min={-24} max={44} step={1} unit="px" onChange={(value) => onTutorialChange("handXOffset", value)} />
+            <TimingControl label="HAND Y" description="手指上下偏移" value={tutorial.handYOffset} min={-32} max={32} step={1} unit="px" onChange={(value) => onTutorialChange("handYOffset", value)} />
+            <TimingControl label="ARROW SPEED" description="軌跡流光速度" value={tutorial.trajectorySpeed} min={500} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("trajectorySpeed", value)} />
+            <TimingControl label="ENDING HOLD" description="Step 1 結束停留" value={tutorial.step1EndingHold} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("step1EndingHold", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onJumpStep1}>Replay Step 1</button></div>
+          </TuningSection>
+
+          <TuningSection id="tutorial-transition" title="③ 系統教學｜Step 1 → Step 2 過場" active={activeSection} onSelect={onSetSection}>
+            <TimingControl label="STEP1 FADE" description="Step 1 淡出" value={tutorial.step1FadeDuration} min={100} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("step1FadeDuration", value)} />
+            <TimingControl label="WAIT" description="過場等待" value={tutorial.transitionWait} min={0} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("transitionWait", value)} />
+            <TimingControl label="SCROLL" description="自動捲動時間" value={tutorial.autoScrollDuration} min={200} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("autoScrollDuration", value)} />
+            <TimingControl label="POST HOLD" description="捲動後停留" value={tutorial.postScrollHold} min={0} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("postScrollHold", value)} />
+            <TimingControl label="STEP2 FADE" description="Step 2 淡入" value={tutorial.step2FadeInDuration} min={100} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("step2FadeInDuration", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onJumpStep2}>Test transition</button></div>
+          </TuningSection>
+
+          <TuningSection id="tutorial-step2" title="④ 系統教學｜Step 2 確認聚會" active={activeSection} onSelect={onSetSection}>
+            <TimingControl label="TEXT TIMING" description="文字停留" value={tutorial.step2TextTiming} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("step2TextTiming", value)} />
+            <TimingControl label="BORDER LOOP" description="外框流光週期" value={tutorial.borderFlowLoopDuration} min={500} max={2400} step={50} unit="ms" onChange={(value) => onTutorialChange("borderFlowLoopDuration", value)} />
+            <TimingControl label="LOOP COUNT" description="外框流光次數" value={tutorial.borderFlowLoopCount} min={1} max={5} step={1} unit="" onChange={(value) => onTutorialChange("borderFlowLoopCount", value)} />
+            <TimingControl label="BRIGHTNESS" description="流光亮度" value={tutorial.borderBrightness} min={20} max={120} step={5} unit="%" onChange={(value) => onTutorialChange("borderBrightness", value)} />
+            <TimingControl label="WIDTH" description="流光寬度" value={tutorial.borderWidth} min={1} max={5} step={1} unit="px" onChange={(value) => onTutorialChange("borderWidth", value)} />
+            <TimingControl label="GLOW" description="外光強度" value={tutorial.glowStrength} min={0} max={140} step={5} unit="%" onChange={(value) => onTutorialChange("glowStrength", value)} />
+            <TimingControl label="CLOSE DELAY" description="關閉教學出現延遲" value={tutorial.closeButtonDelay} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("closeButtonDelay", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onJumpStep2}>Replay Step 2</button></div>
+          </TuningSection>
+
+          <TuningSection id="countdown" title="⑤ 聚會選擇 / 倒數 / 自動進入" active={activeSection} onSelect={onSetSection}>
+            <TimingControl label="COUNTDOWN" description="倒數秒數" value={countdown.seconds} min={3} max={60} step={1} unit="s" onChange={(value) => onCountdownChange("seconds", value)} />
+            <ToggleControl label="SHOW COUNTDOWN" enabled={countdown.showCountdown} onToggle={() => onCountdownToggle("showCountdown")} />
+            <ToggleControl label="AUTO ENTER" enabled={countdown.autoEnterAtZero} onToggle={() => onCountdownToggle("autoEnterAtZero")} />
+            <ToggleControl label="RESET ON CHANGE" enabled={countdown.resetOnMeetupChange} onToggle={() => onCountdownToggle("resetOnMeetupChange")} />
+            <ToggleControl label="SHOW SELECTED" enabled={countdown.showSelectedInfo} onToggle={() => onCountdownToggle("showSelectedInfo")} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onTestCountdown}>Test countdown</button></div>
+          </TuningSection>
+
+          <TuningSection id="visual" title="⑥ 教學遮罩 / 視覺" active={activeSection} onSelect={onSetSection}>
+            <TimingControl label="OVERLAY" description="遮罩濃度" value={visual.overlayOpacity} min={20} max={92} step={2} unit="%" onChange={(value) => onVisualChange("overlayOpacity", value)} />
+            <TimingControl label="SPOTLIGHT" description="聚焦強度" value={visual.spotlightStrength} min={20} max={100} step={2} unit="%" onChange={(value) => onVisualChange("spotlightStrength", value)} />
+            <TimingControl label="SOFTNESS" description="聚焦柔邊" value={visual.spotlightSoftness} min={8} max={80} step={2} unit="px" onChange={(value) => onVisualChange("spotlightSoftness", value)} />
+            <TimingControl label="HEADING" description="標題字級" value={visual.headingSize} min={16} max={34} step={1} unit="px" onChange={(value) => onVisualChange("headingSize", value)} />
+            <TimingControl label="TEXT" description="文字字級" value={visual.textSize} min={11} max={20} step={1} unit="px" onChange={(value) => onVisualChange("textSize", value)} />
+            <TimingControl label="HAND SIZE" description="手指尺寸" value={visual.handIconSize} min={12} max={28} step={1} unit="px" onChange={(value) => onVisualChange("handIconSize", value)} />
+            <TimingControl label="ARROW SIZE" description="軌跡比例" value={visual.arrowSize} min={0} max={2} step={1} unit="x" onChange={(value) => onVisualChange("arrowSize", value)} />
+            <ToggleControl label="SKIP VISIBLE" enabled={visual.skipVisible} onToggle={onToggleSkip} />
+          </TuningSection>
+
+          <TuningSection id="master" title="⑦ 測試 / 總控" active={activeSection} onSelect={onSetSection}>
+            <ToggleControl label="教學啟用" enabled={tutorial.enabled} onToggle={onToggleTutorial} />
+            <button type="button" className={`sd-timing-freeze ${freezeParticles ? "is-on" : ""}`} onClick={onToggleFreeze}>{freezeParticles ? "✓ 凍結完成粒子" : "凍結完成粒子"}</button>
+            <div className="sd-timing-summary"><span>OVERLAP</span><strong>{timing.particleHold + timing.particleFade} ms</strong></div>
+            <div className="sd-timing-actions is-grid">
+              <button type="button" className="is-primary" onClick={() => { onReplayParticles(); onReplayTutorial(); }}>完整重播：開場＋教學</button>
+              <button type="button" onClick={onReplayTutorial}>只重播教學</button>
+              <button type="button" onClick={onJumpStep1}>跳 Step 1</button>
+              <button type="button" onClick={onJumpStep2}>跳 Step 2</button>
+              <button type="button" onClick={onCloseTutorial}>關閉教學遮罩</button>
+              <button type="button" onClick={onClearSeen}>清除已看過教學</button>
+              <button type="button" onClick={onReplayHandoff}>只重播 Handoff</button>
+              <button type="button" onClick={onReset}>恢復預設值</button>
+              <button type="button" onClick={copyCurrentSettings}>複製目前設定</button>
+            </div>
+          </TuningSection>
         </div>
       ) : null}
     </aside>
   );
 }
 
+function TuningSection({
+  id,
+  title,
+  active,
+  onSelect,
+  children,
+}: {
+  id: TuningSectionId;
+  title: string;
+  active: TuningSectionId;
+  onSelect: (section: TuningSectionId) => void;
+  children: ReactNode;
+}) {
+  const expanded = active === id;
+  return (
+    <section className={`sd-tuning-section ${expanded ? "is-open" : ""}`}>
+      <button type="button" className="sd-tuning-section-head" onClick={() => onSelect(id)} aria-expanded={expanded}>
+        <span>{title}</span>
+        <i>{expanded ? "−" : "+"}</i>
+      </button>
+      {expanded ? <div className="sd-tuning-section-body">{children}</div> : null}
+    </section>
+  );
+}
+
+function ToggleControl({ label, enabled, onToggle }: { label: string; enabled: boolean; onToggle: () => void }) {
+  return (
+    <div className="sd-timing-toggle-row">
+      <span>{label}</span>
+      <button type="button" className={enabled ? "is-on" : ""} onClick={onToggle}>{enabled ? "ON" : "OFF"}</button>
+    </div>
+  );
+}
 function TimingControl({
   label,
   description,
@@ -991,7 +1395,7 @@ function TimingControl({
   min: number;
   max: number;
   step: number;
-  unit: "ms" | "px" | "%";
+  unit: string;
   onChange: (value: number) => void;
 }) {
   const change = (next: number) => onChange(clampTiming(next, min, max, value));
@@ -1028,26 +1432,224 @@ function clampTiming(value: unknown, min: number, max: number, fallback: number)
   return Math.max(min, Math.min(max, Math.round(number)));
 }
 
+function normalizeHandoffTiming(value: Partial<HandoffTiming> | undefined): HandoffTiming {
+  const source = value || {};
+  return {
+    preHold: clampTiming(source.preHold, 0, 2000, DEFAULT_HANDOFF_TIMING.preHold),
+    realFade: clampTiming(source.realFade, 300, 2500, DEFAULT_HANDOFF_TIMING.realFade),
+    particleHold: clampTiming(source.particleHold, 0, 2500, DEFAULT_HANDOFF_TIMING.particleHold),
+    particleFade: clampTiming(source.particleFade, 200, 2500, DEFAULT_HANDOFF_TIMING.particleFade),
+    fadeBlur: clampTiming(source.fadeBlur, 0, 12, DEFAULT_HANDOFF_TIMING.fadeBlur),
+    revealDelay: clampTiming(source.revealDelay, 0, 1200, DEFAULT_HANDOFF_TIMING.revealDelay),
+    revealDuration: clampTiming(source.revealDuration, 300, 2500, DEFAULT_HANDOFF_TIMING.revealDuration),
+    revealFeather: clampTiming(source.revealFeather, 0, 48, DEFAULT_HANDOFF_TIMING.revealFeather),
+    tailBias: clampTiming(source.tailBias, 0, 100, DEFAULT_HANDOFF_TIMING.tailBias),
+    scanEnabled: typeof source.scanEnabled === "boolean" ? source.scanEnabled : DEFAULT_HANDOFF_TIMING.scanEnabled,
+    scanWidth: clampTiming(source.scanWidth, 2, 30, DEFAULT_HANDOFF_TIMING.scanWidth),
+    scanIntensity: clampTiming(source.scanIntensity, 0, 100, DEFAULT_HANDOFF_TIMING.scanIntensity),
+    scanSoftness: clampTiming(source.scanSoftness, 0, 20, DEFAULT_HANDOFF_TIMING.scanSoftness),
+  };
+}
+
+function normalizeParticleTuning(value: Partial<ParticleTuning> | undefined): ParticleTuning {
+  const source = value || {};
+  return {
+    sourceX: clampTiming(source.sourceX, -45, 20, DEFAULT_PARTICLE_TUNING.sourceX),
+    sourceY: clampTiming(source.sourceY, 0, 60, DEFAULT_PARTICLE_TUNING.sourceY),
+    entryAngle: clampTiming(source.entryAngle, -16, 26, DEFAULT_PARTICLE_TUNING.entryAngle),
+    streamCount: clampTiming(source.streamCount, 2, 3, DEFAULT_PARTICLE_TUNING.streamCount),
+    streamVerticalSpacing: clampTiming(source.streamVerticalSpacing, 8, 54, DEFAULT_PARTICLE_TUNING.streamVerticalSpacing),
+    curveAmplitude: clampTiming(source.curveAmplitude, 0, 44, DEFAULT_PARTICLE_TUNING.curveAmplitude),
+    interweaveAmount: clampTiming(source.interweaveAmount, 0, 44, DEFAULT_PARTICLE_TUNING.interweaveAmount),
+    convergencePosition: clampTiming(source.convergencePosition, 18, 58, DEFAULT_PARTICLE_TUNING.convergencePosition),
+    initialInflowSpeed: clampTiming(source.initialInflowSpeed, 45, 180, DEFAULT_PARTICLE_TUNING.initialInflowSpeed),
+    curvedDriftSpeed: clampTiming(source.curvedDriftSpeed, 40, 180, DEFAULT_PARTICLE_TUNING.curvedDriftSpeed),
+    approachDeceleration: clampTiming(source.approachDeceleration, 20, 160, DEFAULT_PARTICLE_TUNING.approachDeceleration),
+    attachmentSpeed: clampTiming(source.attachmentSpeed, 40, 180, DEFAULT_PARTICLE_TUNING.attachmentSpeed),
+    attractionStrength: clampTiming(source.attractionStrength, 20, 160, DEFAULT_PARTICLE_TUNING.attractionStrength),
+    supplyUntilFormation: clampTiming(source.supplyUntilFormation, 55, 100, DEFAULT_PARTICLE_TUNING.supplyUntilFormation),
+    trailLength: clampTiming(source.trailLength, 15, 160, DEFAULT_PARTICLE_TUNING.trailLength),
+    trailBrightness: clampTiming(source.trailBrightness, 0, 150, DEFAULT_PARTICLE_TUNING.trailBrightness),
+    totalFormationDuration: clampTiming(source.totalFormationDuration, 1800, 7200, DEFAULT_PARTICLE_TUNING.totalFormationDuration),
+    leftToRightSpeed: clampTiming(source.leftToRightSpeed, 45, 180, DEFAULT_PARTICLE_TUNING.leftToRightSpeed),
+    xTimingWeight: clampTiming(source.xTimingWeight, 20, 95, DEFAULT_PARTICLE_TUNING.xTimingWeight),
+    structureTimingWeight: clampTiming(source.structureTimingWeight, 0, 60, DEFAULT_PARTICLE_TUNING.structureTimingWeight),
+    timingJitter: clampTiming(source.timingJitter, 0, 50, DEFAULT_PARTICLE_TUNING.timingJitter),
+    finalFrameDelay: clampTiming(source.finalFrameDelay, 0, 25, DEFAULT_PARTICLE_TUNING.finalFrameDelay),
+    completionPulseDuration: clampTiming(source.completionPulseDuration, 100, 1000, DEFAULT_PARTICLE_TUNING.completionPulseDuration),
+    normalParticleCount: clampTiming(source.normalParticleCount, 700, 1600, DEFAULT_PARTICLE_TUNING.normalParticleCount),
+    degradedParticleCount: clampTiming(source.degradedParticleCount, 320, 760, DEFAULT_PARTICLE_TUNING.degradedParticleCount),
+    particleCoreSize: clampTiming(source.particleCoreSize, 45, 140, DEFAULT_PARTICLE_TUNING.particleCoreSize),
+    glowSize: clampTiming(source.glowSize, 35, 160, DEFAULT_PARTICLE_TUNING.glowSize),
+    glowStrength: clampTiming(source.glowStrength, 0, 150, DEFAULT_PARTICLE_TUNING.glowStrength),
+    localDriftAmount: clampTiming(source.localDriftAmount, 0, 150, DEFAULT_PARTICLE_TUNING.localDriftAmount),
+    idleScanSpeed: clampTiming(source.idleScanSpeed, 35, 180, DEFAULT_PARTICLE_TUNING.idleScanSpeed),
+  };
+}
+
+function normalizeTutorialTuning(value: Partial<TutorialTuning> | undefined): TutorialTuning {
+  const source = value || {};
+  return {
+    ...DEFAULT_TUTORIAL_TUNING,
+    enabled: typeof source.enabled === "boolean" ? source.enabled : DEFAULT_TUTORIAL_TUNING.enabled,
+    step1StartDelay: clampTiming(source.step1StartDelay, 0, 2500, DEFAULT_TUTORIAL_TUNING.step1StartDelay),
+    demoCount: clampTiming(source.demoCount, 1, 6, DEFAULT_TUTORIAL_TUNING.demoCount),
+    singleDemoDuration: clampTiming(source.singleDemoDuration, 300, 1800, DEFAULT_TUTORIAL_TUNING.singleDemoDuration),
+    gapBetweenDemos: clampTiming(source.gapBetweenDemos, 0, 1200, DEFAULT_TUTORIAL_TUNING.gapBetweenDemos),
+    gestureDistance: clampTiming(source.gestureDistance, 20, 120, DEFAULT_TUTORIAL_TUNING.gestureDistance),
+    handXOffset: clampTiming(source.handXOffset, -24, 44, DEFAULT_TUTORIAL_TUNING.handXOffset),
+    handYOffset: clampTiming(source.handYOffset, -32, 32, DEFAULT_TUTORIAL_TUNING.handYOffset),
+    trajectorySpeed: clampTiming(source.trajectorySpeed, 500, 1800, DEFAULT_TUTORIAL_TUNING.trajectorySpeed),
+    step1EndingHold: clampTiming(source.step1EndingHold, 0, 1600, DEFAULT_TUTORIAL_TUNING.step1EndingHold),
+    step1FadeDuration: clampTiming(source.step1FadeDuration, 100, 1200, DEFAULT_TUTORIAL_TUNING.step1FadeDuration),
+    transitionWait: clampTiming(source.transitionWait, 0, 1200, DEFAULT_TUTORIAL_TUNING.transitionWait),
+    autoScrollDuration: clampTiming(source.autoScrollDuration, 200, 1600, DEFAULT_TUTORIAL_TUNING.autoScrollDuration),
+    postScrollHold: clampTiming(source.postScrollHold, 0, 1200, DEFAULT_TUTORIAL_TUNING.postScrollHold),
+    step2FadeInDuration: clampTiming(source.step2FadeInDuration, 100, 1200, DEFAULT_TUTORIAL_TUNING.step2FadeInDuration),
+    step2TextTiming: clampTiming(source.step2TextTiming, 0, 1600, DEFAULT_TUTORIAL_TUNING.step2TextTiming),
+    borderFlowLoopDuration: clampTiming(source.borderFlowLoopDuration, 500, 2400, DEFAULT_TUTORIAL_TUNING.borderFlowLoopDuration),
+    borderFlowLoopCount: clampTiming(source.borderFlowLoopCount, 1, 5, DEFAULT_TUTORIAL_TUNING.borderFlowLoopCount),
+    borderBrightness: clampTiming(source.borderBrightness, 20, 120, DEFAULT_TUTORIAL_TUNING.borderBrightness),
+    borderWidth: clampTiming(source.borderWidth, 1, 5, DEFAULT_TUTORIAL_TUNING.borderWidth),
+    glowStrength: clampTiming(source.glowStrength, 0, 140, DEFAULT_TUTORIAL_TUNING.glowStrength),
+    closeButtonDelay: clampTiming(source.closeButtonDelay, 0, 1600, DEFAULT_TUTORIAL_TUNING.closeButtonDelay),
+  };
+}
+
+function normalizeCountdownTuning(value: Partial<CountdownTuning> | undefined): CountdownTuning {
+  const source = value || {};
+  return {
+    seconds: clampTiming(source.seconds, 3, 60, DEFAULT_COUNTDOWN_TUNING.seconds),
+    showCountdown: typeof source.showCountdown === "boolean" ? source.showCountdown : DEFAULT_COUNTDOWN_TUNING.showCountdown,
+    autoEnterAtZero: typeof source.autoEnterAtZero === "boolean" ? source.autoEnterAtZero : DEFAULT_COUNTDOWN_TUNING.autoEnterAtZero,
+    resetOnMeetupChange: typeof source.resetOnMeetupChange === "boolean" ? source.resetOnMeetupChange : DEFAULT_COUNTDOWN_TUNING.resetOnMeetupChange,
+    showSelectedInfo: typeof source.showSelectedInfo === "boolean" ? source.showSelectedInfo : DEFAULT_COUNTDOWN_TUNING.showSelectedInfo,
+  };
+}
+
+function normalizeVisualTuning(value: Partial<VisualTuning> | undefined): VisualTuning {
+  const source = value || {};
+  return {
+    overlayOpacity: clampTiming(source.overlayOpacity, 20, 92, DEFAULT_VISUAL_TUNING.overlayOpacity),
+    spotlightStrength: clampTiming(source.spotlightStrength, 20, 100, DEFAULT_VISUAL_TUNING.spotlightStrength),
+    spotlightSoftness: clampTiming(source.spotlightSoftness, 8, 80, DEFAULT_VISUAL_TUNING.spotlightSoftness),
+    headingSize: clampTiming(source.headingSize, 16, 34, DEFAULT_VISUAL_TUNING.headingSize),
+    textSize: clampTiming(source.textSize, 11, 20, DEFAULT_VISUAL_TUNING.textSize),
+    handIconSize: clampTiming(source.handIconSize, 12, 28, DEFAULT_VISUAL_TUNING.handIconSize),
+    arrowSize: clampTiming(source.arrowSize, 0, 2, DEFAULT_VISUAL_TUNING.arrowSize),
+    skipVisible: typeof source.skipVisible === "boolean" ? source.skipVisible : DEFAULT_VISUAL_TUNING.skipVisible,
+  };
+}
 function RacketImage({ src, className = "" }: { src: string; className?: string }) {
   return <img className={className} src={src} alt="" aria-hidden="true" draggable={false} />;
 }
 
-function PreviewSwipeHint() {
+function PreviewSwipeHint({
+  handX,
+  handY,
+  gestureDistance,
+  trajectorySpeed,
+  handSize,
+  arrowScale,
+}: {
+  handX: number;
+  handY: number;
+  gestureDistance: number;
+  trajectorySpeed: number;
+  handSize: number;
+  arrowScale: number;
+}) {
+  const path = `M60 88 C49 ${88 - gestureDistance * 0.08} 41 ${74 - gestureDistance * 0.16} 38 ${63 - gestureDistance * 0.22} C34 ${50 - gestureDistance * 0.18} 37 ${38 - gestureDistance * 0.08} 47 27`;
   return (
-    <span className="sd-preview-swipe-hint" aria-label="上滑切換下一個聚會" role="img">
+    <span
+      className="sd-preview-swipe-hint"
+      aria-label="上滑切換下一個聚會"
+      role="img"
+      style={{ "--sd-gesture-scale": arrowScale } as CSSProperties}
+    >
       <svg viewBox="0 0 72 96" aria-hidden="true">
-        <path className="sd-preview-swipe-base" d="M60 88 C49 83 41 74 38 63 C34 50 37 38 47 27" />
+        <path className="sd-preview-swipe-base" d={path} />
         <path className="sd-preview-swipe-head" d="M35 34 L47 26 L55 39" />
-        <path className="sd-preview-swipe-light" d="M60 88 C49 83 41 74 38 63 C34 50 37 38 47 27" />
-        <text className="sd-preview-swipe-finger" x="-6" y="5">
+        <path className="sd-preview-swipe-light" d={path} style={{ animationDuration: `${trajectorySpeed}ms` }} />
+        <text
+          className="sd-preview-swipe-finger"
+          x={-6 + handX}
+          y={5 + handY}
+          style={{ fontSize: `${handSize}px` }}
+        >
           ☝︎
-          <animateMotion dur="1s" begin=".08s" repeatCount="indefinite" path="M60 88 C49 83 41 74 38 63 C34 50 37 38 47 27" />
+          <animateMotion dur={`${trajectorySpeed}ms`} begin=".08s" repeatCount="indefinite" path={path} />
         </text>
       </svg>
     </span>
   );
 }
 
+function TutorialOverlay({
+  step,
+  tuning,
+  visual,
+  spotlightRect,
+  closeVisible,
+  motionMode,
+  onSkip,
+  onClose,
+}: {
+  step: TutorialStep;
+  tuning: TutorialTuning;
+  visual: VisualTuning;
+  spotlightRect: { top: number; left: number; width: number; height: number };
+  closeVisible: boolean;
+  motionMode: MotionMode;
+  onSkip: () => void;
+  onClose: () => void;
+}) {
+  const isStep2 = step === "step2";
+  const isTransition = step === "transition";
+  return (
+    <div className={`sd-tutorial-overlay is-${step} motion-${motionMode}`} role="dialog" aria-modal="true" aria-label="系統教學">
+      <span
+        className="sd-tutorial-spotlight"
+        style={
+          {
+            "--spot-top": `${spotlightRect.top}px`,
+            "--spot-left": `${spotlightRect.left}px`,
+            "--spot-width": `${spotlightRect.width}px`,
+            "--spot-height": `${spotlightRect.height}px`,
+          } as CSSProperties
+        }
+      />
+      {visual.skipVisible ? (
+        <button type="button" className="sd-tutorial-skip" onClick={onSkip}>Skip</button>
+      ) : null}
+      <section className={`sd-tutorial-card ${isTransition ? "is-fading" : ""}`}>
+        <p>系統教學</p>
+        <h2>{isStep2 ? "STEP 2｜確認聚會" : "STEP 1｜選擇聚會"}</h2>
+        <span>{isStep2 ? "選好聚會後，點這裡確認" : "上下撥動切換聚會，也可以直接點選"}</span>
+        {!isStep2 ? (
+          <div className="sd-tutorial-gesture">
+            <PreviewSwipeHint
+              handX={tuning.handXOffset}
+              handY={tuning.handYOffset}
+              gestureDistance={tuning.gestureDistance}
+              trajectorySpeed={tuning.trajectorySpeed}
+              handSize={visual.handIconSize}
+              arrowScale={visual.arrowSize}
+            />
+          </div>
+        ) : null}
+        {isStep2 && closeVisible ? (
+          <button type="button" className="sd-tutorial-close" onClick={onClose}>關閉教學</button>
+        ) : null}
+      </section>
+    </div>
+  );
+}
+
+function formatPreviewEventLabel(event: AlphaEvent | null | undefined) {
+  if (!event) return "聚會";
+  return `${shortEventDate(event.eventDate)} ${event.name}`.trim();
+}
 function shortEventDate(value: string) {
   const [, month = "", day = ""] = String(value || "").split("-");
   const monthNumber = Number(month);
@@ -1486,6 +2088,215 @@ function HomepageStyles() {
         font-weight: 800;
       }
 
+      .sd-tuning-section {
+        border-bottom: 1px solid rgba(255,255,255,.055);
+      }
+
+      .sd-tuning-section-head {
+        width: 100%;
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border: 0;
+        background: transparent;
+        color: rgba(247,246,239,.82);
+        padding: 0 2px;
+        text-align: left;
+        font: 800 10px/1.2 "Noto Sans TC", sans-serif;
+      }
+
+      .sd-tuning-section-head i {
+        color: rgba(157,244,22,.74);
+        font-style: normal;
+      }
+
+      .sd-tuning-section.is-open .sd-tuning-section-head span {
+        color: rgba(216,185,94,.92);
+      }
+
+      .sd-tuning-section-body {
+        padding: 0 0 9px;
+      }
+
+      .sd-timing-subgroup {
+        margin: 8px 0 2px;
+        color: rgba(157,244,22,.70);
+        font: 800 9px/1.1 "Noto Sans TC", sans-serif;
+        letter-spacing: .06em;
+      }
+
+      .sd-timing-toggle-row {
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border-bottom: 1px solid rgba(255,255,255,.055);
+        color: rgba(216,185,94,.78);
+        font: 800 9.5px/1 "Chakra Petch", monospace;
+        letter-spacing: .06em;
+      }
+
+      .sd-timing-toggle-row button {
+        min-width: 48px;
+        min-height: 27px;
+        border: 1px solid rgba(216,185,94,.24);
+        border-radius: 999px;
+        background: rgba(255,255,255,.035);
+        color: rgba(255,255,255,.52);
+        font: 800 9px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-timing-toggle-row button.is-on {
+        border-color: rgba(157,244,22,.42);
+        color: var(--green);
+        background: rgba(157,244,22,.055);
+      }
+
+      .sd-timing-actions.is-grid {
+        grid-template-columns: 1fr 1fr;
+        margin-top: 8px;
+      }
+
+      .sd-timing-actions.is-grid button:only-child {
+        grid-column: 1 / -1;
+      }
+
+      .sd-tutorial-overlay {
+        position: fixed;
+        z-index: 72;
+        inset: 0;
+        pointer-events: auto;
+        background: rgba(0,0,0,var(--sd-tutorial-overlay, .78));
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+      }
+
+      .sd-tutorial-spotlight {
+        position: fixed;
+        top: calc(var(--spot-top, 0px) - 10px);
+        left: calc(var(--spot-left, 0px) - 10px);
+        width: calc(var(--spot-width, 0px) + 20px);
+        height: calc(var(--spot-height, 0px) + 20px);
+        border-radius: 24px;
+        pointer-events: none;
+        box-shadow:
+          0 0 0 9999px rgba(0,0,0,calc(var(--sd-tutorial-spotlight, .72) * .62)),
+          0 0 var(--sd-tutorial-softness, 34px) rgba(157,244,22,.22),
+          inset 0 0 0 1px rgba(216,185,94,.36);
+      }
+
+      .sd-tutorial-skip {
+        position: fixed;
+        top: calc(env(safe-area-inset-top) + 14px);
+        right: 16px;
+        z-index: 2;
+        border: 1px solid rgba(216,185,94,.24);
+        border-radius: 999px;
+        background: rgba(6,9,12,.62);
+        color: rgba(247,246,239,.82);
+        padding: 9px 14px;
+        font: 800 12px/1 "Chakra Petch", sans-serif;
+      }
+
+      .sd-tutorial-card {
+        position: fixed;
+        z-index: 2;
+        left: 18px;
+        right: 18px;
+        bottom: calc(env(safe-area-inset-bottom) + 112px);
+        display: grid;
+        gap: 10px;
+        padding: 17px 18px 18px;
+        border: 1px solid rgba(216,185,94,.32);
+        border-radius: 20px 20px 18px 22px;
+        background: rgba(5,8,11,.82);
+        box-shadow: 0 18px 48px rgba(0,0,0,.42), 0 0 24px rgba(157,244,22,.06);
+        transition: opacity .36s ease, transform .36s ease;
+      }
+
+      .sd-tutorial-card.is-fading {
+        opacity: .22;
+        transform: translateY(8px);
+      }
+
+      .sd-tutorial-card p,
+      .sd-tutorial-card h2,
+      .sd-tutorial-card span {
+        margin: 0;
+      }
+
+      .sd-tutorial-card p {
+        color: rgba(216,185,94,.72);
+        font: 800 11px/1 "Noto Sans TC", sans-serif;
+        letter-spacing: .18em;
+      }
+
+      .sd-tutorial-card h2 {
+        color: rgba(247,246,239,.98);
+        font: 900 var(--sd-tutorial-heading, 22px)/1.2 "Noto Sans TC", sans-serif;
+      }
+
+      .sd-tutorial-card > span {
+        color: rgba(247,246,239,.76);
+        font-size: var(--sd-tutorial-text, 14px);
+        line-height: 1.45;
+      }
+
+      .sd-tutorial-gesture {
+        position: relative;
+        height: 92px;
+      }
+
+      .sd-tutorial-gesture .sd-preview-swipe-hint {
+        left: 50%;
+        right: auto;
+        bottom: 0;
+        transform: translateX(-50%) scale(var(--sd-tutorial-arrow-scale, 1));
+        opacity: .98;
+      }
+
+      .sd-tutorial-close {
+        justify-self: start;
+        min-height: 42px;
+        border: 1px solid rgba(157,244,22,.44);
+        border-radius: 999px;
+        background: linear-gradient(180deg, rgba(184,255,24,.95), rgba(122,197,12,.92));
+        color: #101607;
+        padding: 0 18px;
+        font-weight: 900;
+      }
+
+      .sd-hero-picker-footer > button.is-tutorial-focus {
+        position: relative;
+        overflow: hidden;
+        box-shadow:
+          0 0 calc(22px * var(--sd-border-glow, .7)) rgba(157,244,22,.24),
+          0 0 calc(26px * var(--sd-border-glow, .7)) rgba(216,185,94,.18),
+          inset 0 0 0 var(--sd-border-width, 2px) rgba(216,185,94,calc(.55 * var(--sd-border-brightness, .7)));
+      }
+
+      .sd-hero-picker-footer > button.is-tutorial-focus::after {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        border-radius: inherit;
+        pointer-events: none;
+        transform: scale(var(--sd-gesture-scale, 1));
+        transform-origin: center;
+        background: conic-gradient(from 0deg, transparent 0 58%, rgba(216,185,94,calc(.9 * var(--sd-border-brightness, .7))) 63%, rgba(157,244,22,calc(.82 * var(--sd-border-brightness, .7))) 68%, transparent 75% 100%);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        padding: var(--sd-border-width, 2px);
+        animation: tutorial-border-flow var(--sd-border-loop, 1200ms) linear var(--sd-border-loops, 2);
+      }
+
+      @keyframes tutorial-border-flow {
+        to { transform: rotate(1turn); }
+      }
       .sd-particles {
         position: fixed;
         z-index: 3;
@@ -1985,6 +2796,8 @@ function HomepageStyles() {
         height: 86px;
         opacity: 0;
         pointer-events: none;
+        transform: scale(var(--sd-gesture-scale, 1));
+        transform-origin: center;
         filter: drop-shadow(0 0 7px rgba(157,244,22,.20));
         animation: preview-swipe-cycle 6s ease .65s infinite both;
       }
@@ -2046,21 +2859,34 @@ function HomepageStyles() {
         -webkit-backdrop-filter: blur(8px);
       }
 
-      .sd-hero-picker-footer > span {
+      .sd-hero-picker-footer > span,
+      .sd-selected-meetup {
         min-width: 0;
         overflow: hidden;
+        display: grid;
+        gap: 3px;
         color: rgba(255,255,255,.54);
         font-size: 11px;
+      }
+
+      .sd-selected-meetup > span {
+        overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
-      .sd-hero-picker-footer > span strong {
+      .sd-hero-picker-footer > span strong,
+      .sd-selected-meetup strong {
         color: rgba(247,246,239,.94);
         font-size: 13px;
         font-weight: 650;
       }
 
+      .sd-selected-meetup small {
+        color: rgba(157,244,22,.70);
+        font: 800 11px/1 "Chakra Petch", monospace;
+        letter-spacing: .06em;
+      }
       .sd-hero-picker-footer > button {
         min-height: 46px;
         border: 0;
@@ -2076,12 +2902,6 @@ function HomepageStyles() {
         opacity: .45;
       }
 
-      .sd-hero-picker-footer > small {
-        grid-column: 1 / -1;
-        color: rgba(255,255,255,.32);
-        font-size: 9.5px;
-        letter-spacing: .03em;
-      }
 
       .sd-annotations {
         position: absolute;

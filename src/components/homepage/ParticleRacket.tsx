@@ -4,6 +4,8 @@ import type { HomepagePhase, MotionMode } from "@/hooks/use-homepage-flow";
 type ParticleRacketProps = {
   phase: HomepagePhase;
   motionMode: MotionMode;
+  tuning: ParticleTuning;
+  replayKey?: number;
 };
 
 type Region = "handle" | "shaft" | "string" | "frame";
@@ -68,11 +70,73 @@ const GOLD = "#d8b45c";
 const GOLD_BRIGHT = "#f1d88d";
 const GREEN = "#b8f22e";
 const GREEN_BRIGHT = "#d9ff5f";
-const NORMAL_COUNT = 1240;
-const DEGRADED_COUNT = 620;
 const REDUCED_COUNT = 360;
-const ASSEMBLY_SECONDS = 4.6;
-const FINISH_PULSE_SECONDS = 0.42;
+
+export type ParticleTuning = {
+  sourceX: number;
+  sourceY: number;
+  entryAngle: number;
+  streamCount: number;
+  streamVerticalSpacing: number;
+  curveAmplitude: number;
+  interweaveAmount: number;
+  convergencePosition: number;
+  initialInflowSpeed: number;
+  curvedDriftSpeed: number;
+  approachDeceleration: number;
+  attachmentSpeed: number;
+  attractionStrength: number;
+  supplyUntilFormation: number;
+  trailLength: number;
+  trailBrightness: number;
+  totalFormationDuration: number;
+  leftToRightSpeed: number;
+  xTimingWeight: number;
+  structureTimingWeight: number;
+  timingJitter: number;
+  finalFrameDelay: number;
+  completionPulseDuration: number;
+  normalParticleCount: number;
+  degradedParticleCount: number;
+  particleCoreSize: number;
+  glowSize: number;
+  glowStrength: number;
+  localDriftAmount: number;
+  idleScanSpeed: number;
+};
+
+export const DEFAULT_PARTICLE_TUNING: ParticleTuning = {
+  sourceX: -14,
+  sourceY: 28,
+  entryAngle: 11,
+  streamCount: 3,
+  streamVerticalSpacing: 28,
+  curveAmplitude: 18,
+  interweaveAmount: 18,
+  convergencePosition: 38,
+  initialInflowSpeed: 112,
+  curvedDriftSpeed: 100,
+  approachDeceleration: 78,
+  attachmentSpeed: 100,
+  attractionStrength: 88,
+  supplyUntilFormation: 94,
+  trailLength: 92,
+  trailBrightness: 82,
+  totalFormationDuration: 4600,
+  leftToRightSpeed: 100,
+  xTimingWeight: 76,
+  structureTimingWeight: 24,
+  timingJitter: 22,
+  finalFrameDelay: 8,
+  completionPulseDuration: 420,
+  normalParticleCount: 1240,
+  degradedParticleCount: 620,
+  particleCoreSize: 100,
+  glowSize: 92,
+  glowStrength: 88,
+  localDriftAmount: 100,
+  idleScanSpeed: 100,
+};
 const TARGET_ANGLE = (-4.5 * Math.PI) / 180;
 
 let sourcePromise: Promise<SourceGeometry> | null = null;
@@ -454,28 +518,35 @@ function makeSourcePoints(source: SourceGeometry, count: number) {
   ];
 }
 
-function assemblyTiming(point: SourcePoint, index: number) {
+function assemblyTiming(point: SourcePoint, index: number, tuning: ParticleTuning) {
   const xProgress = clamp(point.along);
   const jitter = hash01(index * 4.91 + point.x * 0.021 + point.y * 0.017);
-  const structureLag =
+  const structureBase =
     point.region === "handle"
       ? 0
       : point.region === "shaft"
-        ? 0.02
+        ? 0.035
         : point.region === "string"
-          ? 0.045
-          : 0.08;
-  const duration =
+          ? 0.075
+          : 0.11;
+  const durationBase =
     point.region === "handle"
       ? 0.24
       : point.region === "shaft"
-        ? 0.25
+        ? 0.26
         : point.region === "string"
-          ? 0.27
-          : 0.29;
-  const actualDuration = duration + jitter * 0.035;
-  const start = clamp(xProgress * 0.64 + structureLag + jitter * 0.022, 0, 0.98 - actualDuration);
-  return { start, duration: actualDuration };
+          ? 0.29
+          : 0.32;
+  const xWeight = clamp(tuning.xTimingWeight / 100, 0.2, 0.95);
+  const structureWeight = clamp(tuning.structureTimingWeight / 100, 0, 0.6);
+  const speed = clamp(tuning.leftToRightSpeed / 100, 0.45, 1.8);
+  const jitterRange = clamp(tuning.timingJitter / 100, 0, 0.5);
+  const supply = clamp(tuning.supplyUntilFormation / 100, 0.55, 1);
+  const frameDelay = point.region === "frame" ? clamp(tuning.finalFrameDelay / 100, 0, 0.25) : 0;
+  const duration = durationBase / speed + jitter * 0.055 * jitterRange;
+  const flowStart = xProgress * (0.78 * xWeight) + structureBase * structureWeight + frameDelay + jitter * 0.052 * jitterRange;
+  const start = clamp(flowStart * supply, 0, 0.99 - duration);
+  return { start, duration };
 }
 
 function assignColors(dots: Dot[], points: SourcePoint[]) {
@@ -528,13 +599,14 @@ function makeDots(
   width: number,
   height: number,
   motionMode: MotionMode,
+  tuning: ParticleTuning,
 ) {
   const count =
     motionMode === "reduced"
       ? REDUCED_COUNT
       : motionMode === "degraded"
-        ? DEGRADED_COUNT
-        : NORMAL_COUNT;
+        ? tuning.degradedParticleCount
+        : tuning.normalParticleCount;
   const points = makeSourcePoints(source, count);
   const targetLength = Math.min(width * 0.84, width < 640 ? 362 : 640);
   const scale = targetLength / source.bbox.height;
@@ -542,31 +614,38 @@ function makeDots(
   const centerY = height * (width < 640 ? 0.35 : 0.365);
   const ca = Math.cos(TARGET_ANGLE);
   const sa = Math.sin(TARGET_ANGLE);
-  const baseSize = Math.max(0.72, Math.min(1.42, targetLength / 255));
+  const baseSize = Math.max(0.72, Math.min(1.42, targetLength / 255)) * Math.max(0.45, tuning.particleCoreSize / 100);
 
   const dots = points.map<Dot>((point, index) => {
     const long = (source.bbox.maxY - point.y - source.bbox.height / 2) * scale;
     const lateral = (point.x - source.bbox.centerX) * scale;
     const tx = centerX + (long * ca - lateral * sa);
     const ty = centerY + (long * sa + lateral * ca);
-    const flowIndex = Math.floor(hash01(index * 1.83 + 9) * 3);
-    const lane = flowIndex - 1;
-    const laneGap = width < 430 ? 20 : 28;
-    const sx = -42 - hash01(index * 2.29 + point.y * 0.013) * width * 0.36;
+    const streamCount = Math.max(2, Math.min(3, Math.round(tuning.streamCount)));
+    const flowIndex = Math.floor(hash01(index * 1.83 + 9) * streamCount);
+    const lane = flowIndex - (streamCount - 1) / 2;
+    const laneGap = (width < 430 ? 20 : 28) * Math.max(0.35, tuning.streamVerticalSpacing / 28);
+    const sourceX = width * (tuning.sourceX / 100);
+    const sourceY = height * (tuning.sourceY / 100);
+    const angleLift = Math.tan((tuning.entryAngle * Math.PI) / 180) * width * 0.1;
+    const sx = sourceX - hash01(index * 2.29 + point.y * 0.013) * width * 0.34;
     const sy =
-      centerY +
+      sourceY +
       lane * laneGap +
-      Math.sin(point.along * Math.PI * 2.15 + flowIndex * 1.2) * (width < 430 ? 8 : 12) +
-      (hash01(point.x * 0.13 + index) - 0.5) * 12;
-    const weave = (hash01(index * 6.41 + point.x * 0.017) - 0.5) * (width < 430 ? 18 : 26);
-    const c1x = width * (0.08 + hash01(index * 0.77) * 0.1);
+      angleLift +
+      Math.sin(point.along * Math.PI * 1.7 + flowIndex * 1.35) * (width < 430 ? 5 : 8) +
+      (hash01(point.x * 0.13 + index) - 0.5) * 10;
+    const weave = (hash01(index * 6.41 + point.x * 0.017) - 0.5) * tuning.interweaveAmount;
+    const convergenceX = width * clamp(tuning.convergencePosition / 100, 0.18, 0.58);
+    const curveScale = Math.max(0, tuning.curveAmplitude / 18);
+    const c1x = sourceX + (convergenceX - sourceX) * 0.42 + hash01(index * 0.77) * width * 0.08;
     const c1y =
-      centerY +
-      lane * laneGap * 1.15 +
-      Math.sin(point.along * Math.PI * 2.4 + flowIndex) * (width < 430 ? 13 : 19);
-    const c2x = tx - Math.max(width * 0.16, Math.min(width * 0.34, Math.abs(tx - sx) * 0.32));
-    const c2y = ty + lane * (width < 430 ? 8 : 12) + weave;
-    const timing = assemblyTiming(point, index);
+      sourceY +
+      lane * laneGap * 1.25 +
+      Math.sin(point.along * Math.PI * 2.15 + flowIndex) * (width < 430 ? 9 : 14) * curveScale;
+    const c2x = tx - Math.max(width * 0.16, Math.min(width * 0.34, Math.abs(tx - sx) * 0.28));
+    const c2y = ty + lane * (width < 430 ? 6 : 10) + weave;
+    const timing = assemblyTiming(point, index, tuning);
     const regionSize =
       point.region === "string" ? 0.66 : point.region === "shaft" ? 0.72 : point.region === "frame" ? 0.78 : 0.82;
     const size = baseSize * regionSize * (0.82 + hash01(index * 3.19 + point.x) * 0.3);
@@ -585,9 +664,9 @@ function makeDots(
       start: timing.start,
       duration: timing.duration,
       along: point.along,
-      drift: 0.5 + hash01(index * 7.71 + point.y) * 1,
+      drift: (0.5 + hash01(index * 7.71 + point.y) * 1) * Math.max(0, tuning.localDriftAmount / 100),
       phase: hash01(index * 9.43 + point.x) * Math.PI * 2,
-      curve: (hash01(index * 4.41 + point.y) - 0.5) * (width < 430 ? 12 : 18),
+      curve: (hash01(index * 4.41 + point.y) - 0.5) * tuning.curveAmplitude,
       accent: "white",
       region: point.region,
     };
@@ -635,7 +714,7 @@ function drawSubtleBackdrop(context: CanvasRenderingContext2D, width: number, he
   context.restore();
 }
 
-export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
+export function ParticleRacket({ phase, motionMode, tuning, replayKey = 0 }: ParticleRacketProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const dotsRef = useRef<Dot[]>([]);
   const startedRef = useRef(0);
@@ -667,7 +746,7 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
       canvas.width = Math.floor(rect.width * dpr);
       canvas.height = Math.floor(rect.height * dpr);
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      dotsRef.current = makeDots(sourceRef.current, rect.width, rect.height, motionModeRef.current);
+      dotsRef.current = makeDots(sourceRef.current, rect.width, rect.height, motionModeRef.current, tuning);
       startedRef.current = window.performance.now();
     };
 
@@ -683,7 +762,7 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
       if (local <= 0.04 || local >= 0.94) return;
       const dx = x - previousX;
       const dy = y - previousY;
-      const length = (1 - easeInOut(local)) * (dot.region === "handle" ? 9 : 15) + 4;
+      const length = ((1 - easeInOut(local)) * (dot.region === "handle" ? 9 : 15) + 4) * Math.max(0.2, tuning.trailLength / 100);
       const magnitude = Math.max(1, Math.hypot(dx, dy));
       const tx = x - (dx / magnitude) * length;
       const ty = y - (dy / magnitude) * length;
@@ -695,7 +774,7 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
             ? "216,180,92"
             : "245,244,238";
       gradient.addColorStop(0, `rgba(${trailColor},0)`);
-      gradient.addColorStop(1, `rgba(${trailColor},${0.13 * alpha})`);
+      gradient.addColorStop(1, `rgba(${trailColor},${0.13 * alpha * Math.max(0, tuning.trailBrightness / 100)})`);
       context.globalAlpha = 1;
       context.strokeStyle = gradient;
       context.lineWidth = Math.max(0.34, dot.size * 0.4);
@@ -726,10 +805,10 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
               ? WHITE_BRIGHT
               : dot.color;
 
-      context.globalAlpha = clamp(alpha * 0.14 * brightness, 0, 0.28);
+      context.globalAlpha = clamp(alpha * 0.14 * brightness * Math.max(0, tuning.glowStrength / 100), 0, 0.34);
       context.fillStyle = core;
       context.beginPath();
-      context.arc(x, y, dot.size * (1.72 + scan * 0.16 + pulse * 0.12), 0, Math.PI * 2);
+      context.arc(x, y, dot.size * (1.72 + scan * 0.16 + pulse * 0.12) * Math.max(0.35, tuning.glowSize / 100), 0, Math.PI * 2);
       context.fill();
 
       context.globalAlpha = clamp(alpha * brightness, 0, 1);
@@ -748,7 +827,8 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
     const draw = (now: number) => {
       const rect = canvas.getBoundingClientRect();
       const elapsed = (now - startedRef.current) / 1000;
-      const assemblyProgress = clamp(elapsed / ASSEMBLY_SECONDS);
+      const assemblySeconds = Math.max(1.8, tuning.totalFormationDuration / 1000);
+      const assemblyProgress = clamp(elapsed / assemblySeconds);
       const currentPhase = phaseRef.current;
       const currentMotionMode = motionModeRef.current;
       const waiting =
@@ -760,12 +840,12 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
         currentPhase === "meetup-preview" ||
         currentPhase === "rotating-to-active" ||
         currentPhase === "active";
-      const fade = fading ? clamp(1 - (elapsed - (ASSEMBLY_SECONDS + 0.12)) / 0.85) : 1;
-      const pulseWindow = clamp((elapsed - ASSEMBLY_SECONDS) / FINISH_PULSE_SECONDS);
+      const fade = fading ? clamp(1 - (elapsed - (assemblySeconds + 0.12)) / 0.85) : 1;
+      const pulseWindow = clamp((elapsed - assemblySeconds) / Math.max(0.1, tuning.completionPulseDuration / 1000));
       const pulse = pulseWindow > 0 && pulseWindow < 1 ? Math.sin(pulseWindow * Math.PI) : 0;
       const scanCycle =
-        elapsed > ASSEMBLY_SECONDS + 0.4 && waiting
-          ? ((elapsed - (ASSEMBLY_SECONDS + 0.4)) % 3.1) / 3.1
+        elapsed > assemblySeconds + 0.4 && waiting
+          ? ((elapsed - (assemblySeconds + 0.4)) % Math.max(1.4, 3.1 / Math.max(0.35, tuning.idleScanSpeed / 100))) / Math.max(1.4, 3.1 / Math.max(0.35, tuning.idleScanSpeed / 100))
           : -1;
       const frameSweepCycle =
         pulseWindow > 0 && pulseWindow < 1 ? easeInOut(pulseWindow) : -1;
@@ -795,7 +875,7 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
         const streamCurve = Math.sin(local * Math.PI * 2 + dot.phase) * dot.curve * (1 - eased);
         const crossWeave = Math.cos(local * Math.PI * 1.5 + dot.phase) * dot.curve * 0.22 * (1 - eased);
         const arrived = easeOutCubic((local - 0.84) / 0.16);
-        const driftActive = waiting && elapsed > ASSEMBLY_SECONDS ? arrived : 0;
+        const driftActive = waiting && elapsed > assemblySeconds ? arrived : 0;
         const driftX = Math.sin(now / 1030 + dot.phase) * dot.drift * 0.42 * driftActive;
         const driftY = Math.cos(now / 1210 + dot.phase * 1.37) * dot.drift * driftActive;
         const baseX = cubicPoint(dot.sx, dot.c1x, dot.c2x, dot.tx, pathT);
@@ -838,7 +918,7 @@ export function ParticleRacket({ phase, motionMode }: ParticleRacketProps) {
       window.removeEventListener("resize", resize);
       window.cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [replayKey, tuning]);
 
   return (
     <>
