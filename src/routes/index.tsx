@@ -88,6 +88,7 @@ type TuningSectionId =
   | "master";
 
 type ClosePosition = "top-left" | "top-right";
+type TutorialArrowPhase = "up" | "down" | null;
 
 type TutorialTuning = {
   enabled: boolean;
@@ -98,6 +99,8 @@ type TutorialTuning = {
   bubbleOffsetY: number;
   headingSize: number;
   textSize: number;
+  step1PointerX: number;
+  step2PointerX: number;
   step1StartDelay: number;
   demoCount: number;
   demoTravelDistance: number;
@@ -106,11 +109,19 @@ type TutorialTuning = {
   step1EndingHold: number;
   afterimageStrength: number;
   motionTrailStrength: number;
-  directionHudEnabled: boolean;
-  directionHudOffsetX: number;
-  directionHudOffsetY: number;
-  directionHudSize: number;
-  directionHudBrightness: number;
+  upArrowXPercent: number;
+  upArrowYPercent: number;
+  downArrowXPercent: number;
+  downArrowYPercent: number;
+  upArrowLengthPercent: number;
+  downArrowLengthPercent: number;
+  arrowWidth: number;
+  arrowHeadSize: number;
+  arrowGlow: number;
+  arrowTrail: number;
+  upDuration: number;
+  upEndHold: number;
+  downDuration: number;
   targetGlowEnabled: boolean;
   targetGlowStrength: number;
   step1FadeDuration: number;
@@ -134,6 +145,10 @@ type TutorialTuning = {
   closePosition: ClosePosition;
   closeOffsetX: number;
   closeOffsetY: number;
+  startButtonWidth: number;
+  startButtonHeight: number;
+  startButtonOffsetX: number;
+  startButtonOffsetY: number;
 };
 
 type CountdownTuning = {
@@ -154,9 +169,9 @@ type VisualTuning = {
 
 type TutorialNumericKey = Exclude<
   keyof TutorialTuning,
-  "enabled" | "directionHudEnabled" | "targetGlowEnabled" | "closePosition"
+  "enabled" | "targetGlowEnabled" | "closePosition"
 >;
-type TutorialToggleKey = "enabled" | "directionHudEnabled" | "targetGlowEnabled";
+type TutorialToggleKey = "enabled" | "targetGlowEnabled";
 type CountdownNumericKey = "seconds";
 type VisualNumericKey = Exclude<keyof VisualTuning, "interactionBlockerEnabled" | "skipVisible">;
 type VisualToggleKey = "interactionBlockerEnabled" | "skipVisible";
@@ -169,6 +184,8 @@ const DEFAULT_TUTORIAL_TUNING: TutorialTuning = {
   bubbleOffsetY: -8,
   headingSize: 19,
   textSize: 13,
+  step1PointerX: 48,
+  step2PointerX: 54,
   step1StartDelay: 520,
   demoCount: 3,
   demoTravelDistance: 54,
@@ -177,11 +194,19 @@ const DEFAULT_TUTORIAL_TUNING: TutorialTuning = {
   step1EndingHold: 560,
   afterimageStrength: 34,
   motionTrailStrength: 28,
-  directionHudEnabled: true,
-  directionHudOffsetX: 126,
-  directionHudOffsetY: 6,
-  directionHudSize: 22,
-  directionHudBrightness: 70,
+  upArrowXPercent: 58,
+  upArrowYPercent: -38,
+  downArrowXPercent: 68,
+  downArrowYPercent: -15,
+  upArrowLengthPercent: 70,
+  downArrowLengthPercent: 62,
+  arrowWidth: 4,
+  arrowHeadSize: 18,
+  arrowGlow: 80,
+  arrowTrail: 76,
+  upDuration: 820,
+  upEndHold: 260,
+  downDuration: 820,
   targetGlowEnabled: true,
   targetGlowStrength: 68,
   step1FadeDuration: 360,
@@ -205,6 +230,10 @@ const DEFAULT_TUTORIAL_TUNING: TutorialTuning = {
   closePosition: "top-left",
   closeOffsetX: 16,
   closeOffsetY: 12,
+  startButtonWidth: 132,
+  startButtonHeight: 42,
+  startButtonOffsetX: 0,
+  startButtonOffsetY: -88,
 };
 const DEFAULT_COUNTDOWN_TUNING: CountdownTuning = {
   seconds: 10,
@@ -247,7 +276,9 @@ export function Index() {
   const [tutorialCloseVisible, setTutorialCloseVisible] = useState(false);
   const [tutorialReplayKey, setTutorialReplayKey] = useState(0);
   const [tutorialDemoPulse, setTutorialDemoPulse] = useState(0);
+  const [tutorialArrowPhase, setTutorialArrowPhase] = useState<TutorialArrowPhase>(null);
   const [spotlightRect, setSpotlightRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const [frontCardRect, setFrontCardRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
   const [countdownKey, setCountdownKey] = useState(0);
   const [rosterVisible, setRosterVisible] = useState(false);
@@ -406,6 +437,7 @@ export function Index() {
       setTutorialOpen(false);
       setTutorialCloseVisible(false);
       setTutorialDemoPulse(0);
+      setTutorialArrowPhase(null);
       if (startCountdown) {
         setCountdownKey((value) => value + 1);
       } else {
@@ -425,6 +457,7 @@ export function Index() {
     setTutorialStep("step1");
     setTutorialCloseVisible(false);
     setTutorialDemoPulse(0);
+    setTutorialArrowPhase(null);
     setTutorialReplayKey((value) => value + 1);
     setTutorialOpen(true);
   }, [clearTutorialTimers, flow.pendingSwitchEventId, flow.selectedEventId]);
@@ -455,6 +488,18 @@ export function Index() {
     if (!target) return;
     const rect = target.getBoundingClientRect();
     setSpotlightRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+    const frontCard = document.querySelector<HTMLElement>(
+      ".sd-ticket-stack-hero .sd-ticket-slot-0",
+    );
+    if (frontCard) {
+      const cardRect = frontCard.getBoundingClientRect();
+      setFrontCardRect({
+        top: cardRect.top,
+        left: cardRect.left,
+        width: cardRect.width,
+        height: cardRect.height,
+      });
+    }
   }, [tutorialOpen, tutorialStep]);
 
   useLayoutEffect(() => {
@@ -477,24 +522,43 @@ export function Index() {
       flow.events.findIndex((event) => event.id === originalId),
     );
     const demos = flow.events.length > 1 ? Math.max(0, Math.round(tutorialTuning.demoCount)) : 0;
+    setTutorialArrowPhase(null);
 
     for (let index = 0; index < demos; index += 1) {
-      const timer = window.setTimeout(() => {
+      const cycleStart =
+        tutorialTuning.step1StartDelay +
+        index *
+          (tutorialTuning.upDuration +
+            tutorialTuning.upEndHold +
+            tutorialTuning.downDuration +
+            tutorialTuning.gapBetweenDemos);
+      const upTimer = window.setTimeout(() => {
         const next = flow.events[(selectedIndex + index + 1) % flow.events.length];
         if (!next) return;
+        setTutorialArrowPhase("up");
         flow.setPendingSwitchEventId(next.id);
         setTutorialDemoPulse((value) => value + 1);
         updateTutorialSpotlight();
-      }, tutorialTuning.step1StartDelay + index * (tutorialTuning.singleDemoDuration + tutorialTuning.gapBetweenDemos));
-      tutorialTimersRef.current.push(timer);
+      }, cycleStart);
+      const downTimer = window.setTimeout(() => {
+        setTutorialArrowPhase("down");
+        if (originalId) flow.setPendingSwitchEventId(originalId);
+        setTutorialDemoPulse((value) => value + 1);
+        updateTutorialSpotlight();
+      }, cycleStart + tutorialTuning.upDuration + tutorialTuning.upEndHold);
+      const clearArrowTimer = window.setTimeout(() => {
+        setTutorialArrowPhase(null);
+      }, cycleStart + tutorialTuning.upDuration + tutorialTuning.upEndHold + tutorialTuning.downDuration);
+      tutorialTimersRef.current.push(upTimer, downTimer, clearArrowTimer);
     }
 
     const finishAt =
       tutorialTuning.step1StartDelay +
-      demos * tutorialTuning.singleDemoDuration +
+      demos * (tutorialTuning.upDuration + tutorialTuning.upEndHold + tutorialTuning.downDuration) +
       Math.max(0, demos - 1) * tutorialTuning.gapBetweenDemos +
       tutorialTuning.step1EndingHold;
     const finishTimer = window.setTimeout(() => {
+      setTutorialArrowPhase(null);
       if (originalId) flow.setPendingSwitchEventId(originalId);
       setTutorialDemoPulse((value) => value + 1);
       window.setTimeout(() => setTutorialStep("transition"), 60);
@@ -511,9 +575,11 @@ export function Index() {
     tutorialStep,
     tutorialTuning.demoCount,
     tutorialTuning.gapBetweenDemos,
-    tutorialTuning.singleDemoDuration,
     tutorialTuning.step1EndingHold,
     tutorialTuning.step1StartDelay,
+    tutorialTuning.downDuration,
+    tutorialTuning.upDuration,
+    tutorialTuning.upEndHold,
     updateTutorialSpotlight,
   ]);
 
@@ -717,6 +783,8 @@ export function Index() {
           "--sd-tutorial-softness": `${visualTuning.spotlightSoftness}px`,
           "--sd-tutorial-heading": `${tutorialTuning.headingSize}px`,
           "--sd-tutorial-text": `${tutorialTuning.textSize}px`,
+          "--sd-step1-fade": `${tutorialTuning.step1FadeDuration}ms`,
+          "--sd-step2-fade": `${tutorialTuning.step2FadeInDuration}ms`,
           "--sd-border-loop": `${tutorialTuning.borderFlowLoopDuration}ms`,
           "--sd-border-loops": `${tutorialTuning.borderFlowLoopCount}`,
           "--sd-border-brightness": `${tutorialTuning.borderBrightness / 100}`,
@@ -831,6 +899,8 @@ export function Index() {
           tuning={tutorialTuning}
           visual={visualTuning}
           spotlightRect={spotlightRect}
+          frontCardRect={frontCardRect}
+          arrowPhase={tutorialArrowPhase}
           closeVisible={tutorialCloseVisible}
           motionMode={flow.motionMode}
           onSkip={closeTutorial}
@@ -1375,27 +1445,38 @@ function HandoffTimingLab({
             <TimingControl label="BUBBLE WIDTH" description="氣泡寬度" value={tutorial.bubbleWidth} min={220} max={360} step={4} unit="px" onChange={(value) => onTutorialChange("bubbleWidth", value)} />
             <TimingControl label="RADIUS" description="氣泡圓角" value={tutorial.bubbleRadius} min={10} max={28} step={1} unit="px" onChange={(value) => onTutorialChange("bubbleRadius", value)} />
             <TimingControl label="PADDING" description="氣泡內距" value={tutorial.bubblePadding} min={10} max={24} step={1} unit="px" onChange={(value) => onTutorialChange("bubblePadding", value)} />
-            <TimingControl label="OFFSET X" description="氣泡水平偏移" value={tutorial.bubbleOffsetX} min={-80} max={80} step={2} unit="px" onChange={(value) => onTutorialChange("bubbleOffsetX", value)} />
-            <TimingControl label="OFFSET Y" description="氣泡垂直偏移" value={tutorial.bubbleOffsetY} min={-160} max={120} step={2} unit="px" onChange={(value) => onTutorialChange("bubbleOffsetY", value)} />
+            <TimingControl label="OFFSET X" description="氣泡水平偏移" value={tutorial.bubbleOffsetX} min={-240} max={240} step={5} unit="px" onChange={(value) => onTutorialChange("bubbleOffsetX", value)} />
+            <TimingControl label="OFFSET Y" description="氣泡垂直偏移" value={tutorial.bubbleOffsetY} min={-300} max={300} step={5} unit="px" onChange={(value) => onTutorialChange("bubbleOffsetY", value)} />
+            <TimingControl label="POINTER X" description="上緣小箭頭位置" value={tutorial.step1PointerX} min={0} max={100} step={1} unit="%" onChange={(value) => onTutorialChange("step1PointerX", value)} />
             <TimingControl label="HEADING" description="標題字級" value={tutorial.headingSize} min={15} max={28} step={1} unit="px" onChange={(value) => onTutorialChange("headingSize", value)} />
             <TimingControl label="TEXT" description="內文字級" value={tutorial.textSize} min={11} max={18} step={1} unit="px" onChange={(value) => onTutorialChange("textSize", value)} />
 
-            <div className="sd-timing-subgroup">卡片自動示範</div>
+            <div className="sd-timing-subgroup">Front Card Anchored Arrows｜位置</div>
+            <TimingControl label="UP ARROW X" description="上箭頭 X；前景卡寬度%" value={tutorial.upArrowXPercent} min={0} max={120} step={1} unit="%" onChange={(value) => onTutorialChange("upArrowXPercent", value)} />
+            <TimingControl label="UP ARROW Y" description="上箭頭 Y；前景卡高度%" value={tutorial.upArrowYPercent} min={-80} max={100} step={1} unit="%" onChange={(value) => onTutorialChange("upArrowYPercent", value)} />
+            <TimingControl label="DOWN ARROW X" description="下箭頭 X；前景卡寬度%" value={tutorial.downArrowXPercent} min={0} max={120} step={1} unit="%" onChange={(value) => onTutorialChange("downArrowXPercent", value)} />
+            <TimingControl label="DOWN ARROW Y" description="下箭頭 Y；前景卡高度%" value={tutorial.downArrowYPercent} min={-80} max={100} step={1} unit="%" onChange={(value) => onTutorialChange("downArrowYPercent", value)} />
+
+            <div className="sd-timing-subgroup">Front Card Anchored Arrows｜大小</div>
+            <TimingControl label="UP LENGTH" description="上箭頭長度；前景卡高度%" value={tutorial.upArrowLengthPercent} min={20} max={130} step={1} unit="%" onChange={(value) => onTutorialChange("upArrowLengthPercent", value)} />
+            <TimingControl label="DOWN LENGTH" description="下箭頭長度；前景卡高度%" value={tutorial.downArrowLengthPercent} min={20} max={130} step={1} unit="%" onChange={(value) => onTutorialChange("downArrowLengthPercent", value)} />
+            <TimingControl label="ARROW WIDTH" description="箭身寬度" value={tutorial.arrowWidth} min={2} max={10} step={1} unit="px" onChange={(value) => onTutorialChange("arrowWidth", value)} />
+            <TimingControl label="HEAD SIZE" description="箭頭大小" value={tutorial.arrowHeadSize} min={10} max={34} step={1} unit="px" onChange={(value) => onTutorialChange("arrowHeadSize", value)} />
+            <TimingControl label="ARROW GLOW" description="箭頭外光" value={tutorial.arrowGlow} min={0} max={140} step={5} unit="%" onChange={(value) => onTutorialChange("arrowGlow", value)} />
+            <TimingControl label="ARROW TRAIL" description="方向性尾光" value={tutorial.arrowTrail} min={0} max={140} step={5} unit="%" onChange={(value) => onTutorialChange("arrowTrail", value)} />
+
+            <div className="sd-timing-subgroup">箭頭 / 卡片同步示範</div>
             <TimingControl label="START DELAY" description="Step 1 開始延遲" value={tutorial.step1StartDelay} min={0} max={2500} step={50} unit="ms" onChange={(value) => onTutorialChange("step1StartDelay", value)} />
-            <TimingControl label="DEMO COUNT" description="自動示範次數" value={tutorial.demoCount} min={1} max={6} step={1} unit="" onChange={(value) => onTutorialChange("demoCount", value)} />
+            <TimingControl label="DEMO COUNT" description="完整上→下 cycle 數" value={tutorial.demoCount} min={1} max={6} step={1} unit="" onChange={(value) => onTutorialChange("demoCount", value)} />
             <TimingControl label="TRAVEL" description="卡片示範位移" value={tutorial.demoTravelDistance} min={20} max={120} step={2} unit="px" onChange={(value) => onTutorialChange("demoTravelDistance", value)} />
-            <TimingControl label="DURATION" description="單次切換時間" value={tutorial.singleDemoDuration} min={300} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("singleDemoDuration", value)} />
+            <TimingControl label="UP DURATION" description="上箭頭與上切換" value={tutorial.upDuration} min={250} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("upDuration", value)} />
+            <TimingControl label="UP HOLD" description="上行完成停留" value={tutorial.upEndHold} min={0} max={900} step={50} unit="ms" onChange={(value) => onTutorialChange("upEndHold", value)} />
+            <TimingControl label="DOWN DURATION" description="下箭頭與反向切換" value={tutorial.downDuration} min={250} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("downDuration", value)} />
+            <TimingControl label="DURATION" description="舊欄位相容；目前不主導箭頭" value={tutorial.singleDemoDuration} min={300} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("singleDemoDuration", value)} />
             <TimingControl label="GAP" description="示範間隔" value={tutorial.gapBetweenDemos} min={0} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("gapBetweenDemos", value)} />
             <TimingControl label="ENDING HOLD" description="Step 1 結束停留" value={tutorial.step1EndingHold} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("step1EndingHold", value)} />
             <TimingControl label="AFTERIMAGE" description="切換殘影" value={tutorial.afterimageStrength} min={0} max={100} step={5} unit="%" onChange={(value) => onTutorialChange("afterimageStrength", value)} />
             <TimingControl label="TRAIL" description="卡片動態尾跡" value={tutorial.motionTrailStrength} min={0} max={100} step={5} unit="%" onChange={(value) => onTutorialChange("motionTrailStrength", value)} />
-
-            <div className="sd-timing-subgroup">極簡方向 HUD</div>
-            <ToggleControl label="DIRECTION HUD" enabled={tutorial.directionHudEnabled} onToggle={() => onTutorialToggle("directionHudEnabled")} />
-            <TimingControl label="HUD X" description="方向提示水平偏移" value={tutorial.directionHudOffsetX} min={-160} max={160} step={2} unit="px" onChange={(value) => onTutorialChange("directionHudOffsetX", value)} />
-            <TimingControl label="HUD Y" description="方向提示垂直偏移" value={tutorial.directionHudOffsetY} min={-120} max={120} step={2} unit="px" onChange={(value) => onTutorialChange("directionHudOffsetY", value)} />
-            <TimingControl label="HUD SIZE" description="方向提示尺寸" value={tutorial.directionHudSize} min={12} max={42} step={1} unit="px" onChange={(value) => onTutorialChange("directionHudSize", value)} />
-            <TimingControl label="HUD BRIGHT" description="方向提示亮度" value={tutorial.directionHudBrightness} min={20} max={120} step={5} unit="%" onChange={(value) => onTutorialChange("directionHudBrightness", value)} />
 
             <div className="sd-timing-subgroup">目標</div>
             <ToggleControl label="TARGET GLOW" enabled={tutorial.targetGlowEnabled} onToggle={() => onTutorialToggle("targetGlowEnabled")} />
@@ -1416,8 +1497,9 @@ function HandoffTimingLab({
           <TuningSection id="tutorial-step2" title="④ 系統教學｜Step 2 確認聚會" active={activeSection} onSelect={onSetSection}>
             <div className="sd-timing-subgroup">氣泡</div>
             <TimingControl label="BUBBLE WIDTH" description="Step 2 氣泡寬度" value={tutorial.step2BubbleWidth} min={220} max={360} step={4} unit="px" onChange={(value) => onTutorialChange("step2BubbleWidth", value)} />
-            <TimingControl label="OFFSET X" description="Step 2 水平偏移" value={tutorial.step2BubbleOffsetX} min={-100} max={100} step={2} unit="px" onChange={(value) => onTutorialChange("step2BubbleOffsetX", value)} />
-            <TimingControl label="OFFSET Y" description="Step 2 垂直偏移" value={tutorial.step2BubbleOffsetY} min={-180} max={80} step={2} unit="px" onChange={(value) => onTutorialChange("step2BubbleOffsetY", value)} />
+            <TimingControl label="OFFSET X" description="Step 2 水平偏移" value={tutorial.step2BubbleOffsetX} min={-240} max={240} step={5} unit="px" onChange={(value) => onTutorialChange("step2BubbleOffsetX", value)} />
+            <TimingControl label="OFFSET Y" description="Step 2 垂直偏移" value={tutorial.step2BubbleOffsetY} min={-300} max={300} step={5} unit="px" onChange={(value) => onTutorialChange("step2BubbleOffsetY", value)} />
+            <TimingControl label="POINTER X" description="上緣小箭頭位置" value={tutorial.step2PointerX} min={0} max={100} step={1} unit="%" onChange={(value) => onTutorialChange("step2PointerX", value)} />
 
             <div className="sd-timing-subgroup">確認按鈕</div>
             <TimingControl label="TEXT TIMING" description="文字停留" value={tutorial.step2TextTiming} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("step2TextTiming", value)} />
@@ -1429,11 +1511,12 @@ function HandoffTimingLab({
             <TimingControl label="GREEN" description="綠色點綴比例" value={tutorial.greenAccentRatio} min={5} max={50} step={5} unit="%" onChange={(value) => onTutorialChange("greenAccentRatio", value)} />
             <TimingControl label="GLOW" description="外光強度" value={tutorial.glowStrength} min={0} max={140} step={5} unit="%" onChange={(value) => onTutorialChange("glowStrength", value)} />
 
-            <div className="sd-timing-subgroup">關閉教學</div>
-            <TimingControl label="CLOSE DELAY" description="關閉教學出現延遲" value={tutorial.closeButtonDelay} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("closeButtonDelay", value)} />
-            <TogglePositionControl value={tutorial.closePosition} onChange={(value) => onTutorialClosePositionChange(value)} />
-            <TimingControl label="CLOSE X" description="左上 / 右上水平距離" value={tutorial.closeOffsetX} min={0} max={80} step={1} unit="px" onChange={(value) => onTutorialChange("closeOffsetX", value)} />
-            <TimingControl label="CLOSE Y" description="safe-area 下方距離" value={tutorial.closeOffsetY} min={0} max={80} step={1} unit="px" onChange={(value) => onTutorialChange("closeOffsetY", value)} />
+            <div className="sd-timing-subgroup">開始使用</div>
+            <TimingControl label="START DELAY" description="開始使用出現延遲" value={tutorial.closeButtonDelay} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("closeButtonDelay", value)} />
+            <TimingControl label="START WIDTH" description="開始使用寬度" value={tutorial.startButtonWidth} min={90} max={220} step={5} unit="px" onChange={(value) => onTutorialChange("startButtonWidth", value)} />
+            <TimingControl label="START HEIGHT" description="開始使用高度" value={tutorial.startButtonHeight} min={34} max={64} step={2} unit="px" onChange={(value) => onTutorialChange("startButtonHeight", value)} />
+            <TimingControl label="START OFFSET X" description="開始使用水平偏移" value={tutorial.startButtonOffsetX} min={-240} max={240} step={5} unit="px" onChange={(value) => onTutorialChange("startButtonOffsetX", value)} />
+            <TimingControl label="START OFFSET Y" description="開始使用垂直偏移" value={tutorial.startButtonOffsetY} min={-300} max={300} step={5} unit="px" onChange={(value) => onTutorialChange("startButtonOffsetY", value)} />
             <div className="sd-timing-actions is-grid"><button type="button" onClick={onJumpStep2}>Replay Step 2</button></div>
           </TuningSection>
           <TuningSection id="countdown" title="⑤ 聚會選擇 / 倒數 / 自動進入" active={activeSection} onSelect={onSetSection}>
@@ -1670,10 +1753,12 @@ function normalizeTutorialTuning(value: Partial<TutorialTuning> | undefined): Tu
     bubbleWidth: clampTiming(source.bubbleWidth, 220, 360, DEFAULT_TUTORIAL_TUNING.bubbleWidth),
     bubbleRadius: clampTiming(source.bubbleRadius, 10, 28, DEFAULT_TUTORIAL_TUNING.bubbleRadius),
     bubblePadding: clampTiming(source.bubblePadding, 10, 24, DEFAULT_TUTORIAL_TUNING.bubblePadding),
-    bubbleOffsetX: clampTiming(source.bubbleOffsetX, -80, 80, DEFAULT_TUTORIAL_TUNING.bubbleOffsetX),
-    bubbleOffsetY: clampTiming(source.bubbleOffsetY, -160, 120, DEFAULT_TUTORIAL_TUNING.bubbleOffsetY),
+    bubbleOffsetX: clampTiming(source.bubbleOffsetX, -240, 240, DEFAULT_TUTORIAL_TUNING.bubbleOffsetX),
+    bubbleOffsetY: clampTiming(source.bubbleOffsetY, -300, 300, DEFAULT_TUTORIAL_TUNING.bubbleOffsetY),
     headingSize: clampTiming(source.headingSize, 15, 28, DEFAULT_TUTORIAL_TUNING.headingSize),
     textSize: clampTiming(source.textSize, 11, 18, DEFAULT_TUTORIAL_TUNING.textSize),
+    step1PointerX: clampTiming(source.step1PointerX, 0, 100, DEFAULT_TUTORIAL_TUNING.step1PointerX),
+    step2PointerX: clampTiming(source.step2PointerX, 0, 100, DEFAULT_TUTORIAL_TUNING.step2PointerX),
     step1StartDelay: clampTiming(source.step1StartDelay, 0, 2500, DEFAULT_TUTORIAL_TUNING.step1StartDelay),
     demoCount: clampTiming(source.demoCount, 1, 6, DEFAULT_TUTORIAL_TUNING.demoCount),
     demoTravelDistance: clampTiming(source.demoTravelDistance, 20, 120, DEFAULT_TUTORIAL_TUNING.demoTravelDistance),
@@ -1682,11 +1767,19 @@ function normalizeTutorialTuning(value: Partial<TutorialTuning> | undefined): Tu
     step1EndingHold: clampTiming(source.step1EndingHold, 0, 1600, DEFAULT_TUTORIAL_TUNING.step1EndingHold),
     afterimageStrength: clampTiming(source.afterimageStrength, 0, 100, DEFAULT_TUTORIAL_TUNING.afterimageStrength),
     motionTrailStrength: clampTiming(source.motionTrailStrength, 0, 100, DEFAULT_TUTORIAL_TUNING.motionTrailStrength),
-    directionHudEnabled: typeof source.directionHudEnabled === "boolean" ? source.directionHudEnabled : DEFAULT_TUTORIAL_TUNING.directionHudEnabled,
-    directionHudOffsetX: clampTiming(source.directionHudOffsetX, -160, 160, DEFAULT_TUTORIAL_TUNING.directionHudOffsetX),
-    directionHudOffsetY: clampTiming(source.directionHudOffsetY, -120, 120, DEFAULT_TUTORIAL_TUNING.directionHudOffsetY),
-    directionHudSize: clampTiming(source.directionHudSize, 12, 42, DEFAULT_TUTORIAL_TUNING.directionHudSize),
-    directionHudBrightness: clampTiming(source.directionHudBrightness, 20, 120, DEFAULT_TUTORIAL_TUNING.directionHudBrightness),
+    upArrowXPercent: clampTiming(source.upArrowXPercent, 0, 120, DEFAULT_TUTORIAL_TUNING.upArrowXPercent),
+    upArrowYPercent: clampTiming(source.upArrowYPercent, -80, 100, DEFAULT_TUTORIAL_TUNING.upArrowYPercent),
+    downArrowXPercent: clampTiming(source.downArrowXPercent, 0, 120, DEFAULT_TUTORIAL_TUNING.downArrowXPercent),
+    downArrowYPercent: clampTiming(source.downArrowYPercent, -80, 100, DEFAULT_TUTORIAL_TUNING.downArrowYPercent),
+    upArrowLengthPercent: clampTiming(source.upArrowLengthPercent, 20, 130, DEFAULT_TUTORIAL_TUNING.upArrowLengthPercent),
+    downArrowLengthPercent: clampTiming(source.downArrowLengthPercent, 20, 130, DEFAULT_TUTORIAL_TUNING.downArrowLengthPercent),
+    arrowWidth: clampTiming(source.arrowWidth, 2, 10, DEFAULT_TUTORIAL_TUNING.arrowWidth),
+    arrowHeadSize: clampTiming(source.arrowHeadSize, 10, 34, DEFAULT_TUTORIAL_TUNING.arrowHeadSize),
+    arrowGlow: clampTiming(source.arrowGlow, 0, 140, DEFAULT_TUTORIAL_TUNING.arrowGlow),
+    arrowTrail: clampTiming(source.arrowTrail, 0, 140, DEFAULT_TUTORIAL_TUNING.arrowTrail),
+    upDuration: clampTiming(source.upDuration, 250, 1800, DEFAULT_TUTORIAL_TUNING.upDuration),
+    upEndHold: clampTiming(source.upEndHold, 0, 900, DEFAULT_TUTORIAL_TUNING.upEndHold),
+    downDuration: clampTiming(source.downDuration, 250, 1800, DEFAULT_TUTORIAL_TUNING.downDuration),
     targetGlowEnabled: typeof source.targetGlowEnabled === "boolean" ? source.targetGlowEnabled : DEFAULT_TUTORIAL_TUNING.targetGlowEnabled,
     targetGlowStrength: clampTiming(source.targetGlowStrength, 0, 120, DEFAULT_TUTORIAL_TUNING.targetGlowStrength),
     step1FadeDuration: clampTiming(source.step1FadeDuration, 100, 1200, DEFAULT_TUTORIAL_TUNING.step1FadeDuration),
@@ -1697,8 +1790,8 @@ function normalizeTutorialTuning(value: Partial<TutorialTuning> | undefined): Tu
     step2FadeInDuration: clampTiming(source.step2FadeInDuration, 100, 1200, DEFAULT_TUTORIAL_TUNING.step2FadeInDuration),
     step2TextTiming: clampTiming(source.step2TextTiming, 0, 1600, DEFAULT_TUTORIAL_TUNING.step2TextTiming),
     step2BubbleWidth: clampTiming(source.step2BubbleWidth, 220, 360, DEFAULT_TUTORIAL_TUNING.step2BubbleWidth),
-    step2BubbleOffsetX: clampTiming(source.step2BubbleOffsetX, -100, 100, DEFAULT_TUTORIAL_TUNING.step2BubbleOffsetX),
-    step2BubbleOffsetY: clampTiming(source.step2BubbleOffsetY, -180, 80, DEFAULT_TUTORIAL_TUNING.step2BubbleOffsetY),
+    step2BubbleOffsetX: clampTiming(source.step2BubbleOffsetX, -240, 240, DEFAULT_TUTORIAL_TUNING.step2BubbleOffsetX),
+    step2BubbleOffsetY: clampTiming(source.step2BubbleOffsetY, -300, 300, DEFAULT_TUTORIAL_TUNING.step2BubbleOffsetY),
     borderFlowLoopDuration: clampTiming(source.borderFlowLoopDuration, 500, 2400, DEFAULT_TUTORIAL_TUNING.borderFlowLoopDuration),
     borderFlowLoopCount: clampTiming(source.borderFlowLoopCount, 1, 5, DEFAULT_TUTORIAL_TUNING.borderFlowLoopCount),
     borderBrightness: clampTiming(source.borderBrightness, 20, 120, DEFAULT_TUTORIAL_TUNING.borderBrightness),
@@ -1710,6 +1803,10 @@ function normalizeTutorialTuning(value: Partial<TutorialTuning> | undefined): Tu
     closePosition,
     closeOffsetX: clampTiming(source.closeOffsetX, 0, 80, DEFAULT_TUTORIAL_TUNING.closeOffsetX),
     closeOffsetY: clampTiming(source.closeOffsetY, 0, 80, DEFAULT_TUTORIAL_TUNING.closeOffsetY),
+    startButtonWidth: clampTiming(source.startButtonWidth, 90, 220, DEFAULT_TUTORIAL_TUNING.startButtonWidth),
+    startButtonHeight: clampTiming(source.startButtonHeight, 34, 64, DEFAULT_TUTORIAL_TUNING.startButtonHeight),
+    startButtonOffsetX: clampTiming(source.startButtonOffsetX, -240, 240, DEFAULT_TUTORIAL_TUNING.startButtonOffsetX),
+    startButtonOffsetY: clampTiming(source.startButtonOffsetY, -300, 300, DEFAULT_TUTORIAL_TUNING.startButtonOffsetY),
   };
 }
 function normalizeCountdownTuning(value: Partial<CountdownTuning> | undefined): CountdownTuning {
@@ -1742,6 +1839,8 @@ function TutorialOverlay({
   tuning,
   visual,
   spotlightRect,
+  frontCardRect,
+  arrowPhase,
   closeVisible,
   motionMode,
   onSkip,
@@ -1751,20 +1850,18 @@ function TutorialOverlay({
   tuning: TutorialTuning;
   visual: VisualTuning;
   spotlightRect: { top: number; left: number; width: number; height: number };
+  frontCardRect: { top: number; left: number; width: number; height: number };
+  arrowPhase: TutorialArrowPhase;
   closeVisible: boolean;
   motionMode: MotionMode;
   onSkip: () => void;
   onClose: () => void;
 }) {
+  const isStep1 = step === "step1";
   const isStep2 = step === "step2";
   const isTransition = step === "transition";
-  const bubbleStyle = getTutorialBubbleStyle(step, tuning, spotlightRect);
-  const closeStyle = {
-    top: `calc(env(safe-area-inset-top) + ${tuning.closeOffsetY}px)`,
-    ...(tuning.closePosition === "top-right"
-      ? { right: `${tuning.closeOffsetX}px` }
-      : { left: `${tuning.closeOffsetX}px` }),
-  } as CSSProperties;
+  const bubbleStyle = getTutorialBubbleStyle(step, tuning, spotlightRect, frontCardRect);
+  const startStyle = getTutorialStartStyle(tuning, spotlightRect);
 
   return (
     <div className={`sd-tutorial-overlay is-${step} motion-${motionMode}`} role="dialog" aria-modal="true" aria-label="系統教學">
@@ -1787,31 +1884,41 @@ function TutorialOverlay({
       {visual.skipVisible ? (
         <button type="button" className="sd-tutorial-skip" onClick={onSkip}>Skip</button>
       ) : null}
-      {isStep2 && closeVisible ? (
-        <button type="button" className="sd-tutorial-close" style={closeStyle} onClick={onClose}>關閉教學</button>
+      {isStep1 ? (
+        <TutorialSwipeArrows tuning={tuning} frontCardRect={frontCardRect} phase={arrowPhase} />
       ) : null}
-      <section className={`sd-tutorial-card ${isTransition ? "is-fading" : ""}`} style={bubbleStyle}>
-        <p>系統教學</p>
-        <h2>{isStep2 ? "STEP 2｜確認聚會" : "STEP 1｜選擇聚會"}</h2>
-        <span>{isStep2 ? "選好聚會後，點這裡確認" : "上下撥動切換聚會，也可以直接點選"}</span>
-        {!isStep2 && tuning.directionHudEnabled ? (
-          <i
-            className="sd-tutorial-direction-hud"
-            aria-hidden="true"
-            style={
-              {
-                "--hud-x": `${tuning.directionHudOffsetX}px`,
-                "--hud-y": `${tuning.directionHudOffsetY}px`,
-                "--hud-size": `${tuning.directionHudSize}px`,
-                "--hud-bright": `${tuning.directionHudBrightness / 100}`,
-              } as CSSProperties
-            }
-          >
-            <span>↑</span>
-            <span>↓</span>
-          </i>
-        ) : null}
-      </section>
+      {!isTransition ? (
+        <section className={`sd-tutorial-callout is-${isStep2 ? "step2" : "step1"}`} style={bubbleStyle}>
+          <span>{isStep2 ? <>2. 點選進入<br />報名頁面</> : "1. 撥動選擇"}</span>
+        </section>
+      ) : null}
+      {isStep2 && closeVisible ? (
+        <button type="button" className="sd-tutorial-start" style={startStyle} onClick={onClose}>開始使用</button>
+      ) : null}
+    </div>
+  );
+}
+
+function TutorialSwipeArrows({
+  tuning,
+  frontCardRect,
+  phase,
+}: {
+  tuning: TutorialTuning;
+  frontCardRect: { top: number; left: number; width: number; height: number };
+  phase: TutorialArrowPhase;
+}) {
+  if (!frontCardRect.width || !frontCardRect.height) return null;
+  const upStyle = getCardAnchoredArrowStyle(frontCardRect, tuning.upArrowXPercent, tuning.upArrowYPercent, tuning.upArrowLengthPercent, tuning, "up");
+  const downStyle = getCardAnchoredArrowStyle(frontCardRect, tuning.downArrowXPercent, tuning.downArrowYPercent, tuning.downArrowLengthPercent, tuning, "down");
+  return (
+    <div className={`sd-tutorial-arrows is-${phase || "idle"}`} aria-hidden="true">
+      <span className={`sd-tutorial-arrow is-up ${phase === "up" ? "is-active" : ""}`} style={upStyle}>
+        <i />
+      </span>
+      <span className={`sd-tutorial-arrow is-down ${phase === "down" ? "is-active" : ""}`} style={downStyle}>
+        <i />
+      </span>
     </div>
   );
 }
@@ -1845,27 +1952,74 @@ function getTutorialBubbleStyle(
   step: TutorialStep,
   tuning: TutorialTuning,
   spotlightRect: { top: number; left: number; width: number; height: number },
+  frontCardRect: { top: number; left: number; width: number; height: number },
 ) {
   const isStep2 = step === "step2";
   const width = isStep2 ? tuning.step2BubbleWidth : tuning.bubbleWidth;
   const offsetX = isStep2 ? tuning.step2BubbleOffsetX : tuning.bubbleOffsetX;
   const offsetY = isStep2 ? tuning.step2BubbleOffsetY : tuning.bubbleOffsetY;
+  const pointerX = isStep2 ? tuning.step2PointerX : tuning.step1PointerX;
   const viewportWidth = typeof window === "undefined" ? 390 : window.innerWidth;
   const viewportHeight = typeof window === "undefined" ? 760 : window.innerHeight;
-  const left = Math.max(14, Math.min(viewportWidth - width - 14, spotlightRect.left + (spotlightRect.width - width) / 2 + offsetX));
-  const preferredTop = isStep2
-    ? spotlightRect.top + offsetY
-    : spotlightRect.top - 112 + offsetY;
-  const top = Math.max(72, Math.min(viewportHeight - 190, preferredTop));
+  const anchor = isStep2 ? spotlightRect : frontCardRect.width ? frontCardRect : spotlightRect;
+  const baseLeft = isStep2
+    ? anchor.left + (anchor.width - width) / 2
+    : anchor.left + anchor.width * 0.56;
+  const baseTop = isStep2
+    ? anchor.top - 74
+    : anchor.top + anchor.height * 0.38;
+  const left = Math.max(12, Math.min(viewportWidth - width - 12, baseLeft + offsetX));
+  const top = Math.max(58, Math.min(viewportHeight - 96, baseTop + offsetY));
   return {
     width: `${width}px`,
     top: `${top}px`,
     left: `${left}px`,
     "--bubble-radius": `${tuning.bubbleRadius}px`,
     "--bubble-padding": `${tuning.bubblePadding}px`,
+    "--bubble-pointer-x": `${pointerX}%`,
   } as CSSProperties;
 }
-function formatPreviewEventLabel(event: AlphaEvent | null | undefined) {
+
+function getTutorialStartStyle(
+  tuning: TutorialTuning,
+  spotlightRect: { top: number; left: number; width: number; height: number },
+) {
+  const viewportWidth = typeof window === "undefined" ? 390 : window.innerWidth;
+  const viewportHeight = typeof window === "undefined" ? 760 : window.innerHeight;
+  const width = tuning.startButtonWidth;
+  const height = tuning.startButtonHeight;
+  const baseLeft = spotlightRect.left + (spotlightRect.width - width) / 2;
+  const baseTop = spotlightRect.top - 70;
+  return {
+    width: `${width}px`,
+    height: `${height}px`,
+    left: `${Math.max(12, Math.min(viewportWidth - width - 12, baseLeft + tuning.startButtonOffsetX))}px`,
+    top: `${Math.max(58, Math.min(viewportHeight - height - 18, baseTop + tuning.startButtonOffsetY))}px`,
+  } as CSSProperties;
+}
+
+function getCardAnchoredArrowStyle(
+  rect: { top: number; left: number; width: number; height: number },
+  xPercent: number,
+  yPercent: number,
+  lengthPercent: number,
+  tuning: TutorialTuning,
+  direction: "up" | "down",
+) {
+  const length = Math.max(26, rect.height * (lengthPercent / 100));
+  const x = rect.left + rect.width * (xPercent / 100);
+  const y = rect.top + rect.height * (yPercent / 100);
+  return {
+    left: `${x}px`,
+    top: `${y}px`,
+    height: `${length}px`,
+    "--arrow-width": `${tuning.arrowWidth}px`,
+    "--arrow-head": `${tuning.arrowHeadSize}px`,
+    "--arrow-glow": `${tuning.arrowGlow / 100}`,
+    "--arrow-trail": `${tuning.arrowTrail / 100}`,
+    "--arrow-duration": `${direction === "up" ? tuning.upDuration : tuning.downDuration}ms`,
+  } as CSSProperties;
+}function formatPreviewEventLabel(event: AlphaEvent | null | undefined) {
   if (!event) return "聚會";
   return `${shortEventDate(event.eventDate)} ${event.name}`.trim();
 }
@@ -2413,111 +2567,202 @@ function HomepageStyles() {
         pointer-events: none;
         opacity: calc(var(--sd-tutorial-spotlight, .72) * var(--spot-glow, .68));
         box-shadow:
-          0 0 var(--sd-tutorial-softness, 34px) rgba(157,244,22,.26),
-          0 0 calc(var(--sd-tutorial-softness, 34px) * 1.6) rgba(216,185,94,.16),
-          inset 0 0 0 1px rgba(216,185,94,.36);
+          0 0 var(--sd-tutorial-softness, 34px) rgba(157,244,22,.24),
+          inset 0 0 0 1px rgba(157,244,22,.34);
       }
 
       .sd-tutorial-spotlight[data-enabled="false"] {
         opacity: 0;
       }
 
-      .sd-tutorial-skip,
-      .sd-tutorial-close {
-        position: fixed;
-        z-index: 4;
-        pointer-events: auto;
-        border: 1px solid rgba(216,185,94,.26);
-        border-radius: 999px;
-        background: rgba(6,9,12,.72);
-        color: rgba(247,246,239,.84);
-        padding: 9px 14px;
-        font: 800 12px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-      }
-
       .sd-tutorial-skip {
+        position: fixed;
+        z-index: 5;
+        pointer-events: auto;
         top: calc(env(safe-area-inset-top) + 12px);
         right: 16px;
+        border: 1px solid rgba(157,244,22,.30);
+        border-radius: 999px;
+        background: rgba(235,239,229,.82);
+        color: rgba(13,20,14,.86);
+        padding: 8px 13px;
+        font: 900 12px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        box-shadow: 0 0 16px rgba(157,244,22,.12);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
       }
 
-      .sd-tutorial-close {
-        color: #101607;
-        border-color: rgba(157,244,22,.44);
-        background: linear-gradient(180deg, rgba(184,255,24,.95), rgba(122,197,12,.92));
-      }
-
-      .sd-tutorial-card {
+      .sd-tutorial-callout {
         position: fixed;
-        z-index: 3;
+        z-index: 4;
         pointer-events: none;
-        display: grid;
-        gap: 8px;
-        padding: var(--bubble-padding, 15px);
-        border: 1px solid rgba(216,185,94,.32);
-        border-radius: var(--bubble-radius, 18px);
-        background: linear-gradient(145deg, rgba(5,8,11,.86), rgba(11,15,18,.68));
-        box-shadow: 0 16px 38px rgba(0,0,0,.32), 0 0 20px rgba(157,244,22,.055);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        transition: opacity var(--sd-step1-fade, 360ms) ease, transform var(--sd-step1-fade, 360ms) ease;
-      }
-
-      .sd-tutorial-card::before {
-        content: "";
-        position: absolute;
-        left: 18px;
-        top: -1px;
-        width: 38px;
-        height: 1px;
-        background: linear-gradient(90deg, rgba(216,185,94,.86), rgba(157,244,22,.40), transparent);
-      }
-
-      .sd-tutorial-card.is-fading {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-
-      .sd-tutorial-card p,
-      .sd-tutorial-card h2,
-      .sd-tutorial-card span {
-        margin: 0;
-      }
-
-      .sd-tutorial-card p {
-        color: rgba(216,185,94,.72);
-        font: 800 10px/1 "Noto Sans TC", sans-serif;
-        letter-spacing: .18em;
-      }
-
-      .sd-tutorial-card h2 {
-        color: rgba(247,246,239,.98);
-        font: 900 var(--sd-tutorial-heading, 19px)/1.2 "Noto Sans TC", sans-serif;
-      }
-
-      .sd-tutorial-card > span {
-        color: rgba(247,246,239,.76);
-        font-size: var(--sd-tutorial-text, 13px);
-        line-height: 1.45;
-      }
-
-      .sd-tutorial-direction-hud {
-        position: absolute;
-        right: calc(18px - var(--hud-x, 126px));
-        top: calc(50% + var(--hud-y, 6px));
-        transform: translateY(-50%);
         display: grid;
         place-items: center;
-        gap: 0;
-        width: calc(var(--hud-size, 22px) * 1.25);
-        height: calc(var(--hud-size, 22px) * 1.55);
-        border: 1px solid rgba(157,244,22,calc(.22 * var(--hud-bright, .7)));
+        min-height: 42px;
+        padding: var(--bubble-padding, 15px);
+        border: 1.25px solid rgba(97,198,58,.78);
+        border-radius: var(--bubble-radius, 22px);
+        background: linear-gradient(180deg, rgba(244,248,240,.90), rgba(218,229,213,.78));
+        color: rgba(10,18,12,.92);
+        box-shadow: 0 0 22px rgba(157,244,22,.22), 0 10px 26px rgba(0,0,0,.16);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        animation: tutorial-callout-in var(--sd-step2-fade, 300ms) ease both;
+      }
+
+      .sd-tutorial-callout::before {
+        content: "";
+        position: absolute;
+        top: -8px;
+        left: var(--bubble-pointer-x, 52%);
+        width: 15px;
+        height: 15px;
+        border-left: 1.25px solid rgba(97,198,58,.78);
+        border-top: 1.25px solid rgba(97,198,58,.78);
+        background: rgba(238,246,232,.88);
+        transform: translateX(-50%) rotate(45deg);
+        border-radius: 4px 0 0 0;
+      }
+
+      .sd-tutorial-callout span {
+        position: relative;
+        z-index: 1;
+        display: block;
+        text-align: center;
+        font: 950 var(--sd-tutorial-heading, 19px)/1.18 "Noto Sans TC", sans-serif;
+        letter-spacing: .03em;
+      }
+
+      @keyframes tutorial-callout-in {
+        from { opacity: 0; transform: translateY(8px) scale(.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      .sd-tutorial-start {
+        position: fixed;
+        z-index: 5;
+        pointer-events: auto;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(157,244,22,.52);
         border-radius: 999px;
-        color: rgba(157,244,22,calc(.72 * var(--hud-bright, .7)));
-        font: 900 var(--hud-size, 22px)/.72 "Chakra Petch", monospace;
-        box-shadow: 0 0 14px rgba(157,244,22,calc(.12 * var(--hud-bright, .7)));
+        background: rgba(235,242,228,.88);
+        color: rgba(10,18,12,.92);
+        font: 950 14px/1 "Noto Sans TC", sans-serif;
+        box-shadow: 0 0 18px rgba(157,244,22,.22), inset 0 0 0 1px rgba(255,255,255,.38);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        animation: tutorial-callout-in .28s ease both;
+      }
+
+      .sd-tutorial-arrows {
+        position: fixed;
+        z-index: 4;
+        inset: 0;
         pointer-events: none;
+      }
+
+      .sd-tutorial-arrow {
+        position: fixed;
+        width: calc(var(--arrow-head, 18px) * 1.8);
+        transform: translateX(-50%);
+        opacity: .72;
+        filter: drop-shadow(0 0 calc(16px * var(--arrow-glow, .8)) rgba(157,244,22,.46));
+      }
+
+      .sd-tutorial-arrow::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: var(--arrow-width, 4px);
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(157,244,22,.96), rgba(79,207,44,.82));
+        box-shadow: 0 0 10px rgba(157,244,22,calc(.50 * var(--arrow-glow, .8)));
+        transform: translateX(-50%);
+      }
+
+      .sd-tutorial-arrow::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: var(--arrow-head, 18px);
+        height: var(--arrow-head, 18px);
+        border-top: var(--arrow-width, 4px) solid rgba(246,250,241,.96);
+        border-left: var(--arrow-width, 4px) solid rgba(157,244,22,.96);
+        filter: drop-shadow(0 0 8px rgba(157,244,22,calc(.55 * var(--arrow-glow, .8))));
+      }
+
+      .sd-tutorial-arrow i {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .sd-tutorial-arrow i::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: calc(var(--arrow-width, 4px) * 2.8);
+        height: 36%;
+        border-radius: 999px;
+        background: linear-gradient(180deg, transparent, rgba(255,255,255,calc(.62 * var(--arrow-trail, .76))), rgba(157,244,22,calc(.78 * var(--arrow-trail, .76))), transparent);
+        transform: translateX(-50%);
+        opacity: 0;
+      }
+
+      .sd-tutorial-arrow.is-up::after {
+        top: 0;
+        transform: translate(-50%, -15%) rotate(45deg);
+      }
+
+      .sd-tutorial-arrow.is-down::after {
+        bottom: 0;
+        transform: translate(-50%, 15%) rotate(225deg);
+      }
+
+      .sd-tutorial-arrow.is-active {
+        opacity: 1;
+      }
+
+      .sd-tutorial-arrow.is-up.is-active {
+        animation: tutorial-arrow-up var(--arrow-duration, 820ms) ease-in-out both;
+      }
+
+      .sd-tutorial-arrow.is-down.is-active {
+        animation: tutorial-arrow-down var(--arrow-duration, 820ms) ease-in-out both;
+      }
+
+      .sd-tutorial-arrow.is-up.is-active i::before {
+        animation: tutorial-arrow-trail-up var(--arrow-duration, 820ms) ease-in-out both;
+      }
+
+      .sd-tutorial-arrow.is-down.is-active i::before {
+        animation: tutorial-arrow-trail-down var(--arrow-duration, 820ms) ease-in-out both;
+      }
+
+      @keyframes tutorial-arrow-up {
+        0% { transform: translate(-50%, 18px); opacity: .35; }
+        18%, 78% { opacity: 1; }
+        100% { transform: translate(-50%, -18px); opacity: .72; }
+      }
+
+      @keyframes tutorial-arrow-down {
+        0% { transform: translate(-50%, -16px); opacity: .35; }
+        18%, 78% { opacity: 1; }
+        100% { transform: translate(-50%, 16px); opacity: .72; }
+      }
+
+      @keyframes tutorial-arrow-trail-up {
+        0% { top: 72%; opacity: 0; }
+        18% { opacity: .85; }
+        100% { top: -8%; opacity: 0; }
+      }
+
+      @keyframes tutorial-arrow-trail-down {
+        0% { top: -8%; opacity: 0; }
+        18% { opacity: .85; }
+        100% { top: 72%; opacity: 0; }
       }
 
       .sd-hero-ticket-stack-wrap.is-tutorial-target {
@@ -2575,8 +2820,7 @@ function HomepageStyles() {
 
       @keyframes tutorial-border-flow {
         to { transform: rotate(1turn); }
-      }
-      .sd-particles {
+      }      .sd-particles {
         position: fixed;
         z-index: 3;
         inset: 0;
