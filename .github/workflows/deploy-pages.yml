@@ -38,6 +38,9 @@ jobs:
         run: |
           test -f dist/client/index.html
           cp dist/client/index.html dist/client/404.html
+          mkdir -p dist/client/rian dist/client/kangxuan
+          cp dist/client/index.html dist/client/rian/index.html
+          cp dist/client/index.html dist/client/kangxuan/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
