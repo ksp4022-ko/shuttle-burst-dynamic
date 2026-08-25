@@ -428,7 +428,7 @@ function makeStringPoints(source: SourceGeometry, count: number) {
     for (let j = 0; j <= steps; j += 1) {
       const u = j / steps;
       const y = top + (bottom - top) * u;
-      addPoint(points, source, x + (hash01(i * 31 + j) - 0.5) * 1.1, y, "string", t * 0.7 + u * 0.3);
+      addPoint(points, source, x + (hash01(i * 31 + j) - 0.5) * 1.1, y, "string", t * 0.42 + u * 0.12);
     }
   }
 
@@ -442,7 +442,7 @@ function makeStringPoints(source: SourceGeometry, count: number) {
     for (let j = 0; j <= steps; j += 1) {
       const u = j / steps;
       const x = left + (right - left) * u;
-      addPoint(points, source, x, y + (hash01(i * 47 + j) - 0.5) * 1.1, "string", u * 0.7 + t * 0.3);
+      addPoint(points, source, x, y + (hash01(i * 47 + j) - 0.5) * 1.1, "string", 0.56 + t * 0.32 + u * 0.12);
     }
   }
 
@@ -549,7 +549,7 @@ function assemblyTiming(point: SourcePoint, index: number, tuning: ParticleTunin
         ? { base: 0.11, span: 0.25, duration: 0.22, order: xProgress }
         : point.region === "frame"
           ? { base: 0.46 + frameDelay, span: 0.38, duration: 0.085, order: pathProgress }
-          : { base: 0.86, span: 0.1, duration: 0.12, order: pathProgress * xWeight + xProgress * (1 - xWeight) };
+          : { base: 0.86, span: 0.13, duration: 0.055, order: pathProgress * 0.88 + xProgress * (1 - xWeight) * 0.12 };
   const duration = phase.duration / speed + jitter * 0.035 * jitterRange;
   const flowStart =
     phase.base +
