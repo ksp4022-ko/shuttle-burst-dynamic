@@ -97,6 +97,23 @@ export type ParticleTuning = {
   structureTimingWeight: number;
   timingJitter: number;
   finalFrameDelay: number;
+  handleStart: number;
+  handleSpan: number;
+  handleDuration: number;
+  shaftStart: number;
+  shaftSpan: number;
+  shaftDuration: number;
+  frameStart: number;
+  frameSpan: number;
+  frameDuration: number;
+  stringStart: number;
+  stringSpan: number;
+  stringDuration: number;
+  handleLead: number;
+  shaftLead: number;
+  frameLead: number;
+  stringLead: number;
+  preFlowAlpha: number;
   completionPulseDuration: number;
   normalParticleCount: number;
   degradedParticleCount: number;
@@ -130,6 +147,23 @@ export const DEFAULT_PARTICLE_TUNING: ParticleTuning = {
   structureTimingWeight: 24,
   timingJitter: 22,
   finalFrameDelay: 8,
+  handleStart: 0,
+  handleSpan: 20,
+  handleDuration: 24,
+  shaftStart: 7,
+  shaftSpan: 33,
+  shaftDuration: 26,
+  frameStart: 40,
+  frameSpan: 36,
+  frameDuration: 11,
+  stringStart: 90,
+  stringSpan: 9,
+  stringDuration: 6,
+  handleLead: 5,
+  shaftLead: 5,
+  frameLead: 8,
+  stringLead: 6,
+  preFlowAlpha: 42,
   completionPulseDuration: 420,
   normalParticleCount: 1240,
   degradedParticleCount: 620,
@@ -544,12 +578,12 @@ function assemblyTiming(point: SourcePoint, index: number, tuning: ParticleTunin
   const frameDelay = clamp(tuning.finalFrameDelay / 220, 0, 0.12);
   const phase =
     point.region === "handle"
-      ? { base: 0, span: 0.2, duration: 0.24, order: xProgress }
+      ? { base: tuning.handleStart / 100, span: tuning.handleSpan / 100, duration: tuning.handleDuration / 100, order: xProgress }
       : point.region === "shaft"
-        ? { base: 0.07, span: 0.33, duration: 0.26, order: xProgress }
+        ? { base: tuning.shaftStart / 100, span: tuning.shaftSpan / 100, duration: tuning.shaftDuration / 100, order: xProgress }
         : point.region === "frame"
-          ? { base: 0.4 + frameDelay, span: 0.36, duration: 0.11, order: pathProgress }
-          : { base: 0.895, span: 0.09, duration: 0.055, order: pathProgress * 0.92 + xProgress * (1 - xWeight) * 0.08 };
+          ? { base: tuning.frameStart / 100 + frameDelay, span: tuning.frameSpan / 100, duration: tuning.frameDuration / 100, order: pathProgress }
+          : { base: tuning.stringStart / 100, span: tuning.stringSpan / 100, duration: tuning.stringDuration / 100, order: pathProgress * 0.92 + xProgress * (1 - xWeight) * 0.08 };
   const duration = phase.duration / speed + jitter * 0.035 * jitterRange;
   const flowStart =
     phase.base +
@@ -877,10 +911,13 @@ export function ParticleRacket({ phase, motionMode, tuning, replayKey = 0 }: Par
         if (currentMotionMode !== "reduced" && assemblyProgress < dot.start) {
           const lead =
             dot.region === "frame"
-              ? 0.075
+              ? tuning.frameLead / 100
               : dot.region === "string"
-                ? 0.055
-                : 0.045;
+                ? tuning.stringLead / 100
+                : dot.region === "shaft"
+                  ? tuning.shaftLead / 100
+                  : tuning.handleLead / 100;
+          if (lead <= 0) return;
           const leadLocal = clamp((assemblyProgress - (dot.start - lead)) / lead);
           if (leadLocal <= 0) return;
           const pathT = easeInOut(leadLocal) * 0.2;
@@ -894,7 +931,7 @@ export function ParticleRacket({ phase, motionMode, tuning, replayKey = 0 }: Par
           const previousY = cubicPoint(dot.sy, dot.c1y, dot.c2y, dot.ty, previousT);
           const baseAlpha = 0.05 + leadLocal * 0.1;
           drawTrail(dot, x, y, previousX, previousY, leadLocal * 0.65, baseAlpha * fade);
-          drawDot(dot, x, y, baseAlpha * 0.42 * fade, 0, 0, 0);
+          drawDot(dot, x, y, baseAlpha * (tuning.preFlowAlpha / 100) * fade, 0, 0, 0);
           return;
         }
         const local =

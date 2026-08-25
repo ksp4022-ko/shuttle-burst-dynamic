@@ -1469,6 +1469,25 @@ function HandoffTimingLab({
             <TimingControl label="STRUCT WEIGHT" description="結構分組權重" value={particle.structureTimingWeight} min={0} max={60} step={1} unit="%" onChange={(value) => onParticleChange("structureTimingWeight", value)} />
             <TimingControl label="JITTER" description="時間錯落" value={particle.timingJitter} min={0} max={50} step={1} unit="%" onChange={(value) => onParticleChange("timingJitter", value)} />
             <TimingControl label="FRAME DELAY" description="最後封框延遲" value={particle.finalFrameDelay} min={0} max={25} step={1} unit="%" onChange={(value) => onParticleChange("finalFrameDelay", value)} />
+            <div className="sd-timing-subgroup">段落節奏｜Start 越小越早，Span 越大越拖長，Attach 越大越慢貼上</div>
+            <TimingControl label="HANDLE START" description="拍柄開始；變小更早出現" value={particle.handleStart} min={0} max={45} step={1} unit="%" onChange={(value) => onParticleChange("handleStart", value)} />
+            <TimingControl label="HANDLE SPAN" description="拍柄形成長度；變大較順但較慢" value={particle.handleSpan} min={5} max={55} step={1} unit="%" onChange={(value) => onParticleChange("handleSpan", value)} />
+            <TimingControl label="HANDLE ATTACH" description="拍柄吸附時間；變小更俐落" value={particle.handleDuration} min={5} max={45} step={1} unit="%" onChange={(value) => onParticleChange("handleDuration", value)} />
+            <TimingControl label="SHAFT START" description="中桿開始；變小可接近拍柄" value={particle.shaftStart} min={0} max={65} step={1} unit="%" onChange={(value) => onParticleChange("shaftStart", value)} />
+            <TimingControl label="SHAFT SPAN" description="中桿延伸時間；變大較連續" value={particle.shaftSpan} min={5} max={65} step={1} unit="%" onChange={(value) => onParticleChange("shaftSpan", value)} />
+            <TimingControl label="SHAFT ATTACH" description="中桿吸附時間；變大較柔" value={particle.shaftDuration} min={5} max={45} step={1} unit="%" onChange={(value) => onParticleChange("shaftDuration", value)} />
+            <TimingControl label="FRAME START" description="拍框開始；變小可減少中桿後空拍" value={particle.frameStart} min={10} max={80} step={1} unit="%" onChange={(value) => onParticleChange("frameStart", value)} />
+            <TimingControl label="FRAME SPAN" description="拍框繞一圈時間；變大較慢較順" value={particle.frameSpan} min={8} max={65} step={1} unit="%" onChange={(value) => onParticleChange("frameSpan", value)} />
+            <TimingControl label="FRAME ATTACH" description="拍框每顆貼上速度；變小線更銳利" value={particle.frameDuration} min={3} max={30} step={1} unit="%" onChange={(value) => onParticleChange("frameDuration", value)} />
+            <TimingControl label="STRING START" description="網面開始；必須大於拍框結束才不偷跑" value={particle.stringStart} min={55} max={96} step={1} unit="%" onChange={(value) => onParticleChange("stringStart", value)} />
+            <TimingControl label="STRING SPAN" description="網面編織時間；變大不會一坨進來" value={particle.stringSpan} min={4} max={32} step={1} unit="%" onChange={(value) => onParticleChange("stringSpan", value)} />
+            <TimingControl label="STRING ATTACH" description="網面貼上速度；變小一條條更明顯" value={particle.stringDuration} min={3} max={24} step={1} unit="%" onChange={(value) => onParticleChange("stringDuration", value)} />
+            <div className="sd-timing-subgroup">提前流線｜只讓粒子先在路上，不提前長到球拍上</div>
+            <TimingControl label="HANDLE LEAD" description="拍柄前導流線；變大較不突然" value={particle.handleLead} min={0} max={18} step={1} unit="%" onChange={(value) => onParticleChange("handleLead", value)} />
+            <TimingControl label="SHAFT LEAD" description="中桿前導流線；變大銜接較順" value={particle.shaftLead} min={0} max={18} step={1} unit="%" onChange={(value) => onParticleChange("shaftLead", value)} />
+            <TimingControl label="FRAME LEAD" description="拍框前導流線；變大拍框前會先有粒子流" value={particle.frameLead} min={0} max={18} step={1} unit="%" onChange={(value) => onParticleChange("frameLead", value)} />
+            <TimingControl label="STRING LEAD" description="網面前導流線；變大網面不會突然冒出" value={particle.stringLead} min={0} max={18} step={1} unit="%" onChange={(value) => onParticleChange("stringLead", value)} />
+            <TimingControl label="PRE FLOW ALPHA" description="前導流線亮度；太亮會像偷跑" value={particle.preFlowAlpha} min={0} max={100} step={2} unit="%" onChange={(value) => onParticleChange("preFlowAlpha", value)} />
             <TimingControl label="PULSE" description="完成脈衝" value={particle.completionPulseDuration} min={100} max={1000} step={20} unit="ms" onChange={(value) => onParticleChange("completionPulseDuration", value)} />
             <div className="sd-timing-actions is-grid"><button type="button" onClick={onReplayParticles}>Replay complete formation</button></div>
 
@@ -1776,6 +1795,23 @@ function normalizeParticleTuning(value: Partial<ParticleTuning> | undefined): Pa
     structureTimingWeight: clampTiming(source.structureTimingWeight, 0, 60, DEFAULT_PARTICLE_TUNING.structureTimingWeight),
     timingJitter: clampTiming(source.timingJitter, 0, 50, DEFAULT_PARTICLE_TUNING.timingJitter),
     finalFrameDelay: clampTiming(source.finalFrameDelay, 0, 25, DEFAULT_PARTICLE_TUNING.finalFrameDelay),
+    handleStart: clampTiming(source.handleStart, 0, 45, DEFAULT_PARTICLE_TUNING.handleStart),
+    handleSpan: clampTiming(source.handleSpan, 5, 55, DEFAULT_PARTICLE_TUNING.handleSpan),
+    handleDuration: clampTiming(source.handleDuration, 5, 45, DEFAULT_PARTICLE_TUNING.handleDuration),
+    shaftStart: clampTiming(source.shaftStart, 0, 65, DEFAULT_PARTICLE_TUNING.shaftStart),
+    shaftSpan: clampTiming(source.shaftSpan, 5, 65, DEFAULT_PARTICLE_TUNING.shaftSpan),
+    shaftDuration: clampTiming(source.shaftDuration, 5, 45, DEFAULT_PARTICLE_TUNING.shaftDuration),
+    frameStart: clampTiming(source.frameStart, 10, 80, DEFAULT_PARTICLE_TUNING.frameStart),
+    frameSpan: clampTiming(source.frameSpan, 8, 65, DEFAULT_PARTICLE_TUNING.frameSpan),
+    frameDuration: clampTiming(source.frameDuration, 3, 30, DEFAULT_PARTICLE_TUNING.frameDuration),
+    stringStart: clampTiming(source.stringStart, 55, 96, DEFAULT_PARTICLE_TUNING.stringStart),
+    stringSpan: clampTiming(source.stringSpan, 4, 32, DEFAULT_PARTICLE_TUNING.stringSpan),
+    stringDuration: clampTiming(source.stringDuration, 3, 24, DEFAULT_PARTICLE_TUNING.stringDuration),
+    handleLead: clampTiming(source.handleLead, 0, 18, DEFAULT_PARTICLE_TUNING.handleLead),
+    shaftLead: clampTiming(source.shaftLead, 0, 18, DEFAULT_PARTICLE_TUNING.shaftLead),
+    frameLead: clampTiming(source.frameLead, 0, 18, DEFAULT_PARTICLE_TUNING.frameLead),
+    stringLead: clampTiming(source.stringLead, 0, 18, DEFAULT_PARTICLE_TUNING.stringLead),
+    preFlowAlpha: clampTiming(source.preFlowAlpha, 0, 100, DEFAULT_PARTICLE_TUNING.preFlowAlpha),
     completionPulseDuration: clampTiming(source.completionPulseDuration, 100, 1000, DEFAULT_PARTICLE_TUNING.completionPulseDuration),
     normalParticleCount: clampTiming(source.normalParticleCount, 700, 1600, DEFAULT_PARTICLE_TUNING.normalParticleCount),
     degradedParticleCount: clampTiming(source.degradedParticleCount, 320, 760, DEFAULT_PARTICLE_TUNING.degradedParticleCount),
