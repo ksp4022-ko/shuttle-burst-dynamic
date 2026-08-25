@@ -277,6 +277,7 @@ export function Index() {
   const [tutorialReplayKey, setTutorialReplayKey] = useState(0);
   const [tutorialDemoPulse, setTutorialDemoPulse] = useState(0);
   const [tutorialArrowPhase, setTutorialArrowPhase] = useState<TutorialArrowPhase>(null);
+  const [tutorialStartCountdown, setTutorialStartCountdown] = useState<number | null>(null);
   const [spotlightRect, setSpotlightRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [frontCardRect, setFrontCardRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
@@ -284,6 +285,7 @@ export function Index() {
   const [rosterVisible, setRosterVisible] = useState(false);
   const replayTimersRef = useRef<number[]>([]);
   const tutorialTimersRef = useRef<number[]>([]);
+  const tutorialStartIntervalRef = useRef<number | null>(null);
   const tutorialAutoShownRef = useRef(false);
   const tutorialOriginalEventIdRef = useRef("");
   const materializeWindowMs = Math.max(
@@ -424,6 +426,10 @@ export function Index() {
   const clearTutorialTimers = useCallback(() => {
     tutorialTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     tutorialTimersRef.current = [];
+    if (tutorialStartIntervalRef.current !== null) {
+      window.clearInterval(tutorialStartIntervalRef.current);
+      tutorialStartIntervalRef.current = null;
+    }
   }, []);
 
   const completeTutorial = useCallback(
@@ -438,6 +444,7 @@ export function Index() {
       setTutorialCloseVisible(false);
       setTutorialDemoPulse(0);
       setTutorialArrowPhase(null);
+      setTutorialStartCountdown(null);
       if (startCountdown) {
         setCountdownKey((value) => value + 1);
       } else {
@@ -458,6 +465,7 @@ export function Index() {
     setTutorialCloseVisible(false);
     setTutorialDemoPulse(0);
     setTutorialArrowPhase(null);
+    setTutorialStartCountdown(null);
     setTutorialReplayKey((value) => value + 1);
     setTutorialOpen(true);
   }, [clearTutorialTimers, flow.pendingSwitchEventId, flow.selectedEventId]);
@@ -512,6 +520,12 @@ export function Index() {
       window.removeEventListener("scroll", updateTutorialSpotlight, true);
     };
   }, [tutorialOpen, updateTutorialSpotlight]);
+
+  useLayoutEffect(() => {
+    if (!tutorialOpen) return;
+    const frame = window.requestAnimationFrame(updateTutorialSpotlight);
+    return () => window.cancelAnimationFrame(frame);
+  }, [flow.pendingSwitchEventId, tutorialDemoPulse, tutorialOpen, updateTutorialSpotlight]);
 
   useEffect(() => {
     if (!tutorialOpen || tutorialStep !== "step1") return;
@@ -627,15 +641,42 @@ export function Index() {
   useEffect(() => {
     if (!tutorialOpen || tutorialStep !== "step2") return;
     setTutorialCloseVisible(false);
+    setTutorialStartCountdown(null);
     const closeTimer = window.setTimeout(
-      () => setTutorialCloseVisible(true),
+      () => {
+        setTutorialCloseVisible(true);
+        setTutorialStartCountdown(3);
+        if (tutorialStartIntervalRef.current !== null) {
+          window.clearInterval(tutorialStartIntervalRef.current);
+        }
+        tutorialStartIntervalRef.current = window.setInterval(() => {
+          setTutorialStartCountdown((current) => {
+            const next = Math.max(0, (current ?? 3) - 1);
+            if (next <= 0) {
+              if (tutorialStartIntervalRef.current !== null) {
+                window.clearInterval(tutorialStartIntervalRef.current);
+                tutorialStartIntervalRef.current = null;
+              }
+              confirmFromTutorial();
+            }
+            return next;
+          });
+        }, 1000);
+      },
       tutorialTuning.step2TextTiming +
         tutorialTuning.borderFlowLoopDuration * Math.max(1, tutorialTuning.borderFlowLoopCount) +
         tutorialTuning.closeButtonDelay,
     );
     tutorialTimersRef.current.push(closeTimer);
-    return () => window.clearTimeout(closeTimer);
+    return () => {
+      window.clearTimeout(closeTimer);
+      if (tutorialStartIntervalRef.current !== null) {
+        window.clearInterval(tutorialStartIntervalRef.current);
+        tutorialStartIntervalRef.current = null;
+      }
+    };
   }, [
+    confirmFromTutorial,
     tutorialOpen,
     tutorialStep,
     tutorialTuning.borderFlowLoopCount,
@@ -902,9 +943,10 @@ export function Index() {
           frontCardRect={frontCardRect}
           arrowPhase={tutorialArrowPhase}
           closeVisible={tutorialCloseVisible}
+          startCountdown={tutorialStartCountdown}
           motionMode={flow.motionMode}
           onSkip={closeTutorial}
-          onClose={closeTutorial}
+          onStart={confirmFromTutorial}
         />
       ) : null}
 
@@ -1842,9 +1884,10 @@ function TutorialOverlay({
   frontCardRect,
   arrowPhase,
   closeVisible,
+  startCountdown,
   motionMode,
   onSkip,
-  onClose,
+  onStart,
 }: {
   step: TutorialStep;
   tuning: TutorialTuning;
@@ -1853,15 +1896,16 @@ function TutorialOverlay({
   frontCardRect: { top: number; left: number; width: number; height: number };
   arrowPhase: TutorialArrowPhase;
   closeVisible: boolean;
+  startCountdown: number | null;
   motionMode: MotionMode;
   onSkip: () => void;
-  onClose: () => void;
+  onStart: () => void;
 }) {
   const isStep1 = step === "step1";
   const isStep2 = step === "step2";
   const isTransition = step === "transition";
   const bubbleStyle = getTutorialBubbleStyle(step, tuning, spotlightRect, frontCardRect);
-  const startStyle = getTutorialStartStyle(tuning, spotlightRect);
+  const startStyle = getTutorialStartStyle(tuning, frontCardRect, spotlightRect);
 
   return (
     <div className={`sd-tutorial-overlay is-${step} motion-${motionMode}`} role="dialog" aria-modal="true" aria-label="系統教學">
@@ -1887,13 +1931,16 @@ function TutorialOverlay({
       {isStep1 ? (
         <TutorialSwipeArrows tuning={tuning} frontCardRect={frontCardRect} phase={arrowPhase} />
       ) : null}
-      {!isTransition ? (
+      {!isTransition && !(isStep2 && closeVisible) ? (
         <section className={`sd-tutorial-callout is-${isStep2 ? "step2" : "step1"}`} style={bubbleStyle}>
           <span>{isStep2 ? <>2. 點選進入<br />報名頁面</> : "1. 撥動選擇"}</span>
         </section>
       ) : null}
       {isStep2 && closeVisible ? (
-        <button type="button" className="sd-tutorial-start" style={startStyle} onClick={onClose}>開始使用</button>
+        <button type="button" className="sd-tutorial-start" style={startStyle} onClick={onStart}>
+          <span>開始使用</span>
+          <small>{startCountdown ?? 3} 秒後自動進入</small>
+        </button>
       ) : null}
     </div>
   );
@@ -1955,25 +2002,14 @@ function getTutorialBubbleStyle(
   frontCardRect: { top: number; left: number; width: number; height: number },
 ) {
   const isStep2 = step === "step2";
-  const width = isStep2 ? tuning.step2BubbleWidth : tuning.bubbleWidth;
   const offsetX = isStep2 ? tuning.step2BubbleOffsetX : tuning.bubbleOffsetX;
   const offsetY = isStep2 ? tuning.step2BubbleOffsetY : tuning.bubbleOffsetY;
   const pointerX = isStep2 ? tuning.step2PointerX : tuning.step1PointerX;
-  const viewportWidth = typeof window === "undefined" ? 390 : window.innerWidth;
-  const viewportHeight = typeof window === "undefined" ? 760 : window.innerHeight;
-  const anchor = isStep2 ? spotlightRect : frontCardRect.width ? frontCardRect : spotlightRect;
-  const baseLeft = isStep2
-    ? anchor.left + (anchor.width - width) / 2
-    : anchor.left + anchor.width * 0.56;
-  const baseTop = isStep2
-    ? anchor.top - 74
-    : anchor.top + anchor.height * 0.38;
-  const left = Math.max(12, Math.min(viewportWidth - width - 12, baseLeft + offsetX));
-  const top = Math.max(58, Math.min(viewportHeight - 96, baseTop + offsetY));
+  const shared = getSharedTutorialCalloutRect(frontCardRect, spotlightRect, offsetX, offsetY);
   return {
-    width: `${width}px`,
-    top: `${top}px`,
-    left: `${left}px`,
+    width: `${shared.width}px`,
+    top: `${shared.top}px`,
+    left: `${shared.left}px`,
     "--bubble-radius": `${tuning.bubbleRadius}px`,
     "--bubble-padding": `${tuning.bubblePadding}px`,
     "--bubble-pointer-x": `${pointerX}%`,
@@ -1982,20 +2018,41 @@ function getTutorialBubbleStyle(
 
 function getTutorialStartStyle(
   tuning: TutorialTuning,
+  frontCardRect: { top: number; left: number; width: number; height: number },
   spotlightRect: { top: number; left: number; width: number; height: number },
+) {
+  const shared = getSharedTutorialCalloutRect(
+    frontCardRect,
+    spotlightRect,
+    tuning.startButtonOffsetX,
+    tuning.startButtonOffsetY,
+  );
+  const height = Math.max(tuning.startButtonHeight, 52);
+  return {
+    width: `${shared.width}px`,
+    height: `${height}px`,
+    left: `${shared.left}px`,
+    top: `${shared.top}px`,
+  } as CSSProperties;
+}
+
+function getSharedTutorialCalloutRect(
+  frontCardRect: { top: number; left: number; width: number; height: number },
+  fallbackRect: { top: number; left: number; width: number; height: number },
+  offsetX = 0,
+  offsetY = 0,
 ) {
   const viewportWidth = typeof window === "undefined" ? 390 : window.innerWidth;
   const viewportHeight = typeof window === "undefined" ? 760 : window.innerHeight;
-  const width = tuning.startButtonWidth;
-  const height = tuning.startButtonHeight;
-  const baseLeft = spotlightRect.left + (spotlightRect.width - width) / 2;
-  const baseTop = spotlightRect.top - 70;
+  const anchor = frontCardRect.width ? frontCardRect : fallbackRect;
+  const width = Math.max(104, anchor.width * 0.38);
+  const left = anchor.left + anchor.width * 0.6 + offsetX;
+  const top = anchor.top + anchor.height * 0.58 + offsetY;
   return {
-    width: `${width}px`,
-    height: `${height}px`,
-    left: `${Math.max(12, Math.min(viewportWidth - width - 12, baseLeft + tuning.startButtonOffsetX))}px`,
-    top: `${Math.max(58, Math.min(viewportHeight - height - 18, baseTop + tuning.startButtonOffsetY))}px`,
-  } as CSSProperties;
+    width,
+    left: Math.max(12, Math.min(viewportWidth - width - 12, left)),
+    top: Math.max(58, Math.min(viewportHeight - 72, top)),
+  };
 }
 
 function getCardAnchoredArrowStyle(
@@ -2624,6 +2681,16 @@ function HomepageStyles() {
         border-radius: 4px 0 0 0;
       }
 
+      .sd-tutorial-callout.is-step2::before {
+        top: auto;
+        bottom: -8px;
+        border-top: 0;
+        border-left: 0;
+        border-right: 1.25px solid rgba(97,198,58,.78);
+        border-bottom: 1.25px solid rgba(97,198,58,.78);
+        border-radius: 0 0 4px 0;
+      }
+
       .sd-tutorial-callout span {
         position: relative;
         z-index: 1;
@@ -2644,15 +2711,24 @@ function HomepageStyles() {
         pointer-events: auto;
         display: grid;
         place-items: center;
+        gap: 3px;
         border: 1px solid rgba(157,244,22,.52);
-        border-radius: 999px;
+        border-radius: var(--bubble-radius, 22px);
         background: rgba(235,242,228,.88);
         color: rgba(10,18,12,.92);
-        font: 950 14px/1 "Noto Sans TC", sans-serif;
         box-shadow: 0 0 18px rgba(157,244,22,.22), inset 0 0 0 1px rgba(255,255,255,.38);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         animation: tutorial-callout-in .28s ease both;
+      }
+
+      .sd-tutorial-start span {
+        font: 950 14px/1 "Noto Sans TC", sans-serif;
+      }
+
+      .sd-tutorial-start small {
+        font: 850 10px/1 "Noto Sans TC", sans-serif;
+        color: rgba(10,18,12,.72);
       }
 
       .sd-tutorial-arrows {
