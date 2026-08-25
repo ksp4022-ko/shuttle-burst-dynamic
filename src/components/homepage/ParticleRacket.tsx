@@ -541,15 +541,15 @@ function assemblyTiming(point: SourcePoint, index: number, tuning: ParticleTunin
   const supply = clamp(tuning.supplyUntilFormation / 100, 0.55, 1);
   const xWeight = clamp(tuning.xTimingWeight / 100, 0.2, 0.95);
   const structureWeight = clamp(tuning.structureTimingWeight / 100, 0, 0.6);
-  const frameDelay = clamp(tuning.finalFrameDelay / 100, 0, 0.25);
+  const frameDelay = clamp(tuning.finalFrameDelay / 220, 0, 0.12);
   const phase =
     point.region === "handle"
-      ? { base: 0, span: 0.18, duration: 0.2, order: xProgress }
+      ? { base: 0, span: 0.2, duration: 0.24, order: xProgress }
       : point.region === "shaft"
-        ? { base: 0.11, span: 0.25, duration: 0.22, order: xProgress }
+        ? { base: 0.07, span: 0.33, duration: 0.26, order: xProgress }
         : point.region === "frame"
-          ? { base: 0.46 + frameDelay, span: 0.38, duration: 0.085, order: pathProgress }
-          : { base: 0.86, span: 0.13, duration: 0.055, order: pathProgress * 0.88 + xProgress * (1 - xWeight) * 0.12 };
+          ? { base: 0.4 + frameDelay, span: 0.36, duration: 0.11, order: pathProgress }
+          : { base: 0.895, span: 0.09, duration: 0.055, order: pathProgress * 0.92 + xProgress * (1 - xWeight) * 0.08 };
   const duration = phase.duration / speed + jitter * 0.035 * jitterRange;
   const flowStart =
     phase.base +
@@ -874,7 +874,29 @@ export function ParticleRacket({ phase, motionMode, tuning, replayKey = 0 }: Par
       context.translate(-centerX, -centerY);
 
       dotsRef.current.forEach((dot) => {
-        if (currentMotionMode !== "reduced" && assemblyProgress < dot.start) return;
+        if (currentMotionMode !== "reduced" && assemblyProgress < dot.start) {
+          const lead =
+            dot.region === "frame"
+              ? 0.075
+              : dot.region === "string"
+                ? 0.055
+                : 0.045;
+          const leadLocal = clamp((assemblyProgress - (dot.start - lead)) / lead);
+          if (leadLocal <= 0) return;
+          const pathT = easeInOut(leadLocal) * 0.2;
+          const previousT = clamp(pathT - 0.022);
+          const eased = easeOutCubic(leadLocal);
+          const streamCurve = Math.sin(leadLocal * Math.PI * 2 + dot.phase) * dot.curve * 0.72 * (1 - eased);
+          const crossWeave = Math.cos(leadLocal * Math.PI * 1.5 + dot.phase) * dot.curve * 0.16 * (1 - eased);
+          const x = cubicPoint(dot.sx, dot.c1x, dot.c2x, dot.tx, pathT) + crossWeave;
+          const y = cubicPoint(dot.sy, dot.c1y, dot.c2y, dot.ty, pathT) + streamCurve;
+          const previousX = cubicPoint(dot.sx, dot.c1x, dot.c2x, dot.tx, previousT);
+          const previousY = cubicPoint(dot.sy, dot.c1y, dot.c2y, dot.ty, previousT);
+          const baseAlpha = 0.05 + leadLocal * 0.1;
+          drawTrail(dot, x, y, previousX, previousY, leadLocal * 0.65, baseAlpha * fade);
+          drawDot(dot, x, y, baseAlpha * 0.42 * fade, 0, 0, 0);
+          return;
+        }
         const local =
           currentMotionMode === "reduced"
             ? 1
