@@ -1904,8 +1904,8 @@ function TutorialOverlay({
   const isStep1 = step === "step1";
   const isStep2 = step === "step2";
   const isTransition = step === "transition";
+  const isStart = isStep2 && closeVisible;
   const bubbleStyle = getTutorialBubbleStyle(step, tuning, spotlightRect, frontCardRect);
-  const startStyle = getTutorialStartStyle(tuning, frontCardRect, spotlightRect);
 
   return (
     <div className={`sd-tutorial-overlay is-${step} motion-${motionMode}`} role="dialog" aria-modal="true" aria-label="系統教學">
@@ -1931,15 +1931,31 @@ function TutorialOverlay({
       {isStep1 ? (
         <TutorialSwipeArrows tuning={tuning} frontCardRect={frontCardRect} phase={arrowPhase} />
       ) : null}
-      {!isTransition && !(isStep2 && closeVisible) ? (
-        <section className={`sd-tutorial-callout is-${isStep2 ? "step2" : "step1"}`} style={bubbleStyle}>
-          <span>{isStep2 ? <>2. 點選進入<br />報名頁面</> : "1. 撥動選擇"}</span>
-        </section>
-      ) : null}
-      {isStep2 && closeVisible ? (
-        <button type="button" className="sd-tutorial-start" style={startStyle} onClick={onStart}>
-          <span>開始使用</span>
-          <small>{startCountdown ?? 3} 秒後自動進入</small>
+      {!isTransition ? (
+        <button
+          type="button"
+          className={`sd-tutorial-callout is-${isStart ? "start" : isStep2 ? "step2" : "step1"}`}
+          style={bubbleStyle}
+          onClick={isStart ? onStart : undefined}
+          aria-disabled={isStart ? undefined : true}
+          tabIndex={isStart ? 0 : -1}
+        >
+          <span>
+            {isStart ? (
+              <>
+                開始使用
+                <small>{startCountdown ?? 3} 秒後自動進入</small>
+              </>
+            ) : isStep2 ? (
+              <>
+                2. 點選進入
+                <br />
+                報名頁面
+              </>
+            ) : (
+              "1. 撥動選擇"
+            )}
+          </span>
         </button>
       ) : null}
     </div>
@@ -2655,16 +2671,23 @@ function HomepageStyles() {
         pointer-events: none;
         display: grid;
         place-items: center;
+        gap: 3px;
         min-height: 42px;
         padding: var(--bubble-padding, 15px);
         border: 1.25px solid rgba(97,198,58,.78);
         border-radius: var(--bubble-radius, 22px);
         background: linear-gradient(180deg, rgba(244,248,240,.90), rgba(218,229,213,.78));
         color: rgba(10,18,12,.92);
+        appearance: none;
         box-shadow: 0 0 22px rgba(157,244,22,.22), 0 10px 26px rgba(0,0,0,.16);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         animation: tutorial-callout-in var(--sd-step2-fade, 300ms) ease both;
+      }
+
+      .sd-tutorial-callout.is-start {
+        pointer-events: auto;
+        cursor: pointer;
       }
 
       .sd-tutorial-callout::before {
@@ -2691,6 +2714,10 @@ function HomepageStyles() {
         border-radius: 0 0 4px 0;
       }
 
+      .sd-tutorial-callout.is-start::before {
+        display: none;
+      }
+
       .sd-tutorial-callout span {
         position: relative;
         z-index: 1;
@@ -2700,35 +2727,16 @@ function HomepageStyles() {
         letter-spacing: .03em;
       }
 
+      .sd-tutorial-callout small {
+        display: block;
+        margin-top: 4px;
+        font: 850 10px/1 "Noto Sans TC", sans-serif;
+        color: rgba(10,18,12,.72);
+      }
+
       @keyframes tutorial-callout-in {
         from { opacity: 0; transform: translateY(8px) scale(.98); }
         to { opacity: 1; transform: translateY(0) scale(1); }
-      }
-
-      .sd-tutorial-start {
-        position: fixed;
-        z-index: 5;
-        pointer-events: auto;
-        display: grid;
-        place-items: center;
-        gap: 3px;
-        border: 1px solid rgba(157,244,22,.52);
-        border-radius: var(--bubble-radius, 22px);
-        background: rgba(235,242,228,.88);
-        color: rgba(10,18,12,.92);
-        box-shadow: 0 0 18px rgba(157,244,22,.22), inset 0 0 0 1px rgba(255,255,255,.38);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        animation: tutorial-callout-in .28s ease both;
-      }
-
-      .sd-tutorial-start span {
-        font: 950 14px/1 "Noto Sans TC", sans-serif;
-      }
-
-      .sd-tutorial-start small {
-        font: 850 10px/1 "Noto Sans TC", sans-serif;
-        color: rgba(10,18,12,.72);
       }
 
       .sd-tutorial-arrows {
