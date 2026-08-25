@@ -16,6 +16,7 @@ type SourcePoint = {
   y: number;
   region: Region;
   along: number;
+  pathOrder: number;
   goldScore: number;
   greenScore: number;
 };
@@ -55,6 +56,7 @@ type Dot = {
   start: number;
   duration: number;
   along: number;
+  pathOrder: number;
   drift: number;
   phase: number;
   curve: number;
@@ -234,16 +236,18 @@ function smoothBounds(values: number[], index: number, fallback: number, pick: "
   return fallback;
 }
 
-function addPoint(points: SourcePoint[], source: SourceGeometry, x: number, y: number, region: Region) {
+function addPoint(points: SourcePoint[], source: SourceGeometry, x: number, y: number, region: Region, pathOrder?: number) {
   const visible = visibleAt(source, x, y);
   const boundedX = clamp(x, source.bbox.minX, source.bbox.maxX);
   const boundedY = clamp(y, source.bbox.minY, source.bbox.maxY);
+  const along = (source.bbox.maxY - boundedY) / source.bbox.height;
   const scores = pixelScores(source, boundedX, boundedY);
   points.push({
     x: visible ? x : boundedX,
     y: boundedY,
     region,
-    along: (source.bbox.maxY - boundedY) / source.bbox.height,
+    along,
+    pathOrder: pathOrder ?? along,
     goldScore: scores.goldScore,
     greenScore: scores.greenScore,
   });
@@ -362,6 +366,16 @@ function pickFrom(points: SourcePoint[], count: number, salt: number) {
   return picked;
 }
 
+function frameLoopOrder(source: SourceGeometry, x: number, y: number) {
+  const cx = source.bbox.centerX;
+  const cy = (source.bbox.minY + source.headEndY) / 2;
+  const rx = Math.max(1, source.bbox.width / 2);
+  const ry = Math.max(1, (source.headEndY - source.bbox.minY) / 2);
+  const angle = Math.atan2((y - cy) / ry, (x - cx) / rx);
+  const connectionAngle = Math.PI / 2;
+  return ((connectionAngle - angle + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2);
+}
+
 function makeFramePoints(source: SourceGeometry, count: number) {
   const points: SourcePoint[] = [];
   const headHeight = source.headEndY - source.bbox.minY;
@@ -374,8 +388,8 @@ function makeFramePoints(source: SourceGeometry, count: number) {
     const width = right - left;
     if (width < source.bbox.width * 0.24) continue;
     for (const inset of [1.5, 10.5]) {
-      addPoint(points, source, left + inset, y, "frame");
-      addPoint(points, source, right - inset, y, "frame");
+      addPoint(points, source, left + inset, y, "frame", frameLoopOrder(source, left + inset, y));
+      addPoint(points, source, right - inset, y, "frame", frameLoopOrder(source, right - inset, y));
     }
   }
 
@@ -384,13 +398,13 @@ function makeFramePoints(source: SourceGeometry, count: number) {
     const bottom = headBottom(source, x);
     if (top < 0 || bottom < 0 || bottom <= top) continue;
     for (const inset of [1.5, 10.5]) {
-      addPoint(points, source, x, top + inset, "frame");
-      addPoint(points, source, x, bottom - inset, "frame");
+      addPoint(points, source, x, top + inset, "frame", frameLoopOrder(source, x, top + inset));
+      addPoint(points, source, x, bottom - inset, "frame", frameLoopOrder(source, x, bottom - inset));
     }
   }
 
   return pickFrom(
-    points.sort((a, b) => a.along - b.along || a.x - b.x),
+    points.sort((a, b) => a.pathOrder - b.pathOrder || a.along - b.along),
     count,
     19.3,
   );
@@ -414,7 +428,7 @@ function makeStringPoints(source: SourceGeometry, count: number) {
     for (let j = 0; j <= steps; j += 1) {
       const u = j / steps;
       const y = top + (bottom - top) * u;
-      addPoint(points, source, x + (hash01(i * 31 + j) - 0.5) * 1.1, y, "string");
+      addPoint(points, source, x + (hash01(i * 31 + j) - 0.5) * 1.1, y, "string", t * 0.7 + u * 0.3);
     }
   }
 
@@ -428,12 +442,12 @@ function makeStringPoints(source: SourceGeometry, count: number) {
     for (let j = 0; j <= steps; j += 1) {
       const u = j / steps;
       const x = left + (right - left) * u;
-      addPoint(points, source, x, y + (hash01(i * 47 + j) - 0.5) * 1.1, "string");
+      addPoint(points, source, x, y + (hash01(i * 47 + j) - 0.5) * 1.1, "string", u * 0.7 + t * 0.3);
     }
   }
 
   return pickFrom(
-    points.sort((a, b) => a.y - b.y || a.x - b.x),
+    points.sort((a, b) => a.pathOrder - b.pathOrder || a.y - b.y),
     count,
     31.1,
   );
@@ -520,31 +534,28 @@ function makeSourcePoints(source: SourceGeometry, count: number) {
 
 function assemblyTiming(point: SourcePoint, index: number, tuning: ParticleTuning) {
   const xProgress = clamp(point.along);
+  const pathProgress = clamp(point.pathOrder);
   const jitter = hash01(index * 4.91 + point.x * 0.021 + point.y * 0.017);
-  const structureBase =
-    point.region === "handle"
-      ? 0
-      : point.region === "shaft"
-        ? 0.035
-        : point.region === "string"
-          ? 0.075
-          : 0.11;
-  const durationBase =
-    point.region === "handle"
-      ? 0.24
-      : point.region === "shaft"
-        ? 0.26
-        : point.region === "string"
-          ? 0.29
-          : 0.32;
-  const xWeight = clamp(tuning.xTimingWeight / 100, 0.2, 0.95);
-  const structureWeight = clamp(tuning.structureTimingWeight / 100, 0, 0.6);
   const speed = clamp(tuning.leftToRightSpeed / 100, 0.45, 1.8);
   const jitterRange = clamp(tuning.timingJitter / 100, 0, 0.5);
   const supply = clamp(tuning.supplyUntilFormation / 100, 0.55, 1);
-  const frameDelay = point.region === "frame" ? clamp(tuning.finalFrameDelay / 100, 0, 0.25) : 0;
-  const duration = durationBase / speed + jitter * 0.055 * jitterRange;
-  const flowStart = xProgress * (0.78 * xWeight) + structureBase * structureWeight + frameDelay + jitter * 0.052 * jitterRange;
+  const xWeight = clamp(tuning.xTimingWeight / 100, 0.2, 0.95);
+  const structureWeight = clamp(tuning.structureTimingWeight / 100, 0, 0.6);
+  const frameDelay = clamp(tuning.finalFrameDelay / 100, 0, 0.25);
+  const phase =
+    point.region === "handle"
+      ? { base: 0, span: 0.18, duration: 0.2, order: xProgress }
+      : point.region === "shaft"
+        ? { base: 0.11, span: 0.25, duration: 0.22, order: xProgress }
+        : point.region === "frame"
+          ? { base: 0.46 + frameDelay, span: 0.38, duration: 0.085, order: pathProgress }
+          : { base: 0.86, span: 0.1, duration: 0.12, order: pathProgress * xWeight + xProgress * (1 - xWeight) };
+  const duration = phase.duration / speed + jitter * 0.035 * jitterRange;
+  const flowStart =
+    phase.base +
+    phase.order * phase.span +
+    structureWeight * (point.region === "frame" ? 0.035 : point.region === "string" ? 0.055 : 0) +
+    jitter * 0.032 * jitterRange;
   const start = clamp(flowStart * supply, 0, 0.99 - duration);
   return { start, duration };
 }
@@ -664,6 +675,7 @@ function makeDots(
       start: timing.start,
       duration: timing.duration,
       along: point.along,
+      pathOrder: point.pathOrder,
       drift: (0.5 + hash01(index * 7.71 + point.y) * 1) * Math.max(0, tuning.localDriftAmount / 100),
       phase: hash01(index * 9.43 + point.x) * Math.PI * 2,
       curve: (hash01(index * 4.41 + point.y) - 0.5) * tuning.curveAmplitude,
@@ -862,6 +874,7 @@ export function ParticleRacket({ phase, motionMode, tuning, replayKey = 0 }: Par
       context.translate(-centerX, -centerY);
 
       dotsRef.current.forEach((dot) => {
+        if (currentMotionMode !== "reduced" && assemblyProgress < dot.start) return;
         const local =
           currentMotionMode === "reduced"
             ? 1
@@ -889,7 +902,7 @@ export function ParticleRacket({ phase, motionMode, tuning, replayKey = 0 }: Par
           scanCycle >= 0 ? Math.exp(-Math.pow((dot.along - scanCycle) / 0.032, 2)) : 0;
         const frameSweep =
           frameSweepCycle >= 0 && dot.region === "frame"
-            ? Math.exp(-Math.pow((dot.along - frameSweepCycle) / 0.05, 2))
+            ? Math.exp(-Math.pow((dot.pathOrder - frameSweepCycle) / 0.05, 2))
             : 0;
 
         drawTrail(dot, x, y, previousX, previousY, local, baseAlpha);
