@@ -191,7 +191,7 @@ const DEFAULT_TUTORIAL_TUNING: TutorialTuning = {
   demoTravelDistance: 54,
   singleDemoDuration: 900,
   gapBetweenDemos: 420,
-  step1EndingHold: 560,
+  step1EndingHold: 220,
   afterimageStrength: 34,
   motionTrailStrength: 28,
   upArrowXPercent: 58,
@@ -210,10 +210,10 @@ const DEFAULT_TUTORIAL_TUNING: TutorialTuning = {
   targetGlowEnabled: true,
   targetGlowStrength: 68,
   step1FadeDuration: 360,
-  transitionWait: 180,
+  transitionWait: 80,
   autoScrollDuration: 720,
   targetViewportYPercent: 60,
-  postScrollHold: 260,
+  postScrollHold: 120,
   step2FadeInDuration: 300,
   step2TextTiming: 520,
   step2BubbleWidth: 286,
@@ -2018,10 +2018,13 @@ function getTutorialBubbleStyle(
   frontCardRect: { top: number; left: number; width: number; height: number },
 ) {
   const isStep2 = step === "step2";
-  const offsetX = isStep2 ? tuning.step2BubbleOffsetX : tuning.bubbleOffsetX;
-  const offsetY = isStep2 ? tuning.step2BubbleOffsetY : tuning.bubbleOffsetY;
   const pointerX = isStep2 ? tuning.step2PointerX : tuning.step1PointerX;
-  const shared = getSharedTutorialCalloutRect(frontCardRect, spotlightRect, offsetX, offsetY);
+  const shared = getSharedTutorialCalloutRect(
+    frontCardRect,
+    spotlightRect,
+    tuning.bubbleOffsetX,
+    tuning.bubbleOffsetY,
+  );
   return {
     width: `${shared.width}px`,
     top: `${shared.top}px`,
@@ -2040,8 +2043,8 @@ function getTutorialStartStyle(
   const shared = getSharedTutorialCalloutRect(
     frontCardRect,
     spotlightRect,
-    tuning.startButtonOffsetX,
-    tuning.startButtonOffsetY,
+    tuning.bubbleOffsetX,
+    tuning.bubbleOffsetY,
   );
   const height = Math.max(tuning.startButtonHeight, 52);
   return {
