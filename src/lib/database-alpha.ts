@@ -78,7 +78,7 @@ function configuredApiBase() {
     if (fromStorage && fromStorage.trim()) return fromStorage.trim();
   }
 
-  return "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/api/v7-shuttle";
+  return "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/api/v8-shuttle";
 }
 
 function normalizeSiteId(value: unknown) {
