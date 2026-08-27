@@ -37,8 +37,6 @@ export const Route = createFileRoute("/")({
 });
 
 const RACKET_FILE = "shuttle-racket-pearl.png";
-const ADMIN_URL =
-  "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/admin";
 const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
 const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
 const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
@@ -949,21 +947,6 @@ export function Index() {
           onStart={confirmFromTutorial}
         />
       ) : null}
-
-      {active && (
-        <a
-          className="sd-admin-shortcut"
-          href={ADMIN_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="開啟管理頁"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z" />
-            <path d="M19.14 12a7.6 7.6 0 0 0-.08-1.08l2.02-1.57-1.9-3.3-2.39.96a7.7 7.7 0 0 0-1.87-1.08L14.56 3.4h-3.8l-.36 2.53A7.7 7.7 0 0 0 8.53 7L6.14 6.05l-1.9 3.3 2.02 1.57a7.6 7.6 0 0 0 0 2.16l-2.02 1.57 1.9 3.3 2.39-.96a7.7 7.7 0 0 0 1.87 1.08l.36 2.53h3.8l.36-2.53a7.7 7.7 0 0 0 1.87-1.08l2.39.96 1.9-3.3-2.02-1.57c.05-.36.08-.72.08-1.08Z" />
-          </svg>
-        </a>
-      )}
 
       <section className="sd-hero" id="sd-hero">
         {(preview || rotating) && (
@@ -2277,34 +2260,6 @@ function HomepageStyles() {
         color: rgba(216,185,94,.76);
         font: 600 11px/1.2 "Chakra Petch", "Noto Sans TC", sans-serif;
         letter-spacing: .48em;
-      }
-
-      .sd-admin-shortcut {
-        position: fixed;
-        z-index: 40;
-        top: calc(env(safe-area-inset-top) + 12px);
-        right: 12px;
-        display: grid;
-        place-items: center;
-        width: 44px;
-        height: 44px;
-        border: 1px solid rgba(216,185,94,.26);
-        border-radius: 50%;
-        background: rgba(7,10,14,.42);
-        color: rgba(216,185,94,.72);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        text-decoration: none;
-      }
-
-      .sd-admin-shortcut svg {
-        width: 20px;
-        height: 20px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.35;
-        stroke-linecap: round;
-        stroke-linejoin: round;
       }
 
       .sd-timing-lab {
