@@ -64,6 +64,21 @@ const DEFAULT_DATABASE_ALPHA_SITE_ID = "kangxuan";
 const DATABASE_ALPHA_SITE_STORAGE_KEY = "shuttle-database-alpha-site-id";
 
 const API_BASE_STORAGE_KEY = "shuttle-database-alpha-api-base";
+const V7_API_BASE =
+  "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/api/v7-shuttle";
+const V8_API_BASE =
+  "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/api/v8-shuttle";
+
+function configuredFrontendVersion() {
+  if (typeof window === "undefined") return "v7";
+
+  const segments = window.location.pathname
+    .split("/")
+    .map((segment) => segment.trim().toLowerCase())
+    .filter(Boolean);
+
+  return segments.includes("v8") ? "v8" : "v7";
+}
 
 function configuredApiBase() {
   const fromEnv = import.meta.env["VITE_DATABASE_ALPHA_API_BASE"];
@@ -78,7 +93,7 @@ function configuredApiBase() {
     if (fromStorage && fromStorage.trim()) return fromStorage.trim();
   }
 
-  return "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/api/v8-shuttle";
+  return configuredFrontendVersion() === "v8" ? V8_API_BASE : V7_API_BASE;
 }
 
 function normalizeSiteId(value: unknown) {
