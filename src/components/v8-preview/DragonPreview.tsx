@@ -119,7 +119,7 @@ export function DragonPreview() {
 
   const assets = useMemo(
     () => ({
-      body: `${assetBase}/dragon-body-v1.webp`,
+      body: `${assetBase}/dragon-body-v2.png`,
       claw: `${assetBase}/dragon-throw-claw-v1.webp`,
       bag: `${assetBase}/dragon-badminton-bag-v1.webp`,
     }),
