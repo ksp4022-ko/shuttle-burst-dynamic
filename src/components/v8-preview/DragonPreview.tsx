@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, MouseEvent, PointerEvent, ReactNode, TouchEvent } from "react";
 
 type PreviewControls = {
   dragonX: number;
@@ -21,23 +21,24 @@ type PreviewControls = {
 };
 
 type ControlGroupId = "DRAGON" | "CLAW" | "BAG BASE" | "BAG STRAP" | "VIEW";
+type DockPosition = "top" | "bottom";
 
 const defaults: PreviewControls = {
   dragonX: 71,
-  dragonY: 8,
+  dragonY: 5,
   dragonScale: 1,
-  clawX: 4,
-  clawY: 3,
-  clawScale: 0.86,
-  clawRotation: -4,
+  clawX: -30,
+  clawY: -11,
+  clawScale: 0.81,
+  clawRotation: 35,
   bagBaseX: 0,
-  bagBaseY: 0,
+  bagBaseY: 2,
   bagBaseScale: 1,
-  bagBaseRotation: 0,
-  bagStrapX: 0,
-  bagStrapY: 0,
-  bagStrapScale: 1,
-  bagStrapRotation: 0,
+  bagBaseRotation: 5,
+  bagStrapX: -3,
+  bagStrapY: 15,
+  bagStrapScale: 1.15,
+  bagStrapRotation: -2,
   showSafeZone: true,
 };
 
@@ -45,6 +46,34 @@ const assetBase = `${import.meta.env.BASE_URL}v8-preview/dragon`;
 const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 };
 const bagStrapBaseline = { left: 57.6171875, top: 18.4895833, width: 20.80078125, rotation: 2 };
 const clawBaseline = { left: 58, top: 38, width: 50 };
+
+const formatPreviewSettings = (controls: PreviewControls) => `V8 DRAGON PREVIEW SETTINGS
+
+DRAGON
+X: ${Math.round(controls.dragonX)}
+Y: ${Math.round(controls.dragonY)}
+Scale: ${controls.dragonScale.toFixed(2)}
+
+CLAW
+X: ${Math.round(controls.clawX)}
+Y: ${Math.round(controls.clawY)}
+Scale: ${controls.clawScale.toFixed(2)}
+Rotation: ${Math.round(controls.clawRotation)}
+
+BAG BASE
+X: ${Math.round(controls.bagBaseX)}
+Y: ${Math.round(controls.bagBaseY)}
+Scale: ${controls.bagBaseScale.toFixed(2)}
+Rotation Delta: ${Math.round(controls.bagBaseRotation)}
+
+BAG STRAP
+X: ${Math.round(controls.bagStrapX)}
+Y: ${Math.round(controls.bagStrapY)}
+Scale: ${controls.bagStrapScale.toFixed(2)}
+Rotation Delta: ${Math.round(controls.bagStrapRotation)}
+
+VIEW
+Safe Zone: ${controls.showSafeZone ? "ON" : "OFF"}`;
 
 function RangeControl({
   label,
@@ -121,8 +150,14 @@ export function DragonPreview() {
   const [controls, setControls] = useState(defaults);
   const [panelMinimized, setPanelMinimized] = useState(false);
   const [openGroup, setOpenGroup] = useState<ControlGroupId | null>("DRAGON");
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
+  const [dockPosition, setDockPosition] = useState<DockPosition>("bottom");
+  const [dragTop, setDragTop] = useState<number | null>(null);
   const panelBodyRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
   const groupRefs = useRef<Partial<Record<ControlGroupId, HTMLElement>>>({});
+  const copyFeedbackTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const dragRef = useRef<{ pointerId: number | null; offsetY: number } | null>(null);
 
   const update = <Key extends keyof PreviewControls>(key: Key, value: PreviewControls[Key]) => {
     setControls((current) => ({ ...current, [key]: value }));
@@ -131,6 +166,142 @@ export function DragonPreview() {
   const toggleGroup = (group: ControlGroupId) => {
     setOpenGroup((current) => (current === group ? null : group));
   };
+
+  const writeClipboard = async (text: string) => {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch {
+        // Fall through to the textarea path for stricter mobile Safari contexts.
+      }
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    if (!copied) {
+      throw new Error("Clipboard copy failed");
+    }
+  };
+
+  const copySettings = async () => {
+    await writeClipboard(formatPreviewSettings(controls));
+    setCopyStatus("copied");
+    if (copyFeedbackTimer.current) {
+      window.clearTimeout(copyFeedbackTimer.current);
+    }
+    copyFeedbackTimer.current = window.setTimeout(() => setCopyStatus("idle"), 1700);
+  };
+
+  const clampPanelTop = (nextTop: number) => {
+    const panelHeight = panelRef.current?.getBoundingClientRect().height ?? 360;
+    const topLimit = 10;
+    const bottomLimit = Math.max(topLimit, window.innerHeight - panelHeight - 10);
+    return Math.max(topLimit, Math.min(bottomLimit, nextTop));
+  };
+
+  const beginPanelDrag = (clientY: number, pointerId: number | null = null) => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    dragRef.current = { pointerId, offsetY: clientY - rect.top };
+    setDragTop(rect.top);
+  };
+
+  const updatePanelDrag = (clientY: number) => {
+    if (!dragRef.current) return;
+    setDragTop(clampPanelTop(clientY - dragRef.current.offsetY));
+  };
+
+  const finishPanelDrag = () => {
+    const panel = panelRef.current;
+    const rect = panel?.getBoundingClientRect();
+    dragRef.current = null;
+    if (rect) {
+      setDockPosition(rect.top + rect.height / 2 < window.innerHeight / 2 ? "top" : "bottom");
+    }
+    setDragTop(null);
+  };
+
+  const startPanelDrag = (event: PointerEvent<HTMLElement>) => {
+    if (event.button !== 0) return;
+    beginPanelDrag(event.clientY, event.pointerId);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const movePanelDrag = (event: PointerEvent<HTMLElement>) => {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    updatePanelDrag(event.clientY);
+  };
+
+  const endPanelDrag = (event: PointerEvent<HTMLElement>) => {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    finishPanelDrag();
+  };
+
+  const startPanelMouseDrag = (event: MouseEvent<HTMLElement>) => {
+    if (dragRef.current) return;
+    if (event.button !== 0) return;
+    beginPanelDrag(event.clientY);
+  };
+
+  const startPanelTouchDrag = (event: TouchEvent<HTMLElement>) => {
+    if (dragRef.current) return;
+    if (event.touches.length !== 1) return;
+    beginPanelDrag(event.touches[0].clientY);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackTimer.current) {
+        window.clearTimeout(copyFeedbackTimer.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (event: globalThis.MouseEvent) => {
+      if (dragRef.current?.pointerId !== null) return;
+      updatePanelDrag(event.clientY);
+    };
+    const handleMouseUp = () => {
+      if (dragRef.current?.pointerId !== null) return;
+      finishPanelDrag();
+    };
+    const handleTouchMove = (event: globalThis.TouchEvent) => {
+      if (dragRef.current?.pointerId !== null || event.touches.length !== 1) return;
+      event.preventDefault();
+      updatePanelDrag(event.touches[0].clientY);
+    };
+    const handleTouchEnd = () => {
+      if (dragRef.current?.pointerId !== null) return;
+      finishPanelDrag();
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd);
+    window.addEventListener("touchcancel", handleTouchEnd);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener("touchcancel", handleTouchEnd);
+    };
+  }, []);
 
   useEffect(() => {
     if (!openGroup) return;
@@ -158,6 +329,27 @@ export function DragonPreview() {
     }),
     [],
   );
+
+  const panelPositionStyle: CSSProperties =
+    dragTop === null
+      ? {
+          ...panelStyle,
+          ...(dockPosition === "top"
+            ? { top: "calc(10px + env(safe-area-inset-top, 0px))", bottom: "auto" }
+            : { bottom: "calc(10px + env(safe-area-inset-bottom, 0px))" }),
+        }
+      : {
+          ...panelStyle,
+          top: dragTop,
+          bottom: "auto",
+        };
+
+  const pillPositionStyle: CSSProperties = {
+    ...panelPillStyle,
+    ...(dockPosition === "top"
+      ? { top: "calc(14px + env(safe-area-inset-top, 0px))", bottom: "auto" }
+      : { bottom: "calc(14px + env(safe-area-inset-bottom, 0px))" }),
+  };
 
   return (
     <main style={pageStyle}>
@@ -226,16 +418,54 @@ export function DragonPreview() {
       </section>
 
       {panelMinimized ? (
-        <button type="button" onClick={() => setPanelMinimized(false)} style={panelPillStyle} aria-label="Open tuning controls">
+        <button type="button" onClick={() => setPanelMinimized(false)} style={pillPositionStyle} aria-label="Open tuning controls">
           調整
         </button>
       ) : (
-        <section style={panelStyle} aria-label="Dragon preview tuning controls">
-          <div style={panelHeaderStyle}>
+        <section ref={panelRef} style={panelPositionStyle} aria-label="Dragon preview tuning controls">
+          <div
+            style={panelHeaderStyle}
+            onPointerDown={startPanelDrag}
+            onPointerMove={movePanelDrag}
+            onPointerUp={endPanelDrag}
+            onPointerCancel={endPanelDrag}
+            onMouseDown={startPanelMouseDrag}
+            onTouchStart={startPanelTouchDrag}
+          >
             <strong style={panelTitleStyle}>V8 調整</strong>
-            <button type="button" onClick={() => setPanelMinimized(true)} style={panelMinimizeStyle} aria-label="Minimize tuning controls">
-              收合
-            </button>
+            <div style={panelActionsStyle}>
+              <button
+                type="button"
+                onPointerDown={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                onTouchStart={(event) => event.stopPropagation()}
+                onClick={copySettings}
+                style={panelActionButtonStyle}
+              >
+                {copyStatus === "copied" ? "已複製" : "複製設定"}
+              </button>
+              <button
+                type="button"
+                onPointerDown={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                onTouchStart={(event) => event.stopPropagation()}
+                onClick={() => setDockPosition((current) => (current === "top" ? "bottom" : "top"))}
+                style={panelActionButtonStyle}
+              >
+                {dockPosition === "top" ? "移下" : "移上"}
+              </button>
+              <button
+                type="button"
+                onPointerDown={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                onTouchStart={(event) => event.stopPropagation()}
+                onClick={() => setPanelMinimized(true)}
+                style={panelMinimizeStyle}
+                aria-label="Minimize tuning controls"
+              >
+                收合
+              </button>
+            </div>
           </div>
           <div ref={panelBodyRef} style={panelBodyStyle}>
             <ControlGroup title="DRAGON" isOpen={openGroup === "DRAGON"} onToggle={() => toggleGroup("DRAGON")} register={(node) => { if (node) groupRefs.current["DRAGON"] = node; }}>
@@ -459,7 +689,6 @@ const panelStyle: CSSProperties = {
   position: "fixed",
   left: 12,
   right: 12,
-  bottom: "calc(10px + env(safe-area-inset-bottom, 0px))",
   zIndex: 30,
   maxWidth: 390,
   maxHeight: "62vh",
@@ -483,20 +712,44 @@ const panelHeaderStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: 8,
   padding: "9px 12px",
   background: "rgba(24, 17, 13, 0.98)",
   borderBottom: "1px solid rgba(247, 239, 224, 0.16)",
+  touchAction: "none",
+  cursor: "grab",
 };
 
 const panelTitleStyle: CSSProperties = {
   color: "#f7efe0",
   fontSize: 15,
   letterSpacing: 1,
+  whiteSpace: "nowrap",
+  flexShrink: 0,
+};
+
+const panelActionsStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 6,
+  minWidth: 0,
+};
+
+const panelActionButtonStyle: CSSProperties = {
+  minHeight: 34,
+  border: "1px solid rgba(247, 239, 224, 0.22)",
+  borderRadius: 999,
+  background: "rgba(247, 239, 224, 0.12)",
+  color: "#f7efe0",
+  padding: "0 10px",
+  fontSize: 13,
+  fontWeight: 900,
+  whiteSpace: "nowrap",
 };
 
 const panelMinimizeStyle: CSSProperties = {
-  minWidth: 56,
+  minWidth: 52,
   minHeight: 34,
   border: "1px solid rgba(247, 239, 224, 0.22)",
   borderRadius: 999,
