@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 type PreviewControls = {
@@ -9,14 +9,18 @@ type PreviewControls = {
   clawY: number;
   clawScale: number;
   clawRotation: number;
-  bagX: number;
-  bagY: number;
-  bagScale: number;
-  bagRotation: number;
+  bagBaseX: number;
+  bagBaseY: number;
+  bagBaseScale: number;
+  bagBaseRotation: number;
+  bagStrapX: number;
+  bagStrapY: number;
+  bagStrapScale: number;
+  bagStrapRotation: number;
   showSafeZone: boolean;
 };
 
-type ControlGroupId = "DRAGON" | "CLAW" | "BAG" | "VIEW";
+type ControlGroupId = "DRAGON" | "CLAW" | "BAG BASE" | "BAG STRAP" | "VIEW";
 
 const defaults: PreviewControls = {
   dragonX: 71,
@@ -26,14 +30,21 @@ const defaults: PreviewControls = {
   clawY: 3,
   clawScale: 0.86,
   clawRotation: -4,
-  bagX: -12,
-  bagY: 19,
-  bagScale: 0.62,
-  bagRotation: -9,
+  bagBaseX: 0,
+  bagBaseY: 0,
+  bagBaseScale: 1,
+  bagBaseRotation: 0,
+  bagStrapX: 0,
+  bagStrapY: 0,
+  bagStrapScale: 1,
+  bagStrapRotation: 0,
   showSafeZone: true,
 };
 
 const assetBase = `${import.meta.env.BASE_URL}v8-preview/dragon`;
+const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 };
+const bagStrapBaseline = { left: 57.6171875, top: 18.4895833, width: 20.80078125, rotation: 2 };
+const clawBaseline = { left: 58, top: 38, width: 50 };
 
 function RangeControl({
   label,
@@ -84,15 +95,17 @@ function ControlGroup({
   title,
   isOpen,
   onToggle,
+  register,
   children,
 }: {
   title: ControlGroupId;
   isOpen: boolean;
   onToggle: () => void;
+  register: (node: HTMLElement | null) => void;
   children: ReactNode;
 }) {
   return (
-    <section style={controlGroupStyle}>
+    <section ref={register} style={controlGroupStyle}>
       <button type="button" onClick={onToggle} aria-expanded={isOpen} style={controlHeadingButtonStyle}>
         <span>{title}</span>
         <span aria-hidden="true" style={chevronStyle}>
@@ -108,6 +121,8 @@ export function DragonPreview() {
   const [controls, setControls] = useState(defaults);
   const [panelMinimized, setPanelMinimized] = useState(false);
   const [openGroup, setOpenGroup] = useState<ControlGroupId | null>("DRAGON");
+  const panelBodyRef = useRef<HTMLDivElement | null>(null);
+  const groupRefs = useRef<Partial<Record<ControlGroupId, HTMLElement>>>({});
 
   const update = <Key extends keyof PreviewControls>(key: Key, value: PreviewControls[Key]) => {
     setControls((current) => ({ ...current, [key]: value }));
@@ -117,11 +132,29 @@ export function DragonPreview() {
     setOpenGroup((current) => (current === group ? null : group));
   };
 
+  useEffect(() => {
+    if (!openGroup) return;
+    const body = panelBodyRef.current;
+    const group = groupRefs.current[openGroup];
+    if (!body || !group) return;
+    requestAnimationFrame(() => {
+      const bodyRect = body.getBoundingClientRect();
+      const groupRect = group.getBoundingClientRect();
+      if (groupRect.top < bodyRect.top || groupRect.bottom > bodyRect.bottom) {
+        body.scrollTo({
+          top: body.scrollTop + groupRect.top - bodyRect.top - 8,
+          behavior: "smooth",
+        });
+      }
+    });
+  }, [openGroup]);
+
   const assets = useMemo(
     () => ({
       body: `${assetBase}/dragon-body-v2.png`,
       claw: `${assetBase}/dragon-throw-claw-v1.webp`,
-      bag: `${assetBase}/dragon-badminton-bag-v1.webp`,
+      bagBase: `${assetBase}/dragon-bag-base-v2-source.png`,
+      bagStrap: `${assetBase}/dragon-bag-strap-overlay-v2-source.png`,
     }),
     [],
   );
@@ -136,42 +169,53 @@ export function DragonPreview() {
             <path d="M-20 594 C72 536 142 620 230 566 C302 522 348 544 422 510 L422 844 L-20 844 Z" fill="#2f5f73" opacity="0.22" />
             <path d="M-20 640 C72 592 144 664 236 616 C304 580 354 598 422 568" fill="none" stroke="#214a5d" strokeWidth="10" opacity="0.2" />
           </svg>
-          <img
-            src={assets.body}
-            alt="Dragon body preview asset"
+          <div
+            aria-label="Dragon rig"
             style={{
-              ...imageBaseStyle,
+              ...dragonRigStyle,
               width: `${74 * controls.dragonScale}%`,
               right: `${100 - controls.dragonX}%`,
               top: `${controls.dragonY}%`,
-              transform: "translate(44%, -8%)",
-              zIndex: 4,
             }}
-          />
-          <img
-            src={assets.bag}
-            alt="Badminton bag preview asset"
-            style={{
-              ...imageBaseStyle,
-              width: `${36 * controls.bagScale}%`,
-              right: `${100 - controls.dragonX + controls.bagX}%`,
-              top: `${controls.dragonY + controls.bagY}%`,
-              transform: `translate(28%, 0) rotate(${controls.bagRotation}deg)`,
-              zIndex: 5,
-            }}
-          />
-          <img
-            src={assets.claw}
-            alt="Throw claw preview asset"
-            style={{
-              ...imageBaseStyle,
-              width: `${43 * controls.clawScale}%`,
-              right: `${100 - controls.dragonX - controls.clawX}%`,
-              top: `${controls.dragonY + 30 + controls.clawY}%`,
-              transform: `translate(30%, 0) rotate(${controls.clawRotation}deg)`,
-              zIndex: 6,
-            }}
-          />
+          >
+            <img src={assets.body} alt="Dragon body preview asset" style={{ ...rigImageStyle, inset: 0, width: "100%", zIndex: 1 }} />
+            <img
+              src={assets.bagBase}
+              alt="Bag Base A preview asset"
+              style={{
+                ...rigImageStyle,
+                left: `${bagBaseBaseline.left + controls.bagBaseX}%`,
+                top: `${bagBaseBaseline.top + controls.bagBaseY}%`,
+                width: `${bagBaseBaseline.width * controls.bagBaseScale}%`,
+                transform: `rotate(${bagBaseBaseline.rotation + controls.bagBaseRotation}deg)`,
+                zIndex: 2,
+              }}
+            />
+            <img
+              src={assets.bagStrap}
+              alt="Bag Strap E preview asset"
+              style={{
+                ...rigImageStyle,
+                left: `${bagStrapBaseline.left + controls.bagStrapX}%`,
+                top: `${bagStrapBaseline.top + controls.bagStrapY}%`,
+                width: `${bagStrapBaseline.width * controls.bagStrapScale}%`,
+                transform: `rotate(${bagStrapBaseline.rotation + controls.bagStrapRotation}deg)`,
+                zIndex: 3,
+              }}
+            />
+            <img
+              src={assets.claw}
+              alt="Throw claw preview asset"
+              style={{
+                ...rigImageStyle,
+                left: `${clawBaseline.left + controls.clawX}%`,
+                top: `${clawBaseline.top + controls.clawY}%`,
+                width: `${clawBaseline.width * controls.clawScale}%`,
+                transform: `rotate(${controls.clawRotation}deg)`,
+                zIndex: 4,
+              }}
+            />
+          </div>
           <svg viewBox="0 0 390 844" style={frontWaveStyle} aria-hidden="true">
             <path d="M-18 706 C74 658 138 720 220 690 C298 662 340 680 422 638 L422 844 L-18 844 Z" fill="#e8dbbb" opacity="0.94" />
             <path d="M-18 718 C76 672 150 734 234 700 C302 672 358 686 422 654" fill="none" stroke="#ba9c60" strokeWidth="7" opacity="0.32" />
@@ -193,25 +237,31 @@ export function DragonPreview() {
               收合
             </button>
           </div>
-          <div style={panelBodyStyle}>
-            <ControlGroup title="DRAGON" isOpen={openGroup === "DRAGON"} onToggle={() => toggleGroup("DRAGON")}>
+          <div ref={panelBodyRef} style={panelBodyStyle}>
+            <ControlGroup title="DRAGON" isOpen={openGroup === "DRAGON"} onToggle={() => toggleGroup("DRAGON")} register={(node) => { if (node) groupRefs.current["DRAGON"] = node; }}>
               <RangeControl label="Dragon X" value={controls.dragonX} min={35} max={92} onChange={(value) => update("dragonX", value)} />
               <RangeControl label="Dragon Y" value={controls.dragonY} min={-12} max={38} onChange={(value) => update("dragonY", value)} />
               <RangeControl label="Dragon Scale" value={controls.dragonScale} min={0.55} max={1.65} step={0.01} onChange={(value) => update("dragonScale", value)} />
             </ControlGroup>
-            <ControlGroup title="CLAW" isOpen={openGroup === "CLAW"} onToggle={() => toggleGroup("CLAW")}>
+            <ControlGroup title="CLAW" isOpen={openGroup === "CLAW"} onToggle={() => toggleGroup("CLAW")} register={(node) => { if (node) groupRefs.current["CLAW"] = node; }}>
               <RangeControl label="Claw X" value={controls.clawX} min={-30} max={30} onChange={(value) => update("clawX", value)} />
               <RangeControl label="Claw Y" value={controls.clawY} min={-30} max={40} onChange={(value) => update("clawY", value)} />
               <RangeControl label="Claw Scale" value={controls.clawScale} min={0.35} max={1.35} step={0.01} onChange={(value) => update("clawScale", value)} />
               <RangeControl label="Claw Rotation" value={controls.clawRotation} min={-35} max={35} onChange={(value) => update("clawRotation", value)} />
             </ControlGroup>
-            <ControlGroup title="BAG" isOpen={openGroup === "BAG"} onToggle={() => toggleGroup("BAG")}>
-              <RangeControl label="Bag X" value={controls.bagX} min={-40} max={30} onChange={(value) => update("bagX", value)} />
-              <RangeControl label="Bag Y" value={controls.bagY} min={-10} max={50} onChange={(value) => update("bagY", value)} />
-              <RangeControl label="Bag Scale" value={controls.bagScale} min={0.25} max={1.2} step={0.01} onChange={(value) => update("bagScale", value)} />
-              <RangeControl label="Bag Rotation" value={controls.bagRotation} min={-35} max={35} onChange={(value) => update("bagRotation", value)} />
+            <ControlGroup title="BAG BASE" isOpen={openGroup === "BAG BASE"} onToggle={() => toggleGroup("BAG BASE")} register={(node) => { if (node) groupRefs.current["BAG BASE"] = node; }}>
+              <RangeControl label="Bag Base X" value={controls.bagBaseX} min={-30} max={30} onChange={(value) => update("bagBaseX", value)} />
+              <RangeControl label="Bag Base Y" value={controls.bagBaseY} min={-30} max={30} onChange={(value) => update("bagBaseY", value)} />
+              <RangeControl label="Bag Base Scale" value={controls.bagBaseScale} min={0.6} max={1.5} step={0.01} onChange={(value) => update("bagBaseScale", value)} />
+              <RangeControl label="Bag Base Rotation" value={controls.bagBaseRotation} min={-25} max={25} onChange={(value) => update("bagBaseRotation", value)} />
             </ControlGroup>
-            <ControlGroup title="VIEW" isOpen={openGroup === "VIEW"} onToggle={() => toggleGroup("VIEW")}>
+            <ControlGroup title="BAG STRAP" isOpen={openGroup === "BAG STRAP"} onToggle={() => toggleGroup("BAG STRAP")} register={(node) => { if (node) groupRefs.current["BAG STRAP"] = node; }}>
+              <RangeControl label="Bag Strap X" value={controls.bagStrapX} min={-30} max={30} onChange={(value) => update("bagStrapX", value)} />
+              <RangeControl label="Bag Strap Y" value={controls.bagStrapY} min={-40} max={40} onChange={(value) => update("bagStrapY", value)} />
+              <RangeControl label="Bag Strap Scale" value={controls.bagStrapScale} min={0.6} max={1.5} step={0.01} onChange={(value) => update("bagStrapScale", value)} />
+              <RangeControl label="Bag Strap Rotation" value={controls.bagStrapRotation} min={-25} max={25} onChange={(value) => update("bagStrapRotation", value)} />
+            </ControlGroup>
+            <ControlGroup title="VIEW" isOpen={openGroup === "VIEW"} onToggle={() => toggleGroup("VIEW")} register={(node) => { if (node) groupRefs.current["VIEW"] = node; }}>
               <label style={toggleStyle}>
                 <input type="checkbox" checked={controls.showSafeZone} onChange={(event) => update("showSafeZone", event.currentTarget.checked)} />
                 <span>Show Safe Zone</span>
@@ -315,12 +365,20 @@ const frontWaveStyle: CSSProperties = {
   height: "100%",
 };
 
-const imageBaseStyle: CSSProperties = {
+const dragonRigStyle: CSSProperties = {
+  position: "absolute",
+  aspectRatio: "1024 / 1536",
+  transform: "translate(44%, -8%)",
+  transformOrigin: "50% 50%",
+  zIndex: 4,
+};
+
+const rigImageStyle: CSSProperties = {
   position: "absolute",
   height: "auto",
   userSelect: "none",
   pointerEvents: "none",
-  transformOrigin: "50% 50%",
+  transformOrigin: "center center",
 };
 
 const safeZoneStyle: CSSProperties = {
@@ -404,7 +462,8 @@ const panelStyle: CSSProperties = {
   bottom: "calc(10px + env(safe-area-inset-bottom, 0px))",
   zIndex: 30,
   maxWidth: 390,
-  maxHeight: "46svh",
+  maxHeight: "62vh",
+  maxBlockSize: "min(62svh, 560px)",
   margin: "0 auto",
   display: "grid",
   gridTemplateRows: "auto minmax(0, 1fr)",
@@ -474,7 +533,7 @@ const panelBodyStyle: CSSProperties = {
 };
 
 const controlGroupStyle: CSSProperties = {
-  overflow: "hidden",
+  overflow: "visible",
   borderRadius: 12,
   background: "#f7efe0",
   border: "1px solid rgba(255,255,255,0.24)",
