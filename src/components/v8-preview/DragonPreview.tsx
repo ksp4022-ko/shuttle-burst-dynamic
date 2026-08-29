@@ -16,6 +16,8 @@ type PreviewControls = {
   showSafeZone: boolean;
 };
 
+type ControlGroupId = "DRAGON" | "CLAW" | "BAG" | "VIEW";
+
 const defaults: PreviewControls = {
   dragonX: 71,
   dragonY: 8,
@@ -78,20 +80,41 @@ function RangeControl({
   );
 }
 
-function ControlGroup({ title, children }: { title: string; children: ReactNode }) {
+function ControlGroup({
+  title,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  title: ControlGroupId;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
   return (
     <section style={controlGroupStyle}>
-      <h2 style={controlHeadingStyle}>{title}</h2>
-      {children}
+      <button type="button" onClick={onToggle} aria-expanded={isOpen} style={controlHeadingButtonStyle}>
+        <span>{title}</span>
+        <span aria-hidden="true" style={chevronStyle}>
+          {isOpen ? "−" : "+"}
+        </span>
+      </button>
+      {isOpen ? <div style={controlGroupBodyStyle}>{children}</div> : null}
     </section>
   );
 }
 
 export function DragonPreview() {
   const [controls, setControls] = useState(defaults);
+  const [panelMinimized, setPanelMinimized] = useState(false);
+  const [openGroup, setOpenGroup] = useState<ControlGroupId | null>("DRAGON");
 
   const update = <Key extends keyof PreviewControls>(key: Key, value: PreviewControls[Key]) => {
     setControls((current) => ({ ...current, [key]: value }));
+  };
+
+  const toggleGroup = (group: ControlGroupId) => {
+    setOpenGroup((current) => (current === group ? null : group));
   };
 
   const assets = useMemo(
@@ -158,34 +181,48 @@ export function DragonPreview() {
         </div>
       </section>
 
-      <section style={panelStyle} aria-label="Dragon preview tuning controls">
-        <ControlGroup title="DRAGON">
-          <RangeControl label="Dragon X" value={controls.dragonX} min={35} max={92} onChange={(value) => update("dragonX", value)} />
-          <RangeControl label="Dragon Y" value={controls.dragonY} min={-12} max={38} onChange={(value) => update("dragonY", value)} />
-          <RangeControl label="Dragon Scale" value={controls.dragonScale} min={0.55} max={1.65} step={0.01} onChange={(value) => update("dragonScale", value)} />
-        </ControlGroup>
-        <ControlGroup title="CLAW">
-          <RangeControl label="Claw X" value={controls.clawX} min={-30} max={30} onChange={(value) => update("clawX", value)} />
-          <RangeControl label="Claw Y" value={controls.clawY} min={-30} max={40} onChange={(value) => update("clawY", value)} />
-          <RangeControl label="Claw Scale" value={controls.clawScale} min={0.35} max={1.35} step={0.01} onChange={(value) => update("clawScale", value)} />
-          <RangeControl label="Claw Rotation" value={controls.clawRotation} min={-35} max={35} onChange={(value) => update("clawRotation", value)} />
-        </ControlGroup>
-        <ControlGroup title="BAG">
-          <RangeControl label="Bag X" value={controls.bagX} min={-40} max={30} onChange={(value) => update("bagX", value)} />
-          <RangeControl label="Bag Y" value={controls.bagY} min={-10} max={50} onChange={(value) => update("bagY", value)} />
-          <RangeControl label="Bag Scale" value={controls.bagScale} min={0.25} max={1.2} step={0.01} onChange={(value) => update("bagScale", value)} />
-          <RangeControl label="Bag Rotation" value={controls.bagRotation} min={-35} max={35} onChange={(value) => update("bagRotation", value)} />
-        </ControlGroup>
-        <ControlGroup title="VIEW">
-          <label style={toggleStyle}>
-            <input type="checkbox" checked={controls.showSafeZone} onChange={(event) => update("showSafeZone", event.currentTarget.checked)} />
-            <span>Show Safe Zone</span>
-          </label>
-          <button type="button" onClick={() => setControls(defaults)} style={resetStyle}>
-            Reset Defaults
-          </button>
-        </ControlGroup>
-      </section>
+      {panelMinimized ? (
+        <button type="button" onClick={() => setPanelMinimized(false)} style={panelPillStyle} aria-label="Open tuning controls">
+          調整
+        </button>
+      ) : (
+        <section style={panelStyle} aria-label="Dragon preview tuning controls">
+          <div style={panelHeaderStyle}>
+            <strong style={panelTitleStyle}>V8 調整</strong>
+            <button type="button" onClick={() => setPanelMinimized(true)} style={panelMinimizeStyle} aria-label="Minimize tuning controls">
+              收合
+            </button>
+          </div>
+          <div style={panelBodyStyle}>
+            <ControlGroup title="DRAGON" isOpen={openGroup === "DRAGON"} onToggle={() => toggleGroup("DRAGON")}>
+              <RangeControl label="Dragon X" value={controls.dragonX} min={35} max={92} onChange={(value) => update("dragonX", value)} />
+              <RangeControl label="Dragon Y" value={controls.dragonY} min={-12} max={38} onChange={(value) => update("dragonY", value)} />
+              <RangeControl label="Dragon Scale" value={controls.dragonScale} min={0.55} max={1.65} step={0.01} onChange={(value) => update("dragonScale", value)} />
+            </ControlGroup>
+            <ControlGroup title="CLAW" isOpen={openGroup === "CLAW"} onToggle={() => toggleGroup("CLAW")}>
+              <RangeControl label="Claw X" value={controls.clawX} min={-30} max={30} onChange={(value) => update("clawX", value)} />
+              <RangeControl label="Claw Y" value={controls.clawY} min={-30} max={40} onChange={(value) => update("clawY", value)} />
+              <RangeControl label="Claw Scale" value={controls.clawScale} min={0.35} max={1.35} step={0.01} onChange={(value) => update("clawScale", value)} />
+              <RangeControl label="Claw Rotation" value={controls.clawRotation} min={-35} max={35} onChange={(value) => update("clawRotation", value)} />
+            </ControlGroup>
+            <ControlGroup title="BAG" isOpen={openGroup === "BAG"} onToggle={() => toggleGroup("BAG")}>
+              <RangeControl label="Bag X" value={controls.bagX} min={-40} max={30} onChange={(value) => update("bagX", value)} />
+              <RangeControl label="Bag Y" value={controls.bagY} min={-10} max={50} onChange={(value) => update("bagY", value)} />
+              <RangeControl label="Bag Scale" value={controls.bagScale} min={0.25} max={1.2} step={0.01} onChange={(value) => update("bagScale", value)} />
+              <RangeControl label="Bag Rotation" value={controls.bagRotation} min={-35} max={35} onChange={(value) => update("bagRotation", value)} />
+            </ControlGroup>
+            <ControlGroup title="VIEW" isOpen={openGroup === "VIEW"} onToggle={() => toggleGroup("VIEW")}>
+              <label style={toggleStyle}>
+                <input type="checkbox" checked={controls.showSafeZone} onChange={(event) => update("showSafeZone", event.currentTarget.checked)} />
+                <span>Show Safe Zone</span>
+              </label>
+              <button type="button" onClick={() => setControls(defaults)} style={resetStyle}>
+                Reset Defaults
+              </button>
+            </ControlGroup>
+          </div>
+        </section>
+      )}
     </main>
   );
 }
@@ -215,13 +252,13 @@ function HeroCopy() {
 }
 
 const pageStyle: CSSProperties = {
-  minHeight: "100vh",
+  minHeight: "100svh",
   width: "100%",
   overflowX: "hidden",
   background: "#15110e",
   color: "#24170d",
   fontFamily: "'Noto Sans TC', 'Chakra Petch', system-ui, sans-serif",
-  padding: "14px 12px 28px",
+  padding: "12px 12px calc(96px + env(safe-area-inset-bottom, 0px))",
 };
 
 const stageShellStyle: CSSProperties = {
@@ -361,38 +398,136 @@ const ctaStyle: CSSProperties = {
 };
 
 const panelStyle: CSSProperties = {
-  width: "min(100%, 390px)",
-  margin: "14px auto 0",
+  position: "fixed",
+  left: 12,
+  right: 12,
+  bottom: "calc(10px + env(safe-area-inset-bottom, 0px))",
+  zIndex: 30,
+  maxWidth: 390,
+  maxHeight: "46svh",
+  margin: "0 auto",
   display: "grid",
-  gap: 10,
+  gridTemplateRows: "auto minmax(0, 1fr)",
+  overflow: "hidden",
+  borderRadius: 18,
+  background: "rgba(24, 17, 13, 0.94)",
+  boxShadow: "0 18px 54px rgba(0,0,0,0.44)",
+  border: "1px solid rgba(247, 239, 224, 0.22)",
+  backdropFilter: "blur(12px)",
+};
+
+const panelHeaderStyle: CSSProperties = {
+  position: "sticky",
+  top: 0,
+  zIndex: 2,
+  minHeight: 48,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  padding: "9px 12px",
+  background: "rgba(24, 17, 13, 0.98)",
+  borderBottom: "1px solid rgba(247, 239, 224, 0.16)",
+};
+
+const panelTitleStyle: CSSProperties = {
+  color: "#f7efe0",
+  fontSize: 15,
+  letterSpacing: 1,
+};
+
+const panelMinimizeStyle: CSSProperties = {
+  minWidth: 56,
+  minHeight: 34,
+  border: "1px solid rgba(247, 239, 224, 0.22)",
+  borderRadius: 999,
+  background: "rgba(247, 239, 224, 0.12)",
+  color: "#f7efe0",
+  fontSize: 14,
+  fontWeight: 900,
+};
+
+const panelPillStyle: CSSProperties = {
+  position: "fixed",
+  right: 12,
+  bottom: "calc(14px + env(safe-area-inset-bottom, 0px))",
+  zIndex: 30,
+  minWidth: 74,
+  minHeight: 44,
+  border: "1px solid rgba(247, 239, 224, 0.24)",
+  borderRadius: 999,
+  background: "rgba(24, 17, 13, 0.94)",
+  boxShadow: "0 12px 34px rgba(0,0,0,0.38)",
+  color: "#f7efe0",
+  fontSize: 15,
+  fontWeight: 900,
+};
+
+const panelBodyStyle: CSSProperties = {
+  minHeight: 0,
+  overflowY: "auto",
+  WebkitOverflowScrolling: "touch",
+  overscrollBehavior: "contain",
+  display: "grid",
+  gap: 8,
+  padding: "10px 10px 12px",
 };
 
 const controlGroupStyle: CSSProperties = {
-  borderRadius: 14,
-  padding: "12px 12px 10px",
+  overflow: "hidden",
+  borderRadius: 12,
   background: "#f7efe0",
-  border: "1px solid rgba(255,255,255,0.32)",
+  border: "1px solid rgba(255,255,255,0.24)",
 };
 
-const controlHeadingStyle: CSSProperties = {
-  margin: "0 0 8px",
+const controlHeadingButtonStyle: CSSProperties = {
+  width: "100%",
+  minHeight: 44,
+  border: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  padding: "0 12px",
+  background: "rgba(234, 218, 189, 0.72)",
   color: "#3a2414",
   fontSize: 13,
   fontWeight: 900,
   letterSpacing: 1.2,
+  textAlign: "left",
+};
+
+const chevronStyle: CSSProperties = {
+  width: 26,
+  height: 26,
+  borderRadius: 999,
+  display: "grid",
+  placeItems: "center",
+  background: "rgba(58,36,20,0.1)",
+  fontSize: 18,
+  lineHeight: 1,
+};
+
+const controlGroupBodyStyle: CSSProperties = {
+  display: "grid",
+  gap: 4,
+  padding: "8px 9px 10px",
 };
 
 const controlStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "88px 30px 1fr 42px 30px",
+  gridTemplateColumns: "76px 32px minmax(72px, 1fr) 38px 32px",
   alignItems: "center",
-  gap: 7,
-  minHeight: 38,
+  gap: 6,
+  minHeight: 42,
   color: "#3a2414",
 };
 
 const controlLabelStyle: CSSProperties = {
-  fontSize: 13,
+  minWidth: 0,
+  overflowWrap: "anywhere",
+  fontSize: 12,
+  lineHeight: 1.15,
   fontWeight: 700,
 };
 
@@ -404,8 +539,8 @@ const controlValueStyle: CSSProperties = {
 };
 
 const stepperStyle: CSSProperties = {
-  width: 30,
-  height: 30,
+  width: 32,
+  height: 32,
   border: "1px solid rgba(58,36,20,0.22)",
   borderRadius: 8,
   background: "#eadabd",
@@ -419,7 +554,7 @@ const toggleStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 9,
-  minHeight: 36,
+  minHeight: 44,
   fontSize: 14,
   fontWeight: 800,
   color: "#3a2414",
