@@ -1,79 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent, PointerEvent, ReactNode, TouchEvent } from "react";
+import {
+  bagBaseBaseline,
+  bagStrapBaseline,
+  buildPreviewAssets,
+  clawBaseline,
+  controlRanges,
+  formatPreviewSettings,
+  previewDefaults,
+} from "./dragonPreviewConfig";
+import type { ControlGroupId, PreviewControls } from "./dragonPreviewConfig";
 
-type PreviewControls = {
-  dragonX: number;
-  dragonY: number;
-  dragonScale: number;
-  clawX: number;
-  clawY: number;
-  clawScale: number;
-  clawRotation: number;
-  bagBaseX: number;
-  bagBaseY: number;
-  bagBaseScale: number;
-  bagBaseRotation: number;
-  bagStrapX: number;
-  bagStrapY: number;
-  bagStrapScale: number;
-  bagStrapRotation: number;
-  showSafeZone: boolean;
-};
-
-type ControlGroupId = "DRAGON" | "CLAW" | "BAG BASE" | "BAG STRAP" | "VIEW";
 type DockPosition = "top" | "bottom";
-
-const defaults: PreviewControls = {
-  dragonX: 71,
-  dragonY: 5,
-  dragonScale: 1,
-  clawX: -30,
-  clawY: -11,
-  clawScale: 0.81,
-  clawRotation: 35,
-  bagBaseX: 0,
-  bagBaseY: 2,
-  bagBaseScale: 1,
-  bagBaseRotation: 5,
-  bagStrapX: -3,
-  bagStrapY: 15,
-  bagStrapScale: 1.15,
-  bagStrapRotation: -2,
-  showSafeZone: true,
-};
-
-const assetBase = `${import.meta.env.BASE_URL}v8-preview/dragon`;
-const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 };
-const bagStrapBaseline = { left: 57.6171875, top: 18.4895833, width: 20.80078125, rotation: 2 };
-const clawBaseline = { left: 58, top: 38, width: 50 };
-
-const formatPreviewSettings = (controls: PreviewControls) => `V8 DRAGON PREVIEW SETTINGS
-
-DRAGON
-X: ${Math.round(controls.dragonX)}
-Y: ${Math.round(controls.dragonY)}
-Scale: ${controls.dragonScale.toFixed(2)}
-
-CLAW
-X: ${Math.round(controls.clawX)}
-Y: ${Math.round(controls.clawY)}
-Scale: ${controls.clawScale.toFixed(2)}
-Rotation: ${Math.round(controls.clawRotation)}
-
-BAG BASE
-X: ${Math.round(controls.bagBaseX)}
-Y: ${Math.round(controls.bagBaseY)}
-Scale: ${controls.bagBaseScale.toFixed(2)}
-Rotation Delta: ${Math.round(controls.bagBaseRotation)}
-
-BAG STRAP
-X: ${Math.round(controls.bagStrapX)}
-Y: ${Math.round(controls.bagStrapY)}
-Scale: ${controls.bagStrapScale.toFixed(2)}
-Rotation Delta: ${Math.round(controls.bagStrapRotation)}
-
-VIEW
-Safe Zone: ${controls.showSafeZone ? "ON" : "OFF"}`;
 
 function RangeControl({
   label,
@@ -147,7 +85,7 @@ function ControlGroup({
 }
 
 export function DragonPreview() {
-  const [controls, setControls] = useState(defaults);
+  const [controls, setControls] = useState(previewDefaults);
   const [panelMinimized, setPanelMinimized] = useState(false);
   const [openGroup, setOpenGroup] = useState<ControlGroupId | null>("DRAGON");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
@@ -322,10 +260,7 @@ export function DragonPreview() {
 
   const assets = useMemo(
     () => ({
-      body: `${assetBase}/dragon-body-v2.png`,
-      claw: `${assetBase}/dragon-throw-claw-v1.webp`,
-      bagBase: `${assetBase}/dragon-bag-base-v2-source.png`,
-      bagStrap: `${assetBase}/dragon-bag-strap-overlay-v2-source.png`,
+      ...buildPreviewAssets(import.meta.env.BASE_URL),
     }),
     [],
   );
@@ -469,34 +404,34 @@ export function DragonPreview() {
           </div>
           <div ref={panelBodyRef} style={panelBodyStyle}>
             <ControlGroup title="DRAGON" isOpen={openGroup === "DRAGON"} onToggle={() => toggleGroup("DRAGON")} register={(node) => { if (node) groupRefs.current["DRAGON"] = node; }}>
-              <RangeControl label="Dragon X" value={controls.dragonX} min={35} max={92} onChange={(value) => update("dragonX", value)} />
-              <RangeControl label="Dragon Y" value={controls.dragonY} min={-12} max={38} onChange={(value) => update("dragonY", value)} />
-              <RangeControl label="Dragon Scale" value={controls.dragonScale} min={0.55} max={1.65} step={0.01} onChange={(value) => update("dragonScale", value)} />
+              <RangeControl label="Dragon X" value={controls.dragonX} {...controlRanges.dragonX} onChange={(value) => update("dragonX", value)} />
+              <RangeControl label="Dragon Y" value={controls.dragonY} {...controlRanges.dragonY} onChange={(value) => update("dragonY", value)} />
+              <RangeControl label="Dragon Scale" value={controls.dragonScale} {...controlRanges.dragonScale} onChange={(value) => update("dragonScale", value)} />
             </ControlGroup>
             <ControlGroup title="CLAW" isOpen={openGroup === "CLAW"} onToggle={() => toggleGroup("CLAW")} register={(node) => { if (node) groupRefs.current["CLAW"] = node; }}>
-              <RangeControl label="Claw X" value={controls.clawX} min={-30} max={30} onChange={(value) => update("clawX", value)} />
-              <RangeControl label="Claw Y" value={controls.clawY} min={-30} max={40} onChange={(value) => update("clawY", value)} />
-              <RangeControl label="Claw Scale" value={controls.clawScale} min={0.35} max={1.35} step={0.01} onChange={(value) => update("clawScale", value)} />
-              <RangeControl label="Claw Rotation" value={controls.clawRotation} min={-35} max={35} onChange={(value) => update("clawRotation", value)} />
+              <RangeControl label="Claw X" value={controls.clawX} {...controlRanges.clawX} onChange={(value) => update("clawX", value)} />
+              <RangeControl label="Claw Y" value={controls.clawY} {...controlRanges.clawY} onChange={(value) => update("clawY", value)} />
+              <RangeControl label="Claw Scale" value={controls.clawScale} {...controlRanges.clawScale} onChange={(value) => update("clawScale", value)} />
+              <RangeControl label="Claw Rotation" value={controls.clawRotation} {...controlRanges.clawRotation} onChange={(value) => update("clawRotation", value)} />
             </ControlGroup>
             <ControlGroup title="BAG BASE" isOpen={openGroup === "BAG BASE"} onToggle={() => toggleGroup("BAG BASE")} register={(node) => { if (node) groupRefs.current["BAG BASE"] = node; }}>
-              <RangeControl label="Bag Base X" value={controls.bagBaseX} min={-30} max={30} onChange={(value) => update("bagBaseX", value)} />
-              <RangeControl label="Bag Base Y" value={controls.bagBaseY} min={-30} max={30} onChange={(value) => update("bagBaseY", value)} />
-              <RangeControl label="Bag Base Scale" value={controls.bagBaseScale} min={0.6} max={1.5} step={0.01} onChange={(value) => update("bagBaseScale", value)} />
-              <RangeControl label="Bag Base Rotation" value={controls.bagBaseRotation} min={-25} max={25} onChange={(value) => update("bagBaseRotation", value)} />
+              <RangeControl label="Bag Base X" value={controls.bagBaseX} {...controlRanges.bagBaseX} onChange={(value) => update("bagBaseX", value)} />
+              <RangeControl label="Bag Base Y" value={controls.bagBaseY} {...controlRanges.bagBaseY} onChange={(value) => update("bagBaseY", value)} />
+              <RangeControl label="Bag Base Scale" value={controls.bagBaseScale} {...controlRanges.bagBaseScale} onChange={(value) => update("bagBaseScale", value)} />
+              <RangeControl label="Bag Base Rotation" value={controls.bagBaseRotation} {...controlRanges.bagBaseRotation} onChange={(value) => update("bagBaseRotation", value)} />
             </ControlGroup>
             <ControlGroup title="BAG STRAP" isOpen={openGroup === "BAG STRAP"} onToggle={() => toggleGroup("BAG STRAP")} register={(node) => { if (node) groupRefs.current["BAG STRAP"] = node; }}>
-              <RangeControl label="Bag Strap X" value={controls.bagStrapX} min={-30} max={30} onChange={(value) => update("bagStrapX", value)} />
-              <RangeControl label="Bag Strap Y" value={controls.bagStrapY} min={-40} max={40} onChange={(value) => update("bagStrapY", value)} />
-              <RangeControl label="Bag Strap Scale" value={controls.bagStrapScale} min={0.6} max={1.5} step={0.01} onChange={(value) => update("bagStrapScale", value)} />
-              <RangeControl label="Bag Strap Rotation" value={controls.bagStrapRotation} min={-25} max={25} onChange={(value) => update("bagStrapRotation", value)} />
+              <RangeControl label="Bag Strap X" value={controls.bagStrapX} {...controlRanges.bagStrapX} onChange={(value) => update("bagStrapX", value)} />
+              <RangeControl label="Bag Strap Y" value={controls.bagStrapY} {...controlRanges.bagStrapY} onChange={(value) => update("bagStrapY", value)} />
+              <RangeControl label="Bag Strap Scale" value={controls.bagStrapScale} {...controlRanges.bagStrapScale} onChange={(value) => update("bagStrapScale", value)} />
+              <RangeControl label="Bag Strap Rotation" value={controls.bagStrapRotation} {...controlRanges.bagStrapRotation} onChange={(value) => update("bagStrapRotation", value)} />
             </ControlGroup>
             <ControlGroup title="VIEW" isOpen={openGroup === "VIEW"} onToggle={() => toggleGroup("VIEW")} register={(node) => { if (node) groupRefs.current["VIEW"] = node; }}>
               <label style={toggleStyle}>
                 <input type="checkbox" checked={controls.showSafeZone} onChange={(event) => update("showSafeZone", event.currentTarget.checked)} />
                 <span>Show Safe Zone</span>
               </label>
-              <button type="button" onClick={() => setControls(defaults)} style={resetStyle}>
+              <button type="button" onClick={() => setControls(previewDefaults)} style={resetStyle}>
                 Reset Defaults
               </button>
             </ControlGroup>
