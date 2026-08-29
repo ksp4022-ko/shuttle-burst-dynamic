@@ -1,0 +1,26 @@
+{
+  "name": "v8-remotion-intro-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "preview": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts V8IntroMobile out/v8-intro-mobile.mp4",
+    "still": "remotion still src/index.ts V8IntroMobile out/final-hero.png --frame=125",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.518",
+    "@remotion/zod-types": "4.0.518",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.518",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.8.3"
+  }
+}
