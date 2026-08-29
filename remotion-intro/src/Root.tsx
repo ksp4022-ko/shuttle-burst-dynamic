@@ -2,7 +2,7 @@ import React from 'react';
 import {Composition} from 'remotion';
 import {ScenePreview} from './compositions/ScenePreview';
 import {V8IntroMobile} from './compositions/V8IntroMobile';
-import {defaultPreset} from './config/defaultPreset';
+import {defaultPreset, type PartialPreset, withPresetDefaults} from './config/defaultPreset';
 import {v8IntroSchema} from './config/schema';
 import {
   DURATION_IN_FRAMES,
@@ -13,7 +13,12 @@ import {
   PORTRAIT_916_WIDTH,
   TALL_PHONE_HEIGHT,
   TALL_PHONE_WIDTH,
+  getTotalFramesFromControls,
 } from './config/timing';
+
+const calculateV8IntroMetadata = ({props}: {props: PartialPreset}) => ({
+  durationInFrames: getTotalFramesFromControls(withPresetDefaults(props).timing),
+});
 
 export const Root: React.FC = () => (
   <>
@@ -26,6 +31,7 @@ export const Root: React.FC = () => (
       height={MOBILE_HEIGHT}
       schema={v8IntroSchema}
       defaultProps={defaultPreset}
+      calculateMetadata={calculateV8IntroMetadata}
     />
     <Composition
       id="V8IntroTallPhone"
@@ -36,6 +42,7 @@ export const Root: React.FC = () => (
       height={TALL_PHONE_HEIGHT}
       schema={v8IntroSchema}
       defaultProps={defaultPreset}
+      calculateMetadata={calculateV8IntroMetadata}
     />
     <Composition
       id="V8IntroPortrait916"
@@ -46,6 +53,7 @@ export const Root: React.FC = () => (
       height={PORTRAIT_916_HEIGHT}
       schema={v8IntroSchema}
       defaultProps={defaultPreset}
+      calculateMetadata={calculateV8IntroMetadata}
     />
     <Composition
       id="ScenePreview"

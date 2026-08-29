@@ -7,17 +7,65 @@ export const PORTRAIT_916_WIDTH = 405;
 export const PORTRAIT_916_HEIGHT = 720;
 export const DURATION_IN_FRAMES = 126;
 
-export const sceneTiming = {
-  Scene01_Standoff: {from: 0, to: 19},
-  Scene02_Anticipation: {from: 20, to: 34},
-  Scene03_Attack: {from: 35, to: 56},
-  Scene04_Impact: {from: 57, to: 64},
-  Scene05_Knockback: {from: 65, to: 84},
-  Scene06_Settle: {from: 85, to: 103},
-  Scene07_HeroReveal: {from: 104, to: 125},
-} as const;
+export const sceneKeys = [
+  'Scene01_Standoff',
+  'Scene02_Anticipation',
+  'Scene03_Attack',
+  'Scene04_Impact',
+  'Scene05_Knockback',
+  'Scene06_Settle',
+  'Scene07_HeroReveal',
+] as const;
 
-export type SceneKey = keyof typeof sceneTiming;
+export type SceneKey = (typeof sceneKeys)[number];
+
+export type TimingControls = {
+  standoffFrames: number;
+  anticipationFrames: number;
+  attackFrames: number;
+  impactFrames: number;
+  knockbackFrames: number;
+  settleFrames: number;
+  heroRevealFrames: number;
+};
+
+export type SceneTiming = Record<SceneKey, {from: number; to: number; duration: number}>;
+
+export const defaultTimingControls: TimingControls = {
+  standoffFrames: 20,
+  anticipationFrames: 15,
+  attackFrames: 22,
+  impactFrames: 8,
+  knockbackFrames: 20,
+  settleFrames: 19,
+  heroRevealFrames: 22,
+};
+
+const timingFieldByScene: Record<SceneKey, keyof TimingControls> = {
+  Scene01_Standoff: 'standoffFrames',
+  Scene02_Anticipation: 'anticipationFrames',
+  Scene03_Attack: 'attackFrames',
+  Scene04_Impact: 'impactFrames',
+  Scene05_Knockback: 'knockbackFrames',
+  Scene06_Settle: 'settleFrames',
+  Scene07_HeroReveal: 'heroRevealFrames',
+};
+
+export const createSceneTiming = (controls: TimingControls): SceneTiming => {
+  let cursor = 0;
+  return sceneKeys.reduce((timing, key) => {
+    const duration = Math.max(1, Math.round(controls[timingFieldByScene[key]]));
+    timing[key] = {from: cursor, to: cursor + duration - 1, duration};
+    cursor += duration;
+    return timing;
+  }, {} as SceneTiming);
+};
+
+export const sceneTiming = createSceneTiming(defaultTimingControls);
+
+export const getTotalFrames = (timing: SceneTiming) => timing.Scene07_HeroReveal.to + 1;
+
+export const getTotalFramesFromControls = (controls: TimingControls) => getTotalFrames(createSceneTiming(controls));
 
 export const sceneLabels: Record<SceneKey, string> = {
   Scene01_Standoff: 'Standoff',
@@ -29,15 +77,13 @@ export const sceneLabels: Record<SceneKey, string> = {
   Scene07_HeroReveal: 'Final Hero',
 };
 
-export const sceneKeys = Object.keys(sceneTiming) as SceneKey[];
-
-export const getSceneProgress = (frame: number, key: SceneKey) => {
-  const scene = sceneTiming[key];
+export const getSceneProgress = (frame: number, key: SceneKey, timing: SceneTiming = sceneTiming) => {
+  const scene = timing[key];
   const span = Math.max(1, scene.to - scene.from);
   return Math.min(1, Math.max(0, (frame - scene.from) / span));
 };
 
-export const getFrameForScenePreview = (key: SceneKey) => {
-  const scene = sceneTiming[key];
+export const getFrameForScenePreview = (key: SceneKey, timing: SceneTiming = sceneTiming) => {
+  const scene = timing[key];
   return Math.round((scene.from + scene.to) / 2);
 };

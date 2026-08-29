@@ -1,5 +1,6 @@
 import React from 'react';
 import type {V8IntroProps} from '../config/schema';
+import type {SceneTiming} from '../config/timing';
 import {SceneCanvas} from './SceneCanvas';
 
-export const Scene04_Impact: React.FC<{frame: number; width: number; height: number; preset: V8IntroProps}> = (props) => <SceneCanvas {...props} scene="Scene04_Impact" />;
+export const Scene04_Impact: React.FC<{frame: number; width: number; height: number; preset: V8IntroProps; timing: SceneTiming}> = (props) => <SceneCanvas {...props} scene="Scene04_Impact" />;

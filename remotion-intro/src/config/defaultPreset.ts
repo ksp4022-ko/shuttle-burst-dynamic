@@ -1,6 +1,6 @@
 import type {V8IntroProps} from './schema';
 
-type PartialPreset = {
+export type PartialPreset = {
   [Key in keyof V8IntroProps]?: Partial<V8IntroProps[Key]>;
 };
 
@@ -50,6 +50,13 @@ export const defaultPreset: V8IntroProps = {
     guardianOpacity: 1,
   },
   timing: {
+    standoffFrames: 20,
+    anticipationFrames: 15,
+    attackFrames: 22,
+    impactFrames: 8,
+    knockbackFrames: 20,
+    settleFrames: 19,
+    heroRevealFrames: 22,
     sceneHold: 0,
     heroRevealLagFrames: 5,
   },
@@ -58,6 +65,10 @@ export const defaultPreset: V8IntroProps = {
     title: 'SHUTTLE V8',
     date: '8.29｜康軒\n19:00–22:00',
     cta: '進入戰局',
+    heroX: 50,
+    heroY: 42,
+    heroWidth: 75,
+    ctaOffsetY: 0,
   },
   mobileLayout: {
     showSafeZone: false,

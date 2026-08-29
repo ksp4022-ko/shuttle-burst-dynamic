@@ -1,7 +1,7 @@
 import React from 'react';
 import {Easing, interpolate} from 'remotion';
 import type {V8IntroProps} from '../config/schema';
-import {sceneTiming, type SceneKey} from '../config/timing';
+import {getSceneProgress, type SceneKey, type SceneTiming} from '../config/timing';
 import {BattleSun} from '../visual/BattleSun';
 import {DragonBreathFlow} from '../visual/DragonBreathFlow';
 import {DragonPlaceholder} from '../visual/DragonPlaceholder';
@@ -19,6 +19,7 @@ type SceneCanvasProps = {
   width: number;
   height: number;
   preset: V8IntroProps;
+  timing: SceneTiming;
   scene: SceneKey;
 };
 
@@ -29,31 +30,31 @@ const dragonClaw = (width: number, height: number, preset: V8IntroProps) => ({
   y: (preset.characters.dragonY / 100) * height + 106,
 });
 
-const shuttleAngle = (fromX: number, fromY: number, toX: number, toY: number) => (Math.atan2(toY - fromY, toX - fromX) * 180) / Math.PI;
+const degrees = (radians: number) => (radians * 180) / Math.PI;
 
-const cameraShake = (frame: number, preset: V8IntroProps) => {
-  const hit = sceneTiming.Scene04_Impact.from;
+const cameraShake = (frame: number, preset: V8IntroProps, timing: SceneTiming) => {
+  const hit = timing.Scene04_Impact.from;
   const p = clamp01(1 - Math.abs(frame - hit) / Math.max(1, preset.impact.hitStopFrames + 5));
   const amount = p * preset.impact.cameraShake * 22;
   return {x: Math.sin(frame * 2.1) * amount, y: Math.cos(frame * 1.7) * amount};
 };
 
-const sceneState = (frame: number) => {
-  const anticipation = ease(progress(frame, sceneTiming.Scene02_Anticipation.from, sceneTiming.Scene02_Anticipation.to));
-  const attack = Easing.out(Easing.cubic)(progress(frame, sceneTiming.Scene03_Attack.from, sceneTiming.Scene03_Attack.to));
-  const impact = progress(frame, sceneTiming.Scene04_Impact.from, sceneTiming.Scene04_Impact.to);
-  const knockback = Easing.out(Easing.cubic)(progress(frame, sceneTiming.Scene05_Knockback.from, sceneTiming.Scene05_Knockback.to));
-  const settle = Easing.out(Easing.cubic)(progress(frame, sceneTiming.Scene06_Settle.from, sceneTiming.Scene06_Settle.to));
-  const hero = Easing.out(Easing.cubic)(progress(frame, sceneTiming.Scene07_HeroReveal.from, sceneTiming.Scene07_HeroReveal.to));
+const sceneState = (frame: number, timing: SceneTiming) => {
+  const anticipation = ease(getSceneProgress(frame, 'Scene02_Anticipation', timing));
+  const attack = Easing.out(Easing.cubic)(getSceneProgress(frame, 'Scene03_Attack', timing));
+  const impact = getSceneProgress(frame, 'Scene04_Impact', timing);
+  const knockback = Easing.out(Easing.cubic)(getSceneProgress(frame, 'Scene05_Knockback', timing));
+  const settle = Easing.out(Easing.cubic)(getSceneProgress(frame, 'Scene06_Settle', timing));
+  const hero = Easing.out(Easing.cubic)(getSceneProgress(frame, 'Scene07_HeroReveal', timing));
   return {anticipation, attack, impact, knockback, settle, hero};
 };
 
-const Shuttles: React.FC<{frame: number; width: number; height: number; preset: V8IntroProps}> = ({frame, width, height, preset}) => {
+const Shuttles: React.FC<{frame: number; width: number; height: number; preset: V8IntroProps; timing: SceneTiming}> = ({frame, width, height, preset, timing}) => {
   const origin = dragonClaw(width, height, preset);
   const hit = impactPoint(width, height);
   const count = preset.throw.shuttleCount;
-  const throwStart = sceneTiming.Scene03_Attack.from;
-  const throwEnd = sceneTiming.Scene04_Impact.from;
+  const throwStart = timing.Scene03_Attack.from;
+  const throwEnd = timing.Scene04_Impact.from;
 
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{overflow: 'visible'}}>
@@ -64,12 +65,18 @@ const Shuttles: React.FC<{frame: number; width: number; height: number; preset: 
         const end = throwEnd + i * 2;
         const raw = progress(frame, start, end);
         const p = Easing.out(Easing.quad)(clamp01(raw * preset.throw.throwSpeed));
-        const toX = hit.x + (i - center) * 22;
-        const toY = hit.y + (i - center) * 10;
-        const curve = Math.sin(p * Math.PI) * 72 * preset.throw.trailCurve;
+        const baseAngle = Math.atan2(hit.y - origin.y, hit.x - origin.x);
+        const distance = Math.hypot(hit.x - origin.x, hit.y - origin.y);
+        const pathAngle = baseAngle + (spread * Math.PI) / 180;
+        const toX = origin.x + Math.cos(pathAngle) * distance + (i - center) * 8;
+        const toY = origin.y + Math.sin(pathAngle) * distance + (i - center) * 4;
+        const curveHeight = 72 * preset.throw.trailCurve;
+        const curve = Math.sin(p * Math.PI) * curveHeight;
         const x = interpolate(p, [0, 1], [origin.x, toX]);
         const y = interpolate(p, [0, 1], [origin.y, toY]) - curve;
-        const angle = shuttleAngle(origin.x, origin.y, toX, toY) + spread;
+        const dx = toX - origin.x;
+        const dy = toY - origin.y - Math.PI * curveHeight * Math.cos(p * Math.PI);
+        const angle = degrees(Math.atan2(dy, dx));
         const opacity = raw <= 0 ? 0 : 1;
         const isPrimary = i === count - 1;
         return (
@@ -83,15 +90,17 @@ const Shuttles: React.FC<{frame: number; width: number; height: number; preset: 
   );
 };
 
-const HeroUi: React.FC<{height: number; preset: V8IntroProps; progressValue: number}> = ({height, preset, progressValue}) => {
-  const y = height * 0.42;
+const HeroUi: React.FC<{width: number; height: number; preset: V8IntroProps; progressValue: number}> = ({width, height, preset, progressValue}) => {
+  const heroWidth = (preset.hero.heroWidth / 100) * width;
+  const left = (preset.hero.heroX / 100) * width - heroWidth / 2;
+  const top = (preset.hero.heroY / 100) * height;
   return (
     <div
       style={{
         position: 'absolute',
-        left: 48,
-        right: 48,
-        top: y,
+        left,
+        width: heroWidth,
+        top,
         opacity: progressValue,
         transform: `translateY(${(1 - progressValue) * 18}px)`,
         textAlign: 'center',
@@ -104,7 +113,7 @@ const HeroUi: React.FC<{height: number; preset: V8IntroProps; progressValue: num
       <div style={{whiteSpace: 'pre-line', fontSize: 20, lineHeight: 1.35, marginTop: 16, fontWeight: 700}}>{preset.hero.date}</div>
       <div
         style={{
-          margin: '24px auto 0',
+          margin: `${24 + preset.hero.ctaOffsetY}px auto 0`,
           width: 148,
           height: 42,
           border: '2px solid #17130f',
@@ -122,9 +131,9 @@ const HeroUi: React.FC<{height: number; preset: V8IntroProps; progressValue: num
   );
 };
 
-export const SceneCanvas: React.FC<SceneCanvasProps> = ({frame, width, height, preset}) => {
-  const state = sceneState(frame);
-  const shake = cameraShake(frame, preset);
+export const SceneCanvas: React.FC<SceneCanvasProps> = ({frame, width, height, preset, timing}) => {
+  const state = sceneState(frame, timing);
+  const shake = cameraShake(frame, preset, timing);
   const hit = impactPoint(width, height);
   const characterAttack = Math.max(state.anticipation * 0.35, state.attack);
   const burst = state.impact * preset.impact.goldBurst;
@@ -159,11 +168,11 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({frame, width, height, p
           <Waves width={width} height={height} preset={preset} layer="front" offset={state.knockback * 20} />
         </div>
         <div style={{position: 'absolute', inset: 0}}>
-          <Shuttles frame={frame} width={width} height={height} preset={preset} />
+          <Shuttles frame={frame} width={width} height={height} preset={preset} timing={timing} />
           <ImpactRing x={hit.x} y={hit.y} preset={preset} progress={state.impact} />
         </div>
       </div>
-      <HeroUi height={height} preset={preset} progressValue={state.hero} />
+      <HeroUi width={width} height={height} preset={preset} progressValue={state.hero} />
     </div>
   );
 };
