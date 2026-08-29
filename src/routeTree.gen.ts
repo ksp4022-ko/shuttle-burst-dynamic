@@ -15,6 +15,7 @@ import { Route as RianRouteImport } from './routes/rian'
 import { Route as V8RouteImport } from './routes/v8'
 import { Route as V8KangxuanRouteImport } from './routes/v8.kangxuan'
 import { Route as V8RianRouteImport } from './routes/v8.rian'
+import { Route as V8PreviewRouteImport } from './routes/v8_.preview'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const V8RianRoute = V8RianRouteImport.update({
   path: '/rian',
   getParentRoute: () => V8Route,
 } as any)
+const V8PreviewRoute = V8PreviewRouteImport.update({
+  id: '/v8_/preview',
+  path: '/v8/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/v8': typeof V8RouteWithChildren
   '/v8/kangxuan': typeof V8KangxuanRoute
   '/v8/rian': typeof V8RianRoute
+  '/v8/preview': typeof V8PreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/v8': typeof V8RouteWithChildren
   '/v8/kangxuan': typeof V8KangxuanRoute
   '/v8/rian': typeof V8RianRoute
+  '/v8/preview': typeof V8PreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,12 +79,27 @@ export interface FileRoutesById {
   '/v8': typeof V8RouteWithChildren
   '/v8/kangxuan': typeof V8KangxuanRoute
   '/v8/rian': typeof V8RianRoute
+  '/v8_/preview': typeof V8PreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/kangxuan' | '/rian' | '/v8' | '/v8/kangxuan' | '/v8/rian'
+  fullPaths:
+    | '/'
+    | '/kangxuan'
+    | '/rian'
+    | '/v8'
+    | '/v8/kangxuan'
+    | '/v8/rian'
+    | '/v8/preview'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/kangxuan' | '/rian' | '/v8' | '/v8/kangxuan' | '/v8/rian'
+  to:
+    | '/'
+    | '/kangxuan'
+    | '/rian'
+    | '/v8'
+    | '/v8/kangxuan'
+    | '/v8/rian'
+    | '/v8/preview'
   id:
     | '__root__'
     | '/'
@@ -85,6 +108,7 @@ export interface FileRouteTypes {
     | '/v8'
     | '/v8/kangxuan'
     | '/v8/rian'
+    | '/v8_/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -92,6 +116,7 @@ export interface RootRouteChildren {
   KangxuanRoute: typeof KangxuanRoute
   RianRoute: typeof RianRoute
   V8Route: typeof V8RouteWithChildren
+  V8PreviewRoute: typeof V8PreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -138,6 +163,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V8RianRouteImport
       parentRoute: typeof V8Route
     }
+    '/v8_/preview': {
+      id: '/v8_/preview'
+      path: '/v8/preview'
+      fullPath: '/v8/preview'
+      preLoaderRoute: typeof V8PreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -158,6 +190,7 @@ const rootRouteChildren: RootRouteChildren = {
   KangxuanRoute: KangxuanRoute,
   RianRoute: RianRoute,
   V8Route: V8RouteWithChildren,
+  V8PreviewRoute: V8PreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
