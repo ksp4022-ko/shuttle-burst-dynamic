@@ -6,28 +6,36 @@ const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const fade = (frame: number, from: number, to: number, start = 0, end = 1) =>
   interpolate(frame, [from, to], [start, end], clamp);
 
+const final = {
+  cloud: { x: -72, y: -20, scale: 0.8, rotation: 0, opacity: 0.79 },
+  mountain: { x: 139, y: -33, scale: 1.01, rotation: 0, opacity: 0.52 },
+  backWave: { x: 14, y: 503, scale: 0.99, rotation: 0, opacity: 1 },
+  midWave: { x: -49, y: 577, scale: 0.58, rotation: 0, opacity: 1 },
+  goldInk: { x: 78, y: 342, scale: 0.83, rotation: -5, opacity: 0.43 },
+} as const;
+
 export function BackgroundScene() {
   const frame = useCurrentFrame();
 
-  const sunOpacity = fade(frame, 0, 12);
+  const sunOpacity = fade(frame, 0, 12, 0, 0.9);
   const sunScale = fade(frame, 0, 12, 0.94, 1);
   const sunY = fade(frame, 0, 12, 7, 0);
 
-  const cloudOpacity = fade(frame, 2, 14, 0, 0.76);
-  const cloudX = fade(frame, 2, 14, -8, 0);
-  const cloudY = fade(frame, 2, 14, 4, 0);
+  const cloudOpacity = fade(frame, 2, 14, 0, final.cloud.opacity);
+  const cloudX = fade(frame, 2, 14, final.cloud.x - 8, final.cloud.x);
+  const cloudY = fade(frame, 2, 14, final.cloud.y + 4, final.cloud.y);
 
-  const mountainOpacity = fade(frame, 4, 14, 0, 0.62);
-  const mountainY = fade(frame, 4, 14, 8, 0);
+  const mountainOpacity = fade(frame, 4, 14, 0, final.mountain.opacity);
+  const mountainY = fade(frame, 4, 14, final.mountain.y + 8, final.mountain.y);
 
-  const goldOpacity = fade(frame, 5, 14, 0, 0.36);
-  const goldScale = fade(frame, 5, 14, 0.97, 1);
+  const goldOpacity = fade(frame, 5, 14, 0, final.goldInk.opacity);
+  const goldScale = fade(frame, 5, 14, final.goldInk.scale * 0.97, final.goldInk.scale);
 
-  const backWaveOpacity = fade(frame, 5, 14, 0, 0.88);
-  const backWaveY = fade(frame, 5, 14, 18, 0);
+  const backWaveOpacity = fade(frame, 5, 14, 0, final.backWave.opacity);
+  const backWaveY = fade(frame, 5, 14, final.backWave.y + 18, final.backWave.y);
 
-  const midWaveOpacity = fade(frame, 7, 14, 0, 0.9);
-  const midWaveY = fade(frame, 7, 14, 22, 0);
+  const midWaveOpacity = fade(frame, 7, 14, 0, final.midWave.opacity);
+  const midWaveY = fade(frame, 7, 14, final.midWave.y + 22, final.midWave.y);
 
   return (
     <AbsoluteFill style={paperStyle}>
@@ -36,7 +44,7 @@ export function BackgroundScene() {
         style={{
           ...sunStyle,
           opacity: sunOpacity,
-          transform: `translate(-50%, calc(-50% + ${sunY}px)) scale(${sunScale})`,
+          transform: `translateY(${sunY}px) scale(${sunScale})`,
         }}
       />
       <Img
@@ -44,7 +52,7 @@ export function BackgroundScene() {
         style={{
           ...cloudStyle,
           opacity: cloudOpacity,
-          transform: `translate(${cloudX}px, ${cloudY}px)`,
+          transform: `translate(${cloudX}px, ${cloudY}px) scale(${final.cloud.scale}) rotate(${final.cloud.rotation}deg)`,
         }}
       />
       <Img
@@ -52,7 +60,7 @@ export function BackgroundScene() {
         style={{
           ...mountainStyle,
           opacity: mountainOpacity,
-          transform: `translateY(${mountainY}px)`,
+          transform: `translate(${final.mountain.x}px, ${mountainY}px) scale(${final.mountain.scale}) rotate(${final.mountain.rotation}deg)`,
         }}
       />
       <Img
@@ -60,7 +68,7 @@ export function BackgroundScene() {
         style={{
           ...backWaveStyle,
           opacity: backWaveOpacity,
-          transform: `translateY(${backWaveY}px)`,
+          transform: `translate(${final.backWave.x}px, ${backWaveY}px) scale(${final.backWave.scale}) rotate(${final.backWave.rotation}deg)`,
         }}
       />
       <Img
@@ -68,7 +76,7 @@ export function BackgroundScene() {
         style={{
           ...goldInkStyle,
           opacity: goldOpacity,
-          transform: `scale(${goldScale})`,
+          transform: `translate(${final.goldInk.x}px, ${final.goldInk.y}px) scale(${goldScale}) rotate(${final.goldInk.rotation}deg)`,
         }}
       />
       <Img
@@ -76,7 +84,7 @@ export function BackgroundScene() {
         style={{
           ...midWaveStyle,
           opacity: midWaveOpacity,
-          transform: `translateY(${midWaveY}px)`,
+          transform: `translate(${final.midWave.x}px, ${midWaveY}px) scale(${final.midWave.scale}) rotate(${final.midWave.rotation}deg)`,
         }}
       />
     </AbsoluteFill>
@@ -98,60 +106,63 @@ const paperFiberStyle: CSSProperties = {
 
 const sunStyle: CSSProperties = {
   position: "absolute",
-  left: "50%",
-  top: 316,
-  width: 214,
-  height: 214,
+  zIndex: 4,
+  left: "23%",
+  top: "29%",
+  width: "52%",
+  aspectRatio: "1",
   borderRadius: "50%",
-  background: "#c83b2e",
-  boxShadow: "0 0 46px rgba(200, 59, 46, 0.22)",
+  background: "#c64325",
+  boxShadow: "0 0 0 12px rgba(198,67,37,0.08)",
   transformOrigin: "50% 50%",
 };
 
 const cloudStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 2,
-  left: -78,
-  top: 86,
-  width: 360,
+  zIndex: 5,
+  left: 0,
+  top: 0,
+  width: 390,
   objectFit: "contain",
-  filter: "blur(0.3px)",
+  transformOrigin: "top left",
 };
 
 const mountainStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 3,
-  right: -148,
-  top: 164,
-  width: 438,
+  zIndex: 6,
+  left: 0,
+  top: 0,
+  width: 390,
   objectFit: "contain",
-  filter: "blur(0.4px)",
+  transformOrigin: "top left",
 };
 
 const backWaveStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 4,
-  left: -72,
-  bottom: -12,
-  width: 492,
+  zIndex: 7,
+  left: 0,
+  top: 0,
+  width: 390,
   objectFit: "contain",
+  transformOrigin: "top left",
 };
 
 const goldInkStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 5,
-  left: 28,
-  top: 312,
-  width: 310,
+  zIndex: 3,
+  left: 0,
+  top: 0,
+  width: 390,
   objectFit: "contain",
-  transformOrigin: "50% 50%",
+  transformOrigin: "top left",
 };
 
 const midWaveStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 6,
-  left: -50,
-  bottom: -20,
-  width: 340,
+  zIndex: 10,
+  left: 0,
+  top: 0,
+  width: 390,
   objectFit: "contain",
+  transformOrigin: "top left",
 };
