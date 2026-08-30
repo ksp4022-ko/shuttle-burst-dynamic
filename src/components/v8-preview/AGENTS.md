@@ -14,9 +14,25 @@ No hover dependency. No horizontal overflow. Touch controls must remain usable.
 
 Preview changes must not alter `/v8`, `/v8/kangxuan`, `/v8/rian`, or production API/business logic.
 
-# Current Preview Architecture
+# Current Rig Architecture
 
-Use one DragonRig coordinate system. Dragon X/Y/Scale moves the whole DragonRig. Independent parts use their own tuning controls inside that rig.
+Use `dragonPreviewConfig.ts` as the source of truth for defaults, ranges, target metadata, baselines, and copy-settings output.
+
+`DragonRig`:
+
+DragonRig -> Rear Claw -> Dragon Body -> Bag Base -> Bag Strap -> Front Claw
+
+Dragon Rig X/Y/Scale/Rotation move the whole dragon assembly. Rear Claw, Front Claw, Bag Base, and Bag Strap remain local child controls inside the rig.
+
+`TigerRig`:
+
+TigerRig -> Tiger Body -> Tiger Racket
+
+Tiger Rig X/Y/Scale/Rotation move the whole tiger assembly. Tiger Racket remains a local child control and renders in front of Tiger Body.
+
+`HeroRig` contains title, event info, and CTA. Event Info and CTA have local Y controls so they can later become production meetup-switch targets without changing the preview panel.
+
+Safe Zone is an independently adjustable developer guide. It does not drive Hero layout.
 
 # Current Locked Layer Order
 
@@ -24,26 +40,38 @@ Keep current order unless a task explicitly changes it:
 
 Rear Claw -> Dragon Body -> Bag Base -> Bag Strap -> Front Claw
 
-Future explicitly-approved rear/background parts may sit behind Dragon Body.
+Tiger Racket stays in front of Tiger Body.
 
-# Current Tool Panel Requirements
+Future decoration targets such as `SUN`, `BACK WAVE`, `FRONT WAVE`, and `GOLD / INK` may be added to the target registry when explicitly requested.
 
-Preserve the floating panel, draggable header, TOP/BOTTOM docking, iPhone safe-area, internal panel scrolling, one accordion group open at a time, auto visibility of opened group, no accordion clipping, minimize/reopen, `複製設定`, current-value clipboard output, and no horizontal overflow.
+# Current Tool HUD Requirements
 
-Do not redesign this panel unless explicitly requested.
+Preserve the single-target transparent HUD:
+
+- Target selector
+- only selected target controls visible
+- compact internal-scroll control area
+- Normal/Ghost transparency toggle
+- Fine/Normal/Large step mode
+- Reset Target / Reset All
+- Target Highlight ON/OFF
+- draggable header
+- TOP/BOTTOM docking
+- iPhone safe-area
+- minimize/reopen
+- `複製設定`
+- current-value clipboard output
+- no horizontal overflow
+
+Do not restore the old large accordion panel unless explicitly requested.
 
 # Current Locked Defaults
 
-DRAGON:
+DRAGON RIG:
 - X = 71
 - Y = 5
 - Scale = 1.00
-
-CLAW:
-- X = -30
-- Y = -11
-- Scale = 0.81
-- Rotation = 35
+- Rotation = 0
 
 REAR CLAW:
 - Show = ON
@@ -51,6 +79,12 @@ REAR CLAW:
 - Y = -6
 - Scale = 0.54
 - Rotation = -18
+
+FRONT CLAW:
+- X = -30
+- Y = -11
+- Scale = 0.81
+- Rotation = 35
 
 BAG BASE:
 - X = 0
@@ -63,6 +97,19 @@ BAG STRAP:
 - Y = 15
 - Scale = 1.15
 - Rotation Delta = -2
+
+TIGER RIG:
+- X = 0
+- Y = 0
+- Scale = 1.00
+- Rotation = 0
+
+TIGER RACKET:
+- Show = ON
+- X = 0
+- Y = 0
+- Scale = 1.00
+- Rotation = 0
 
 Safe Zone: preserve current default behavior until explicitly changed.
 
@@ -89,8 +136,10 @@ Control Rotation values are deltas around these locked rotations.
 - Front Claw: `dragon-throw-claw-v1.webp`
 - Bag Base: `dragon-bag-base-v2-source.png`
 - Bag Strap: `dragon-bag-strap-overlay-v2-source.png`
+- Tiger Body: `tiger-body-v1.png`
+- Tiger Racket: `tiger-racket-v1.png`
 
-Do not change them unless explicitly requested.
+Do not redraw, regenerate, repaint, crop, alter pixels, or substitute visually similar art unless explicitly requested.
 
 # Preview Validation
 
