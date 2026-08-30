@@ -8,6 +8,7 @@ import {
   controlRanges,
   formatPreviewSettings,
   previewDefaults,
+  rearClawBaseline,
 } from "./dragonPreviewConfig";
 import type { ControlGroupId, PreviewControls } from "./dragonPreviewConfig";
 
@@ -305,6 +306,20 @@ export function DragonPreview() {
               top: `${controls.dragonY}%`,
             }}
           >
+            {controls.rearClawShow ? (
+              <img
+                src={assets.rearClaw}
+                alt="Rear claw preview asset"
+                style={{
+                  ...rigImageStyle,
+                  left: `${rearClawBaseline.left + controls.rearClawX}%`,
+                  top: `${rearClawBaseline.top + controls.rearClawY}%`,
+                  width: `${rearClawBaseline.width * controls.rearClawScale}%`,
+                  transform: `rotate(${controls.rearClawRotation}deg)`,
+                  zIndex: 0,
+                }}
+              />
+            ) : null}
             <img src={assets.body} alt="Dragon body preview asset" style={{ ...rigImageStyle, inset: 0, width: "100%", zIndex: 1 }} />
             <img
               src={assets.bagBase}
@@ -407,6 +422,16 @@ export function DragonPreview() {
               <RangeControl label="Dragon X" value={controls.dragonX} {...controlRanges.dragonX} onChange={(value) => update("dragonX", value)} />
               <RangeControl label="Dragon Y" value={controls.dragonY} {...controlRanges.dragonY} onChange={(value) => update("dragonY", value)} />
               <RangeControl label="Dragon Scale" value={controls.dragonScale} {...controlRanges.dragonScale} onChange={(value) => update("dragonScale", value)} />
+            </ControlGroup>
+            <ControlGroup title="REAR CLAW" isOpen={openGroup === "REAR CLAW"} onToggle={() => toggleGroup("REAR CLAW")} register={(node) => { if (node) groupRefs.current["REAR CLAW"] = node; }}>
+              <label style={toggleStyle}>
+                <input aria-label="Show Rear Claw" type="checkbox" checked={controls.rearClawShow} onChange={(event) => update("rearClawShow", event.currentTarget.checked)} />
+                <span>Show Rear Claw</span>
+              </label>
+              <RangeControl label="Rear Claw X" value={controls.rearClawX} {...controlRanges.rearClawX} onChange={(value) => update("rearClawX", value)} />
+              <RangeControl label="Rear Claw Y" value={controls.rearClawY} {...controlRanges.rearClawY} onChange={(value) => update("rearClawY", value)} />
+              <RangeControl label="Rear Claw Scale" value={controls.rearClawScale} {...controlRanges.rearClawScale} onChange={(value) => update("rearClawScale", value)} />
+              <RangeControl label="Rear Claw Rotation" value={controls.rearClawRotation} {...controlRanges.rearClawRotation} onChange={(value) => update("rearClawRotation", value)} />
             </ControlGroup>
             <ControlGroup title="CLAW" isOpen={openGroup === "CLAW"} onToggle={() => toggleGroup("CLAW")} register={(node) => { if (node) groupRefs.current["CLAW"] = node; }}>
               <RangeControl label="Claw X" value={controls.clawX} {...controlRanges.clawX} onChange={(value) => update("clawX", value)} />

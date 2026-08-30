@@ -22,7 +22,7 @@ Use one DragonRig coordinate system. Dragon X/Y/Scale moves the whole DragonRig.
 
 Keep current order unless a task explicitly changes it:
 
-Dragon Body -> Bag Base -> Bag Strap -> Front Claw
+Rear Claw -> Dragon Body -> Bag Base -> Bag Strap -> Front Claw
 
 Future explicitly-approved rear/background parts may sit behind Dragon Body.
 
@@ -44,6 +44,13 @@ CLAW:
 - Y = -11
 - Scale = 0.81
 - Rotation = 35
+
+REAR CLAW:
+- Show = ON
+- X = 14
+- Y = -6
+- Scale = 0.54
+- Rotation = -18
 
 BAG BASE:
 - X = 0
@@ -78,6 +85,7 @@ Control Rotation values are deltas around these locked rotations.
 # Locked Current Assets
 
 - Dragon Body: `dragon-body-v2.png`
+- Rear Claw: `dragon-rear-claw-v1.png`
 - Front Claw: `dragon-throw-claw-v1.webp`
 - Bag Base: `dragon-bag-base-v2-source.png`
 - Bag Strap: `dragon-bag-strap-overlay-v2-source.png`

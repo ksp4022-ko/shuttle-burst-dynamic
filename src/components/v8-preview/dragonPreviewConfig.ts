@@ -6,6 +6,11 @@ export type PreviewControls = {
   clawY: number;
   clawScale: number;
   clawRotation: number;
+  rearClawShow: boolean;
+  rearClawX: number;
+  rearClawY: number;
+  rearClawScale: number;
+  rearClawRotation: number;
   bagBaseX: number;
   bagBaseY: number;
   bagBaseScale: number;
@@ -17,12 +22,13 @@ export type PreviewControls = {
   showSafeZone: boolean;
 };
 
-export type ControlGroupId = "DRAGON" | "CLAW" | "BAG BASE" | "BAG STRAP" | "VIEW";
+export type ControlGroupId = "DRAGON" | "REAR CLAW" | "CLAW" | "BAG BASE" | "BAG STRAP" | "VIEW";
 
-export const controlGroupOrder: ControlGroupId[] = ["DRAGON", "CLAW", "BAG BASE", "BAG STRAP", "VIEW"];
+export const controlGroupOrder: ControlGroupId[] = ["DRAGON", "REAR CLAW", "CLAW", "BAG BASE", "BAG STRAP", "VIEW"];
 
 export const previewAssets = {
   body: "dragon-body-v2.png",
+  rearClaw: "dragon-rear-claw-v1.png",
   claw: "dragon-throw-claw-v1.webp",
   bagBase: "dragon-bag-base-v2-source.png",
   bagStrap: "dragon-bag-strap-overlay-v2-source.png",
@@ -32,6 +38,7 @@ export const buildPreviewAssets = (baseUrl: string) => {
   const assetBase = `${baseUrl}v8-preview/dragon`;
   return {
     body: `${assetBase}/${previewAssets.body}`,
+    rearClaw: `${assetBase}/${previewAssets.rearClaw}`,
     claw: `${assetBase}/${previewAssets.claw}`,
     bagBase: `${assetBase}/${previewAssets.bagBase}`,
     bagStrap: `${assetBase}/${previewAssets.bagStrap}`,
@@ -46,6 +53,11 @@ export const previewDefaults: PreviewControls = {
   clawY: -11,
   clawScale: 0.81,
   clawRotation: 35,
+  rearClawShow: true,
+  rearClawX: 14,
+  rearClawY: -6,
+  rearClawScale: 0.54,
+  rearClawRotation: -18,
   bagBaseX: 0,
   bagBaseY: 2,
   bagBaseScale: 1,
@@ -60,6 +72,7 @@ export const previewDefaults: PreviewControls = {
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
 export const bagStrapBaseline = { left: 57.6171875, top: 18.4895833, width: 20.80078125, rotation: 2 } as const;
 export const clawBaseline = { left: 58, top: 38, width: 50 } as const;
+export const rearClawBaseline = { left: 53, top: 23, width: 46 } as const;
 
 export const controlRanges = {
   dragonX: { min: 35, max: 92 },
@@ -69,6 +82,10 @@ export const controlRanges = {
   clawY: { min: -30, max: 40 },
   clawScale: { min: 0.35, max: 1.35, step: 0.01 },
   clawRotation: { min: -35, max: 35 },
+  rearClawX: { min: -30, max: 30 },
+  rearClawY: { min: -30, max: 40 },
+  rearClawScale: { min: 0.25, max: 1.2, step: 0.01 },
+  rearClawRotation: { min: -45, max: 45 },
   bagBaseX: { min: -30, max: 30 },
   bagBaseY: { min: -30, max: 30 },
   bagBaseScale: { min: 0.6, max: 1.5, step: 0.01 },
@@ -91,6 +108,13 @@ X: ${Math.round(controls.clawX)}
 Y: ${Math.round(controls.clawY)}
 Scale: ${controls.clawScale.toFixed(2)}
 Rotation: ${Math.round(controls.clawRotation)}
+
+REAR CLAW
+Show: ${controls.rearClawShow ? "ON" : "OFF"}
+X: ${Math.round(controls.rearClawX)}
+Y: ${Math.round(controls.rearClawY)}
+Scale: ${controls.rearClawScale.toFixed(2)}
+Rotation: ${Math.round(controls.rearClawRotation)}
 
 BAG BASE
 X: ${Math.round(controls.bagBaseX)}
