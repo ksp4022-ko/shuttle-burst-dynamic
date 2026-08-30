@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type RefObject } from "react";
 import {
   bagBaseBaseline,
   bagStrapBaseline,
@@ -14,10 +14,13 @@ import {
 
 type V8HeroCompositionProps = {
   eventLabel: string;
-  meetupStack: ReactNode;
-  countdownText?: string;
+  eventPositionLabel?: string;
+  hasMultipleEvents: boolean;
+  confirmed: boolean;
   confirmButtonRef: RefObject<HTMLButtonElement | null>;
   confirmDisabled: boolean;
+  onPreviousEvent: () => void;
+  onNextEvent: () => void;
   onConfirm: () => void;
 };
 
@@ -87,10 +90,13 @@ function DecorLayer({
 
 export function V8HeroComposition({
   eventLabel,
-  meetupStack,
-  countdownText,
+  eventPositionLabel,
+  hasMultipleEvents,
+  confirmed,
   confirmButtonRef,
   confirmDisabled,
+  onPreviousEvent,
+  onNextEvent,
   onConfirm,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
@@ -225,15 +231,30 @@ export function V8HeroComposition({
               <div style={{ ...heroCopyStyle, left: heroBaseline.centerX, top: heroBaseline.top, width: controls.heroWidth, transform: `translate(calc(-50% + ${controls.heroX}px), ${controls.heroY}px) scale(${controls.heroScale})` }}>
                 <p style={eyebrowStyle}>龍虎交鋒・戰局未定</p>
                 <h1 style={titleStyle}>SHUTTLE V8</h1>
-                <button type="button" onClick={onConfirm} disabled={confirmDisabled} style={{ ...eventButtonStyle, transform: `translateY(${controls.heroEventY}px)` }}>
-                  {eventLabel || "選擇聚會"}
-                </button>
-                <button ref={confirmButtonRef} type="button" disabled={confirmDisabled} onClick={onConfirm} style={{ ...ctaStyle, transform: `translateY(${controls.heroCtaY}px)` }}>
-                  進入戰局
-                </button>
-                {countdownText ? <small style={countdownStyle}>{countdownText}</small> : null}
+                {confirmed ? (
+                  <p style={{ ...confirmedStyle, transform: `translateY(${controls.heroEventY}px)` }}>
+                    戰局準備中
+                  </p>
+                ) : (
+                  <>
+                    <div style={{ ...selectorStyle, transform: `translateY(${controls.heroEventY}px)` }}>
+                      <button type="button" onClick={onPreviousEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="上一場聚會">
+                        ‹
+                      </button>
+                      <button type="button" onClick={onConfirm} disabled={confirmDisabled} style={eventButtonStyle}>
+                        {eventLabel || "選擇聚會"}
+                      </button>
+                      <button type="button" onClick={onNextEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="下一場聚會">
+                        ›
+                      </button>
+                    </div>
+                    {eventPositionLabel ? <small style={eventPositionStyle}>{eventPositionLabel}</small> : null}
+                    <button ref={confirmButtonRef} type="button" disabled={confirmDisabled} onClick={onConfirm} style={{ ...ctaStyle, transform: `translateY(${controls.heroCtaY}px)` }}>
+                      進入戰局
+                    </button>
+                  </>
+                )}
               </div>
-              <div style={ticketLayerStyle}>{meetupStack}</div>
             </div>
             {controls.tigerShow && controls.tigerRacketShow ? (
               <div
@@ -296,7 +317,7 @@ const stageShellStyle: CSSProperties = {
 
 const stageStyle: CSSProperties = {
   position: "relative",
-  width: "min(100%, 390px)",
+  width: "min(100%, 390px, calc(100svh * 390 / 844))",
   aspectRatio: "390 / 844",
   overflow: "hidden",
   background: "#f1e4ca",
@@ -397,15 +418,48 @@ const titleStyle: CSSProperties = {
 
 const eventButtonStyle: CSSProperties = {
   display: "block",
-  width: "100%",
-  margin: "17px 0 0",
+  minWidth: 0,
   border: 0,
   background: "transparent",
   color: "#20150d",
-  fontSize: 20,
+  padding: 0,
+  fontSize: 19,
   lineHeight: 1.35,
   fontWeight: 800,
   textAlign: "center",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const selectorStyle: CSSProperties = {
+  width: "100%",
+  margin: "17px 0 0",
+  display: "grid",
+  gridTemplateColumns: "34px minmax(0, 1fr) 34px",
+  alignItems: "center",
+  gap: 4,
+};
+
+const selectorArrowStyle: CSSProperties = {
+  width: 34,
+  height: 34,
+  border: 0,
+  borderRadius: 999,
+  background: "rgba(245, 237, 219, 0.58)",
+  color: "#20150d",
+  fontSize: 28,
+  lineHeight: 1,
+  fontWeight: 700,
+};
+
+const eventPositionStyle: CSSProperties = {
+  display: "block",
+  marginTop: 8,
+  color: "rgba(32,21,13,0.62)",
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: 1.2,
 };
 
 const ctaStyle: CSSProperties = {
@@ -422,20 +476,10 @@ const ctaStyle: CSSProperties = {
   fontWeight: 900,
 };
 
-const countdownStyle: CSSProperties = {
-  display: "block",
-  marginTop: 8,
-  color: "rgba(32,21,13,0.68)",
-  fontSize: 12,
-  fontWeight: 800,
-};
-
-const ticketLayerStyle: CSSProperties = {
-  position: "absolute",
-  zIndex: 2,
-  left: 16,
-  right: 16,
-  top: 458,
-  transform: "scale(0.66)",
-  transformOrigin: "50% 0",
+const confirmedStyle: CSSProperties = {
+  margin: "20px 0 0",
+  color: "#20150d",
+  fontSize: 20,
+  lineHeight: 1.35,
+  fontWeight: 900,
 };

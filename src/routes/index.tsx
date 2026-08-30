@@ -284,6 +284,7 @@ export function Index() {
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
   const [countdownKey, setCountdownKey] = useState(0);
   const [rosterVisible, setRosterVisible] = useState(false);
+  const [v8MeetupConfirmed, setV8MeetupConfirmed] = useState(false);
   const replayTimersRef = useRef<number[]>([]);
   const tutorialTimersRef = useRef<number[]>([]);
   const tutorialStartIntervalRef = useRef<number | null>(null);
@@ -304,6 +305,8 @@ export function Index() {
   const materialized = ["materializing", "meetup-preview", "rotating-to-active", "active"].includes(
     flow.phase,
   );
+  const v8HeroStage = isV8Route && (preview || v8MeetupConfirmed);
+  const legacyActiveStage = (active || rotating) && !v8HeroStage;
 
   useLayoutEffect(() => {
     const alignMaterializedRacket = () => {
@@ -392,6 +395,14 @@ export function Index() {
   }, [flow.events, flow.pendingSwitchEventId, flow.selectedEvent, flow.selectedEventId]);
 
   const selectedMeetupLabel = formatPreviewEventLabel(previewPickedEvent);
+  const previewPickedEventIndex = useMemo(() => {
+    const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+    return flow.events.findIndex((event) => event.id === targetId);
+  }, [flow.events, flow.pendingSwitchEventId, flow.selectedEventId]);
+  const selectedMeetupPosition =
+    flow.events.length > 1 && previewPickedEventIndex >= 0
+      ? `${previewPickedEventIndex + 1} / ${flow.events.length}`
+      : "";
 
   const markPreviewInteraction = useCallback(() => {
     setPreviewActivityKey((value) => value + 1);
@@ -417,6 +428,51 @@ export function Index() {
     flow.selectedEventId,
     flow.setPendingSwitchEventId,
     flow.switchMeetup,
+  ]);
+
+  const selectAdjacentV8Meetup = useCallback(
+    (direction: -1 | 1) => {
+      if (!flow.events.length || flow.pendingAction) return;
+      const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+      const currentIndex = Math.max(
+        0,
+        flow.events.findIndex((event) => event.id === targetId),
+      );
+      const nextIndex = (currentIndex + direction + flow.events.length) % flow.events.length;
+      const nextEvent = flow.events[nextIndex];
+      if (!nextEvent) return;
+      flow.setPendingSwitchEventId(nextEvent.id);
+      markPreviewInteraction();
+    },
+    [
+      flow.events,
+      flow.pendingAction,
+      flow.pendingSwitchEventId,
+      flow.selectedEventId,
+      flow.setPendingSwitchEventId,
+      markPreviewInteraction,
+    ],
+  );
+
+  const confirmV8MeetupSelection = useCallback(async () => {
+    if (flow.pendingAction) return;
+    const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+    if (!targetId) return;
+    markPreviewInteraction();
+    setCountdownRemaining(null);
+    setV8MeetupConfirmed(true);
+    if (targetId === flow.selectedEventId) {
+      flow.setPendingSwitchEventId("");
+      return;
+    }
+    await flow.switchMeetup();
+  }, [
+    flow.pendingAction,
+    flow.pendingSwitchEventId,
+    flow.selectedEventId,
+    flow.setPendingSwitchEventId,
+    flow.switchMeetup,
+    markPreviewInteraction,
   ]);
 
   useEffect(() => {
@@ -852,11 +908,13 @@ export function Index() {
         replayPhase={handoffReplayPhase}
       />
 
-      <header className="sd-header">
-        <p>BADMINTON ASSEMBLY</p>
-      </header>
+      {!v8HeroStage ? (
+        <header className="sd-header">
+          <p>BADMINTON ASSEMBLY</p>
+        </header>
+      ) : null}
 
-      {(preview || rotating || active) && (
+      {(preview || rotating || active) && !v8HeroStage && (
         <HandoffTimingLab
           timing={handoffTiming}
           particle={particleTuning}
@@ -951,8 +1009,12 @@ export function Index() {
         />
       ) : null}
 
-      <section className="sd-hero" id="sd-hero">
-        {(preview || rotating) && (
+      <section
+        className="sd-hero"
+        id="sd-hero"
+        style={v8HeroStage ? ({ minHeight: "100svh", width: "100%" } as CSSProperties) : undefined}
+      >
+        {(preview || rotating) && !v8HeroStage && (
           <div className={`sd-preview-system-title ${rotating ? "is-leaving" : ""}`}>
             <strong>羽球報名系統</strong>
             <span>
@@ -963,40 +1025,42 @@ export function Index() {
           </div>
         )}
 
-        <div
-          ref={racketWrapRef}
-          className={`sd-racket-wrap ${materialized ? "is-materialized" : ""}`}
-          style={{ "--sd-particle-match-top": `${particleMatchTop}px` } as CSSProperties}
-        >
-          <span className="sd-racket-reveal" aria-hidden="true">
-            <span className="sd-racket-reveal-clip">
-              <RacketImage className="sd-racket-main" src={racketSrc} />
+        {!v8HeroStage ? (
+          <div
+            ref={racketWrapRef}
+            className={`sd-racket-wrap ${materialized ? "is-materialized" : ""}`}
+            style={{ "--sd-particle-match-top": `${particleMatchTop}px` } as CSSProperties}
+          >
+            <span className="sd-racket-reveal" aria-hidden="true">
+              <span className="sd-racket-reveal-clip">
+                <RacketImage className="sd-racket-main" src={racketSrc} />
+              </span>
+              <span className="sd-racket-scan-line" />
             </span>
-            <span className="sd-racket-scan-line" />
-          </span>
-          <span ref={racketFaceAnchorRef} className="sd-racket-face-anchor" aria-hidden="true" />
-          {active && flow.events.length > 1 ? (
-            <button
-              type="button"
-              className="sd-racket-main-switch"
-              onClick={() => flow.openMeetupPicker()}
-              aria-label={`切換聚會，目前為 ${flow.selectedEvent?.name || "目前聚會"}`}
-            />
-          ) : null}
-          {flow.shadowEvents.map((event, index) => (
-            <button
-              key={event.id}
-              className={`sd-racket-shadow sd-shadow-${index + 1}`}
-              aria-label={`切換到 ${event.name}`}
-              onClick={() => flow.openMeetupPicker(event.id)}
-              style={{ "--shadow-index": index } as CSSProperties}
-            >
-              <RacketImage src={racketSrc} />
-            </button>
-          ))}
-        </div>
+            <span ref={racketFaceAnchorRef} className="sd-racket-face-anchor" aria-hidden="true" />
+            {active && flow.events.length > 1 ? (
+              <button
+                type="button"
+                className="sd-racket-main-switch"
+                onClick={() => flow.openMeetupPicker()}
+                aria-label={`切換聚會，目前為 ${flow.selectedEvent?.name || "目前聚會"}`}
+              />
+            ) : null}
+            {flow.shadowEvents.map((event, index) => (
+              <button
+                key={event.id}
+                className={`sd-racket-shadow sd-shadow-${index + 1}`}
+                aria-label={`切換到 ${event.name}`}
+                onClick={() => flow.openMeetupPicker(event.id)}
+                style={{ "--shadow-index": index } as CSSProperties}
+              >
+                <RacketImage src={racketSrc} />
+              </button>
+            ))}
+          </div>
+        ) : null}
 
-        {active && flow.events.length > 1 ? (
+        {legacyActiveStage && flow.events.length > 1 ? (
           <>
             <button
               type="button"
@@ -1025,53 +1089,17 @@ export function Index() {
           </section>
         )}
 
-        {preview && isV8Route ? (
+        {v8HeroStage ? (
           <V8HeroComposition
             eventLabel={selectedMeetupLabel}
-            meetupStack={
-              <div
-                className={`sd-hero-ticket-stack-wrap ${tutorialOpen && tutorialStep === "step1" ? "is-tutorial-target" : ""} ${tutorialDemoPulse ? "is-tutorial-demoing" : ""}`}
-                style={{
-                  "--sd-demo-afterimage": `${tutorialTuning.afterimageStrength / 100}`,
-                  "--sd-demo-trail": `${tutorialTuning.motionTrailStrength / 100}`,
-                  "--sd-demo-travel": `${tutorialTuning.demoTravelDistance}px`,
-                } as CSSProperties}
-              >
-                {flow.events.length ? (
-                  <MeetupTicketStack
-                    events={flow.events}
-                    selectedEventId={flow.selectedEventId}
-                    pendingEventId={flow.pendingSwitchEventId || flow.selectedEventId}
-                    onSelect={(eventId) => {
-                      flow.setPendingSwitchEventId(eventId);
-                      markPreviewInteraction();
-                    }}
-                    disabled={Boolean(flow.pendingAction)}
-                    variant="hero"
-                    onInteract={markPreviewInteraction}
-                  />
-                ) : (
-                  <div className="sd-hero-no-events" role="status">
-                    目前沒有開放聚會
-                  </div>
-                )}
-              </div>
-            }
-            countdownText={
-              countdownTuning.showCountdown
-                ? `自動進入 ${countdownRemaining ?? countdownTuning.seconds}`
-                : undefined
-            }
+            eventPositionLabel={selectedMeetupPosition}
+            hasMultipleEvents={flow.events.length > 1}
+            confirmed={v8MeetupConfirmed}
             confirmButtonRef={confirmMeetupButtonRef}
             confirmDisabled={Boolean(flow.pendingAction) || !previewPickedEvent}
-            onConfirm={() => {
-              markPreviewInteraction();
-              if (tutorialOpen && tutorialStep === "step2") {
-                confirmFromTutorial();
-                return;
-              }
-              enterPreviewSelection();
-            }}
+            onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
+            onNextEvent={() => selectAdjacentV8Meetup(1)}
+            onConfirm={() => void confirmV8MeetupSelection()}
           />
         ) : null}
 
@@ -1137,7 +1165,7 @@ export function Index() {
           </section>
         ) : null}
 
-        {(active || rotating) && (
+        {legacyActiveStage && (
           <>
             <FloatingAnnotations
               event={flow.selectedEvent}
@@ -1196,7 +1224,7 @@ export function Index() {
           </>
         )}
 
-        {flow.pendingAction && (
+        {flow.pendingAction && !v8HeroStage && (
           <div className="sd-pending" aria-live="polite">
             <span />
             <span />
@@ -1205,7 +1233,7 @@ export function Index() {
           </div>
         )}
 
-        {(active || rotating) && (
+        {legacyActiveStage && (
           <button className="sd-scroll-cue" type="button" onClick={scrollToRoster} aria-label="往下查看報名名單">
             <span />
             <span />
@@ -1214,7 +1242,7 @@ export function Index() {
         )}
       </section>
 
-      {(active || rotating) && (
+      {legacyActiveStage && (
         <HomepageRoster
           roster={flow.roster}
           confirmed={flow.confirmed}
