@@ -183,6 +183,7 @@ export function DragonPreview() {
   const targetHighlightStyle = (target: PreviewTargetId): CSSProperties =>
     highlightEnabled && selectedTarget === target ? selectedTargetStyle : {};
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
+  const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
 
   const update = <Key extends keyof PreviewControls>(key: Key, value: PreviewControls[Key]) => {
     setControls((current) => ({ ...current, [key]: value }));
@@ -353,10 +354,12 @@ export function DragonPreview() {
       <section style={stageShellStyle} aria-label="V8 mobile composition preview">
         <div style={stageStyle}>
           <div style={paperStyle} />
+          <DecorLayer target="FRONT FOAM" src={assets.frontFoam} show={controls.frontFoamShow && controls.decorMode === "FULL"} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} highlighted={highlightEnabled && selectedTarget === "FRONT FOAM"} />
+          <DecorLayer target="GOLD / INK" src={assets.goldInk} show={controls.goldInkShow} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} highlighted={highlightEnabled && selectedTarget === "GOLD / INK"} />
           <div style={sunStyle} />
-          <DecorLayer target="CLOUD" src={assets.cloud} show={controls.cloudShow} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={3} highlighted={highlightEnabled && selectedTarget === "CLOUD"} />
-          <DecorLayer target="MOUNTAIN" src={assets.mountain} show={controls.mountainShow} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={4} highlighted={highlightEnabled && selectedTarget === "MOUNTAIN"} />
-          <DecorLayer target="BACK WAVE" src={assets.backWave} show={controls.backWaveShow} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={5} highlighted={highlightEnabled && selectedTarget === "BACK WAVE"} />
+          <DecorLayer target="CLOUD" src={assets.cloud} show={controls.cloudShow} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={5} highlighted={highlightEnabled && selectedTarget === "CLOUD"} />
+          <DecorLayer target="MOUNTAIN" src={assets.mountain} show={controls.mountainShow} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={6} highlighted={highlightEnabled && selectedTarget === "MOUNTAIN"} />
+          <DecorLayer target="BACK WAVE" src={assets.backWave} show={controls.backWaveShow} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} highlighted={highlightEnabled && selectedTarget === "BACK WAVE"} />
           {controls.dragonShow ? (
           <div
             data-highlight-target="DRAGON RIG"
@@ -368,7 +371,7 @@ export function DragonPreview() {
               right: `${100 - controls.dragonX}%`,
               top: `${controls.dragonY}%`,
               transform: `translate(44%, -8%) rotate(${controls.dragonRotation}deg)`,
-              zIndex: 6,
+              zIndex: 8,
             }}
           >
             {controls.rearClawShow ? (
@@ -441,15 +444,15 @@ export function DragonPreview() {
           {controls.tigerShow ? (
           <div
             data-highlight-target="TIGER RIG"
-            aria-label="Tiger rig"
+            aria-label="Tiger body rig"
             style={{
               ...tigerRigStyle,
               ...targetHighlightStyle("TIGER RIG"),
               left: tigerRigBaseline.left,
               top: tigerRigBaseline.top,
               width: tigerRigBaseline.width,
-              transform: `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`,
-              zIndex: 7,
+              transform: tigerRigTransform,
+              zIndex: 9,
             }}
           >
             <img
@@ -457,9 +460,24 @@ export function DragonPreview() {
               alt="Tiger body preview asset"
               style={{ ...stageImageStyle, inset: 0, width: "100%", transform: `rotate(${tigerRigBaseline.bodyRotation}deg)`, zIndex: 0 }}
             />
-            {controls.tigerRacketShow ? (
+          </div>
+          ) : null}
+          <DecorLayer target="MID WAVE" src={assets.midWave} show={controls.midWaveShow} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={10} highlighted={highlightEnabled && selectedTarget === "MID WAVE"} />
+          {controls.heroShow ? <HeroCopy controls={controls} highlighted={highlightEnabled && selectedTarget === "HERO"} /> : null}
+          {controls.tigerShow && controls.tigerRacketShow ? (
+            <div
+              data-highlight-target="TIGER RACKET"
+              aria-label="Tiger racket rig"
+              style={{
+                ...tigerRigStyle,
+                left: tigerRigBaseline.left,
+                top: tigerRigBaseline.top,
+                width: tigerRigBaseline.width,
+                transform: tigerRigTransform,
+                zIndex: 12,
+              }}
+            >
               <img
-                data-highlight-target="TIGER RACKET"
                 src={assets.tigerRacket}
                 alt="Tiger racket preview asset"
                 style={{
@@ -469,16 +487,11 @@ export function DragonPreview() {
                   top: `${tigerRacketBaseline.top + controls.tigerRacketY}%`,
                   width: `${tigerRacketBaseline.width * controls.tigerRacketScale}%`,
                   transform: `rotate(${tigerRacketBaseline.rotation + controls.tigerRacketRotation}deg)`,
-                  zIndex: 1,
+                  zIndex: 0,
                 }}
               />
-            ) : null}
-          </div>
+            </div>
           ) : null}
-          <DecorLayer target="MID WAVE" src={assets.midWave} show={controls.midWaveShow} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={8} highlighted={highlightEnabled && selectedTarget === "MID WAVE"} />
-          <DecorLayer target="GOLD / INK" src={assets.goldInk} show={controls.goldInkShow} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={9} highlighted={highlightEnabled && selectedTarget === "GOLD / INK"} />
-          {controls.heroShow ? <HeroCopy controls={controls} highlighted={highlightEnabled && selectedTarget === "HERO"} /> : null}
-          <DecorLayer target="FRONT FOAM" src={assets.frontFoam} show={controls.frontFoamShow && controls.decorMode === "FULL"} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={11} highlighted={highlightEnabled && selectedTarget === "FRONT FOAM"} />
           <SafeZoneOverlay controls={controls} />
         </div>
       </section>
@@ -618,7 +631,7 @@ const paperStyle: CSSProperties = {
 
 const sunStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 2,
+  zIndex: 4,
   left: "23%",
   top: "29%",
   width: "52%",
@@ -669,7 +682,7 @@ const decorImageStyle: CSSProperties = {
 
 const safeZoneStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 12,
+  zIndex: 13,
   border: "2px dashed rgba(20, 125, 92, 0.78)",
   background: "rgba(40, 191, 138, 0.08)",
   color: "#10523d",
@@ -689,7 +702,7 @@ const safeZoneLabelStyle: CSSProperties = {
 
 const heroStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 10,
+  zIndex: 11,
   textAlign: "center",
   color: "#20150d",
   transformOrigin: "50% 0",

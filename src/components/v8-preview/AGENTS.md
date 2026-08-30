@@ -48,7 +48,7 @@ Future decoration targets such as additional `SUN`, `WAVE`, or `GOLD / INK` vari
 
 Full stage layer order:
 
-PAPER -> SUN -> CLOUD -> MOUNTAIN -> BACK WAVE -> DRAGON RIG -> TIGER RIG -> MID WAVE -> GOLD / INK -> HERO -> FRONT FOAM -> SAFE ZONE
+PAPER -> FRONT FOAM -> GOLD / INK -> SUN -> CLOUD -> MOUNTAIN -> BACK WAVE -> DRAGON RIG -> TIGER BODY -> MID WAVE -> HERO -> TIGER RACKET -> SAFE ZONE
 
 # Current Tool HUD Requirements
 
