@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import {
   useCallback,
   useEffect,
@@ -251,6 +251,8 @@ const DEFAULT_VISUAL_TUNING: VisualTuning = {
 };
 
 export function Index() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isV8Route = pathname === "/v8" || pathname.startsWith("/v8/");
   const [name, setName] = useState("");
   const toastOriginRef = useRef<ToastOrigin | null>(null);
   const eventTitleRef = useRef<HTMLElement | null>(null);
@@ -1023,7 +1025,7 @@ export function Index() {
           </section>
         )}
 
-        {preview && (
+        {preview && isV8Route ? (
           <V8HeroComposition
             eventLabel={selectedMeetupLabel}
             meetupStack={
@@ -1071,7 +1073,69 @@ export function Index() {
               enterPreviewSelection();
             }}
           />
-        )}
+        ) : null}
+
+        {preview && !isV8Route ? (
+          <section className="sd-hero-meetup-picker" aria-label="選擇聚會">
+            <div
+              className={`sd-hero-ticket-stack-wrap ${tutorialOpen && tutorialStep === "step1" ? "is-tutorial-target" : ""} ${tutorialDemoPulse ? "is-tutorial-demoing" : ""}`}
+              style={{
+                "--sd-demo-afterimage": `${tutorialTuning.afterimageStrength / 100}`,
+                "--sd-demo-trail": `${tutorialTuning.motionTrailStrength / 100}`,
+                "--sd-demo-travel": `${tutorialTuning.demoTravelDistance}px`,
+              } as CSSProperties}
+            >
+              {flow.events.length ? (
+                <MeetupTicketStack
+                  events={flow.events}
+                  selectedEventId={flow.selectedEventId}
+                  pendingEventId={flow.pendingSwitchEventId || flow.selectedEventId}
+                  onSelect={(eventId) => {
+                    flow.setPendingSwitchEventId(eventId);
+                    markPreviewInteraction();
+                  }}
+                  disabled={Boolean(flow.pendingAction)}
+                  variant="hero"
+                  onInteract={markPreviewInteraction}
+                />
+              ) : (
+                <div className="sd-hero-no-events" role="status">
+                  目前沒有開放聚會
+                </div>
+              )}
+            </div>
+            {flow.events.length ? (
+              <footer className="sd-hero-picker-footer">
+                <span className="sd-selected-meetup">
+                  {countdownTuning.showSelectedInfo ? (
+                    <span>
+                      已選：<strong>{selectedMeetupLabel}</strong>
+                    </span>
+                  ) : null}
+                  {countdownTuning.showCountdown ? (
+                    <small>自動進入 {countdownRemaining ?? countdownTuning.seconds}</small>
+                  ) : null}
+                </span>
+                <button
+                  ref={confirmMeetupButtonRef}
+                  type="button"
+                  className={tutorialOpen && tutorialStep === "step2" ? "is-tutorial-focus" : ""}
+                  disabled={Boolean(flow.pendingAction) || !previewPickedEvent}
+                  onClick={() => {
+                    markPreviewInteraction();
+                    if (tutorialOpen && tutorialStep === "step2") {
+                      confirmFromTutorial();
+                      return;
+                    }
+                    enterPreviewSelection();
+                  }}
+                >
+                  確認聚會
+                </button>
+              </footer>
+            ) : null}
+          </section>
+        ) : null}
 
         {(active || rotating) && (
           <>
