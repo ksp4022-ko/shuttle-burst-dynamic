@@ -1,8 +1,10 @@
 export type PreviewControls = {
+  dragonShow: boolean;
   dragonX: number;
   dragonY: number;
   dragonScale: number;
   dragonRotation: number;
+  clawShow: boolean;
   clawX: number;
   clawY: number;
   clawScale: number;
@@ -12,14 +14,17 @@ export type PreviewControls = {
   rearClawY: number;
   rearClawScale: number;
   rearClawRotation: number;
+  bagBaseShow: boolean;
   bagBaseX: number;
   bagBaseY: number;
   bagBaseScale: number;
   bagBaseRotation: number;
+  bagStrapShow: boolean;
   bagStrapX: number;
   bagStrapY: number;
   bagStrapScale: number;
   bagStrapRotation: number;
+  tigerShow: boolean;
   tigerX: number;
   tigerY: number;
   tigerScale: number;
@@ -29,6 +34,7 @@ export type PreviewControls = {
   tigerRacketY: number;
   tigerRacketScale: number;
   tigerRacketRotation: number;
+  heroShow: boolean;
   heroX: number;
   heroY: number;
   heroScale: number;
@@ -84,6 +90,10 @@ export type PreviewControls = {
   goldInkOpacity: number;
   goldInkBlur: number;
 };
+
+export type PreviewBooleanControlKey = {
+  [Key in keyof PreviewControls]: PreviewControls[Key] extends boolean ? Key : never;
+}[keyof PreviewControls];
 
 export type PreviewTargetId =
   | "DRAGON RIG"
@@ -161,10 +171,12 @@ export const buildPreviewAssets = (baseUrl: string) => {
 };
 
 export const previewDefaults: PreviewControls = {
+  dragonShow: true,
   dragonX: 71,
   dragonY: 5,
   dragonScale: 1,
   dragonRotation: 0,
+  clawShow: true,
   clawX: -30,
   clawY: -11,
   clawScale: 0.81,
@@ -174,14 +186,17 @@ export const previewDefaults: PreviewControls = {
   rearClawY: -6,
   rearClawScale: 0.54,
   rearClawRotation: -18,
+  bagBaseShow: true,
   bagBaseX: 0,
   bagBaseY: 2,
   bagBaseScale: 1,
   bagBaseRotation: 5,
+  bagStrapShow: true,
   bagStrapX: -3,
   bagStrapY: 15,
   bagStrapScale: 1.15,
   bagStrapRotation: -2,
+  tigerShow: true,
   tigerX: 0,
   tigerY: 0,
   tigerScale: 1,
@@ -191,6 +206,7 @@ export const previewDefaults: PreviewControls = {
   tigerRacketY: 0,
   tigerRacketScale: 1,
   tigerRacketRotation: 0,
+  heroShow: true,
   heroX: 0,
   heroY: 0,
   heroScale: 1,
@@ -208,54 +224,54 @@ export const previewDefaults: PreviewControls = {
   cloudY: 42,
   cloudScale: 0.76,
   cloudRotation: -8,
-  cloudOpacity: 34,
-  cloudBlur: 2,
+  cloudOpacity: 100,
+  cloudBlur: 0,
   mountainShow: true,
   mountainX: -58,
   mountainY: 224,
   mountainScale: 0.72,
   mountainRotation: 0,
-  mountainOpacity: 38,
-  mountainBlur: 1,
+  mountainOpacity: 100,
+  mountainBlur: 0,
   backWaveShow: true,
   backWaveX: -38,
   backWaveY: 398,
   backWaveScale: 0.9,
   backWaveRotation: -4,
-  backWaveOpacity: 44,
-  backWaveBlur: 1,
+  backWaveOpacity: 100,
+  backWaveBlur: 0,
   midWaveShow: true,
   midWaveX: -36,
   midWaveY: 514,
   midWaveScale: 0.98,
   midWaveRotation: 2,
-  midWaveOpacity: 58,
+  midWaveOpacity: 100,
   midWaveBlur: 0,
   frontFoamShow: true,
   frontFoamX: -46,
   frontFoamY: 646,
   frontFoamScale: 1.02,
   frontFoamRotation: 0,
-  frontFoamOpacity: 68,
+  frontFoamOpacity: 100,
   frontFoamBlur: 0,
   goldInkShow: true,
   goldInkX: 6,
   goldInkY: 152,
   goldInkScale: 0.92,
   goldInkRotation: 0,
-  goldInkOpacity: 52,
+  goldInkOpacity: 100,
   goldInkBlur: 0,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
-  "DRAGON RIG": ["dragonX", "dragonY", "dragonScale", "dragonRotation"],
+  "DRAGON RIG": ["dragonShow", "dragonX", "dragonY", "dragonScale", "dragonRotation"],
   "REAR CLAW": ["rearClawShow", "rearClawX", "rearClawY", "rearClawScale", "rearClawRotation"],
-  "FRONT CLAW": ["clawX", "clawY", "clawScale", "clawRotation"],
-  "BAG BASE": ["bagBaseX", "bagBaseY", "bagBaseScale", "bagBaseRotation"],
-  "BAG STRAP": ["bagStrapX", "bagStrapY", "bagStrapScale", "bagStrapRotation"],
-  "TIGER RIG": ["tigerX", "tigerY", "tigerScale", "tigerRotation"],
+  "FRONT CLAW": ["clawShow", "clawX", "clawY", "clawScale", "clawRotation"],
+  "BAG BASE": ["bagBaseShow", "bagBaseX", "bagBaseY", "bagBaseScale", "bagBaseRotation"],
+  "BAG STRAP": ["bagStrapShow", "bagStrapX", "bagStrapY", "bagStrapScale", "bagStrapRotation"],
+  "TIGER RIG": ["tigerShow", "tigerX", "tigerY", "tigerScale", "tigerRotation"],
   "TIGER RACKET": ["tigerRacketShow", "tigerRacketX", "tigerRacketY", "tigerRacketScale", "tigerRacketRotation"],
-  HERO: ["heroX", "heroY", "heroScale", "heroWidth", "heroEventY", "heroCtaY"],
+  HERO: ["heroShow", "heroX", "heroY", "heroScale", "heroWidth", "heroEventY", "heroCtaY"],
   "SAFE ZONE": ["showSafeZone", "safeZoneX", "safeZoneY", "safeZoneWidth", "safeZoneHeight"],
   CLOUD: ["cloudShow", "cloudX", "cloudY", "cloudScale", "cloudRotation", "cloudOpacity", "cloudBlur"],
   MOUNTAIN: ["mountainShow", "mountainX", "mountainY", "mountainScale", "mountainRotation", "mountainOpacity", "mountainBlur"],
@@ -263,6 +279,24 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "MID WAVE": ["midWaveShow", "midWaveX", "midWaveY", "midWaveScale", "midWaveRotation", "midWaveOpacity", "midWaveBlur"],
   "FRONT FOAM": ["frontFoamShow", "frontFoamX", "frontFoamY", "frontFoamScale", "frontFoamRotation", "frontFoamOpacity", "frontFoamBlur"],
   "GOLD / INK": ["goldInkShow", "goldInkX", "goldInkY", "goldInkScale", "goldInkRotation", "goldInkOpacity", "goldInkBlur"],
+};
+
+export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
+  "DRAGON RIG": "dragonShow",
+  "REAR CLAW": "rearClawShow",
+  "FRONT CLAW": "clawShow",
+  "BAG BASE": "bagBaseShow",
+  "BAG STRAP": "bagStrapShow",
+  "TIGER RIG": "tigerShow",
+  "TIGER RACKET": "tigerRacketShow",
+  HERO: "heroShow",
+  "SAFE ZONE": "showSafeZone",
+  CLOUD: "cloudShow",
+  MOUNTAIN: "mountainShow",
+  "BACK WAVE": "backWaveShow",
+  "MID WAVE": "midWaveShow",
+  "FRONT FOAM": "frontFoamShow",
+  "GOLD / INK": "goldInkShow",
 };
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
@@ -315,37 +349,37 @@ export const controlRanges = {
   safeZoneWidth: { label: "Width", min: 180, max: 390 },
   safeZoneHeight: { label: "Height", min: 180, max: 650 },
   cloudX: { label: "X", min: -200, max: 200 },
-  cloudY: { label: "Y", min: -300, max: 300 },
+  cloudY: { label: "Y", min: -900, max: 900 },
   cloudScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
   cloudRotation: { label: "Rotation", min: -90, max: 90 },
   cloudOpacity: { label: "Opacity", min: 0, max: 100 },
   cloudBlur: { label: "Blur", min: 0, max: 8 },
   mountainX: { label: "X", min: -200, max: 200 },
-  mountainY: { label: "Y", min: -300, max: 300 },
+  mountainY: { label: "Y", min: -900, max: 900 },
   mountainScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
   mountainRotation: { label: "Rotation", min: -90, max: 90 },
   mountainOpacity: { label: "Opacity", min: 0, max: 100 },
   mountainBlur: { label: "Blur", min: 0, max: 8 },
   backWaveX: { label: "X", min: -200, max: 200 },
-  backWaveY: { label: "Y", min: -300, max: 300 },
+  backWaveY: { label: "Y", min: -900, max: 900 },
   backWaveScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
   backWaveRotation: { label: "Rotation", min: -90, max: 90 },
   backWaveOpacity: { label: "Opacity", min: 0, max: 100 },
   backWaveBlur: { label: "Blur", min: 0, max: 8 },
   midWaveX: { label: "X", min: -200, max: 200 },
-  midWaveY: { label: "Y", min: -300, max: 300 },
+  midWaveY: { label: "Y", min: -900, max: 900 },
   midWaveScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
   midWaveRotation: { label: "Rotation", min: -90, max: 90 },
   midWaveOpacity: { label: "Opacity", min: 0, max: 100 },
   midWaveBlur: { label: "Blur", min: 0, max: 8 },
   frontFoamX: { label: "X", min: -200, max: 200 },
-  frontFoamY: { label: "Y", min: -300, max: 300 },
+  frontFoamY: { label: "Y", min: -900, max: 900 },
   frontFoamScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
   frontFoamRotation: { label: "Rotation", min: -90, max: 90 },
   frontFoamOpacity: { label: "Opacity", min: 0, max: 100 },
   frontFoamBlur: { label: "Blur", min: 0, max: 8 },
   goldInkX: { label: "X", min: -200, max: 200 },
-  goldInkY: { label: "Y", min: -300, max: 300 },
+  goldInkY: { label: "Y", min: -900, max: 900 },
   goldInkScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
   goldInkRotation: { label: "Rotation", min: -90, max: 90 },
   goldInkOpacity: { label: "Opacity", min: 0, max: 100 },
@@ -368,6 +402,7 @@ export const getButtonStep = (key: keyof PreviewControls, mode: StepMode) => {
 export const formatPreviewSettings = (controls: PreviewControls) => `V8 PREVIEW SETTINGS
 
 DRAGON RIG
+Show: ${controls.dragonShow ? "ON" : "OFF"}
 X: ${Math.round(controls.dragonX)}
 Y: ${Math.round(controls.dragonY)}
 Scale: ${controls.dragonScale.toFixed(2)}
@@ -381,24 +416,28 @@ Scale: ${controls.rearClawScale.toFixed(2)}
 Rotation: ${Math.round(controls.rearClawRotation)}
 
 FRONT CLAW
+Show: ${controls.clawShow ? "ON" : "OFF"}
 X: ${Math.round(controls.clawX)}
 Y: ${Math.round(controls.clawY)}
 Scale: ${controls.clawScale.toFixed(2)}
 Rotation: ${Math.round(controls.clawRotation)}
 
 BAG BASE
+Show: ${controls.bagBaseShow ? "ON" : "OFF"}
 X: ${Math.round(controls.bagBaseX)}
 Y: ${Math.round(controls.bagBaseY)}
 Scale: ${controls.bagBaseScale.toFixed(2)}
 Rotation Delta: ${Math.round(controls.bagBaseRotation)}
 
 BAG STRAP
+Show: ${controls.bagStrapShow ? "ON" : "OFF"}
 X: ${Math.round(controls.bagStrapX)}
 Y: ${Math.round(controls.bagStrapY)}
 Scale: ${controls.bagStrapScale.toFixed(2)}
 Rotation Delta: ${Math.round(controls.bagStrapRotation)}
 
 TIGER RIG
+Show: ${controls.tigerShow ? "ON" : "OFF"}
 X: ${Math.round(controls.tigerX)}
 Y: ${Math.round(controls.tigerY)}
 Scale: ${controls.tigerScale.toFixed(2)}
@@ -412,6 +451,7 @@ Scale: ${controls.tigerRacketScale.toFixed(2)}
 Rotation: ${Math.round(controls.tigerRacketRotation)}
 
 HERO
+Show: ${controls.heroShow ? "ON" : "OFF"}
 X: ${Math.round(controls.heroX)}
 Y: ${Math.round(controls.heroY)}
 Scale: ${controls.heroScale.toFixed(2)}

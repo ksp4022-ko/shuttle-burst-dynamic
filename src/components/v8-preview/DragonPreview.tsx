@@ -15,6 +15,7 @@ import {
   safeZoneBaseline,
   targetControlKeys,
   targetOrder,
+  targetVisibilityKeys,
   tigerRacketBaseline,
   tigerRigBaseline,
 } from "./dragonPreviewConfig";
@@ -70,15 +71,6 @@ function RangeControl({
         +
       </button>
     </div>
-  );
-}
-
-function ToggleControl({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
-  return (
-    <label style={toggleStyle}>
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.currentTarget.checked)} />
-      <span>{label}</span>
-    </label>
   );
 }
 
@@ -182,6 +174,7 @@ export function DragonPreview() {
   const [hudOpacity, setHudOpacity] = useState<HudOpacityMode>("normal");
   const [stepMode, setStepMode] = useState<StepMode>("Normal");
   const [highlightEnabled, setHighlightEnabled] = useState(true);
+  const [moreOpen, setMoreOpen] = useState(false);
   const panelRef = useRef<HTMLElement | null>(null);
   const copyFeedbackTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const dragRef = useRef<{ pointerId: number | null; offsetY: number } | null>(null);
@@ -351,7 +344,9 @@ export function DragonPreview() {
       : { bottom: "calc(14px + env(safe-area-inset-bottom, 0px))" }),
   };
 
-  const selectedControlKeys = targetControlKeys[selectedTarget];
+  const selectedControlKeys = targetControlKeys[selectedTarget].filter(isNumericControlKey);
+  const selectedVisibilityKey = targetVisibilityKeys[selectedTarget];
+  const selectedVisible = selectedVisibilityKey ? controls[selectedVisibilityKey] : null;
 
   return (
     <main style={pageStyle}>
@@ -362,6 +357,7 @@ export function DragonPreview() {
           <DecorLayer target="CLOUD" src={assets.cloud} show={controls.cloudShow} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={3} highlighted={highlightEnabled && selectedTarget === "CLOUD"} />
           <DecorLayer target="MOUNTAIN" src={assets.mountain} show={controls.mountainShow} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={4} highlighted={highlightEnabled && selectedTarget === "MOUNTAIN"} />
           <DecorLayer target="BACK WAVE" src={assets.backWave} show={controls.backWaveShow} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={5} highlighted={highlightEnabled && selectedTarget === "BACK WAVE"} />
+          {controls.dragonShow ? (
           <div
             data-highlight-target="DRAGON RIG"
             aria-label="Dragon rig"
@@ -392,6 +388,7 @@ export function DragonPreview() {
               />
             ) : null}
             <img src={assets.body} alt="Dragon body preview asset" style={{ ...rigImageStyle, inset: 0, width: "100%", zIndex: 1 }} />
+            {controls.bagBaseShow ? (
             <img
               data-highlight-target="BAG BASE"
               src={assets.bagBase}
@@ -406,6 +403,8 @@ export function DragonPreview() {
                 zIndex: 2,
               }}
             />
+            ) : null}
+            {controls.bagStrapShow ? (
             <img
               data-highlight-target="BAG STRAP"
               src={assets.bagStrap}
@@ -420,6 +419,8 @@ export function DragonPreview() {
                 zIndex: 3,
               }}
             />
+            ) : null}
+            {controls.clawShow ? (
             <img
               data-highlight-target="FRONT CLAW"
               src={assets.claw}
@@ -434,7 +435,10 @@ export function DragonPreview() {
                 zIndex: 4,
               }}
             />
+            ) : null}
           </div>
+          ) : null}
+          {controls.tigerShow ? (
           <div
             data-highlight-target="TIGER RIG"
             aria-label="Tiger rig"
@@ -470,9 +474,10 @@ export function DragonPreview() {
               />
             ) : null}
           </div>
+          ) : null}
           <DecorLayer target="MID WAVE" src={assets.midWave} show={controls.midWaveShow} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={8} highlighted={highlightEnabled && selectedTarget === "MID WAVE"} />
           <DecorLayer target="GOLD / INK" src={assets.goldInk} show={controls.goldInkShow} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={9} highlighted={highlightEnabled && selectedTarget === "GOLD / INK"} />
-          <HeroCopy controls={controls} highlighted={highlightEnabled && selectedTarget === "HERO"} />
+          {controls.heroShow ? <HeroCopy controls={controls} highlighted={highlightEnabled && selectedTarget === "HERO"} /> : null}
           <DecorLayer target="FRONT FOAM" src={assets.frontFoam} show={controls.frontFoamShow && controls.decorMode === "FULL"} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={11} highlighted={highlightEnabled && selectedTarget === "FRONT FOAM"} />
           <SafeZoneOverlay controls={controls} />
         </div>
@@ -504,6 +509,16 @@ export function DragonPreview() {
               </select>
             </label>
             <div style={panelActionsStyle}>
+              {selectedVisibilityKey ? (
+                <button
+                  type="button"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => update(selectedVisibilityKey, !controls[selectedVisibilityKey])}
+                  style={visibilityButtonStyle}
+                >
+                  顯示 {selectedVisible ? "ON" : "OFF"}
+                </button>
+              ) : null}
               <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={copySettings} style={panelActionButtonStyle}>
                 {copyStatus === "copied" ? "已複製" : "複製"}
               </button>
@@ -515,61 +530,51 @@ export function DragonPreview() {
               </button>
             </div>
           </div>
-          <div style={toolbarStyle}>
-            <label style={inlineSelectLabelStyle}>
-              STEP
-              <select value={stepMode} onChange={(event) => setStepMode(event.currentTarget.value as StepMode)} style={compactSelectStyle}>
-                <option value="Fine">Fine</option>
-                <option value="Normal">Normal</option>
-                <option value="Large">Large</option>
-              </select>
-            </label>
-            <label style={inlineSelectLabelStyle}>
-              DECOR
-              <select value={controls.decorMode} onChange={(event) => update("decorMode", event.currentTarget.value as PreviewControls["decorMode"])} style={compactSelectStyle}>
-                <option value="FULL">FULL</option>
-                <option value="LIGHT">LIGHT</option>
-              </select>
-            </label>
-            <button type="button" onClick={() => setHighlightEnabled((current) => !current)} style={smallButtonStyle}>
-              {highlightEnabled ? "Highlight ON" : "Highlight OFF"}
-            </button>
-            <button type="button" onClick={() => setDockPosition((current) => (current === "top" ? "bottom" : "top"))} style={smallButtonStyle}>
-              {dockPosition === "top" ? "移下" : "移上"}
-            </button>
-          </div>
           <div style={panelBodyStyle}>
-            {selectedControlKeys.map((key) => {
-              if (!isNumericControlKey(key)) {
-                return (
-                  <ToggleControl
-                    key={key}
-                    label={key === "showSafeZone" ? "Show Safe Zone" : "Show"}
-                    checked={controls[key] as boolean}
-                    onChange={(value) => update(key, value as PreviewControls[typeof key])}
-                  />
-                );
-              }
-
-              return (
-                <RangeControl
-                  key={key}
-                  controlKey={key}
-                  value={controls[key]}
-                  stepMode={stepMode}
-                  onChange={(value) => update(key, value as PreviewControls[typeof key])}
-                />
-              );
-            })}
+            {selectedControlKeys.map((key) => (
+              <RangeControl
+                key={key}
+                controlKey={key}
+                value={controls[key]}
+                stepMode={stepMode}
+                onChange={(value) => update(key, value as PreviewControls[typeof key])}
+              />
+            ))}
           </div>
-          <div style={resetBarStyle}>
-            <button type="button" onClick={resetTarget} style={resetButtonStyle}>
-              Reset Target
-            </button>
-            <button type="button" onClick={() => setControls(previewDefaults)} style={resetButtonStyle}>
-              Reset All
-            </button>
-          </div>
+          <button type="button" onClick={() => setMoreOpen((current) => !current)} style={moreToggleStyle}>
+            {moreOpen ? "收起更多" : "⋯ 更多"}
+          </button>
+          {moreOpen ? (
+            <>
+              <div style={toolbarStyle}>
+                <label style={inlineSelectLabelStyle}>
+                  STEP
+                  <select value={stepMode} onChange={(event) => setStepMode(event.currentTarget.value as StepMode)} style={compactSelectStyle}>
+                    <option value="Fine">Fine</option>
+                    <option value="Normal">Normal</option>
+                    <option value="Large">Large</option>
+                  </select>
+                </label>
+                <label style={inlineSelectLabelStyle}>
+                  DECOR
+                  <select value={controls.decorMode} onChange={(event) => update("decorMode", event.currentTarget.value as PreviewControls["decorMode"])} style={compactSelectStyle}>
+                    <option value="FULL">FULL</option>
+                    <option value="LIGHT">LIGHT</option>
+                  </select>
+                </label>
+                <button type="button" onClick={() => setHighlightEnabled((current) => !current)} style={smallButtonStyle}>
+                  {highlightEnabled ? "Highlight ON" : "Highlight OFF"}
+                </button>
+                <button type="button" onClick={() => setDockPosition((current) => (current === "top" ? "bottom" : "top"))} style={smallButtonStyle}>
+                  {dockPosition === "top" ? "移下" : "移上"}
+                </button>
+              </div>
+              <div style={resetBarStyle}>
+                <button type="button" onClick={resetTarget} style={resetButtonStyle}>Reset Target</button>
+                <button type="button" onClick={() => setControls(previewDefaults)} style={resetButtonStyle}>Reset All</button>
+              </div>
+            </>
+          ) : null}
         </section>
       )}
     </main>
@@ -659,7 +664,7 @@ const decorImageStyle: CSSProperties = {
   height: "auto",
   userSelect: "none",
   pointerEvents: "none",
-  transformOrigin: "center center",
+  transformOrigin: "top left",
 };
 
 const safeZoneStyle: CSSProperties = {
@@ -742,8 +747,7 @@ const panelStyle: CSSProperties = {
   zIndex: 30,
   maxWidth: 390,
   margin: "0 auto",
-  display: "grid",
-  gridTemplateRows: "auto auto minmax(0, 1fr) auto",
+  display: "block",
   overflow: "hidden",
   borderRadius: 14,
   boxShadow: "0 14px 42px rgba(0,0,0,0.34)",
@@ -808,6 +812,18 @@ const panelActionButtonStyle: CSSProperties = {
   fontWeight: 900,
 };
 
+const visibilityButtonStyle: CSSProperties = {
+  minHeight: 34,
+  border: "1px solid rgba(247, 239, 224, 0.25)",
+  borderRadius: 8,
+  background: "rgba(247, 239, 224, 0.16)",
+  color: "#f7efe0",
+  padding: "0 6px",
+  fontSize: 10,
+  fontWeight: 900,
+  whiteSpace: "nowrap",
+};
+
 const panelIconButtonStyle: CSSProperties = {
   width: 34,
   height: 34,
@@ -863,7 +879,7 @@ const smallButtonStyle: CSSProperties = {
 };
 
 const panelBodyStyle: CSSProperties = {
-  maxHeight: 210,
+  maxHeight: 180,
   minHeight: 0,
   overflowY: "auto",
   WebkitOverflowScrolling: "touch",
@@ -913,14 +929,15 @@ const stepperStyle: CSSProperties = {
   lineHeight: 1,
 };
 
-const toggleStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  minHeight: 36,
-  fontSize: 13,
-  fontWeight: 800,
+const moreToggleStyle: CSSProperties = {
+  width: "100%",
+  minHeight: 30,
+  border: 0,
+  borderTop: "1px solid rgba(247, 239, 224, 0.1)",
+  background: "rgba(247, 239, 224, 0.08)",
   color: "#f7efe0",
+  fontSize: 11,
+  fontWeight: 900,
 };
 
 const resetBarStyle: CSSProperties = {
