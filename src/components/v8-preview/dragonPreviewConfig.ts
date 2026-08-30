@@ -19,12 +19,37 @@ export type PreviewControls = {
   bagStrapY: number;
   bagStrapScale: number;
   bagStrapRotation: number;
+  tigerX: number;
+  tigerY: number;
+  tigerScale: number;
+  tigerRotation: number;
+  tigerRacketX: number;
+  tigerRacketY: number;
+  tigerRacketScale: number;
+  tigerRacketRotation: number;
   showSafeZone: boolean;
 };
 
-export type ControlGroupId = "DRAGON" | "REAR CLAW" | "CLAW" | "BAG BASE" | "BAG STRAP" | "VIEW";
+export type ControlGroupId =
+  | "DRAGON"
+  | "REAR CLAW"
+  | "CLAW"
+  | "BAG BASE"
+  | "BAG STRAP"
+  | "TIGER"
+  | "TIGER RACKET"
+  | "VIEW";
 
-export const controlGroupOrder: ControlGroupId[] = ["DRAGON", "REAR CLAW", "CLAW", "BAG BASE", "BAG STRAP", "VIEW"];
+export const controlGroupOrder: ControlGroupId[] = [
+  "DRAGON",
+  "REAR CLAW",
+  "CLAW",
+  "BAG BASE",
+  "BAG STRAP",
+  "TIGER",
+  "TIGER RACKET",
+  "VIEW",
+];
 
 export const previewAssets = {
   body: "dragon-body-v2.png",
@@ -32,16 +57,21 @@ export const previewAssets = {
   claw: "dragon-throw-claw-v1.webp",
   bagBase: "dragon-bag-base-v2-source.png",
   bagStrap: "dragon-bag-strap-overlay-v2-source.png",
+  tigerBody: "tiger-body-v1.png",
+  tigerRacket: "tiger-racket-v1.png",
 } as const;
 
 export const buildPreviewAssets = (baseUrl: string) => {
-  const assetBase = `${baseUrl}v8-preview/dragon`;
+  const dragonAssetBase = `${baseUrl}v8-preview/dragon`;
+  const tigerAssetBase = `${baseUrl}v8-preview/tiger`;
   return {
-    body: `${assetBase}/${previewAssets.body}`,
-    rearClaw: `${assetBase}/${previewAssets.rearClaw}`,
-    claw: `${assetBase}/${previewAssets.claw}`,
-    bagBase: `${assetBase}/${previewAssets.bagBase}`,
-    bagStrap: `${assetBase}/${previewAssets.bagStrap}`,
+    body: `${dragonAssetBase}/${previewAssets.body}`,
+    rearClaw: `${dragonAssetBase}/${previewAssets.rearClaw}`,
+    claw: `${dragonAssetBase}/${previewAssets.claw}`,
+    bagBase: `${dragonAssetBase}/${previewAssets.bagBase}`,
+    bagStrap: `${dragonAssetBase}/${previewAssets.bagStrap}`,
+    tigerBody: `${tigerAssetBase}/${previewAssets.tigerBody}`,
+    tigerRacket: `${tigerAssetBase}/${previewAssets.tigerRacket}`,
   };
 };
 
@@ -66,6 +96,14 @@ export const previewDefaults: PreviewControls = {
   bagStrapY: 15,
   bagStrapScale: 1.15,
   bagStrapRotation: -2,
+  tigerX: 0,
+  tigerY: 0,
+  tigerScale: 1,
+  tigerRotation: -5,
+  tigerRacketX: 18,
+  tigerRacketY: 0,
+  tigerRacketScale: 1,
+  tigerRacketRotation: -6,
   showSafeZone: true,
 };
 
@@ -73,6 +111,8 @@ export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.03
 export const bagStrapBaseline = { left: 57.6171875, top: 18.4895833, width: 20.80078125, rotation: 2 } as const;
 export const clawBaseline = { left: 58, top: 38, width: 50 } as const;
 export const rearClawBaseline = { left: 53, top: 23, width: 46 } as const;
+export const tigerBodyBaseline = { left: -118, top: 485, width: 330 } as const;
+export const tigerRacketBaseline = { left: 52, top: 444, width: 268 } as const;
 
 export const controlRanges = {
   dragonX: { min: 35, max: 92 },
@@ -94,6 +134,14 @@ export const controlRanges = {
   bagStrapY: { min: -40, max: 40 },
   bagStrapScale: { min: 0.6, max: 1.5, step: 0.01 },
   bagStrapRotation: { min: -25, max: 25 },
+  tigerX: { min: -120, max: 120 },
+  tigerY: { min: -120, max: 120 },
+  tigerScale: { min: 0.4, max: 1.6, step: 0.01 },
+  tigerRotation: { min: -30, max: 30 },
+  tigerRacketX: { min: -140, max: 140 },
+  tigerRacketY: { min: -140, max: 140 },
+  tigerRacketScale: { min: 0.3, max: 1.6, step: 0.01 },
+  tigerRacketRotation: { min: -120, max: 120 },
 } as const;
 
 export const formatPreviewSettings = (controls: PreviewControls) => `V8 DRAGON PREVIEW SETTINGS
@@ -127,6 +175,18 @@ X: ${Math.round(controls.bagStrapX)}
 Y: ${Math.round(controls.bagStrapY)}
 Scale: ${controls.bagStrapScale.toFixed(2)}
 Rotation Delta: ${Math.round(controls.bagStrapRotation)}
+
+TIGER
+X: ${Math.round(controls.tigerX)}
+Y: ${Math.round(controls.tigerY)}
+Scale: ${controls.tigerScale.toFixed(2)}
+Rotation: ${Math.round(controls.tigerRotation)}
+
+TIGER RACKET
+X: ${Math.round(controls.tigerRacketX)}
+Y: ${Math.round(controls.tigerRacketY)}
+Scale: ${controls.tigerRacketScale.toFixed(2)}
+Rotation: ${Math.round(controls.tigerRacketRotation)}
 
 VIEW
 Safe Zone: ${controls.showSafeZone ? "ON" : "OFF"}`;

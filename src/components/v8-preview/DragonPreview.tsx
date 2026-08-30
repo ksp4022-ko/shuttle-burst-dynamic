@@ -9,6 +9,8 @@ import {
   formatPreviewSettings,
   previewDefaults,
   rearClawBaseline,
+  tigerBodyBaseline,
+  tigerRacketBaseline,
 } from "./dragonPreviewConfig";
 import type { ControlGroupId, PreviewControls } from "./dragonPreviewConfig";
 
@@ -358,6 +360,30 @@ export function DragonPreview() {
               }}
             />
           </div>
+          <img
+            src={assets.tigerBody}
+            alt="Tiger body preview asset"
+            style={{
+              ...stageImageStyle,
+              left: tigerBodyBaseline.left,
+              top: tigerBodyBaseline.top,
+              width: tigerBodyBaseline.width,
+              transform: `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`,
+              zIndex: 5,
+            }}
+          />
+          <img
+            src={assets.tigerRacket}
+            alt="Tiger racket preview asset"
+            style={{
+              ...stageImageStyle,
+              left: tigerRacketBaseline.left,
+              top: tigerRacketBaseline.top,
+              width: tigerRacketBaseline.width,
+              transform: `translate(${controls.tigerRacketX}px, ${controls.tigerRacketY}px) scale(${controls.tigerRacketScale}) rotate(${controls.tigerRacketRotation}deg)`,
+              zIndex: 6,
+            }}
+          />
           <svg viewBox="0 0 390 844" style={frontWaveStyle} aria-hidden="true">
             <path d="M-18 706 C74 658 138 720 220 690 C298 662 340 680 422 638 L422 844 L-18 844 Z" fill="#e8dbbb" opacity="0.94" />
             <path d="M-18 718 C76 672 150 734 234 700 C302 672 358 686 422 654" fill="none" stroke="#ba9c60" strokeWidth="7" opacity="0.32" />
@@ -450,6 +476,18 @@ export function DragonPreview() {
               <RangeControl label="Bag Strap Y" value={controls.bagStrapY} {...controlRanges.bagStrapY} onChange={(value) => update("bagStrapY", value)} />
               <RangeControl label="Bag Strap Scale" value={controls.bagStrapScale} {...controlRanges.bagStrapScale} onChange={(value) => update("bagStrapScale", value)} />
               <RangeControl label="Bag Strap Rotation" value={controls.bagStrapRotation} {...controlRanges.bagStrapRotation} onChange={(value) => update("bagStrapRotation", value)} />
+            </ControlGroup>
+            <ControlGroup title="TIGER" isOpen={openGroup === "TIGER"} onToggle={() => toggleGroup("TIGER")} register={(node) => { if (node) groupRefs.current["TIGER"] = node; }}>
+              <RangeControl label="Tiger X" value={controls.tigerX} {...controlRanges.tigerX} onChange={(value) => update("tigerX", value)} />
+              <RangeControl label="Tiger Y" value={controls.tigerY} {...controlRanges.tigerY} onChange={(value) => update("tigerY", value)} />
+              <RangeControl label="Tiger Scale" value={controls.tigerScale} {...controlRanges.tigerScale} onChange={(value) => update("tigerScale", value)} />
+              <RangeControl label="Tiger Rotation" value={controls.tigerRotation} {...controlRanges.tigerRotation} onChange={(value) => update("tigerRotation", value)} />
+            </ControlGroup>
+            <ControlGroup title="TIGER RACKET" isOpen={openGroup === "TIGER RACKET"} onToggle={() => toggleGroup("TIGER RACKET")} register={(node) => { if (node) groupRefs.current["TIGER RACKET"] = node; }}>
+              <RangeControl label="Tiger Racket X" value={controls.tigerRacketX} {...controlRanges.tigerRacketX} onChange={(value) => update("tigerRacketX", value)} />
+              <RangeControl label="Tiger Racket Y" value={controls.tigerRacketY} {...controlRanges.tigerRacketY} onChange={(value) => update("tigerRacketY", value)} />
+              <RangeControl label="Tiger Racket Scale" value={controls.tigerRacketScale} {...controlRanges.tigerRacketScale} onChange={(value) => update("tigerRacketScale", value)} />
+              <RangeControl label="Tiger Racket Rotation" value={controls.tigerRacketRotation} {...controlRanges.tigerRacketRotation} onChange={(value) => update("tigerRacketRotation", value)} />
             </ControlGroup>
             <ControlGroup title="VIEW" isOpen={openGroup === "VIEW"} onToggle={() => toggleGroup("VIEW")} register={(node) => { if (node) groupRefs.current["VIEW"] = node; }}>
               <label style={toggleStyle}>
@@ -564,6 +602,14 @@ const dragonRigStyle: CSSProperties = {
 };
 
 const rigImageStyle: CSSProperties = {
+  position: "absolute",
+  height: "auto",
+  userSelect: "none",
+  pointerEvents: "none",
+  transformOrigin: "center center",
+};
+
+const stageImageStyle: CSSProperties = {
   position: "absolute",
   height: "auto",
   userSelect: "none",
