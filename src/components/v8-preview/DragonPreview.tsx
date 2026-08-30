@@ -6,6 +6,7 @@ import {
   buildPreviewAssets,
   clawBaseline,
   controlRanges,
+  decorBaseline,
   formatPreviewSettings,
   getButtonStep,
   heroBaseline,
@@ -125,6 +126,52 @@ function SafeZoneOverlay({ controls }: { controls: PreviewControls }) {
   );
 }
 
+function DecorLayer({
+  target,
+  src,
+  show,
+  x,
+  y,
+  scale,
+  rotation,
+  opacity,
+  blur,
+  zIndex,
+  highlighted,
+}: {
+  target: PreviewTargetId;
+  src: string;
+  show: boolean;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  blur: number;
+  zIndex: number;
+  highlighted: boolean;
+}) {
+  if (!show) return null;
+  return (
+    <img
+      data-highlight-target={target}
+      src={src}
+      alt={`${target} preview asset`}
+      style={{
+        ...decorImageStyle,
+        ...(highlighted ? selectedTargetStyle : {}),
+        left: decorBaseline.left,
+        top: decorBaseline.top,
+        width: decorBaseline.width,
+        opacity: opacity / 100,
+        filter: blur > 0 ? `blur(${blur}px)` : "none",
+        transform: `translate(${x}px, ${y}px) scale(${scale}) rotate(${rotation}deg)`,
+        zIndex,
+      }}
+    />
+  );
+}
+
 export function DragonPreview() {
   const [controls, setControls] = useState<PreviewControls>(previewDefaults);
   const [panelMinimized, setPanelMinimized] = useState(false);
@@ -142,6 +189,7 @@ export function DragonPreview() {
   const assets = useMemo(() => buildPreviewAssets(import.meta.env.BASE_URL), []);
   const targetHighlightStyle = (target: PreviewTargetId): CSSProperties =>
     highlightEnabled && selectedTarget === target ? selectedTargetStyle : {};
+  const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
 
   const update = <Key extends keyof PreviewControls>(key: Key, value: PreviewControls[Key]) => {
     setControls((current) => ({ ...current, [key]: value }));
@@ -311,10 +359,9 @@ export function DragonPreview() {
         <div style={stageStyle}>
           <div style={paperStyle} />
           <div style={sunStyle} />
-          <svg viewBox="0 0 390 844" style={backWaveStyle} aria-hidden="true">
-            <path d="M-20 594 C72 536 142 620 230 566 C302 522 348 544 422 510 L422 844 L-20 844 Z" fill="#2f5f73" opacity="0.22" />
-            <path d="M-20 640 C72 592 144 664 236 616 C304 580 354 598 422 568" fill="none" stroke="#214a5d" strokeWidth="10" opacity="0.2" />
-          </svg>
+          <DecorLayer target="CLOUD" src={assets.cloud} show={controls.cloudShow} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={3} highlighted={highlightEnabled && selectedTarget === "CLOUD"} />
+          <DecorLayer target="MOUNTAIN" src={assets.mountain} show={controls.mountainShow} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={4} highlighted={highlightEnabled && selectedTarget === "MOUNTAIN"} />
+          <DecorLayer target="BACK WAVE" src={assets.backWave} show={controls.backWaveShow} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={5} highlighted={highlightEnabled && selectedTarget === "BACK WAVE"} />
           <div
             data-highlight-target="DRAGON RIG"
             aria-label="Dragon rig"
@@ -325,6 +372,7 @@ export function DragonPreview() {
               right: `${100 - controls.dragonX}%`,
               top: `${controls.dragonY}%`,
               transform: `translate(44%, -8%) rotate(${controls.dragonRotation}deg)`,
+              zIndex: 6,
             }}
           >
             {controls.rearClawShow ? (
@@ -397,6 +445,7 @@ export function DragonPreview() {
               top: tigerRigBaseline.top,
               width: tigerRigBaseline.width,
               transform: `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`,
+              zIndex: 7,
             }}
           >
             <img
@@ -421,12 +470,11 @@ export function DragonPreview() {
               />
             ) : null}
           </div>
-          <svg viewBox="0 0 390 844" style={frontWaveStyle} aria-hidden="true">
-            <path d="M-18 706 C74 658 138 720 220 690 C298 662 340 680 422 638 L422 844 L-18 844 Z" fill="#e8dbbb" opacity="0.94" />
-            <path d="M-18 718 C76 672 150 734 234 700 C302 672 358 686 422 654" fill="none" stroke="#ba9c60" strokeWidth="7" opacity="0.32" />
-          </svg>
-          <SafeZoneOverlay controls={controls} />
+          <DecorLayer target="MID WAVE" src={assets.midWave} show={controls.midWaveShow} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={8} highlighted={highlightEnabled && selectedTarget === "MID WAVE"} />
+          <DecorLayer target="GOLD / INK" src={assets.goldInk} show={controls.goldInkShow} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={9} highlighted={highlightEnabled && selectedTarget === "GOLD / INK"} />
           <HeroCopy controls={controls} highlighted={highlightEnabled && selectedTarget === "HERO"} />
+          <DecorLayer target="FRONT FOAM" src={assets.frontFoam} show={controls.frontFoamShow && controls.decorMode === "FULL"} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={11} highlighted={highlightEnabled && selectedTarget === "FRONT FOAM"} />
+          <SafeZoneOverlay controls={controls} />
         </div>
       </section>
 
@@ -474,6 +522,13 @@ export function DragonPreview() {
                 <option value="Fine">Fine</option>
                 <option value="Normal">Normal</option>
                 <option value="Large">Large</option>
+              </select>
+            </label>
+            <label style={inlineSelectLabelStyle}>
+              DECOR
+              <select value={controls.decorMode} onChange={(event) => update("decorMode", event.currentTarget.value as PreviewControls["decorMode"])} style={compactSelectStyle}>
+                <option value="FULL">FULL</option>
+                <option value="LIGHT">LIGHT</option>
               </select>
             </label>
             <button type="button" onClick={() => setHighlightEnabled((current) => !current)} style={smallButtonStyle}>
@@ -569,22 +624,6 @@ const sunStyle: CSSProperties = {
   boxShadow: "0 0 0 12px rgba(198,67,37,0.08)",
 };
 
-const backWaveStyle: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  zIndex: 3,
-  width: "100%",
-  height: "100%",
-};
-
-const frontWaveStyle: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  zIndex: 7,
-  width: "100%",
-  height: "100%",
-};
-
 const dragonRigStyle: CSSProperties = {
   position: "absolute",
   aspectRatio: "1024 / 1536",
@@ -615,9 +654,17 @@ const stageImageStyle: CSSProperties = {
   transformOrigin: "center center",
 };
 
+const decorImageStyle: CSSProperties = {
+  position: "absolute",
+  height: "auto",
+  userSelect: "none",
+  pointerEvents: "none",
+  transformOrigin: "center center",
+};
+
 const safeZoneStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 8,
+  zIndex: 12,
   border: "2px dashed rgba(20, 125, 92, 0.78)",
   background: "rgba(40, 191, 138, 0.08)",
   color: "#10523d",
@@ -637,7 +684,7 @@ const safeZoneLabelStyle: CSSProperties = {
 
 const heroStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 9,
+  zIndex: 10,
   textAlign: "center",
   color: "#20150d",
   transformOrigin: "50% 0",
@@ -774,7 +821,7 @@ const panelIconButtonStyle: CSSProperties = {
 
 const toolbarStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr auto auto",
+  gridTemplateColumns: "1fr 1fr auto auto",
   alignItems: "center",
   gap: 6,
   padding: "6px 8px",

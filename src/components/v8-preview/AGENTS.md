@@ -42,7 +42,13 @@ Rear Claw -> Dragon Body -> Bag Base -> Bag Strap -> Front Claw
 
 Tiger Racket stays in front of Tiger Body.
 
-Future decoration targets such as `SUN`, `BACK WAVE`, `FRONT WAVE`, and `GOLD / INK` may be added to the target registry when explicitly requested.
+Current locked decor targets are `CLOUD`, `MOUNTAIN`, `BACK WAVE`, `MID WAVE`, `FRONT FOAM`, and `GOLD / INK`.
+
+Future decoration targets such as additional `SUN`, `WAVE`, or `GOLD / INK` variants may be added to the target registry when explicitly requested.
+
+Full stage layer order:
+
+PAPER -> SUN -> CLOUD -> MOUNTAIN -> BACK WAVE -> DRAGON RIG -> TIGER RIG -> MID WAVE -> GOLD / INK -> HERO -> FRONT FOAM -> SAFE ZONE
 
 # Current Tool HUD Requirements
 
@@ -55,6 +61,7 @@ Preserve the single-target transparent HUD:
 - Fine/Normal/Large step mode
 - Reset Target / Reset All
 - Target Highlight ON/OFF
+- Decor Mode FULL/LIGHT
 - draggable header
 - TOP/BOTTOM docking
 - iPhone safe-area
@@ -138,8 +145,20 @@ Control Rotation values are deltas around these locked rotations.
 - Bag Strap: `dragon-bag-strap-overlay-v2-source.png`
 - Tiger Body: `tiger-body-v1.png`
 - Tiger Racket: `tiger-racket-v1.png`
+- Cloud: `ukiyoe-cloud-v1.png`
+- Mountain: `ukiyoe-mountain-v1.png`
+- Back Wave: `ukiyoe-back-wave-v1.png`
+- Mid Wave: `ukiyoe-mid-wave-v1.png`
+- Front Foam: `ukiyoe-front-foam-v1.png`
+- Gold / Ink: `ukiyoe-gold-ink-v1.png`
 
 Do not redraw, regenerate, repaint, crop, alter pixels, or substitute visually similar art unless explicitly requested.
+
+# Decor Mode
+
+`FULL` follows normal Show, Opacity, and Blur values.
+
+`LIGHT` is runtime-only: it disables decor blur and hides `FRONT FOAM` without overwriting the saved target values.
 
 # Preview Validation
 

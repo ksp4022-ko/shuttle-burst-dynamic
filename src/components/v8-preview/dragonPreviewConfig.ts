@@ -40,6 +40,49 @@ export type PreviewControls = {
   safeZoneY: number;
   safeZoneWidth: number;
   safeZoneHeight: number;
+  decorMode: "FULL" | "LIGHT";
+  cloudShow: boolean;
+  cloudX: number;
+  cloudY: number;
+  cloudScale: number;
+  cloudRotation: number;
+  cloudOpacity: number;
+  cloudBlur: number;
+  mountainShow: boolean;
+  mountainX: number;
+  mountainY: number;
+  mountainScale: number;
+  mountainRotation: number;
+  mountainOpacity: number;
+  mountainBlur: number;
+  backWaveShow: boolean;
+  backWaveX: number;
+  backWaveY: number;
+  backWaveScale: number;
+  backWaveRotation: number;
+  backWaveOpacity: number;
+  backWaveBlur: number;
+  midWaveShow: boolean;
+  midWaveX: number;
+  midWaveY: number;
+  midWaveScale: number;
+  midWaveRotation: number;
+  midWaveOpacity: number;
+  midWaveBlur: number;
+  frontFoamShow: boolean;
+  frontFoamX: number;
+  frontFoamY: number;
+  frontFoamScale: number;
+  frontFoamRotation: number;
+  frontFoamOpacity: number;
+  frontFoamBlur: number;
+  goldInkShow: boolean;
+  goldInkX: number;
+  goldInkY: number;
+  goldInkScale: number;
+  goldInkRotation: number;
+  goldInkOpacity: number;
+  goldInkBlur: number;
 };
 
 export type PreviewTargetId =
@@ -51,7 +94,13 @@ export type PreviewTargetId =
   | "TIGER RIG"
   | "TIGER RACKET"
   | "HERO"
-  | "SAFE ZONE";
+  | "SAFE ZONE"
+  | "CLOUD"
+  | "MOUNTAIN"
+  | "BACK WAVE"
+  | "MID WAVE"
+  | "FRONT FOAM"
+  | "GOLD / INK";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -66,6 +115,12 @@ export const targetOrder: PreviewTargetId[] = [
   "TIGER RACKET",
   "HERO",
   "SAFE ZONE",
+  "CLOUD",
+  "MOUNTAIN",
+  "BACK WAVE",
+  "MID WAVE",
+  "FRONT FOAM",
+  "GOLD / INK",
 ];
 
 export const previewAssets = {
@@ -76,11 +131,18 @@ export const previewAssets = {
   bagStrap: "dragon-bag-strap-overlay-v2-source.png",
   tigerBody: "tiger-body-v1.png",
   tigerRacket: "tiger-racket-v1.png",
+  cloud: "ukiyoe-cloud-v1.png",
+  mountain: "ukiyoe-mountain-v1.png",
+  backWave: "ukiyoe-back-wave-v1.png",
+  midWave: "ukiyoe-mid-wave-v1.png",
+  frontFoam: "ukiyoe-front-foam-v1.png",
+  goldInk: "ukiyoe-gold-ink-v1.png",
 } as const;
 
 export const buildPreviewAssets = (baseUrl: string) => {
   const dragonAssetBase = `${baseUrl}v8-preview/dragon`;
   const tigerAssetBase = `${baseUrl}v8-preview/tiger`;
+  const decorAssetBase = `${baseUrl}v8-preview/decor`;
   return {
     body: `${dragonAssetBase}/${previewAssets.body}`,
     rearClaw: `${dragonAssetBase}/${previewAssets.rearClaw}`,
@@ -89,6 +151,12 @@ export const buildPreviewAssets = (baseUrl: string) => {
     bagStrap: `${dragonAssetBase}/${previewAssets.bagStrap}`,
     tigerBody: `${tigerAssetBase}/${previewAssets.tigerBody}`,
     tigerRacket: `${tigerAssetBase}/${previewAssets.tigerRacket}`,
+    cloud: `${decorAssetBase}/${previewAssets.cloud}`,
+    mountain: `${decorAssetBase}/${previewAssets.mountain}`,
+    backWave: `${decorAssetBase}/${previewAssets.backWave}`,
+    midWave: `${decorAssetBase}/${previewAssets.midWave}`,
+    frontFoam: `${decorAssetBase}/${previewAssets.frontFoam}`,
+    goldInk: `${decorAssetBase}/${previewAssets.goldInk}`,
   };
 };
 
@@ -134,6 +202,49 @@ export const previewDefaults: PreviewControls = {
   safeZoneY: 0,
   safeZoneWidth: 294,
   safeZoneHeight: 392,
+  decorMode: "FULL",
+  cloudShow: true,
+  cloudX: 82,
+  cloudY: 42,
+  cloudScale: 0.76,
+  cloudRotation: -8,
+  cloudOpacity: 34,
+  cloudBlur: 2,
+  mountainShow: true,
+  mountainX: -58,
+  mountainY: 224,
+  mountainScale: 0.72,
+  mountainRotation: 0,
+  mountainOpacity: 38,
+  mountainBlur: 1,
+  backWaveShow: true,
+  backWaveX: -38,
+  backWaveY: 398,
+  backWaveScale: 0.9,
+  backWaveRotation: -4,
+  backWaveOpacity: 44,
+  backWaveBlur: 1,
+  midWaveShow: true,
+  midWaveX: -36,
+  midWaveY: 514,
+  midWaveScale: 0.98,
+  midWaveRotation: 2,
+  midWaveOpacity: 58,
+  midWaveBlur: 0,
+  frontFoamShow: true,
+  frontFoamX: -46,
+  frontFoamY: 646,
+  frontFoamScale: 1.02,
+  frontFoamRotation: 0,
+  frontFoamOpacity: 68,
+  frontFoamBlur: 0,
+  goldInkShow: true,
+  goldInkX: 6,
+  goldInkY: 152,
+  goldInkScale: 0.92,
+  goldInkRotation: 0,
+  goldInkOpacity: 52,
+  goldInkBlur: 0,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -146,6 +257,12 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "TIGER RACKET": ["tigerRacketShow", "tigerRacketX", "tigerRacketY", "tigerRacketScale", "tigerRacketRotation"],
   HERO: ["heroX", "heroY", "heroScale", "heroWidth", "heroEventY", "heroCtaY"],
   "SAFE ZONE": ["showSafeZone", "safeZoneX", "safeZoneY", "safeZoneWidth", "safeZoneHeight"],
+  CLOUD: ["cloudShow", "cloudX", "cloudY", "cloudScale", "cloudRotation", "cloudOpacity", "cloudBlur"],
+  MOUNTAIN: ["mountainShow", "mountainX", "mountainY", "mountainScale", "mountainRotation", "mountainOpacity", "mountainBlur"],
+  "BACK WAVE": ["backWaveShow", "backWaveX", "backWaveY", "backWaveScale", "backWaveRotation", "backWaveOpacity", "backWaveBlur"],
+  "MID WAVE": ["midWaveShow", "midWaveX", "midWaveY", "midWaveScale", "midWaveRotation", "midWaveOpacity", "midWaveBlur"],
+  "FRONT FOAM": ["frontFoamShow", "frontFoamX", "frontFoamY", "frontFoamScale", "frontFoamRotation", "frontFoamOpacity", "frontFoamBlur"],
+  "GOLD / INK": ["goldInkShow", "goldInkX", "goldInkY", "goldInkScale", "goldInkRotation", "goldInkOpacity", "goldInkBlur"],
 };
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
@@ -156,6 +273,7 @@ export const tigerRigBaseline = { left: -118, top: 485, width: 330, bodyRotation
 export const tigerRacketBaseline = { left: 56.9696969697, top: -9.9431618497, width: 81.2121212121, rotation: -6 } as const;
 export const heroBaseline = { centerX: 195, top: 286 } as const;
 export const safeZoneBaseline = { left: 48, top: 238 } as const;
+export const decorBaseline = { left: 0, top: 0, width: 390 } as const;
 
 export const controlRanges = {
   dragonX: { label: "X", min: 35, max: 92 },
@@ -196,6 +314,42 @@ export const controlRanges = {
   safeZoneY: { label: "Y", min: -220, max: 220 },
   safeZoneWidth: { label: "Width", min: 180, max: 390 },
   safeZoneHeight: { label: "Height", min: 180, max: 650 },
+  cloudX: { label: "X", min: -200, max: 200 },
+  cloudY: { label: "Y", min: -300, max: 300 },
+  cloudScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
+  cloudRotation: { label: "Rotation", min: -90, max: 90 },
+  cloudOpacity: { label: "Opacity", min: 0, max: 100 },
+  cloudBlur: { label: "Blur", min: 0, max: 8 },
+  mountainX: { label: "X", min: -200, max: 200 },
+  mountainY: { label: "Y", min: -300, max: 300 },
+  mountainScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
+  mountainRotation: { label: "Rotation", min: -90, max: 90 },
+  mountainOpacity: { label: "Opacity", min: 0, max: 100 },
+  mountainBlur: { label: "Blur", min: 0, max: 8 },
+  backWaveX: { label: "X", min: -200, max: 200 },
+  backWaveY: { label: "Y", min: -300, max: 300 },
+  backWaveScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
+  backWaveRotation: { label: "Rotation", min: -90, max: 90 },
+  backWaveOpacity: { label: "Opacity", min: 0, max: 100 },
+  backWaveBlur: { label: "Blur", min: 0, max: 8 },
+  midWaveX: { label: "X", min: -200, max: 200 },
+  midWaveY: { label: "Y", min: -300, max: 300 },
+  midWaveScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
+  midWaveRotation: { label: "Rotation", min: -90, max: 90 },
+  midWaveOpacity: { label: "Opacity", min: 0, max: 100 },
+  midWaveBlur: { label: "Blur", min: 0, max: 8 },
+  frontFoamX: { label: "X", min: -200, max: 200 },
+  frontFoamY: { label: "Y", min: -300, max: 300 },
+  frontFoamScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
+  frontFoamRotation: { label: "Rotation", min: -90, max: 90 },
+  frontFoamOpacity: { label: "Opacity", min: 0, max: 100 },
+  frontFoamBlur: { label: "Blur", min: 0, max: 8 },
+  goldInkX: { label: "X", min: -200, max: 200 },
+  goldInkY: { label: "Y", min: -300, max: 300 },
+  goldInkScale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
+  goldInkRotation: { label: "Rotation", min: -90, max: 90 },
+  goldInkOpacity: { label: "Opacity", min: 0, max: 100 },
+  goldInkBlur: { label: "Blur", min: 0, max: 8 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -270,4 +424,61 @@ Show: ${controls.showSafeZone ? "ON" : "OFF"}
 X: ${Math.round(controls.safeZoneX)}
 Y: ${Math.round(controls.safeZoneY)}
 Width: ${Math.round(controls.safeZoneWidth)}
-Height: ${Math.round(controls.safeZoneHeight)}`;
+Height: ${Math.round(controls.safeZoneHeight)}
+
+CLOUD
+Show: ${controls.cloudShow ? "ON" : "OFF"}
+X: ${Math.round(controls.cloudX)}
+Y: ${Math.round(controls.cloudY)}
+Scale: ${controls.cloudScale.toFixed(2)}
+Rotation: ${Math.round(controls.cloudRotation)}
+Opacity: ${Math.round(controls.cloudOpacity)}
+Blur: ${Math.round(controls.cloudBlur)}
+
+MOUNTAIN
+Show: ${controls.mountainShow ? "ON" : "OFF"}
+X: ${Math.round(controls.mountainX)}
+Y: ${Math.round(controls.mountainY)}
+Scale: ${controls.mountainScale.toFixed(2)}
+Rotation: ${Math.round(controls.mountainRotation)}
+Opacity: ${Math.round(controls.mountainOpacity)}
+Blur: ${Math.round(controls.mountainBlur)}
+
+BACK WAVE
+Show: ${controls.backWaveShow ? "ON" : "OFF"}
+X: ${Math.round(controls.backWaveX)}
+Y: ${Math.round(controls.backWaveY)}
+Scale: ${controls.backWaveScale.toFixed(2)}
+Rotation: ${Math.round(controls.backWaveRotation)}
+Opacity: ${Math.round(controls.backWaveOpacity)}
+Blur: ${Math.round(controls.backWaveBlur)}
+
+MID WAVE
+Show: ${controls.midWaveShow ? "ON" : "OFF"}
+X: ${Math.round(controls.midWaveX)}
+Y: ${Math.round(controls.midWaveY)}
+Scale: ${controls.midWaveScale.toFixed(2)}
+Rotation: ${Math.round(controls.midWaveRotation)}
+Opacity: ${Math.round(controls.midWaveOpacity)}
+Blur: ${Math.round(controls.midWaveBlur)}
+
+FRONT FOAM
+Show: ${controls.frontFoamShow ? "ON" : "OFF"}
+X: ${Math.round(controls.frontFoamX)}
+Y: ${Math.round(controls.frontFoamY)}
+Scale: ${controls.frontFoamScale.toFixed(2)}
+Rotation: ${Math.round(controls.frontFoamRotation)}
+Opacity: ${Math.round(controls.frontFoamOpacity)}
+Blur: ${Math.round(controls.frontFoamBlur)}
+
+GOLD / INK
+Show: ${controls.goldInkShow ? "ON" : "OFF"}
+X: ${Math.round(controls.goldInkX)}
+Y: ${Math.round(controls.goldInkY)}
+Scale: ${controls.goldInkScale.toFixed(2)}
+Rotation: ${Math.round(controls.goldInkRotation)}
+Opacity: ${Math.round(controls.goldInkOpacity)}
+Blur: ${Math.round(controls.goldInkBlur)}
+
+DECOR MODE
+Mode: ${controls.decorMode}`;
