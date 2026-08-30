@@ -149,24 +149,38 @@ export const previewAssets = {
   goldInk: "ukiyoe-gold-ink-v1.png",
 } as const;
 
+export const previewDisplayAssets = {
+  body: "dragon-body-v2-display.webp",
+  rearClaw: "dragon-rear-claw-v1-display.webp",
+  claw: "dragon-throw-claw-v1-display.webp",
+  bagBase: "dragon-bag-base-v2-display.webp",
+  bagStrap: "dragon-bag-strap-v2-display.webp",
+  tigerBody: "tiger-body-v1-display.webp",
+  tigerRacket: "tiger-racket-v1-display.webp",
+  cloud: "ukiyoe-cloud-v1-display.webp",
+  mountain: "ukiyoe-mountain-v1-display.webp",
+  backWave: "ukiyoe-back-wave-v1-display.webp",
+  midWave: "ukiyoe-mid-wave-v1-display.webp",
+  frontFoam: "ukiyoe-front-foam-v1-display.webp",
+  goldInk: "ukiyoe-gold-ink-v1-display.webp",
+} as const;
+
 export const buildPreviewAssets = (baseUrl: string) => {
-  const dragonAssetBase = `${baseUrl}v8-preview/dragon`;
-  const tigerAssetBase = `${baseUrl}v8-preview/tiger`;
-  const decorAssetBase = `${baseUrl}v8-preview/decor`;
+  const displayAssetBase = `${baseUrl}v8-preview/display`;
   return {
-    body: `${dragonAssetBase}/${previewAssets.body}`,
-    rearClaw: `${dragonAssetBase}/${previewAssets.rearClaw}`,
-    claw: `${dragonAssetBase}/${previewAssets.claw}`,
-    bagBase: `${dragonAssetBase}/${previewAssets.bagBase}`,
-    bagStrap: `${dragonAssetBase}/${previewAssets.bagStrap}`,
-    tigerBody: `${tigerAssetBase}/${previewAssets.tigerBody}`,
-    tigerRacket: `${tigerAssetBase}/${previewAssets.tigerRacket}`,
-    cloud: `${decorAssetBase}/${previewAssets.cloud}`,
-    mountain: `${decorAssetBase}/${previewAssets.mountain}`,
-    backWave: `${decorAssetBase}/${previewAssets.backWave}`,
-    midWave: `${decorAssetBase}/${previewAssets.midWave}`,
-    frontFoam: `${decorAssetBase}/${previewAssets.frontFoam}`,
-    goldInk: `${decorAssetBase}/${previewAssets.goldInk}`,
+    body: `${displayAssetBase}/${previewDisplayAssets.body}`,
+    rearClaw: `${displayAssetBase}/${previewDisplayAssets.rearClaw}`,
+    claw: `${displayAssetBase}/${previewDisplayAssets.claw}`,
+    bagBase: `${displayAssetBase}/${previewDisplayAssets.bagBase}`,
+    bagStrap: `${displayAssetBase}/${previewDisplayAssets.bagStrap}`,
+    tigerBody: `${displayAssetBase}/${previewDisplayAssets.tigerBody}`,
+    tigerRacket: `${displayAssetBase}/${previewDisplayAssets.tigerRacket}`,
+    cloud: `${displayAssetBase}/${previewDisplayAssets.cloud}`,
+    mountain: `${displayAssetBase}/${previewDisplayAssets.mountain}`,
+    backWave: `${displayAssetBase}/${previewDisplayAssets.backWave}`,
+    midWave: `${displayAssetBase}/${previewDisplayAssets.midWave}`,
+    frontFoam: `${displayAssetBase}/${previewDisplayAssets.frontFoam}`,
+    goldInk: `${displayAssetBase}/${previewDisplayAssets.goldInk}`,
   };
 };
 

@@ -26,6 +26,29 @@ type NumericControlKey = {
   [Key in keyof PreviewControls]: PreviewControls[Key] extends number ? Key : never;
 }[keyof PreviewControls];
 
+const preloadPreviewImage = (src: string) =>
+  new Promise<void>((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    image.onload = () => {
+      if (!image.decode) {
+        finish();
+        return;
+      }
+      image.decode().catch(() => undefined).finally(finish);
+    };
+    image.onerror = finish;
+    image.decoding = "async";
+    image.src = src;
+  });
+
+const preloadPreviewImages = (sources: string[]) => Promise.all([...new Set(sources)].map(preloadPreviewImage));
+
 function isNumericControlKey(key: keyof PreviewControls): key is NumericControlKey {
   return typeof previewDefaults[key] === "number";
 }
@@ -149,6 +172,8 @@ function DecorLayer({
       data-highlight-target={target}
       src={src}
       alt={`${target} preview asset`}
+      decoding="async"
+      loading="eager"
       style={{
         ...decorImageStyle,
         ...(highlighted ? selectedTargetStyle : {}),
@@ -166,6 +191,7 @@ function DecorLayer({
 
 export function DragonPreview() {
   const [controls, setControls] = useState<PreviewControls>(previewDefaults);
+  const [assetsReady, setAssetsReady] = useState(false);
   const [panelMinimized, setPanelMinimized] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<PreviewTargetId>("TIGER RIG");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
@@ -290,6 +316,17 @@ export function DragonPreview() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    setAssetsReady(false);
+    preloadPreviewImages(Object.values(assets)).then(() => {
+      if (!cancelled) setAssetsReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [assets]);
+
+  useEffect(() => {
     const handleMouseMove = (event: globalThis.MouseEvent) => {
       if (dragRef.current?.pointerId !== null) return;
       updatePanelDrag(event.clientY);
@@ -353,6 +390,7 @@ export function DragonPreview() {
     <main style={pageStyle}>
       <section style={stageShellStyle} aria-label="V8 mobile composition preview">
         <div style={stageStyle}>
+          <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
           <div style={paperStyle} />
           <DecorLayer target="FRONT FOAM" src={assets.frontFoam} show={controls.frontFoamShow && controls.decorMode === "FULL"} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} highlighted={highlightEnabled && selectedTarget === "FRONT FOAM"} />
           <DecorLayer target="GOLD / INK" src={assets.goldInk} show={controls.goldInkShow} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} highlighted={highlightEnabled && selectedTarget === "GOLD / INK"} />
@@ -379,6 +417,8 @@ export function DragonPreview() {
                 data-highlight-target="REAR CLAW"
                 src={assets.rearClaw}
                 alt="Rear claw preview asset"
+                decoding="async"
+                loading="eager"
                 style={{
                   ...rigImageStyle,
                   ...targetHighlightStyle("REAR CLAW"),
@@ -390,12 +430,14 @@ export function DragonPreview() {
                 }}
               />
             ) : null}
-            <img src={assets.body} alt="Dragon body preview asset" style={{ ...rigImageStyle, inset: 0, width: "100%", zIndex: 1 }} />
+                <img src={assets.body} alt="Dragon body preview asset" decoding="async" loading="eager" style={{ ...rigImageStyle, inset: 0, width: "100%", zIndex: 1 }} />
             {controls.bagBaseShow ? (
             <img
-              data-highlight-target="BAG BASE"
-              src={assets.bagBase}
-              alt="Bag Base A preview asset"
+                data-highlight-target="BAG BASE"
+                src={assets.bagBase}
+                alt="Bag Base A preview asset"
+                decoding="async"
+                loading="eager"
               style={{
                 ...rigImageStyle,
                 ...targetHighlightStyle("BAG BASE"),
@@ -409,9 +451,11 @@ export function DragonPreview() {
             ) : null}
             {controls.bagStrapShow ? (
             <img
-              data-highlight-target="BAG STRAP"
-              src={assets.bagStrap}
-              alt="Bag Strap E preview asset"
+                data-highlight-target="BAG STRAP"
+                src={assets.bagStrap}
+                alt="Bag Strap E preview asset"
+                decoding="async"
+                loading="eager"
               style={{
                 ...rigImageStyle,
                 ...targetHighlightStyle("BAG STRAP"),
@@ -428,6 +472,8 @@ export function DragonPreview() {
               data-highlight-target="FRONT CLAW"
               src={assets.claw}
               alt="Throw claw preview asset"
+              decoding="async"
+              loading="eager"
               style={{
                 ...rigImageStyle,
                 ...targetHighlightStyle("FRONT CLAW"),
@@ -458,6 +504,8 @@ export function DragonPreview() {
             <img
               src={assets.tigerBody}
               alt="Tiger body preview asset"
+              decoding="async"
+              loading="eager"
               style={{ ...stageImageStyle, inset: 0, width: "100%", transform: `rotate(${tigerRigBaseline.bodyRotation}deg)`, zIndex: 0 }}
             />
           </div>
@@ -480,6 +528,8 @@ export function DragonPreview() {
               <img
                 src={assets.tigerRacket}
                 alt="Tiger racket preview asset"
+                decoding="async"
+                loading="eager"
                 style={{
                   ...stageImageStyle,
                   ...targetHighlightStyle("TIGER RACKET"),
@@ -493,6 +543,7 @@ export function DragonPreview() {
             </div>
           ) : null}
           <SafeZoneOverlay controls={controls} />
+          </div>
         </div>
       </section>
 
@@ -627,6 +678,12 @@ const paperStyle: CSSProperties = {
   zIndex: 1,
   background:
     "radial-gradient(circle at 24% 18%, rgba(255,255,255,0.35), transparent 28%), linear-gradient(135deg, #f4e8cf 0%, #e2c795 54%, #f2dfb8 100%)",
+};
+
+const artworkFadeStyle: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  transition: "opacity 200ms ease",
 };
 
 const sunStyle: CSSProperties = {
