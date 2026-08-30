@@ -14,6 +14,14 @@ const final = {
   goldInk: { x: 78, y: 342, scale: 0.83, rotation: -5, opacity: 0.43 },
 } as const;
 
+const assets = {
+  cloud: "v8-preview/display/ukiyoe-cloud-v1-display.webp",
+  mountain: "v8-preview/display/ukiyoe-mountain-v1-display.webp",
+  backWave: "v8-preview/display/ukiyoe-back-wave-v1-display.webp",
+  midWave: "v8-preview/display/ukiyoe-mid-wave-v1-display.webp",
+  goldInk: "v8-preview/display/ukiyoe-gold-ink-v1-display.webp",
+} as const;
+
 export function BackgroundScene() {
   const frame = useCurrentFrame();
 
@@ -48,7 +56,7 @@ export function BackgroundScene() {
         }}
       />
       <Img
-        src={staticFile("/v8-preview/display/ukiyoe-cloud-v1-display.webp")}
+        src={staticFile(assets.cloud)}
         style={{
           ...cloudStyle,
           opacity: cloudOpacity,
@@ -56,7 +64,7 @@ export function BackgroundScene() {
         }}
       />
       <Img
-        src={staticFile("/v8-preview/display/ukiyoe-mountain-v1-display.webp")}
+        src={staticFile(assets.mountain)}
         style={{
           ...mountainStyle,
           opacity: mountainOpacity,
@@ -64,7 +72,7 @@ export function BackgroundScene() {
         }}
       />
       <Img
-        src={staticFile("/v8-preview/display/ukiyoe-back-wave-v1-display.webp")}
+        src={staticFile(assets.backWave)}
         style={{
           ...backWaveStyle,
           opacity: backWaveOpacity,
@@ -72,7 +80,7 @@ export function BackgroundScene() {
         }}
       />
       <Img
-        src={staticFile("/v8-preview/display/ukiyoe-gold-ink-v1-display.webp")}
+        src={staticFile(assets.goldInk)}
         style={{
           ...goldInkStyle,
           opacity: goldOpacity,
@@ -80,7 +88,7 @@ export function BackgroundScene() {
         }}
       />
       <Img
-        src={staticFile("/v8-preview/display/ukiyoe-mid-wave-v1-display.webp")}
+        src={staticFile(assets.midWave)}
         style={{
           ...midWaveStyle,
           opacity: midWaveOpacity,
@@ -117,52 +125,36 @@ const sunStyle: CSSProperties = {
   transformOrigin: "50% 50%",
 };
 
-const cloudStyle: CSSProperties = {
+const decorBaseStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 5,
   left: 0,
   top: 0,
   width: 390,
   objectFit: "contain",
   transformOrigin: "top left",
+};
+
+const cloudStyle: CSSProperties = {
+  ...decorBaseStyle,
+  zIndex: 5,
 };
 
 const mountainStyle: CSSProperties = {
-  position: "absolute",
+  ...decorBaseStyle,
   zIndex: 6,
-  left: 0,
-  top: 0,
-  width: 390,
-  objectFit: "contain",
-  transformOrigin: "top left",
 };
 
 const backWaveStyle: CSSProperties = {
-  position: "absolute",
+  ...decorBaseStyle,
   zIndex: 7,
-  left: 0,
-  top: 0,
-  width: 390,
-  objectFit: "contain",
-  transformOrigin: "top left",
 };
 
 const goldInkStyle: CSSProperties = {
-  position: "absolute",
+  ...decorBaseStyle,
   zIndex: 3,
-  left: 0,
-  top: 0,
-  width: 390,
-  objectFit: "contain",
-  transformOrigin: "top left",
 };
 
 const midWaveStyle: CSSProperties = {
-  position: "absolute",
+  ...decorBaseStyle,
   zIndex: 10,
-  left: 0,
-  top: 0,
-  width: 390,
-  objectFit: "contain",
-  transformOrigin: "top left",
 };
