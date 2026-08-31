@@ -15,7 +15,8 @@ const final = {
 } as const;
 
 const assets = {
-  cloud: "v8-preview/display/ukiyoe-cloud-v1-display.webp",
+  cloudMain: "v8-preview/display/cloud-main-v2.png",
+  cloudGoldStrokes: "v8-preview/display/cloud-gold-strokes-v2.png",
   mountain: "v8-preview/display/ukiyoe-mountain-v1-display.webp",
   backWave: "v8-preview/display/ukiyoe-back-wave-v1-display.webp",
   midWave: "v8-preview/display/ukiyoe-mid-wave-v1-display.webp",
@@ -32,6 +33,9 @@ export function BackgroundScene() {
   const cloudOpacity = fade(frame, 2, 14, 0, final.cloud.opacity);
   const cloudX = fade(frame, 2, 14, final.cloud.x - 8, final.cloud.x);
   const cloudY = fade(frame, 2, 14, final.cloud.y + 4, final.cloud.y);
+  const cloudGoldOpacity = fade(frame, 4, 14, 0, final.cloud.opacity);
+  const cloudGoldX = fade(frame, 4, 14, final.cloud.x - 3, final.cloud.x);
+  const cloudGoldY = fade(frame, 4, 14, final.cloud.y + 5, final.cloud.y);
 
   const mountainOpacity = fade(frame, 4, 14, 0, final.mountain.opacity);
   const mountainY = fade(frame, 4, 14, final.mountain.y + 8, final.mountain.y);
@@ -56,11 +60,19 @@ export function BackgroundScene() {
         }}
       />
       <Img
-        src={staticFile(assets.cloud)}
+        src={staticFile(assets.cloudMain)}
         style={{
           ...cloudStyle,
           opacity: cloudOpacity,
           transform: `translate(${cloudX}px, ${cloudY}px) scale(${final.cloud.scale}) rotate(${final.cloud.rotation}deg)`,
+        }}
+      />
+      <Img
+        src={staticFile(assets.cloudGoldStrokes)}
+        style={{
+          ...cloudGoldStrokesStyle,
+          opacity: cloudGoldOpacity,
+          transform: `translate(${cloudGoldX}px, ${cloudGoldY}px) scale(${final.cloud.scale}) rotate(${final.cloud.rotation}deg)`,
         }}
       />
       <Img
@@ -135,6 +147,11 @@ const decorBaseStyle: CSSProperties = {
 };
 
 const cloudStyle: CSSProperties = {
+  ...decorBaseStyle,
+  zIndex: 5,
+};
+
+const cloudGoldStrokesStyle: CSSProperties = {
   ...decorBaseStyle,
   zIndex: 5,
 };
