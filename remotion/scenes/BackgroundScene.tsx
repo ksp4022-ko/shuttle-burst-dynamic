@@ -30,12 +30,13 @@ export function BackgroundScene() {
   const sunScale = fade(frame, 0, 12, 0.94, 1);
   const sunY = fade(frame, 0, 12, 7, 0);
 
-  const cloudOpacity = fade(frame, 2, 14, 0, final.cloud.opacity);
-  const cloudX = fade(frame, 2, 14, final.cloud.x - 8, final.cloud.x);
-  const cloudY = fade(frame, 2, 14, final.cloud.y + 4, final.cloud.y);
-  const cloudGoldOpacity = fade(frame, 4, 14, 0, final.cloud.opacity);
-  const cloudGoldX = fade(frame, 4, 14, final.cloud.x - 3, final.cloud.x);
-  const cloudGoldY = fade(frame, 4, 14, final.cloud.y + 5, final.cloud.y);
+  const cloudOpacity = fade(frame, 2, 4, 0.12, final.cloud.opacity);
+  const cloudX = fade(frame, 2, 11, final.cloud.x - 18, final.cloud.x);
+  const cloudY = fade(frame, 2, 11, final.cloud.y - 10, final.cloud.y);
+  const cloudGoldOpacity = fade(frame, 7, 11, 0, final.cloud.opacity);
+  const cloudGoldX = fade(frame, 7, 14, final.cloud.x + 16, final.cloud.x);
+  const cloudGoldY = fade(frame, 7, 14, final.cloud.y - 8, final.cloud.y);
+  const cloudGoldReveal = fade(frame, 7, 14, 72, 0);
 
   const mountainOpacity = fade(frame, 4, 14, 0, final.mountain.opacity);
   const mountainY = fade(frame, 4, 14, final.mountain.y + 8, final.mountain.y);
@@ -72,6 +73,7 @@ export function BackgroundScene() {
         style={{
           ...cloudGoldStrokesStyle,
           opacity: cloudGoldOpacity,
+          clipPath: `inset(0 ${cloudGoldReveal}% 0 0)`,
           transform: `translate(${cloudGoldX}px, ${cloudGoldY}px) scale(${final.cloud.scale}) rotate(${final.cloud.rotation}deg)`,
         }}
       />
