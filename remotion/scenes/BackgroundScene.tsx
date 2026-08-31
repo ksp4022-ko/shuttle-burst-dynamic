@@ -30,13 +30,12 @@ export function BackgroundScene() {
   const sunScale = fade(frame, 0, 12, 0.94, 1);
   const sunY = fade(frame, 0, 12, 7, 0);
 
-  const cloudOpacity = fade(frame, 2, 4, 0.12, final.cloud.opacity);
-  const cloudX = fade(frame, 2, 11, final.cloud.x - 18, final.cloud.x);
-  const cloudY = fade(frame, 2, 11, final.cloud.y - 10, final.cloud.y);
-  const cloudGoldOpacity = fade(frame, 7, 11, 0, final.cloud.opacity);
-  const cloudGoldX = fade(frame, 7, 14, final.cloud.x + 16, final.cloud.x);
-  const cloudGoldY = fade(frame, 7, 14, final.cloud.y - 8, final.cloud.y);
-  const cloudGoldReveal = fade(frame, 7, 14, 72, 0);
+  const cloudOpacity = fade(frame, 2, 8, 0, final.cloud.opacity);
+  const cloudReveal = fade(frame, 2, 12, 28, 0);
+  const cloudAmbient = frame <= 14 ? 0 : Math.sin((frame - 14) / 34) * 2;
+  const cloudGoldOpacity = fade(frame, 7, 13, 0, final.cloud.opacity);
+  const cloudGoldReveal = fade(frame, 7, 14, 82, 0);
+  const cloudGoldAmbient = frame <= 14 ? 0 : Math.sin((frame - 14) / 48) * 0.7;
 
   const mountainOpacity = fade(frame, 4, 14, 0, final.mountain.opacity);
   const mountainY = fade(frame, 4, 14, final.mountain.y + 8, final.mountain.y);
@@ -65,7 +64,8 @@ export function BackgroundScene() {
         style={{
           ...cloudStyle,
           opacity: cloudOpacity,
-          transform: `translate(${cloudX}px, ${cloudY}px) scale(${final.cloud.scale}) rotate(${final.cloud.rotation}deg)`,
+          clipPath: `inset(0 0 ${cloudReveal}% 0)`,
+          transform: `translate(${final.cloud.x + cloudAmbient}px, ${final.cloud.y}px) scale(${final.cloud.scale}) rotate(${final.cloud.rotation}deg)`,
         }}
       />
       <Img
@@ -74,7 +74,7 @@ export function BackgroundScene() {
           ...cloudGoldStrokesStyle,
           opacity: cloudGoldOpacity,
           clipPath: `inset(0 ${cloudGoldReveal}% 0 0)`,
-          transform: `translate(${cloudGoldX}px, ${cloudGoldY}px) scale(${final.cloud.scale}) rotate(${final.cloud.rotation}deg)`,
+          transform: `translate(${final.cloud.x + cloudGoldAmbient}px, ${final.cloud.y}px) scale(${final.cloud.scale}) rotate(${final.cloud.rotation}deg)`,
         }}
       />
       <Img
