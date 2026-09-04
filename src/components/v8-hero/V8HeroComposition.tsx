@@ -392,12 +392,13 @@ const stageShellStyle: CSSProperties = {
 // Canvas is authored at 390x844, but the art (back wave in particular) extends
 // to y=890 before it's fully clear of the frame. aspect-ratio uses 390/890
 // instead of 390/844 so the extra ~46px of design space is part of the
-// scrollable page instead of being clipped by `overflow: hidden`. Width still
-// targets the original 390/844 frame (svh-based cap), so on short viewports
-// the box simply gets a bit taller than one screen rather than narrower.
+// scrollable page instead of being clipped by `overflow: hidden`. Width is a
+// flat 100% (not capped at 390px) so the card always reaches the real screen
+// edges instead of leaving gutters on phones wider than the 390 design unit;
+// aspect-ratio scales height to match on wider screens.
 const stageStyle: CSSProperties = {
   position: "relative",
-  width: "min(100%, 390px, calc(100svh * 390 / 844))",
+  width: "100%",
   aspectRatio: "390 / 890",
   overflow: "hidden",
   borderRadius: 28,
