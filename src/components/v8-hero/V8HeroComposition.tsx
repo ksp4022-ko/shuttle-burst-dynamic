@@ -56,6 +56,7 @@ function DecorLayer({
   opacity,
   blur,
   zIndex,
+  driftClassName,
 }: {
   src: string;
   x: number;
@@ -65,8 +66,9 @@ function DecorLayer({
   opacity: number;
   blur: number;
   zIndex: number;
+  driftClassName?: string;
 }) {
-  return (
+  const img = (
     <img
       src={src}
       alt=""
@@ -82,9 +84,81 @@ function DecorLayer({
         opacity: opacity / 100,
         filter: blur > 0 ? `blur(${blur}px)` : "none",
         transform: `translate(${x}px, ${y}px) scale(${scale}) rotate(${rotation}deg)`,
-        zIndex,
+        zIndex: driftClassName ? undefined : zIndex,
       }}
     />
+  );
+
+  if (!driftClassName) return img;
+
+  // The drift animation lives on this wrapper (not the <img> itself) so it
+  // composes with the image's own position/scale/rotation transform above
+  // instead of overwriting it -- animating `transform` on the same element
+  // that already has an inline `transform` would just replace it each frame.
+  return (
+    <div className={driftClassName} style={{ ...driftWrapStyle, zIndex }}>
+      {img}
+    </div>
+  );
+}
+
+// Three independent drift loops for Front Foam / Back Wave / Mid Wave.
+// Durations and delays are deliberately non-round and mutually prime-ish so
+// the three layers never fall back into a shared phase -- and each loop's
+// keyframe stops sit at uneven percentages (not 0/25/50/75/100) so a single
+// cycle doesn't read as one clean back-and-forth sweep. Amplitudes stay in
+// the 2-4px range: this is ambient sway on a fixed card, not a moving scene.
+function V8HeroWaveStyles() {
+  return (
+    <style>{`
+      .v8-wave-drift-front {
+        animation: v8-wave-drift-front 8.6s ease-in-out infinite;
+        animation-delay: -1.8s;
+      }
+      .v8-wave-drift-back {
+        animation: v8-wave-drift-back 11.4s ease-in-out infinite;
+        animation-delay: -4.2s;
+      }
+      .v8-wave-drift-mid {
+        animation: v8-wave-drift-mid 9.8s ease-in-out infinite;
+        animation-delay: -0.6s;
+      }
+
+      @keyframes v8-wave-drift-front {
+        0%   { transform: translate(0px, 0px) rotate(0deg); }
+        18%  { transform: translate(-3px, 2px) rotate(-0.4deg); }
+        37%  { transform: translate(2px, -3px) rotate(0.3deg); }
+        61%  { transform: translate(-2px, -1px) rotate(-0.2deg); }
+        83%  { transform: translate(3px, 2px) rotate(0.4deg); }
+        100% { transform: translate(0px, 0px) rotate(0deg); }
+      }
+
+      @keyframes v8-wave-drift-back {
+        0%   { transform: translate(0px, 0px) rotate(0deg); }
+        22%  { transform: translate(4px, -2px) rotate(0.5deg); }
+        44%  { transform: translate(-3px, 3px) rotate(-0.35deg); }
+        68%  { transform: translate(2px, 2px) rotate(0.25deg); }
+        90%  { transform: translate(-2px, -3px) rotate(-0.45deg); }
+        100% { transform: translate(0px, 0px) rotate(0deg); }
+      }
+
+      @keyframes v8-wave-drift-mid {
+        0%   { transform: translate(0px, 0px) rotate(0deg); }
+        14%  { transform: translate(-2px, -2px) rotate(0.3deg); }
+        33%  { transform: translate(3px, 1px) rotate(-0.4deg); }
+        57%  { transform: translate(-3px, 3px) rotate(0.35deg); }
+        79%  { transform: translate(1px, -3px) rotate(-0.25deg); }
+        100% { transform: translate(0px, 0px) rotate(0deg); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .v8-wave-drift-front,
+        .v8-wave-drift-back,
+        .v8-wave-drift-mid {
+          animation: none;
+        }
+      }
+    `}</style>
   );
 }
 
@@ -118,16 +192,17 @@ export function V8HeroComposition({
 
   return (
     <section className="sd-hero-meetup-picker sd-v8-hero-composition" aria-label="V8 聚會選擇" style={rootStyle}>
+      <V8HeroWaveStyles />
       <div style={stageShellStyle}>
         <div style={stageStyle}>
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
             <div style={paperStyle} />
-            <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} />
+            <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
             <DecorLayer src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
             <div style={sunStyle} />
             <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={5} />
             <DecorLayer src={assets.mountain} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={6} />
-            <DecorLayer src={assets.backWave} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} />
+            <DecorLayer src={assets.backWave} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} driftClassName="v8-wave-drift-back" />
             {controls.dragonShow ? (
               <div
                 aria-hidden="true"
@@ -226,7 +301,7 @@ export function V8HeroComposition({
                 <img src={assets.tigerBody} alt="" decoding="async" loading="eager" draggable={false} style={{ ...stageImageStyle, inset: 0, width: "100%", transform: `rotate(${tigerRigBaseline.bodyRotation}deg)`, zIndex: 0 }} />
               </div>
             ) : null}
-            <DecorLayer src={assets.midWave} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={10} />
+            <DecorLayer src={assets.midWave} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={10} driftClassName="v8-wave-drift-mid" />
             <div style={heroStyle}>
               <div style={{ ...heroCopyStyle, left: heroBaseline.centerX, top: heroBaseline.top, width: controls.heroWidth, transform: `translate(calc(-50% + ${controls.heroX}px), ${controls.heroY}px) scale(${controls.heroScale})` }}>
                 <p style={eyebrowStyle}>龍虎交鋒・戰局未定</p>
@@ -392,6 +467,12 @@ const decorImageStyle: CSSProperties = {
   userSelect: "none",
   pointerEvents: "none",
   transformOrigin: "top left",
+};
+
+const driftWrapStyle: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  transformOrigin: "center center",
 };
 
 const heroStyle: CSSProperties = {
