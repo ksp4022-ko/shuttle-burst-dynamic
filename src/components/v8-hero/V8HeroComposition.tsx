@@ -308,18 +308,24 @@ const rootStyle: CSSProperties = {
 
 const stageShellStyle: CSSProperties = {
   width: "100%",
-  height: "100%",
   display: "flex",
   justifyContent: "center",
   alignItems: "flex-start",
-  overflow: "hidden",
+  overflowX: "hidden",
 };
 
+// Canvas is authored at 390x844, but the art (back wave in particular) extends
+// to y=890 before it's fully clear of the frame. aspect-ratio uses 390/890
+// instead of 390/844 so the extra ~46px of design space is part of the
+// scrollable page instead of being clipped by `overflow: hidden`. Width still
+// targets the original 390/844 frame (svh-based cap), so on short viewports
+// the box simply gets a bit taller than one screen rather than narrower.
 const stageStyle: CSSProperties = {
   position: "relative",
   width: "min(100%, 390px, calc(100svh * 390 / 844))",
-  aspectRatio: "390 / 844",
+  aspectRatio: "390 / 890",
   overflow: "hidden",
+  borderRadius: 28,
   background: "#f1e4ca",
   isolation: "isolate",
   boxShadow: "0 18px 48px rgba(0,0,0,0.34)",
