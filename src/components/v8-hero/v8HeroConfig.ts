@@ -41,13 +41,22 @@ export const v8HeroDefaults = {
   heroEventY: -16,
   heroCtaY: -31,
   decorMode: "FULL",
+  // Front cloud layer. Opacity is animation-driven (breathing, see
+  // V8HeroWaveStyles' v8-cloud-drift-front keyframes) rather than a static
+  // value, so there's no cloudOpacity here.
   cloudShow: true,
   cloudX: -72,
   cloudY: -20,
   cloudScale: 0.8,
   cloudRotation: 0,
-  cloudOpacity: 79,
   cloudBlur: 0,
+  // Back cloud layer -- same source image as the front layer, rendered as a
+  // second, larger/softer/slower copy underneath it.
+  cloudBackX: -72,
+  cloudBackY: -20,
+  cloudBackScale: 0.84,
+  cloudBackRotation: 0,
+  cloudBackBlur: 1,
   mountainShow: true,
   mountainX: 139,
   mountainY: -33,

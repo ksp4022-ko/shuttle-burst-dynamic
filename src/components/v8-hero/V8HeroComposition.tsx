@@ -108,7 +108,17 @@ function DecorLayer({
 // keyframe stops sit at uneven percentages (not 0/25/50/75/100) so a single
 // cycle doesn't read as one clean back-and-forth sweep. Amplitudes stay in
 // the 2-4px range: this is ambient sway on a fixed card, not a moving scene.
-function V8HeroWaveStyles() {
+//
+// Cloud layers use a different technique: they're meant to read as drifting
+// in one direction (back layer right, front layer left), not an undirected
+// wobble. A truly seamless one-way loop needs the source tiled/duplicated,
+// which we don't have -- so instead each loop spends most of its time (the
+// 0% -> ~55% stretch) moving out toward the target direction and only the
+// remaining ~45% snapping back, so the eye reads a net drift that direction
+// even though the box does return to start. Opacity "breathing" is baked
+// into the same keyframes as absolute values (not a multiplier on top of
+// the image's own opacity) to keep the two effects from compounding.
+function V8HeroAmbientStyles() {
   return (
     <style>{`
       .v8-wave-drift-front {
@@ -122,6 +132,16 @@ function V8HeroWaveStyles() {
       .v8-wave-drift-mid {
         animation: v8-wave-drift-mid 9.8s ease-in-out infinite;
         animation-delay: -0.6s;
+      }
+      .v8-cloud-drift-back {
+        opacity: 0.60;
+        animation: v8-cloud-drift-back 20s ease-in-out infinite;
+        animation-delay: -6s;
+      }
+      .v8-cloud-drift-front {
+        opacity: 0.90;
+        animation: v8-cloud-drift-front 13.4s ease-in-out infinite;
+        animation-delay: -3.5s;
       }
 
       @keyframes v8-wave-drift-front {
@@ -151,10 +171,28 @@ function V8HeroWaveStyles() {
         100% { transform: translate(0px, 0px) rotate(0deg); }
       }
 
+      @keyframes v8-cloud-drift-back {
+        0%   { transform: translate(0px, 0px);   opacity: 0.60; }
+        20%  { transform: translate(5px, -1px);  opacity: 0.66; }
+        55%  { transform: translate(16px, 1px);  opacity: 0.51; }
+        80%  { transform: translate(6px, 2px);   opacity: 0.69; }
+        100% { transform: translate(0px, 0px);   opacity: 0.60; }
+      }
+
+      @keyframes v8-cloud-drift-front {
+        0%   { transform: translate(0px, 0px);    opacity: 0.90; }
+        18%  { transform: translate(-4px, 1px);   opacity: 0.83; }
+        55%  { transform: translate(-14px, -2px); opacity: 0.99; }
+        82%  { transform: translate(-5px, 1px);   opacity: 0.82; }
+        100% { transform: translate(0px, 0px);    opacity: 0.90; }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .v8-wave-drift-front,
         .v8-wave-drift-back,
-        .v8-wave-drift-mid {
+        .v8-wave-drift-mid,
+        .v8-cloud-drift-back,
+        .v8-cloud-drift-front {
           animation: none;
         }
       }
@@ -192,7 +230,7 @@ export function V8HeroComposition({
 
   return (
     <section className="sd-hero-meetup-picker sd-v8-hero-composition" aria-label="V8 聚會選擇" style={rootStyle}>
-      <V8HeroWaveStyles />
+      <V8HeroAmbientStyles />
       <div style={stageShellStyle}>
         <div style={stageStyle}>
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
@@ -200,7 +238,8 @@ export function V8HeroComposition({
             <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
             <DecorLayer src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
             <div style={sunStyle} />
-            <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={5} />
+            <DecorLayer src={assets.cloud} x={controls.cloudBackX} y={controls.cloudBackY} scale={controls.cloudBackScale} rotation={controls.cloudBackRotation} opacity={100} blur={decorBlur(controls.cloudBackBlur)} zIndex={5} driftClassName="v8-cloud-drift-back" />
+            <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={100} blur={decorBlur(controls.cloudBlur)} zIndex={5} driftClassName="v8-cloud-drift-front" />
             <DecorLayer src={assets.mountain} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={6} />
             <DecorLayer src={assets.backWave} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} driftClassName="v8-wave-drift-back" />
             {controls.dragonShow ? (
