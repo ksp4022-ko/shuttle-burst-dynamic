@@ -16,6 +16,7 @@ Before modifying source:
 1. `git checkout main`
 2. `git pull --ff-only`
 3. `git status --short`
+4. `git checkout -b agent/codex/<short-slug>` (branch off latest `main`)
 
 Always work from latest `main`. Never overwrite unrelated work. Use the minimum delta needed for the task and do not modify unrelated files.
 
@@ -23,9 +24,31 @@ Always work from latest `main`. Never overwrite unrelated work. Use the minimum 
 
 Never force push, rebase pushed history, amend pushed commits, or squash pushed history.
 
+**Never push directly to `main`.** `main` has GitHub Pages auto-deploy on push
+(`.github/workflows/deploy-pages.yml`), and Claude may be working on `main`
+concurrently. All work goes through a branch + PR.
+
 Normal successful workflow:
 
-inspect latest source -> minimum change -> required verification -> commit -> push `main`
+inspect latest source -> `agent/codex/<slug>` branch -> minimum change ->
+required verification -> commit -> push branch -> open PR (fill in
+`.github/pull_request_template.md`) -> merge per policy below
+
+# Branch + PR Convention
+
+- Branch naming: `agent/codex/<short-slug>`, e.g. `agent/codex/tiger-idle-loop`.
+- Every PR must fill out `.github/pull_request_template.md` — do not leave
+  sections blank.
+- Merge policy, tied to `xtog` mode below:
+  - `xtog-direct` (small isolated fix): after required checks PASS, open the
+    PR and merge it directly. No need to wait for human confirmation.
+  - `xtog-patch` (larger / higher-risk multi-file change) or anything
+    touching Production Protection items: open the PR, do **not** merge —
+    leave it for human review.
+  - `xtog-audit`: no branch/PR needed, this is read-only.
+- If Claude has an open PR touching the same files, do not force-merge over
+  it — flag the conflict in the return report instead of resolving it
+  unilaterally.
 
 # Formatting
 
@@ -62,7 +85,9 @@ Use task-specific verification when defined. Build must pass before committing u
 
 # Standard Commit Behavior
 
-Commit only after required checks PASS. Push `main` normally.
+Commit only after required checks PASS. Push the `agent/codex/<slug>` branch
+and open a PR — never push `main` directly. See Branch + PR Convention above
+for merge policy.
 
 # Standard Return Format
 
@@ -88,6 +113,12 @@ COMMIT:
 
 PUSH:
 <PASS / FAIL / NOT DONE>
+
+PR:
+<url or NONE>
+
+MERGE:
+<MERGED / OPEN-AWAITING-REVIEW / NOT DONE>
 
 ISSUES:
 - NONE
