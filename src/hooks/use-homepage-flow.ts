@@ -299,20 +299,60 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   ]);
 
   const submitSignup = useCallback(
-    async (name: string) => {
+    async (name: string): Promise<{ ok: boolean; signupId?: string }> => {
       const trimmed = name.trim();
-      if (!trimmed || !selectedEventId || pendingAction) return false;
+      if (!trimmed || !selectedEventId || pendingAction) return { ok: false };
       setPendingAction({ type: "signup", label: "報名中" });
       setNotice("");
       try {
-        await createAlphaTempSignup(selectedEventId, trimmed);
+        const result = await createAlphaTempSignup(selectedEventId, trimmed);
         await loadRoster(selectedEventId, { silent: true });
         setLastChangedId(trimmed);
         setBurstKey((key) => key + 1);
         setNotice(`${trimmed} 已完成報名`);
-        return true;
+        return { ok: true, signupId: result.signupId };
       } catch (reason) {
         setNotice(reason instanceof Error ? reason.message : "報名失敗。");
+        return { ok: false };
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [loadRoster, pendingAction, selectedEventId],
+  );
+
+  // Additive counterpart to confirmMemberAction: runs the same fixed-leave /
+  // fixed-return / cancel-temp calls against a signup we already know the id
+  // of (the V8 Active page's "current identity"), instead of requiring a
+  // pick-from-list step first. Does not touch confirmMemberAction or its
+  // MemberSheet-driven callers.
+  const runIdentityAction = useCallback(
+    async (action: "fixed-leave" | "fixed-return" | "cancel-temp", signup: { id: string; name: string }) => {
+      if (!selectedEventId || pendingAction) return false;
+      const labels: Record<typeof action, string> = {
+        "fixed-leave": "請假中",
+        "fixed-return": "消假中",
+        "cancel-temp": "取消中",
+      };
+      setPendingAction({ type: action, label: labels[action] });
+      try {
+        if (action === "fixed-leave") await fixedAlphaLeave(selectedEventId, signup.id);
+        if (action === "fixed-return") await fixedAlphaReturn(selectedEventId, signup.id);
+        if (action === "cancel-temp") await cancelAlphaTempSignup(selectedEventId, signup.id);
+
+        await loadRoster(selectedEventId, { silent: true });
+        setLastChangedId(signup.id);
+        setBurstKey((key) => key + 1);
+        setNotice(
+          action === "fixed-leave"
+            ? `${signup.name} 已請假`
+            : action === "fixed-return"
+              ? `${signup.name} 已消假`
+              : `${signup.name} 已取消`,
+        );
+        return true;
+      } catch (reason) {
+        setNotice(reason instanceof Error ? reason.message : "操作失敗。");
         return false;
       } finally {
         setPendingAction(null);
@@ -413,11 +453,14 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     closeMeetupPicker,
     switchMeetup,
     submitSignup,
+    runIdentityAction,
     openMemberPicker,
     closeMemberPicker,
     confirmMemberAction,
   };
 }
+
+export type HomepageFlow = ReturnType<typeof useHomepageFlow>;
 
 export function personRole(person: AlphaSignup) {
   if (person.signupType === "fixed") return "季打";

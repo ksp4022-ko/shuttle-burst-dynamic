@@ -14,6 +14,7 @@ import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepa
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
+import { V8ActivePage } from "@/components/v8-active/V8ActivePage";
 import {
   HomepageToast,
   clearToastOrigin,
@@ -824,8 +825,8 @@ export function Index() {
 
   const submit = async (originElement: HTMLElement | null = signupButtonRef.current) => {
     rememberToastOriginFromElement(originElement, toastOriginRef, "toast");
-    const ok = await flow.submitSignup(name);
-    if (ok) setName("");
+    const result = await flow.submitSignup(name);
+    if (result.ok) setName("");
   };
 
   const openMemberPickerFrom = (
@@ -1260,6 +1261,8 @@ export function Index() {
           onRefresh={() => flow.refresh()}
         />
       )}
+
+      {isV8Route && v8MeetupConfirmed ? <V8ActivePage flow={flow} /> : null}
 
       <HomepageToast
         notice={flow.notice}
