@@ -297,6 +297,7 @@ export function Index() {
   const flow = useHomepageFlow({
     preHoldMs: handoffTiming.preHold,
     realFadeMs: materializeWindowMs,
+    skipIntro: isV8Route,
   });
   const racketSrc = `${import.meta.env.BASE_URL}${RACKET_FILE}`;
   const active = flow.phase === "active";
@@ -533,6 +534,9 @@ export function Index() {
   }, [completeTutorial, enterPreviewSelection]);
 
   useEffect(() => {
+    // The tutorial spotlights .sd-hero-meetup-picker / the ticket-stack UI,
+    // which only exists on the legacy (non-V8) flow.
+    if (isV8Route) return;
     if (!preview || !flow.events.length || flow.pendingAction || !tutorialTuning.enabled) return;
     if (tutorialAutoShownRef.current) return;
     try {
@@ -542,7 +546,7 @@ export function Index() {
     }
     tutorialAutoShownRef.current = true;
     startTutorial();
-  }, [flow.events.length, flow.pendingAction, preview, startTutorial, tutorialTuning.enabled]);
+  }, [flow.events.length, flow.pendingAction, isV8Route, preview, startTutorial, tutorialTuning.enabled]);
 
   const updateTutorialSpotlight = useCallback(() => {
     if (!tutorialOpen) return;
@@ -894,21 +898,25 @@ export function Index() {
       }
     >
       <HomepageStyles />
-      <ParticleRacket
-        phase={flow.phase}
-        motionMode={flow.motionMode}
-        tuning={particleTuning}
-        replayKey={particleReplayKey}
-      />
-      <ParticleHandoffOverlay
-        phase={flow.phase}
-        motionMode={flow.motionMode}
-        timing={handoffTiming}
-        freezeParticles={freezeParticles}
-        replayPhase={handoffReplayPhase}
-      />
+      {!isV8Route && (
+        <>
+          <ParticleRacket
+            phase={flow.phase}
+            motionMode={flow.motionMode}
+            tuning={particleTuning}
+            replayKey={particleReplayKey}
+          />
+          <ParticleHandoffOverlay
+            phase={flow.phase}
+            motionMode={flow.motionMode}
+            timing={handoffTiming}
+            freezeParticles={freezeParticles}
+            replayPhase={handoffReplayPhase}
+          />
+        </>
+      )}
 
-      {!v8HeroStage ? (
+      {!isV8Route ? (
         <header className="sd-header">
           <p>BADMINTON ASSEMBLY</p>
         </header>
@@ -1025,7 +1033,7 @@ export function Index() {
           </div>
         )}
 
-        {!v8HeroStage ? (
+        {!isV8Route ? (
           <div
             ref={racketWrapRef}
             className={`sd-racket-wrap ${materialized ? "is-materialized" : ""}`}

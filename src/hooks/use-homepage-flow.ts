@@ -33,6 +33,11 @@ export type PendingAction = {
 export type HomepageHandoffTiming = {
   preHoldMs: number;
   realFadeMs: number;
+  // When true, skip the particle-assembly / racket-materializing intro
+  // entirely and land on meetup-preview (or active, under reduced motion)
+  // as soon as data loads. Used by the V8 route, which never shows the
+  // racket the intro was building up to.
+  skipIntro?: boolean;
 };
 
 const PARTICLE_ASSEMBLY_MS = 4600;
@@ -94,6 +99,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   handoffTimingRef.current = {
     preHoldMs: Math.max(0, Number(handoffTiming?.preHoldMs ?? DEFAULT_PRE_HOLD_MS)),
     realFadeMs: Math.max(0, Number(handoffTiming?.realFadeMs ?? DEFAULT_REAL_FADE_MS)),
+    skipIntro: Boolean(handoffTiming?.skipIntro),
   };
 
   const selectedEvent = useMemo(
@@ -175,6 +181,16 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
 
     loadInitial()
       .then((hasEvents) => {
+        if (handoffTimingRef.current.skipIntro) {
+          if (cancelled) return;
+          if (detectMotionMode() === "reduced" && hasEvents) {
+            setPhase("active");
+            return;
+          }
+          setPhase("meetup-preview");
+          return;
+        }
+
         const remaining = Math.max(
           0,
           PARTICLE_ASSEMBLY_MS - (window.performance.now() - startedAt),
