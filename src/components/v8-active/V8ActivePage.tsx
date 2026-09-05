@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
-import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import type { AlphaSignup } from "@/lib/database-alpha";
+import { buildV8ActiveAssets, v8ActiveDefaults } from "./v8ActiveConfig";
+import { V8ActiveTokenField, type V8ActiveToken } from "./V8ActiveTokenField";
 
 const DRAGON_BADGE = "v8-preview/display/dragon-body-v2-display.webp";
 const TIGER_BADGE = "v8-preview/display/tiger-body-v1-display.webp";
@@ -30,6 +31,8 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
+  const assets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
+  const activeControls = v8ActiveDefaults;
 
   const seasonCandidates = useMemo<AlphaSignup[]>(
     () => [...(roster?.fixedConfirmed || []), ...(roster?.fixedLeave || [])],
@@ -40,6 +43,25 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     () => [...(roster?.tempConfirmed || []), ...(roster?.tempWaiting || [])],
     [roster],
   );
+
+  const tokens = useMemo<V8ActiveToken[]>(() => {
+    if (!roster) return [];
+    return [
+      ...confirmed.map((person) => ({ id: person.id, name: person.name, variant: "confirmed" as const })),
+      ...waiting.map((person) => ({ id: person.id, name: person.name, variant: "waiting" as const })),
+      ...(roster.fixedLeave || []).map((person) => ({ id: person.id, name: person.name, variant: "leave" as const })),
+    ];
+  }, [confirmed, waiting, roster]);
+
+  // Dragon before an identity is known would be arbitrary (we don't know
+  // yet whether they're season or casual), so the character + backdrop
+  // only appear once identified. Before that, only the sun/meetup info and
+  // the identity prompt show.
+  const characterKind: "dragon" | "tiger" | null = identity
+    ? identity.signupType === "fixed"
+      ? "dragon"
+      : "tiger"
+    : null;
 
   if (!selectedEvent || !roster) return null;
 
@@ -73,20 +95,49 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
 
   return (
     <div className="v8-active">
-      <V8ActiveStyles />
+      <V8ActiveStyles controls={activeControls} />
 
-      <div className="v8-active-sun" aria-hidden="true" />
+      <section className="v8-active-scene" aria-label="場景">
+        {characterKind ? (
+          <img
+            className="v8-active-scene-bg"
+            src={characterKind === "dragon" ? assets.dragonSea : assets.tigerMountain}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+          />
+        ) : null}
 
-      <section className="v8-active-meetup" aria-label="聚會資訊">
-        <p className="v8-active-meetup-title">
-          {shortDate(selectedEvent.eventDate)} {selectedEvent.name}
-        </p>
-        <div className="v8-active-meetup-row">
-          {selectedEvent.hours ? <span>{selectedEvent.hours} 小時</span> : null}
-          {selectedEvent.courtCount ? <span>{selectedEvent.courtCount} 片場地</span> : null}
-          {selectedEvent.ballType ? <span>{selectedEvent.ballType}</span> : null}
-          <span>${Number(selectedEvent.tempFee || 0)}</span>
+        <div className="v8-active-sun" aria-hidden="true">
+          <span className="v8-active-sun-title">{shortDate(selectedEvent.eventDate)} {selectedEvent.name}</span>
         </div>
+
+        <div
+          className="v8-active-sun-info"
+          style={{
+            transform: `translate(${activeControls.sunInfoOffsetX}px, ${activeControls.sunInfoOffsetY}px)`,
+            fontSize: activeControls.sunInfoFontSize,
+          }}
+        >
+          {selectedEvent.courtCount ? <V8SunInfoBadge assets={assets} label={`${selectedEvent.courtCount} 片場地`} /> : null}
+          {selectedEvent.ballType ? <V8SunInfoBadge assets={assets} label={selectedEvent.ballType} /> : null}
+          <V8SunInfoBadge assets={assets} label={`$${Number(selectedEvent.tempFee || 0)}`} />
+        </div>
+
+        {characterKind ? (
+          <div className="v8-active-character-wrap">
+            <img
+              className="v8-active-character"
+              src={characterKind === "dragon" ? assets.dragon : assets.tiger}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              style={{
+                transform: `translate(${activeControls.characterX}px, ${activeControls.characterY}px) scale(${activeControls.characterScale})`,
+              }}
+            />
+          </div>
+        ) : null}
       </section>
 
       {identity ? (
@@ -167,15 +218,17 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
         )}
       </div>
 
-      <HomepageRoster
-        roster={roster}
-        confirmed={confirmed}
-        waiting={waiting}
-        lastChangedId={flow.lastChangedId}
-        refreshing={busy}
-        onRefresh={() => flow.refresh()}
-      />
+      <V8ActiveTokenField tokens={tokens} assets={assets} controls={activeControls} />
     </div>
+  );
+}
+
+function V8SunInfoBadge({ assets, label }: { assets: { sunInfoBadge: string }; label: string }) {
+  return (
+    <span className="v8-sun-info-badge">
+      <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
+      <em>{label}</em>
+    </span>
   );
 }
 
@@ -295,12 +348,15 @@ function shortDate(value: string) {
   return monthNumber > 0 && dayNumber > 0 ? `${monthNumber}/${dayNumber}` : value;
 }
 
-// TEMPORARY layout/visual pass -- Roster card styling, exact CTA button
-// styles, and the Opening -> Active character transition are explicitly
-// unlocked in the design doc (V8_Dragon_Tiger_Active_Page_Layout_v0.2.md
-// section 21). This gets the identity/status/CTA/roster data flow correct
-// first; visual polish is a follow-up once the direction is confirmed.
-function V8ActiveStyles() {
+// TEMPORARY layout/visual pass -- identity/status/CTA is still the interim
+// card from the first pass (Option B "companion plaque" treatment is
+// confirmed direction but not yet built), and the Opening -> Active
+// character transition is unimplemented. Scene (sun/backdrop/character) and
+// the roster (token field) are the redesigned pieces this round.
+function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults }) {
+  const breatheScaleTo = 1 + controls.breatheAmplitudeScale;
+  const breatheOpacityTo = Math.max(0, 1 - controls.breatheOpacityRange);
+
   return (
     <style>{`
       .v8-active {
@@ -308,44 +364,152 @@ function V8ActiveStyles() {
         z-index: 2;
         margin: 0 auto;
         max-width: 560px;
-        padding: 24px 16px calc(env(safe-area-inset-bottom) + 32px);
+        padding: 0 16px calc(env(safe-area-inset-bottom) + 32px);
         background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
         color: #20150d;
       }
 
-      .v8-active-sun {
+      .v8-active-scene {
+        position: relative;
+        margin: 0 -16px 20px;
+        padding: 24px 16px 8px;
+        overflow: hidden;
+        min-height: 220px;
+      }
+
+      .v8-active-scene-bg {
         position: absolute;
-        top: 18px;
-        left: 16px;
-        width: 46px;
-        height: 46px;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.5;
+        z-index: 0;
+      }
+
+      .v8-active-sun {
+        position: relative;
+        z-index: 1;
+        width: 96px;
+        height: 96px;
         border-radius: 50%;
         background: #c64325;
-        opacity: 0.85;
         box-shadow: 0 0 0 10px rgba(198, 67, 37, 0.10);
-      }
-
-      .v8-active-meetup {
-        position: relative;
-        padding-top: 8px;
-        margin-bottom: 18px;
-        text-align: center;
-      }
-
-      .v8-active-meetup-title {
-        margin: 0 0 6px;
-        font-size: 19px;
-        font-weight: 800;
-      }
-
-      .v8-active-meetup-row {
         display: flex;
+        align-items: center;
         justify-content: center;
-        flex-wrap: wrap;
-        gap: 6px 12px;
+        padding: 10px;
+      }
+
+      .v8-active-sun-title {
         font-size: 12px;
-        color: rgba(32, 21, 13, 0.64);
+        font-weight: 800;
+        text-align: center;
+        color: #fdf3e2;
+        line-height: 1.3;
+      }
+
+      .v8-active-sun-info {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .v8-sun-info-badge {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .v8-sun-info-badge img {
+        display: block;
+        height: 28px;
+        width: auto;
+      }
+
+      .v8-sun-info-badge em {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-style: normal;
         font-weight: 700;
+        white-space: nowrap;
+        padding: 0 10px;
+      }
+
+      .v8-active-character-wrap {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: flex-end;
+        margin-top: -40px;
+        animation: v8-active-breathe ${controls.breatheSeconds}s ease-in-out infinite;
+        transform-origin: 70% 60%;
+      }
+
+      .v8-active-character {
+        width: 40%;
+        height: auto;
+        user-select: none;
+        pointer-events: none;
+      }
+
+      @keyframes v8-active-breathe {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(${breatheScaleTo}); opacity: ${breatheOpacityTo}; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .v8-active-character-wrap { animation: none; }
+      }
+
+      .v8-token-empty {
+        text-align: center;
+        color: rgba(32, 21, 13, 0.5);
+        font-size: 13px;
+      }
+
+      .v8-token-field {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .v8-token-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .v8-token-unit {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .v8-token-rope {
+        display: block;
+      }
+
+      .v8-token-face {
+        display: block;
+        object-fit: contain;
+      }
+
+      .v8-token-name {
+        margin-top: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        max-width: 64px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: center;
       }
 
       .v8-active-identity-wrap {
@@ -562,12 +726,6 @@ function V8ActiveStyles() {
         text-decoration: underline;
       }
 
-      .v8-active .sd-roster {
-        position: relative;
-        z-index: auto;
-        color: #20150d;
-        padding: 0;
-      }
     `}</style>
   );
 }
