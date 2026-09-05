@@ -22,15 +22,22 @@ function statusLabel(identity: CurrentIdentity) {
   return identity.status === "waiting" ? "臨打・候補中" : "臨打・正取";
 }
 
+type HelperMode = "signup" | "cancel" | null;
+
 export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const { roster, selectedEvent, confirmed, waiting, pendingAction, selectedEventId } = flow;
-  const { identity, remember } = useCurrentIdentity(roster, selectedEventId);
+  const { identity, remember, forget } = useCurrentIdentity(roster, selectedEventId);
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
-  const [helperOpen, setHelperOpen] = useState(false);
+  const [helperMode, setHelperMode] = useState<HelperMode>(null);
 
   const seasonCandidates = useMemo<AlphaSignup[]>(
     () => [...(roster?.fixedConfirmed || []), ...(roster?.fixedLeave || [])],
+    [roster],
+  );
+
+  const tempCandidates = useMemo<AlphaSignup[]>(
+    () => [...(roster?.tempConfirmed || []), ...(roster?.tempWaiting || [])],
     [roster],
   );
 
@@ -55,8 +62,13 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     const result = await flow.submitSignup(helperName);
     if (result.ok) {
       setHelperName("");
-      setHelperOpen(false);
+      setHelperMode(null);
     }
+  };
+
+  const cancelForSomeoneElse = async (person: AlphaSignup) => {
+    const ok = await flow.runIdentityAction("cancel-temp", { id: person.id, name: person.name });
+    if (ok) setHelperMode(null);
   };
 
   return (
@@ -89,6 +101,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               void runAction("cancel-temp");
             }
           }}
+          onForget={forget}
         />
       ) : (
         <V8IdentityPrompt
@@ -102,7 +115,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
       )}
 
       <div className="v8-active-helper">
-        {helperOpen ? (
+        {helperMode === "signup" ? (
           <div className="v8-active-helper-row">
             <input
               value={helperName}
@@ -116,14 +129,41 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             <button type="button" disabled={!helperName.trim() || busy} onClick={() => void submitHelperSignup()}>
               確認
             </button>
-            <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperOpen(false)}>
+            <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
               取消
             </button>
           </div>
+        ) : helperMode === "cancel" ? (
+          <div className="v8-active-season-list">
+            {tempCandidates.length ? (
+              tempCandidates.map((person) => (
+                <button
+                  key={person.id}
+                  type="button"
+                  className="v8-active-season-item"
+                  disabled={busy}
+                  onClick={() => void cancelForSomeoneElse(person)}
+                >
+                  <strong>{person.name}</strong>
+                  <em>{person.status === "waiting" ? "候補" : "臨打"}</em>
+                </button>
+              ))
+            ) : (
+              <p className="sd-empty">目前沒有臨打報名可取消</p>
+            )}
+            <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
+              返回
+            </button>
+          </div>
         ) : (
-          <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperOpen(true)}>
-            幫人報名
-          </button>
+          <div className="v8-active-helper-toggles">
+            <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("signup")}>
+              幫人報名
+            </button>
+            <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("cancel")}>
+              幫人取消
+            </button>
+          </div>
         )}
       </div>
 
@@ -144,31 +184,38 @@ function V8IdentityStatusCard({
   busy,
   pendingLabel,
   onPrimaryAction,
+  onForget,
 }: {
   identity: CurrentIdentity;
   busy: boolean;
   pendingLabel: string | undefined;
   onPrimaryAction: () => void;
+  onForget: () => void;
 }) {
   const badge = identity.signupType === "fixed" ? DRAGON_BADGE : TIGER_BADGE;
 
   return (
-    <section className="v8-active-identity" aria-label="我的狀態">
-      <img
-        className="v8-active-badge"
-        src={`${import.meta.env.BASE_URL}${badge}`}
-        alt=""
-        aria-hidden="true"
-        decoding="async"
-        loading="eager"
-        draggable={false}
-      />
-      <div className="v8-active-identity-text">
-        <strong>{identity.name}</strong>
-        <span>{statusLabel(identity)}</span>
-      </div>
-      <button type="button" className="v8-active-cta" disabled={busy} onClick={onPrimaryAction}>
-        {busy ? pendingLabel : primaryActionLabel(identity)}
+    <section className="v8-active-identity-wrap">
+      <section className="v8-active-identity" aria-label="我的狀態">
+        <img
+          className="v8-active-badge"
+          src={`${import.meta.env.BASE_URL}${badge}`}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          loading="eager"
+          draggable={false}
+        />
+        <div className="v8-active-identity-text">
+          <strong>{identity.name}</strong>
+          <span>{statusLabel(identity)}</span>
+        </div>
+        <button type="button" className="v8-active-cta" disabled={busy} onClick={onPrimaryAction}>
+          {busy ? pendingLabel : primaryActionLabel(identity)}
+        </button>
+      </section>
+      <button type="button" className="v8-active-forget" disabled={busy} onClick={onForget}>
+        不是我，重新選擇身份
       </button>
     </section>
   );
@@ -301,6 +348,10 @@ function V8ActiveStyles() {
         font-weight: 700;
       }
 
+      .v8-active-identity-wrap {
+        margin-bottom: 16px;
+      }
+
       .v8-active-identity {
         display: flex;
         align-items: center;
@@ -309,7 +360,21 @@ function V8ActiveStyles() {
         border-radius: 20px;
         background: rgba(255, 255, 255, 0.5);
         border: 1px solid rgba(32, 21, 13, 0.10);
-        margin-bottom: 16px;
+        margin-bottom: 8px;
+      }
+
+      .v8-active-forget {
+        display: block;
+        margin: 0 auto;
+        background: transparent;
+        border: none;
+        font-size: 11px;
+        color: rgba(32, 21, 13, 0.5);
+        text-decoration: underline;
+      }
+
+      .v8-active-forget:disabled {
+        opacity: 0.5;
       }
 
       .v8-active-badge {
@@ -445,6 +510,12 @@ function V8ActiveStyles() {
       .v8-active-helper {
         margin-bottom: 20px;
         text-align: center;
+      }
+
+      .v8-active-helper-toggles {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
       }
 
       .v8-active-helper-toggle {
