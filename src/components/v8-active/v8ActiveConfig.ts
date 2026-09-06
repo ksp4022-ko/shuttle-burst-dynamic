@@ -1,16 +1,23 @@
-// All visual elements here are image-file-driven (PNG/SVG), never CSS-drawn
-// shapes -- per the redesign brief, token/rope/badge art must stay swappable
-// by replacing a file, without touching layout code. Everything currently
-// pointing at v8-preview/active/*.svg is a placeholder; the background
+// All visual elements here are image-file-driven (PNG/SVG/WEBP), never
+// CSS-drawn shapes -- per the redesign brief, token/rope/badge art must stay
+// swappable by replacing a file, without touching layout code. Background
 // pairing (sea/mountain) reuses existing locked display assets since real
 // art already exists for those.
-
+//
+// token-v2 / sun-info-badge-v2: real generated art (2026-09-06 batch),
+// de-haloed + recompressed from the originals in
+// public/v8-preview/06_V8_Player_Token_.../06_V8_Player_Token... and
+// .../04_V8_Cloud_Mist_.../ (the "浮世繪對話框" piece). token-v2 already has
+// its own integrated rope+tassel baked into the art, so the separate rope
+// layer is set to 0 length in v8ActiveDefaults for this pick rather than
+// double-hanging it -- swap ropeLength back up if a future token doesn't
+// include its own rope. -v1 SVG placeholders kept on disk, unreferenced.
 export const v8ActiveAssetFiles = {
-  token: "token-v1.svg",
+  token: "token-v2.webp",
   ropeConfirmed: "rope-confirmed-v1.svg",
   ropeWaiting: "rope-waiting-v1.svg",
   ropeLeave: "rope-leave-v1.svg",
-  sunInfoBadge: "sun-info-badge-v1.svg",
+  sunInfoBadge: "sun-info-badge-v2.webp",
 } as const;
 
 // Dragon (season/fixed) pairs with a sea backdrop, Tiger (casual/temp) pairs
@@ -65,11 +72,11 @@ export type V8ActiveControls = {
 
 export const v8ActiveDefaults: V8ActiveControls = {
   // Token field (hanging roster)
-  tokenSize: 52,
+  tokenSize: 64,
   tokenSpacingX: 14,
   tokensPerRow: 9,
-  rowGap: 46,
-  ropeLength: 34,
+  rowGap: 56,
+  ropeLength: 0, // token-v2 has its own rope+tassel baked in; bump back up if a future token art needs a separate connecting rope
   staggerAmplitude: 12,
   fieldTopOffset: 40,
 

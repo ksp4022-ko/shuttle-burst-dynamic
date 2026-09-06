@@ -73,7 +73,7 @@ export function V8ActiveTokenField({
                   alt=""
                   aria-hidden="true"
                   draggable={false}
-                  style={{ width: controls.tokenSize, height: controls.tokenSize }}
+                  style={{ width: controls.tokenSize, height: "auto" }}
                 />
                 <span className="v8-token-name">{token.name}</span>
               </div>
