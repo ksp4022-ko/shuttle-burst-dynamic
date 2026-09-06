@@ -476,14 +476,8 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
       }
 
       .v8-token-field {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .v8-token-row {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
+        position: relative;
+        width: 100%;
       }
 
       .v8-token-unit {

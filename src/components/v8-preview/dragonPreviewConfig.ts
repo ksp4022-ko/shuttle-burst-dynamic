@@ -100,6 +100,11 @@ export type PreviewControls = {
   activeRopeLength: number;
   activeStaggerAmplitude: number;
   activeFieldTopOffset: number;
+  activeStrandTokenTarget: number;
+  activeStrandsPerPass: number;
+  activeStrandSpacingX: number;
+  activeStrandRowHeight: number;
+  activeStrandWaveAmplitude: number;
   activeSunInfoOffsetX: number;
   activeSunInfoOffsetY: number;
   activeSunInfoFontSize: number;
@@ -316,6 +321,11 @@ export const previewDefaults: PreviewControls = {
   activeRopeLength: 34,
   activeStaggerAmplitude: 12,
   activeFieldTopOffset: 40,
+  activeStrandTokenTarget: 4,
+  activeStrandsPerPass: 3,
+  activeStrandSpacingX: 30,
+  activeStrandRowHeight: 230,
+  activeStrandWaveAmplitude: 5,
   activeSunInfoOffsetX: 0,
   activeSunInfoOffsetY: 0,
   activeSunInfoFontSize: 11,
@@ -351,6 +361,11 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRopeLength",
     "activeStaggerAmplitude",
     "activeFieldTopOffset",
+    "activeStrandTokenTarget",
+    "activeStrandsPerPass",
+    "activeStrandSpacingX",
+    "activeStrandRowHeight",
+    "activeStrandWaveAmplitude",
   ],
   "ACTIVE SUN INFO": ["activeSunInfoOffsetX", "activeSunInfoOffsetY", "activeSunInfoFontSize"],
   "ACTIVE CHARACTER": [
@@ -473,6 +488,11 @@ export const controlRanges = {
   activeRopeLength: { label: "Rope Length", min: 10, max: 80 },
   activeStaggerAmplitude: { label: "Stagger Amplitude", min: 0, max: 40 },
   activeFieldTopOffset: { label: "Field Top Offset", min: 0, max: 200 },
+  activeStrandTokenTarget: { label: "Tokens Per Strand", min: 2, max: 6 },
+  activeStrandsPerPass: { label: "Strands Per Pass", min: 1, max: 5 },
+  activeStrandSpacingX: { label: "Strand Spacing X %", min: 5, max: 45 },
+  activeStrandRowHeight: { label: "Strand Row Height", min: 100, max: 400 },
+  activeStrandWaveAmplitude: { label: "Strand Wave Amp %", min: 0, max: 15 },
   activeSunInfoOffsetX: { label: "Sun Info X", min: -100, max: 100 },
   activeSunInfoOffsetY: { label: "Sun Info Y", min: -100, max: 100 },
   activeSunInfoFontSize: { label: "Sun Info Font", min: 8, max: 20 },
@@ -629,6 +649,11 @@ Row Gap: ${Math.round(controls.activeRowGap)}
 Rope Length: ${Math.round(controls.activeRopeLength)}
 Stagger Amplitude: ${Math.round(controls.activeStaggerAmplitude)}
 Field Top Offset: ${Math.round(controls.activeFieldTopOffset)}
+Tokens Per Strand: ${Math.round(controls.activeStrandTokenTarget)}
+Strands Per Pass: ${Math.round(controls.activeStrandsPerPass)}
+Strand Spacing X: ${Math.round(controls.activeStrandSpacingX)}
+Strand Row Height: ${Math.round(controls.activeStrandRowHeight)}
+Strand Wave Amplitude: ${Math.round(controls.activeStrandWaveAmplitude)}
 
 ACTIVE SUN INFO
 X: ${Math.round(controls.activeSunInfoOffsetX)}
