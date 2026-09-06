@@ -44,7 +44,26 @@ export function buildV8ActiveAssets(baseUrl: string) {
 
 export type V8ActiveTokenVariant = "confirmed" | "waiting" | "leave";
 
-export const v8ActiveDefaults = {
+export type V8ActiveControls = {
+  tokenSize: number;
+  tokenSpacingX: number;
+  tokensPerRow: number;
+  rowGap: number;
+  ropeLength: number;
+  staggerAmplitude: number;
+  fieldTopOffset: number;
+  sunInfoOffsetX: number;
+  sunInfoOffsetY: number;
+  sunInfoFontSize: number;
+  characterX: number;
+  characterY: number;
+  characterScale: number;
+  breatheAmplitudeScale: number;
+  breatheOpacityRange: number;
+  breatheSeconds: number;
+};
+
+export const v8ActiveDefaults: V8ActiveControls = {
   // Token field (hanging roster)
   tokenSize: 52,
   tokenSpacingX: 14,
@@ -66,9 +85,7 @@ export const v8ActiveDefaults = {
   breatheAmplitudeScale: 0.03,
   breatheOpacityRange: 0.06,
   breatheSeconds: 6,
-} as const;
-
-export type V8ActiveControls = typeof v8ActiveDefaults;
+};
 
 export const v8ActiveControlRanges = {
   tokenSize: { label: "Token Size", min: 24, max: 96 },

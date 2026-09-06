@@ -353,7 +353,7 @@ function shortDate(value: string) {
 // confirmed direction but not yet built), and the Opening -> Active
 // character transition is unimplemented. Scene (sun/backdrop/character) and
 // the roster (token field) are the redesigned pieces this round.
-function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults }) {
+export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults }) {
   const breatheScaleTo = 1 + controls.breatheAmplitudeScale;
   const breatheOpacityTo = Math.max(0, 1 - controls.breatheOpacityRange);
 
