@@ -313,7 +313,7 @@ export const previewDefaults: PreviewControls = {
   activeTokenSpacingX: 14,
   activeTokensPerRow: 9,
   activeRowGap: 56,
-  activeRopeLength: 0,
+  activeRopeLength: 34,
   activeStaggerAmplitude: 12,
   activeFieldTopOffset: 40,
   activeSunInfoOffsetX: 0,

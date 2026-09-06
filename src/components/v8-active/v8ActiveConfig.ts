@@ -4,16 +4,21 @@
 // pairing (sea/mountain) reuses existing locked display assets since real
 // art already exists for those.
 //
-// token-v2 / sun-info-badge-v2: real generated art (2026-09-06 batch),
-// de-haloed + recompressed from the originals in
-// public/v8-preview/06_V8_Player_Token_.../06_V8_Player_Token... and
-// .../04_V8_Cloud_Mist_.../ (the "浮世繪對話框" piece). token-v2 already has
-// its own integrated rope+tassel baked into the art, so the separate rope
-// layer is set to 0 length in v8ActiveDefaults for this pick rather than
-// double-hanging it -- swap ropeLength back up if a future token doesn't
-// include its own rope. -v1 SVG placeholders kept on disk, unreferenced.
+// sun-info-badge-v2: real generated art (2026-09-06 batch), de-haloed +
+// recompressed. token-confirmed/waiting/leave-v1: three separately
+// generated frames (same ornate border, blank center panel colored
+// blue/yellow/red) -- status is shown by which token image is used, not by
+// rope color, so the name text renders inside each token's blank panel
+// (see V8ActiveTokenField). The 3 sources had inconsistent aspect ratios
+// (0.69 / 0.58 / 0.81) even after tight-cropping to content, so they were
+// normalized to a common 0.70 ratio (transparent letterbox padding, not
+// stretched) before export -- otherwise tokens would visibly change shape
+// depending on status. token-v2.webp (the old single fused rope+plaque
+// pick) and the v1 SVG placeholders stay on disk, unreferenced.
 export const v8ActiveAssetFiles = {
-  token: "token-v2.webp",
+  tokenConfirmed: "token-confirmed-v1.webp",
+  tokenWaiting: "token-waiting-v1.webp",
+  tokenLeave: "token-leave-v1.webp",
   ropeConfirmed: "rope-confirmed-v1.svg",
   ropeWaiting: "rope-waiting-v1.svg",
   ropeLeave: "rope-leave-v1.svg",
@@ -37,7 +42,9 @@ export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
   return {
-    token: `${activeBase}/${v8ActiveAssetFiles.token}`,
+    tokenConfirmed: `${activeBase}/${v8ActiveAssetFiles.tokenConfirmed}`,
+    tokenWaiting: `${activeBase}/${v8ActiveAssetFiles.tokenWaiting}`,
+    tokenLeave: `${activeBase}/${v8ActiveAssetFiles.tokenLeave}`,
     ropeConfirmed: `${activeBase}/${v8ActiveAssetFiles.ropeConfirmed}`,
     ropeWaiting: `${activeBase}/${v8ActiveAssetFiles.ropeWaiting}`,
     ropeLeave: `${activeBase}/${v8ActiveAssetFiles.ropeLeave}`,
@@ -76,7 +83,7 @@ export const v8ActiveDefaults: V8ActiveControls = {
   tokenSpacingX: 14,
   tokensPerRow: 9,
   rowGap: 56,
-  ropeLength: 0, // token-v2 has its own rope+tassel baked in; bump back up if a future token art needs a separate connecting rope
+  ropeLength: 34, // the confirmed/waiting/leave token frames have no rope baked in, unlike the earlier token-v2 pick
   staggerAmplitude: 12,
   fieldTopOffset: 40,
 

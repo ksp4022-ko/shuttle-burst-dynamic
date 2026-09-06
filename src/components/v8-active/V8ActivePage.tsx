@@ -496,20 +496,37 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         display: block;
       }
 
+      .v8-token-face-wrap {
+        position: relative;
+      }
+
       .v8-token-face {
         display: block;
+        width: 100%;
+        height: auto;
         object-fit: contain;
       }
 
       .v8-token-name {
-        margin-top: 4px;
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        text-align: center;
         font-size: 11px;
         font-weight: 700;
-        max-width: 64px;
+        line-height: 1.15;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      }
+
+      .v8-token-name span {
+        display: block;
+        min-width: 0;
+        max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        text-align: center;
       }
 
       .v8-active-identity-wrap {

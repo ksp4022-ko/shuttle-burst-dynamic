@@ -8,7 +8,9 @@ export type V8ActiveToken = {
 };
 
 type Assets = {
-  token: string;
+  tokenConfirmed: string;
+  tokenWaiting: string;
+  tokenLeave: string;
   ropeConfirmed: string;
   ropeWaiting: string;
   ropeLeave: string;
@@ -19,6 +21,24 @@ function ropeFor(assets: Assets, variant: V8ActiveTokenVariant) {
   if (variant === "waiting") return assets.ropeWaiting;
   return assets.ropeLeave;
 }
+
+function tokenFor(assets: Assets, variant: V8ActiveTokenVariant) {
+  if (variant === "confirmed") return assets.tokenConfirmed;
+  if (variant === "waiting") return assets.tokenWaiting;
+  return assets.tokenLeave;
+}
+
+// Status is shown by which token frame is used (blue/yellow/red panel),
+// so the name text needs contrast against that panel color, not a fixed
+// color. All three frames share the same normalized proportions (see
+// v8ActiveConfig.ts), so one shared inset box for the blank panel works
+// across all three.
+function nameTextColorFor(variant: V8ActiveTokenVariant) {
+  if (variant === "waiting") return "#3a2c06"; // yellow panel needs dark text
+  return "#f7f0dc"; // blue/red panels need light text
+}
+
+const TOKEN_PANEL_INSET = { top: "18%", bottom: "20%", left: "16%", right: "16%" };
 
 // Renders the roster as tokens hanging from ropes, high/low staggered,
 // wrapping into a new row every `tokensPerRow` -- rows stack vertically and
@@ -59,23 +79,31 @@ export function V8ActiveTokenField({
                 className="v8-token-unit"
                 style={{ transform: `translateY(${stagger}px)` } as CSSProperties}
               >
-                <img
-                  className="v8-token-rope"
-                  src={ropeFor(assets, token.variant)}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  style={{ height: controls.ropeLength, width: Math.max(2, controls.tokenSize * 0.06) }}
-                />
-                <img
-                  className="v8-token-face"
-                  src={assets.token}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  style={{ width: controls.tokenSize, height: "auto" }}
-                />
-                <span className="v8-token-name">{token.name}</span>
+                {controls.ropeLength > 0 ? (
+                  <img
+                    className="v8-token-rope"
+                    src={ropeFor(assets, token.variant)}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    style={{ height: controls.ropeLength, width: Math.max(2, controls.tokenSize * 0.06) }}
+                  />
+                ) : null}
+                <div className="v8-token-face-wrap" style={{ width: controls.tokenSize }}>
+                  <img
+                    className="v8-token-face"
+                    src={tokenFor(assets, token.variant)}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                  />
+                  <span
+                    className="v8-token-name"
+                    style={{ ...TOKEN_PANEL_INSET, color: nameTextColorFor(token.variant) } as CSSProperties}
+                  >
+                    <span>{token.name}</span>
+                  </span>
+                </div>
               </div>
             );
           })}
