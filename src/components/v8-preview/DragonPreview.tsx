@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent, PointerEvent, TouchEvent } from "react";
 import {
+  activeTargetOrder,
   bagBaseBaseline,
   bagStrapBaseline,
   buildPreviewAssets,
@@ -10,16 +11,19 @@ import {
   formatPreviewSettings,
   getButtonStep,
   heroBaseline,
+  openingTargetOrder,
   previewDefaults,
   rearClawBaseline,
   safeZoneBaseline,
   targetControlKeys,
-  targetOrder,
   targetVisibilityKeys,
   tigerRacketBaseline,
   tigerRigBaseline,
 } from "./dragonPreviewConfig";
-import type { HudOpacityMode, PreviewControls, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
+import type { HudOpacityMode, PreviewControls, PreviewMode, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
+import { V8ActiveStyles } from "@/components/v8-active/V8ActivePage";
+import { V8ActiveTokenField, type V8ActiveToken } from "@/components/v8-active/V8ActiveTokenField";
+import { buildV8ActiveAssets, type V8ActiveControls } from "@/components/v8-active/v8ActiveConfig";
 
 type DockPosition = "top" | "bottom";
 type NumericControlKey = {
@@ -141,6 +145,119 @@ function SafeZoneOverlay({ controls }: { controls: PreviewControls }) {
   );
 }
 
+const MOCK_TOKEN_NAMES = [
+  "柯Sammy", "阿牛", "美玲", "菊花", "Rich", "Roger", "蘇軾", "Kelly", "適丞",
+  "Ariana", "Harry", "子齊", "宗恩", "千賀", "阿偉", "阿富", "小明", "小華", "小芳",
+];
+
+// Live-tunes the same V8ActivePage.tsx / V8ActiveTokenField.tsx components
+// the real Active page uses, fed with mock roster data instead of a real
+// API call -- same isolation principle as the rest of this preview tool.
+function ActiveCanvas({
+  controls,
+  assets,
+  character,
+  onCharacterChange,
+}: {
+  controls: PreviewControls;
+  assets: ReturnType<typeof buildV8ActiveAssets>;
+  character: "dragon" | "tiger";
+  onCharacterChange: (character: "dragon" | "tiger") => void;
+}) {
+  const mockTokens: V8ActiveToken[] = useMemo(
+    () =>
+      MOCK_TOKEN_NAMES.map((name, index) => ({
+        id: `mock-${index}`,
+        name,
+        variant: index < 12 ? "confirmed" : index < 16 ? "waiting" : "leave",
+      })),
+    [],
+  );
+
+  const tokenFieldControls: V8ActiveControls = {
+    tokenSize: controls.activeTokenSize,
+    tokenSpacingX: controls.activeTokenSpacingX,
+    tokensPerRow: controls.activeTokensPerRow,
+    rowGap: controls.activeRowGap,
+    ropeLength: controls.activeRopeLength,
+    staggerAmplitude: controls.activeStaggerAmplitude,
+    fieldTopOffset: controls.activeFieldTopOffset,
+    sunInfoOffsetX: controls.activeSunInfoOffsetX,
+    sunInfoOffsetY: controls.activeSunInfoOffsetY,
+    sunInfoFontSize: controls.activeSunInfoFontSize,
+    characterX: controls.activeCharacterX,
+    characterY: controls.activeCharacterY,
+    characterScale: controls.activeCharacterScale,
+    breatheAmplitudeScale: controls.activeBreatheAmplitudeScale,
+    breatheOpacityRange: controls.activeBreatheOpacityRange,
+    breatheSeconds: controls.activeBreatheSeconds,
+  };
+
+  return (
+    <div className="v8-active" style={{ position: "relative", width: "100%", minHeight: "100%" }}>
+      <V8ActiveStyles controls={tokenFieldControls} />
+
+      <button
+        type="button"
+        onClick={() => onCharacterChange(character === "dragon" ? "tiger" : "dragon")}
+        style={activeCharacterToggleStyle}
+      >
+        預覽角色：{character === "dragon" ? "龍 (季打)" : "虎 (臨打)"}
+      </button>
+
+      <section className="v8-active-scene" aria-label="場景預覽">
+        <img
+          className="v8-active-scene-bg"
+          src={character === "dragon" ? assets.dragonSea : assets.tigerMountain}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
+
+        <div className="v8-active-sun" aria-hidden="true">
+          <span className="v8-active-sun-title">9/10 康軒(預覽資料)</span>
+        </div>
+
+        <div
+          className="v8-active-sun-info"
+          style={{
+            transform: `translate(${controls.activeSunInfoOffsetX}px, ${controls.activeSunInfoOffsetY}px)`,
+            fontSize: controls.activeSunInfoFontSize,
+          }}
+        >
+          <span className="v8-sun-info-badge">
+            <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
+            <em>2 片場地</em>
+          </span>
+          <span className="v8-sun-info-badge">
+            <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
+            <em>MS 101</em>
+          </span>
+          <span className="v8-sun-info-badge">
+            <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
+            <em>$245</em>
+          </span>
+        </div>
+
+        <div className="v8-active-character-wrap">
+          <img
+            className="v8-active-character"
+            src={character === "dragon" ? assets.dragon : assets.tiger}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            style={{
+              transform: `translate(${controls.activeCharacterX}px, ${controls.activeCharacterY}px) scale(${controls.activeCharacterScale})`,
+            }}
+          />
+        </div>
+      </section>
+
+      <V8ActiveTokenField tokens={mockTokens} assets={assets} controls={tokenFieldControls} />
+    </div>
+  );
+}
+
 function DecorLayer({
   target,
   src,
@@ -201,11 +318,20 @@ export function DragonPreview() {
   const [stepMode, setStepMode] = useState<StepMode>("Normal");
   const [highlightEnabled, setHighlightEnabled] = useState(true);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("OPENING");
+  const [activePreviewCharacter, setActivePreviewCharacter] = useState<"dragon" | "tiger">("dragon");
   const panelRef = useRef<HTMLElement | null>(null);
   const copyFeedbackTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const dragRef = useRef<{ pointerId: number | null; offsetY: number } | null>(null);
 
   const assets = useMemo(() => buildPreviewAssets(import.meta.env.BASE_URL), []);
+  const activeAssets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
+  const currentTargetOrder = previewMode === "OPENING" ? openingTargetOrder : activeTargetOrder;
+
+  const setPreviewModeAndTarget = (mode: PreviewMode) => {
+    setPreviewMode(mode);
+    setSelectedTarget(mode === "OPENING" ? "DRAGON RIG" : "ACTIVE TOKEN");
+  };
   const targetHighlightStyle = (target: PreviewTargetId): CSSProperties =>
     highlightEnabled && selectedTarget === target ? selectedTargetStyle : {};
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
@@ -390,6 +516,7 @@ export function DragonPreview() {
     <main style={pageStyle}>
       <section style={stageShellStyle} aria-label="V8 mobile composition preview">
         <div style={stageStyle}>
+          {previewMode === "OPENING" ? (
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
           <div style={paperStyle} />
           <DecorLayer target="FRONT FOAM" src={assets.frontFoam} show={controls.frontFoamShow && controls.decorMode === "FULL"} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} highlighted={highlightEnabled && selectedTarget === "FRONT FOAM"} />
@@ -544,6 +671,14 @@ export function DragonPreview() {
           ) : null}
           <SafeZoneOverlay controls={controls} />
           </div>
+          ) : (
+            <ActiveCanvas
+              controls={controls}
+              assets={activeAssets}
+              character={activePreviewCharacter}
+              onCharacterChange={setActivePreviewCharacter}
+            />
+          )}
         </div>
       </section>
 
@@ -562,10 +697,26 @@ export function DragonPreview() {
             onMouseDown={startPanelMouseDrag}
             onTouchStart={startPanelTouchDrag}
           >
+            <div style={modeToggleRowStyle} onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()}>
+              <button
+                type="button"
+                style={previewMode === "OPENING" ? modeToggleActiveStyle : modeToggleStyle}
+                onClick={() => setPreviewModeAndTarget("OPENING")}
+              >
+                OPENING
+              </button>
+              <button
+                type="button"
+                style={previewMode === "ACTIVE" ? modeToggleActiveStyle : modeToggleStyle}
+                onClick={() => setPreviewModeAndTarget("ACTIVE")}
+              >
+                ACTIVE
+              </button>
+            </div>
             <label style={targetSelectLabelStyle} onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()}>
               <span style={targetPrefixStyle}>TARGET</span>
               <select value={selectedTarget} onChange={(event) => setSelectedTarget(event.currentTarget.value as PreviewTargetId)} style={targetSelectStyle}>
-                {targetOrder.map((target) => (
+                {currentTargetOrder.map((target) => (
                   <option key={target} value={target}>
                     {target}
                   </option>
@@ -835,6 +986,44 @@ const panelHeaderStyle: CSSProperties = {
   borderBottom: "1px solid rgba(247, 239, 224, 0.12)",
   touchAction: "none",
   cursor: "grab",
+};
+
+const activeCharacterToggleStyle: CSSProperties = {
+  position: "absolute",
+  top: 8,
+  right: 8,
+  zIndex: 20,
+  padding: "6px 12px",
+  fontSize: 11,
+  fontWeight: 700,
+  border: "1px solid rgba(32,21,13,0.24)",
+  borderRadius: 999,
+  background: "rgba(255,255,255,0.85)",
+  color: "#20150d",
+};
+
+const modeToggleRowStyle: CSSProperties = {
+  display: "flex",
+  gap: 4,
+  marginRight: 6,
+};
+
+const modeToggleStyle: CSSProperties = {
+  padding: "3px 8px",
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 0.4,
+  border: "1px solid rgba(247,239,224,0.28)",
+  borderRadius: 999,
+  background: "transparent",
+  color: "rgba(247,239,224,0.6)",
+};
+
+const modeToggleActiveStyle: CSSProperties = {
+  ...modeToggleStyle,
+  background: "rgba(216,185,94,0.85)",
+  border: "1px solid rgba(216,185,94,0.85)",
+  color: "#20150d",
 };
 
 const targetSelectLabelStyle: CSSProperties = {

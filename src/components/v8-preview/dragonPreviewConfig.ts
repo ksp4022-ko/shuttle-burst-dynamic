@@ -89,6 +89,26 @@ export type PreviewControls = {
   goldInkRotation: number;
   goldInkOpacity: number;
   goldInkBlur: number;
+  // V8 Active page (token field / sun info / character breathing) --
+  // shares this same tool/mechanism per the "don't invent a new console"
+  // requirement. Prefixed with active* since PreviewControls is one flat
+  // object across both Opening and Active targets.
+  activeTokenSize: number;
+  activeTokenSpacingX: number;
+  activeTokensPerRow: number;
+  activeRowGap: number;
+  activeRopeLength: number;
+  activeStaggerAmplitude: number;
+  activeFieldTopOffset: number;
+  activeSunInfoOffsetX: number;
+  activeSunInfoOffsetY: number;
+  activeSunInfoFontSize: number;
+  activeCharacterX: number;
+  activeCharacterY: number;
+  activeCharacterScale: number;
+  activeBreatheAmplitudeScale: number;
+  activeBreatheOpacityRange: number;
+  activeBreatheSeconds: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -110,12 +130,16 @@ export type PreviewTargetId =
   | "BACK WAVE"
   | "MID WAVE"
   | "FRONT FOAM"
-  | "GOLD / INK";
+  | "GOLD / INK"
+  | "ACTIVE TOKEN"
+  | "ACTIVE SUN INFO"
+  | "ACTIVE CHARACTER";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
+export type PreviewMode = "OPENING" | "ACTIVE";
 
-export const targetOrder: PreviewTargetId[] = [
+export const openingTargetOrder: PreviewTargetId[] = [
   "DRAGON RIG",
   "REAR CLAW",
   "FRONT CLAW",
@@ -132,6 +156,16 @@ export const targetOrder: PreviewTargetId[] = [
   "FRONT FOAM",
   "GOLD / INK",
 ];
+
+export const activeTargetOrder: PreviewTargetId[] = [
+  "ACTIVE TOKEN",
+  "ACTIVE SUN INFO",
+  "ACTIVE CHARACTER",
+];
+
+// Kept for anything still importing the old flat name -- identical to
+// openingTargetOrder, since that's every target the Opening canvas has.
+export const targetOrder: PreviewTargetId[] = openingTargetOrder;
 
 export const previewAssets = {
   body: "dragon-body-v2.png",
@@ -275,6 +309,22 @@ export const previewDefaults: PreviewControls = {
   goldInkRotation: -5,
   goldInkOpacity: 43,
   goldInkBlur: 0,
+  activeTokenSize: 52,
+  activeTokenSpacingX: 14,
+  activeTokensPerRow: 9,
+  activeRowGap: 46,
+  activeRopeLength: 34,
+  activeStaggerAmplitude: 12,
+  activeFieldTopOffset: 40,
+  activeSunInfoOffsetX: 0,
+  activeSunInfoOffsetY: 0,
+  activeSunInfoFontSize: 11,
+  activeCharacterX: 0,
+  activeCharacterY: 0,
+  activeCharacterScale: 1,
+  activeBreatheAmplitudeScale: 0.03,
+  activeBreatheOpacityRange: 0.06,
+  activeBreatheSeconds: 6,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -293,6 +343,24 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "MID WAVE": ["midWaveShow", "midWaveX", "midWaveY", "midWaveScale", "midWaveRotation", "midWaveOpacity", "midWaveBlur"],
   "FRONT FOAM": ["frontFoamShow", "frontFoamX", "frontFoamY", "frontFoamScale", "frontFoamRotation", "frontFoamOpacity", "frontFoamBlur"],
   "GOLD / INK": ["goldInkShow", "goldInkX", "goldInkY", "goldInkScale", "goldInkRotation", "goldInkOpacity", "goldInkBlur"],
+  "ACTIVE TOKEN": [
+    "activeTokenSize",
+    "activeTokenSpacingX",
+    "activeTokensPerRow",
+    "activeRowGap",
+    "activeRopeLength",
+    "activeStaggerAmplitude",
+    "activeFieldTopOffset",
+  ],
+  "ACTIVE SUN INFO": ["activeSunInfoOffsetX", "activeSunInfoOffsetY", "activeSunInfoFontSize"],
+  "ACTIVE CHARACTER": [
+    "activeCharacterX",
+    "activeCharacterY",
+    "activeCharacterScale",
+    "activeBreatheAmplitudeScale",
+    "activeBreatheOpacityRange",
+    "activeBreatheSeconds",
+  ],
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
@@ -398,6 +466,22 @@ export const controlRanges = {
   goldInkRotation: { label: "Rotation", min: -90, max: 90 },
   goldInkOpacity: { label: "Opacity", min: 0, max: 100 },
   goldInkBlur: { label: "Blur", min: 0, max: 8 },
+  activeTokenSize: { label: "Token Size", min: 24, max: 96 },
+  activeTokenSpacingX: { label: "Token Spacing X", min: 0, max: 40 },
+  activeTokensPerRow: { label: "Tokens Per Row", min: 4, max: 14 },
+  activeRowGap: { label: "Row Gap", min: 10, max: 100 },
+  activeRopeLength: { label: "Rope Length", min: 10, max: 80 },
+  activeStaggerAmplitude: { label: "Stagger Amplitude", min: 0, max: 40 },
+  activeFieldTopOffset: { label: "Field Top Offset", min: 0, max: 200 },
+  activeSunInfoOffsetX: { label: "Sun Info X", min: -100, max: 100 },
+  activeSunInfoOffsetY: { label: "Sun Info Y", min: -100, max: 100 },
+  activeSunInfoFontSize: { label: "Sun Info Font", min: 8, max: 20 },
+  activeCharacterX: { label: "Character X", min: -100, max: 100 },
+  activeCharacterY: { label: "Character Y", min: -100, max: 100 },
+  activeCharacterScale: { label: "Character Scale", min: 0.5, max: 1.5, step: 0.01 },
+  activeBreatheAmplitudeScale: { label: "Breathe Scale Amp", min: 0, max: 0.15, step: 0.005 },
+  activeBreatheOpacityRange: { label: "Breathe Opacity Range", min: 0, max: 0.3, step: 0.01 },
+  activeBreatheSeconds: { label: "Breathe Seconds", min: 2, max: 14, step: 0.1 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -535,4 +619,26 @@ Opacity: ${Math.round(controls.goldInkOpacity)}
 Blur: ${Math.round(controls.goldInkBlur)}
 
 DECOR MODE
-Mode: ${controls.decorMode}`;
+Mode: ${controls.decorMode}
+
+ACTIVE TOKEN
+Token Size: ${Math.round(controls.activeTokenSize)}
+Token Spacing X: ${Math.round(controls.activeTokenSpacingX)}
+Tokens Per Row: ${Math.round(controls.activeTokensPerRow)}
+Row Gap: ${Math.round(controls.activeRowGap)}
+Rope Length: ${Math.round(controls.activeRopeLength)}
+Stagger Amplitude: ${Math.round(controls.activeStaggerAmplitude)}
+Field Top Offset: ${Math.round(controls.activeFieldTopOffset)}
+
+ACTIVE SUN INFO
+X: ${Math.round(controls.activeSunInfoOffsetX)}
+Y: ${Math.round(controls.activeSunInfoOffsetY)}
+Font Size: ${Math.round(controls.activeSunInfoFontSize)}
+
+ACTIVE CHARACTER
+X: ${Math.round(controls.activeCharacterX)}
+Y: ${Math.round(controls.activeCharacterY)}
+Scale: ${controls.activeCharacterScale.toFixed(2)}
+Breathe Scale Amp: ${controls.activeBreatheAmplitudeScale.toFixed(3)}
+Breathe Opacity Range: ${controls.activeBreatheOpacityRange.toFixed(2)}
+Breathe Seconds: ${controls.activeBreatheSeconds.toFixed(1)}`;
