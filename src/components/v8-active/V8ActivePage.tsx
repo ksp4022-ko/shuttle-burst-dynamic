@@ -4,16 +4,7 @@ import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import type { AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition, eyebrowStyle, titleStyle } from "@/components/v8-hero/V8HeroComposition";
-import {
-  buildV8ActiveAssets,
-  getV8ActiveFieldMinHeight,
-  v8ActiveDefaults,
-  v8ActiveDragonFieldOverrides,
-  v8ActiveDragonHeroOverrides,
-  v8ActiveSunOverrides,
-  type V8ActiveControls,
-} from "./v8ActiveConfig";
-import { V8ActiveTokenField, type V8ActiveToken } from "./V8ActiveTokenField";
+import { buildV8ActiveAssets, v8ActiveDragonHeroOverrides, v8ActiveSunOverrides } from "./v8ActiveConfig";
 
 const DRAGON_BADGE = "v8-preview/display/dragon-body-v2-display.webp";
 const TIGER_BADGE = "v8-preview/display/tiger-body-v1-display.webp";
@@ -35,13 +26,12 @@ function statusLabel(identity: CurrentIdentity) {
 type HelperMode = "signup" | "cancel" | null;
 
 export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
-  const { roster, selectedEvent, confirmed, waiting, pendingAction, selectedEventId } = flow;
+  const { roster, selectedEvent, pendingAction, selectedEventId } = flow;
   const { identity, remember, forget } = useCurrentIdentity(roster, selectedEventId);
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
   const assets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
-  const activeControls = v8ActiveDefaults;
 
   const seasonCandidates = useMemo<AlphaSignup[]>(
     () => [...(roster?.fixedConfirmed || []), ...(roster?.fixedLeave || [])],
@@ -52,15 +42,6 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     () => [...(roster?.tempConfirmed || []), ...(roster?.tempWaiting || [])],
     [roster],
   );
-
-  const tokens = useMemo<V8ActiveToken[]>(() => {
-    if (!roster) return [];
-    return [
-      ...confirmed.map((person) => ({ id: person.id, name: person.name, variant: "confirmed" as const })),
-      ...waiting.map((person) => ({ id: person.id, name: person.name, variant: "waiting" as const })),
-      ...(roster.fixedLeave || []).map((person) => ({ id: person.id, name: person.name, variant: "leave" as const })),
-    ];
-  }, [confirmed, waiting, roster]);
 
   // Dragon before an identity is known would be arbitrary (we don't know
   // yet whether they're season or casual), so the character + backdrop
@@ -114,7 +95,6 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     ...v8ActiveSunOverrides,
     ...(isDragonFix ? v8ActiveDragonHeroOverrides : characterKind === "tiger" ? { dragonShow: false } : {}),
   };
-  const fieldControls = isDragonFix ? { ...activeControls, ...v8ActiveDragonFieldOverrides } : activeControls;
 
   const handlePrimaryAction = () => {
     if (!identity) return;
@@ -125,40 +105,36 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     }
   };
 
-  const fieldMinHeight = getV8ActiveFieldMinHeight(tokens.length);
-
   return (
-    <div className="v8-active" style={{ "--v8-active-field-min-height": `${fieldMinHeight}px` } as CSSProperties}>
-      <V8ActiveStyles controls={activeControls} />
+    <div className="v8-active">
+      <V8ActiveStyles />
 
-      <div className="v8-active-hero-slot">
-        <V8HeroComposition
-          confirmed
-          controlOverrides={heroOverrides}
-          sunContent={
-            <V8ActiveSunContent
-              assets={assets}
-              eventDate={selectedEvent.eventDate}
-              eventName={selectedEvent.name}
-              courtCount={selectedEvent.courtCount}
-              ballType={selectedEvent.ballType}
-              tempFee={selectedEvent.tempFee}
-              scattered={isDragonFix}
+      <V8HeroComposition
+        confirmed
+        controlOverrides={heroOverrides}
+        sunContent={
+          <V8ActiveSunContent
+            assets={assets}
+            eventDate={selectedEvent.eventDate}
+            eventName={selectedEvent.name}
+            courtCount={selectedEvent.courtCount}
+            ballType={selectedEvent.ballType}
+            tempFee={selectedEvent.tempFee}
+            scattered={isDragonFix}
+          />
+        }
+        scrollContent={
+          isDragonFix && identity ? (
+            <V8IdentityScrollContent
+              identity={identity}
+              busy={busy}
+              pendingLabel={pendingAction?.label}
+              onPrimaryAction={handlePrimaryAction}
+              onForget={forget}
             />
-          }
-          scrollContent={
-            isDragonFix && identity ? (
-              <V8IdentityScrollContent
-                identity={identity}
-                busy={busy}
-                pendingLabel={pendingAction?.label}
-                onPrimaryAction={handlePrimaryAction}
-                onForget={forget}
-              />
-            ) : undefined
-          }
-        />
-      </div>
+          ) : undefined
+        }
+      />
 
       <div className="v8-active-content">
         {isDragonFix ? null : identity ? (
@@ -233,8 +209,6 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
           )}
         </div>
       </div>
-
-      <V8ActiveTokenField tokens={tokens} assets={assets} controls={fieldControls} />
     </div>
   );
 }
@@ -469,16 +443,14 @@ function shortDate(value: string) {
 // TEMPORARY layout/visual pass -- identity/status/CTA is still the interim
 // card from the first pass (Option B "companion plaque" treatment is
 // confirmed direction but not yet built), and the Opening -> Active
-// character transition is unimplemented. Scene (sun/backdrop/character) and
-// the roster (token field) are the redesigned pieces this round.
-export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults }) {
+// character transition is unimplemented. The roster (previously a token
+// card field) is being redesigned -- removed for now, no replacement UI yet.
+export function V8ActiveStyles() {
   return (
     <style>{`
       .v8-active {
         position: relative;
         z-index: 2;
-        display: flex;
-        flex-direction: column;
         /* Full-bleed on every device width -- no max-width cap, so there is
            never a gap showing .sd-page's own background on the sides. No
            background/padding here (see .v8-active-content below) -- the
@@ -494,30 +466,14 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         */
         width: 100%;
         color: #20150d;
-        /* .v8-token-field is position:absolute (see fieldAnchorX/Y), so it no
-           longer reserves space in normal flow -- this min-height (a fixed
-           per-roster-count lookup, see getV8ActiveFieldMinHeight) keeps the
-           container tall enough to contain it instead of clipping. */
-        min-height: var(--v8-active-field-min-height, auto);
-      }
-
-      /* Keeps the hero canvas at its own natural (aspect-ratio-driven)
-         height inside the flex column -- without this, flex's default
-         shrink behavior could compress it in a tight layout. */
-      .v8-active-hero-slot {
-        flex-shrink: 0;
       }
 
       /* Everything below the hero canvas (identity card, helper toggles,
          season list) keeps the cream background and the 16px side inset --
          moved off .v8-active itself (see the comment there) so the cream
          fill starts right where this section begins instead of painting
-         behind the hero canvas's rounded corners too. flex:1 so it (and its
-         cream background) stretches down to fill any leftover height from
-         .v8-active's min-height, instead of leaving a stray strip of
-         .sd-page's dark background below a short identity card. */
+         behind the hero canvas's rounded corners too. */
       .v8-active-content {
-        flex: 1 1 auto;
         padding: 0 16px calc(env(safe-area-inset-bottom) + 32px);
         background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
       }
@@ -587,55 +543,6 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         font-weight: 700;
         white-space: nowrap;
         padding: 0 10px;
-      }
-
-      .v8-token-empty {
-        text-align: center;
-        color: rgba(32, 21, 13, 0.5);
-        font-size: 13px;
-      }
-
-      .v8-token-unit {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .v8-token-rope {
-        display: block;
-      }
-
-      .v8-token-face-wrap {
-        position: relative;
-      }
-
-      .v8-token-face {
-        display: block;
-        width: 100%;
-        height: auto;
-        object-fit: contain;
-      }
-
-      .v8-token-name {
-        position: absolute;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 0;
-        text-align: center;
-        font-size: 11px;
-        font-weight: 700;
-        line-height: 1.15;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-      }
-
-      .v8-token-name span {
-        display: block;
-        min-width: 0;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
       .v8-active-identity-wrap {

@@ -89,23 +89,10 @@ export type PreviewControls = {
   goldInkRotation: number;
   goldInkOpacity: number;
   goldInkBlur: number;
-  // V8 Active page (token field / sun info / character breathing) --
-  // shares this same tool/mechanism per the "don't invent a new console"
-  // requirement. Prefixed with active* since PreviewControls is one flat
-  // object across both Opening and Active targets.
-  activeTokenSize: number;
-  activeTokenSpacingX: number;
-  activeTokensPerRow: number;
-  activeRowGap: number;
-  activeRopeLength: number;
-  activeStaggerAmplitude: number;
-  activeFieldAnchorX: number;
-  activeFieldAnchorY: number;
-  activeStrandTokenTarget: number;
-  activeStrandsPerPass: number;
-  activeStrandSpacingX: number;
-  activeStrandRowHeight: number;
-  activeStrandWaveAmplitude: number;
+  // V8 Active page (sun info / character breathing) -- shares this same
+  // tool/mechanism per the "don't invent a new console" requirement.
+  // Prefixed with active* since PreviewControls is one flat object across
+  // both Opening and Active targets.
   // Active-only: the sun's own position (a container -- see V8HeroComposition's
   // sunContent prop). Moving these carries the meetup title/date and info
   // badges along with it, since they're positioned relative to the sun's own
@@ -115,7 +102,6 @@ export type PreviewControls = {
   activeSunScale: number;
   activeSunZIndex: number;
   activeSunTextScale: number;
-  activeFieldCenterXPercent: number;
   // B_fix (season/dragon): position of dragon-scroll-fixed-v1, the user's
   // own pre-composed dragon-gripping-a-scroll art. Only applied by
   // ActiveCanvas when the mock character toggle is "dragon".
@@ -145,7 +131,6 @@ export type PreviewTargetId =
   | "MID WAVE"
   | "FRONT FOAM"
   | "GOLD / INK"
-  | "ACTIVE TOKEN"
   | "ACTIVE SUN INFO"
   | "ACTIVE DRAGON SCROLL";
 
@@ -171,7 +156,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "GOLD / INK",
 ];
 
-export const activeTargetOrder: PreviewTargetId[] = ["ACTIVE TOKEN", "ACTIVE SUN INFO", "ACTIVE DRAGON SCROLL"];
+export const activeTargetOrder: PreviewTargetId[] = ["ACTIVE SUN INFO", "ACTIVE DRAGON SCROLL"];
 
 // Kept for anything still importing the old flat name -- identical to
 // openingTargetOrder, since that's every target the Opening canvas has.
@@ -319,29 +304,11 @@ export const previewDefaults: PreviewControls = {
   goldInkRotation: -5,
   goldInkOpacity: 43,
   goldInkBlur: 0,
-  activeTokenSize: 50,
-  activeTokenSpacingX: 18,
-  activeTokensPerRow: 7,
-  activeRowGap: 64,
-  activeRopeLength: 34,
-  activeStaggerAmplitude: 20,
-  activeFieldAnchorX: 6,
-  activeFieldAnchorY: 14,
-  activeStrandTokenTarget: 4,
-  activeStrandsPerPass: 4,
-  activeStrandSpacingX: 22,
-  activeStrandRowHeight: 196,
-  activeStrandWaveAmplitude: 0,
   activeSunX: 9,
   activeSunY: 3,
   activeSunScale: 0.68,
   activeSunZIndex: 30,
   activeSunTextScale: 0.58,
-  // Kept at 30 (not the 41 last shown on the slider) -- for the dragon
-  // (season) identity this console previews, v8ActiveDragonFieldOverrides
-  // always overrides fieldCenterXPercent to 30, so 30 is what actually
-  // renders; the slider's 41 never took visual effect. See v8ActiveConfig.ts.
-  activeFieldCenterXPercent: 30,
   activeDragonScrollX: 69,
   activeDragonScrollY: 31,
   activeDragonScrollScale: 1.22,
@@ -364,22 +331,6 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "MID WAVE": ["midWaveShow", "midWaveX", "midWaveY", "midWaveScale", "midWaveRotation", "midWaveOpacity", "midWaveBlur"],
   "FRONT FOAM": ["frontFoamShow", "frontFoamX", "frontFoamY", "frontFoamScale", "frontFoamRotation", "frontFoamOpacity", "frontFoamBlur"],
   "GOLD / INK": ["goldInkShow", "goldInkX", "goldInkY", "goldInkScale", "goldInkRotation", "goldInkOpacity", "goldInkBlur"],
-  "ACTIVE TOKEN": [
-    "activeTokenSize",
-    "activeTokenSpacingX",
-    "activeTokensPerRow",
-    "activeRowGap",
-    "activeRopeLength",
-    "activeStaggerAmplitude",
-    "activeFieldAnchorX",
-    "activeFieldAnchorY",
-    "activeStrandTokenTarget",
-    "activeStrandsPerPass",
-    "activeStrandSpacingX",
-    "activeStrandRowHeight",
-    "activeStrandWaveAmplitude",
-    "activeFieldCenterXPercent",
-  ],
   "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex", "activeSunTextScale"],
   "ACTIVE DRAGON SCROLL": [
     "activeDragonScrollX",
@@ -492,25 +443,11 @@ export const controlRanges = {
   goldInkRotation: { label: "Rotation", min: -90, max: 90 },
   goldInkOpacity: { label: "Opacity", min: 0, max: 100 },
   goldInkBlur: { label: "Blur", min: 0, max: 8 },
-  activeTokenSize: { label: "Token Size", min: 24, max: 96 },
-  activeTokenSpacingX: { label: "Token Spacing X", min: 0, max: 40 },
-  activeTokensPerRow: { label: "Tokens Per Row", min: 4, max: 14 },
-  activeRowGap: { label: "Row Gap", min: 10, max: 100 },
-  activeRopeLength: { label: "Rope Length", min: 10, max: 80 },
-  activeStaggerAmplitude: { label: "Stagger Amplitude", min: 0, max: 40 },
-  activeFieldAnchorX: { label: "Field Anchor X %", min: -20, max: 100 },
-  activeFieldAnchorY: { label: "Field Anchor Y %", min: 0, max: 150 },
-  activeStrandTokenTarget: { label: "Tokens Per Strand", min: 2, max: 6 },
-  activeStrandsPerPass: { label: "Strands Per Pass", min: 1, max: 5 },
-  activeStrandSpacingX: { label: "Strand Spacing X %", min: 5, max: 45 },
-  activeStrandRowHeight: { label: "Strand Row Height", min: 100, max: 400 },
-  activeStrandWaveAmplitude: { label: "Strand Wave Amp %", min: 0, max: 15 },
   activeSunX: { label: "Sun X %", min: 0, max: 100 },
   activeSunY: { label: "Sun Y %", min: 0, max: 100 },
   activeSunScale: { label: "Sun Scale", min: 0.3, max: 2, step: 0.01 },
   activeSunZIndex: { label: "Sun Z-Index", min: 0, max: 30 },
   activeSunTextScale: { label: "Sun Text Scale", min: 0.2, max: 2, step: 0.01 },
-  activeFieldCenterXPercent: { label: "Field Center X %", min: 10, max: 90 },
   activeDragonScrollX: { label: "Dragon+Scroll X %", min: 0, max: 100 },
   activeDragonScrollY: { label: "Dragon+Scroll Y %", min: 0, max: 100 },
   activeDragonScrollScale: { label: "Dragon+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
@@ -653,22 +590,6 @@ Blur: ${Math.round(controls.goldInkBlur)}
 
 DECOR MODE
 Mode: ${controls.decorMode}
-
-ACTIVE TOKEN
-Token Size: ${Math.round(controls.activeTokenSize)}
-Token Spacing X: ${Math.round(controls.activeTokenSpacingX)}
-Tokens Per Row: ${Math.round(controls.activeTokensPerRow)}
-Row Gap: ${Math.round(controls.activeRowGap)}
-Rope Length: ${Math.round(controls.activeRopeLength)}
-Stagger Amplitude: ${Math.round(controls.activeStaggerAmplitude)}
-Field Anchor X %: ${Math.round(controls.activeFieldAnchorX)}
-Field Anchor Y %: ${Math.round(controls.activeFieldAnchorY)}
-Tokens Per Strand: ${Math.round(controls.activeStrandTokenTarget)}
-Strands Per Pass: ${Math.round(controls.activeStrandsPerPass)}
-Strand Spacing X: ${Math.round(controls.activeStrandSpacingX)}
-Strand Row Height: ${Math.round(controls.activeStrandRowHeight)}
-Strand Wave Amplitude: ${Math.round(controls.activeStrandWaveAmplitude)}
-Field Center X: ${Math.round(controls.activeFieldCenterXPercent)}
 
 ACTIVE SUN INFO
 X: ${Math.round(controls.activeSunX)}
