@@ -1,3 +1,5 @@
+import type { V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
+
 // All visual elements here are image-file-driven (PNG/SVG/WEBP), never
 // CSS-drawn shapes -- per the redesign brief, token/rope/badge art must stay
 // swappable by replacing a file, without touching layout code. Background
@@ -56,6 +58,51 @@ export function buildV8ActiveAssets(baseUrl: string) {
   };
 }
 
+// Applies to EVERY confirmed Active render (both this default overlay and
+// B_fix), regardless of identity -- the sun always moves to its Active
+// position once a meetup is confirmed. Top-left, shrunk a bit to leave room
+// for the info badges around it, and z-index above every other layer
+// (highest existing layer is 11) so the dragon/clouds/waves never cover it.
+// Rough/schematic placement -- the user tunes exact values via
+// /v8/preview's ACTIVE mode afterward.
+export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
+  sunX: 8,
+  sunY: 6,
+  sunScale: 0.75,
+  sunZIndex: 20,
+};
+
+// B_fix (season/dragon) layout overrides for V8HeroComposition's shared
+// canvas. Uses dragon-scroll-fixed-v1 -- the user's own pre-composed
+// dragon-gripping-a-scroll art (dropped in 01_V8_Dragon as
+// 藍龍纏繞華麗金邊卷軸.png, de-haloed/recompressed, unmodified pose) --
+// instead of assembling the opening's separate dragon body + claw + scroll
+// layers, since that single image already has a real grip pose the
+// app-assembled rig could only approximate. Hides the opening's dragon rig
+// and bag/claw layers entirely; dragonScrollShow takes over. Rough/schematic
+// placement for now (the user tunes exact values via /v8/preview's ACTIVE
+// mode afterward) -- B_temp (casual/tiger) stays on the plain overlay until
+// that mockup exists.
+export const v8ActiveDragonHeroOverrides: Partial<V8HeroControls> = {
+  dragonShow: false,
+  bagBaseShow: false,
+  bagStrapShow: false,
+  rearClawShow: false,
+  tigerShow: false,
+  tigerRacketShow: false,
+  dragonScrollShow: true,
+  dragonScrollX: 62,
+  dragonScrollY: 45,
+  dragonScrollScale: 1,
+  dragonScrollRotation: 0,
+};
+
+// B_fix token field: shifted left to leave room for the dragon + scroll
+// column on the right (see v8ActiveDragonHeroOverrides above).
+export const v8ActiveDragonFieldOverrides: Partial<V8ActiveControls> = {
+  fieldCenterXPercent: 30,
+};
+
 export type V8ActiveTokenVariant = "confirmed" | "waiting" | "leave";
 
 export type V8ActiveControls = {
@@ -72,9 +119,10 @@ export type V8ActiveControls = {
   strandSpacingX: number;
   strandRowHeight: number;
   strandWaveAmplitude: number;
-  sunInfoOffsetX: number;
-  sunInfoOffsetY: number;
-  sunInfoFontSize: number;
+  // Shifts the whole zigzag path left/right (50 = centered) -- the B_fix
+  // (season/dragon) layout moves it left to leave room for the dragon +
+  // identity scroll on the right instead of spanning the full width.
+  fieldCenterXPercent: number;
 };
 
 export const v8ActiveDefaults: V8ActiveControls = {
@@ -91,11 +139,7 @@ export const v8ActiveDefaults: V8ActiveControls = {
   strandSpacingX: 30,
   strandRowHeight: 230,
   strandWaveAmplitude: 5,
-
-  // Sun info overlay (court count / ball type / fee, placed around the sun)
-  sunInfoOffsetX: 0,
-  sunInfoOffsetY: 0,
-  sunInfoFontSize: 11,
+  fieldCenterXPercent: 50,
 };
 
 export const v8ActiveControlRanges = {
@@ -111,9 +155,7 @@ export const v8ActiveControlRanges = {
   strandSpacingX: { label: "Strand Spacing X %", min: 5, max: 45 },
   strandRowHeight: { label: "Strand Row Height", min: 100, max: 400 },
   strandWaveAmplitude: { label: "Strand Wave Amp %", min: 0, max: 15 },
-  sunInfoOffsetX: { label: "Sun Info X", min: -100, max: 100 },
-  sunInfoOffsetY: { label: "Sun Info Y", min: -100, max: 100 },
-  sunInfoFontSize: { label: "Sun Info Font", min: 8, max: 20 },
+  fieldCenterXPercent: { label: "Field Center X %", min: 10, max: 90 },
 } as const satisfies Record<keyof V8ActiveControls, { label: string; min: number; max: number; step?: number }>;
 
 // Deterministic per-token stagger so the layout doesn't jump around on
@@ -143,12 +185,18 @@ export function computeZigzagLayout(
   total: number,
   controls: Pick<
     V8ActiveControls,
-    "tokenSize" | "strandTokenTarget" | "strandsPerPass" | "strandSpacingX" | "strandRowHeight" | "strandWaveAmplitude"
+    | "tokenSize"
+    | "strandTokenTarget"
+    | "strandsPerPass"
+    | "strandSpacingX"
+    | "strandRowHeight"
+    | "strandWaveAmplitude"
+    | "fieldCenterXPercent"
   >,
 ): { slots: TokenLayoutSlot[]; height: number } {
   if (total <= 0) return { slots: [], height: 0 };
 
-  const { tokenSize, strandTokenTarget, strandsPerPass, strandSpacingX, strandRowHeight, strandWaveAmplitude } =
+  const { tokenSize, strandTokenTarget, strandsPerPass, strandSpacingX, strandRowHeight, strandWaveAmplitude, fieldCenterXPercent } =
     controls;
   const strandCount = Math.max(1, Math.round(total / strandTokenTarget));
   const base = Math.floor(total / strandCount);
@@ -164,11 +212,12 @@ export function computeZigzagLayout(
   const tokenVisualHeight = tokenSize / 0.7;
   const tokenPitch = tokenVisualHeight + 10;
 
-  const centerPercent = 50;
-  // Capped below 50 - (half a token's own width, roughly) so a token
-  // anchored at the widest swing plus its x-jitter still stays inside the
-  // field's own width instead of bleeding past the edge.
-  const halfSpanPercent = Math.min(36, (strandsPerPass - 1) * strandSpacingX * 0.55 + 8);
+  const centerPercent = fieldCenterXPercent;
+  // Capped below the distance to whichever edge is closer (minus room for
+  // half a token's own width) so a token anchored at the widest swing plus
+  // its x-jitter still stays inside the field even when centerPercent is
+  // shifted off 50 (e.g. the B_fix layout, which moves the whole path left).
+  const halfSpanPercent = Math.min(36, Math.min(centerPercent, 100 - centerPercent) - 8, (strandsPerPass - 1) * strandSpacingX * 0.55 + 8);
   const rowCount = Math.ceil(strandCount / strandsPerPass);
 
   // A row's vertical footprint is set by its tallest strand, never a fixed

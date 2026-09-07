@@ -21,10 +21,15 @@ import {
   tigerRigBaseline,
 } from "./dragonPreviewConfig";
 import type { HudOpacityMode, PreviewControls, PreviewMode, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
-import { V8ActiveStyles, V8ActiveSunOverlay } from "@/components/v8-active/V8ActivePage";
+import { V8ActiveStyles, V8ActiveSunContent, V8IdentityScrollContent } from "@/components/v8-active/V8ActivePage";
 import { V8ActiveTokenField, type V8ActiveToken } from "@/components/v8-active/V8ActiveTokenField";
-import { buildV8ActiveAssets, type V8ActiveControls } from "@/components/v8-active/v8ActiveConfig";
+import {
+  buildV8ActiveAssets,
+  v8ActiveDragonFieldOverrides,
+  type V8ActiveControls,
+} from "@/components/v8-active/v8ActiveConfig";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
+import type { CurrentIdentity } from "@/hooks/use-current-identity";
 
 type DockPosition = "top" | "bottom";
 type NumericControlKey = {
@@ -197,9 +202,45 @@ function ActiveCanvas({
     strandSpacingX: controls.activeStrandSpacingX,
     strandRowHeight: controls.activeStrandRowHeight,
     strandWaveAmplitude: controls.activeStrandWaveAmplitude,
-    sunInfoOffsetX: controls.activeSunInfoOffsetX,
-    sunInfoOffsetY: controls.activeSunInfoOffsetY,
-    sunInfoFontSize: controls.activeSunInfoFontSize,
+    fieldCenterXPercent: controls.activeFieldCenterXPercent,
+  };
+
+  // Mirrors V8ActivePage's B_fix branching (see v8ActiveDragonHeroOverrides
+  // there) so this console previews the exact same composition, just fed by
+  // this slider state instead of the frozen defaults -- "複製" then hands
+  // back the numbers to bake into that frozen object. The sun's Active
+  // position applies unconditionally (real page: v8ActiveSunOverrides),
+  // same as here.
+  const isDragonFix = character === "dragon";
+  const heroOverrides = {
+    sunX: controls.activeSunX,
+    sunY: controls.activeSunY,
+    sunScale: controls.activeSunScale,
+    sunZIndex: controls.activeSunZIndex,
+    ...(isDragonFix
+      ? {
+          dragonShow: false,
+          bagBaseShow: false,
+          bagStrapShow: false,
+          rearClawShow: false,
+          tigerShow: false,
+          tigerRacketShow: false,
+          dragonScrollShow: true,
+          dragonScrollX: controls.activeDragonScrollX,
+          dragonScrollY: controls.activeDragonScrollY,
+          dragonScrollScale: controls.activeDragonScrollScale,
+          dragonScrollRotation: controls.activeDragonScrollRotation,
+        }
+      : { dragonShow: false }),
+  };
+  const fieldControls = isDragonFix
+    ? { ...tokenFieldControls, ...v8ActiveDragonFieldOverrides }
+    : tokenFieldControls;
+  const mockIdentity: CurrentIdentity = {
+    signupId: "mock-self",
+    name: "柯Sammy",
+    signupType: "fixed",
+    status: "confirmed",
   };
 
   return (
@@ -229,22 +270,32 @@ function ActiveCanvas({
 
       <V8HeroComposition
         confirmed
-        dragonVisible={character === "dragon"}
-        tigerVisible={character === "tiger"}
-        activeContent={
-          <V8ActiveSunOverlay
+        controlOverrides={heroOverrides}
+        sunContent={
+          <V8ActiveSunContent
             assets={assets}
-            controls={tokenFieldControls}
             eventDate="2026-09-10"
             eventName="康軒(預覽資料)"
             courtCount={2}
             ballType="MS 101"
             tempFee={245}
+            scattered={isDragonFix}
           />
+        }
+        scrollContent={
+          isDragonFix ? (
+            <V8IdentityScrollContent
+              identity={mockIdentity}
+              busy={false}
+              pendingLabel={undefined}
+              onPrimaryAction={() => {}}
+              onForget={() => {}}
+            />
+          ) : undefined
         }
       />
 
-      <V8ActiveTokenField tokens={mockTokens} assets={assets} controls={tokenFieldControls} />
+      <V8ActiveTokenField tokens={mockTokens} assets={assets} controls={fieldControls} />
     </div>
   );
 }

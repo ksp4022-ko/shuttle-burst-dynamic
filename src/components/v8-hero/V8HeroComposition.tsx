@@ -10,6 +10,7 @@ import {
   tigerRacketBaseline,
   tigerRigBaseline,
   v8HeroDefaults,
+  type V8HeroControls,
 } from "./v8HeroConfig";
 
 type V8HeroCompositionProps = {
@@ -25,16 +26,21 @@ type V8HeroCompositionProps = {
   onPreviousEvent?: () => void;
   onNextEvent?: () => void;
   onConfirm?: () => void;
-  // Replaces the post-confirm placeholder text with real Active-page
-  // content (meetup name/date + sun-info badges) so the Active page can
-  // render inside this same canvas/card instead of stacking a second one
-  // below it. Rendered inside the same centered heroCopyStyle title area.
-  activeContent?: ReactNode;
-  // Lets a confirmed identity show only its own creature instead of both --
-  // defaults to each layer's own controls.dragonShow/tigerShow (both visible,
-  // the opening's "龍虎交鋒" look) when not given.
-  dragonVisible?: boolean | undefined;
-  tigerVisible?: boolean | undefined;
+  // Lets a caller reposition/hide any rig layer (dragon, claw, tiger, bag,
+  // waves...) for a confirmed identity's own composition (e.g. the Active
+  // page's dragon-holds-a-scroll layout) without needing a dedicated prop
+  // per field -- merged on top of v8HeroDefaults.
+  controlOverrides?: Partial<V8HeroControls> | undefined;
+  // Active-only identity/status/CTA content, rendered inside the scroll's
+  // blank panel (see controls.scrollShow/scrollX/scrollY/scrollScale in
+  // v8HeroConfig.ts) -- the "claw grips a scroll" companion plaque.
+  scrollContent?: ReactNode | undefined;
+  // Active-only meetup title/date + info badges, rendered INSIDE the sun's
+  // own container (position relative to the sun's own box, via
+  // controls.sunX/sunY/sunScale/sunZIndex) instead of independently
+  // positioned -- moving the sun carries this content with it. Replaces the
+  // Opening's title/CTA in that same on-canvas spot once confirmed.
+  sunContent?: ReactNode | undefined;
 };
 
 // Deliberately does NOT call image.decode() here -- decode() can stall
@@ -225,17 +231,15 @@ export function V8HeroComposition({
   onPreviousEvent = () => {},
   onNextEvent = () => {},
   onConfirm = () => {},
-  activeContent,
-  dragonVisible,
-  tigerVisible,
+  controlOverrides,
+  scrollContent,
+  sunContent,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
   const [assetsReady, setAssetsReady] = useState(false);
-  const controls = v8HeroDefaults;
+  const controls = controlOverrides ? { ...v8HeroDefaults, ...controlOverrides } : v8HeroDefaults;
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
   const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
-  const showDragon = dragonVisible ?? controls.dragonShow;
-  const showTiger = tigerVisible ?? controls.tigerShow;
   const fallbackConfirmButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -258,12 +262,22 @@ export function V8HeroComposition({
             <div style={paperStyle} />
             <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
             <DecorLayer src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
-            <div style={sunStyle} />
+            <div
+              style={{
+                ...sunStyle,
+                left: `${controls.sunX}%`,
+                top: `${controls.sunY}%`,
+                width: `${52 * controls.sunScale}%`,
+                zIndex: controls.sunZIndex,
+              }}
+            >
+              {sunContent}
+            </div>
             <DecorLayer src={assets.cloud} x={controls.cloudBackX} y={controls.cloudBackY} scale={controls.cloudBackScale} rotation={controls.cloudBackRotation} opacity={100} blur={decorBlur(controls.cloudBackBlur)} zIndex={5} driftClassName="v8-cloud-drift-back" />
             <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={100} blur={decorBlur(controls.cloudBlur)} zIndex={5} driftClassName="v8-cloud-drift-front" />
             <DecorLayer src={assets.mountain} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={6} />
             <DecorLayer src={assets.backWave} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} driftClassName="v8-wave-drift-back" />
-            {showDragon ? (
+            {controls.dragonShow ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -346,7 +360,90 @@ export function V8HeroComposition({
                 ) : null}
               </div>
             ) : null}
-            {showTiger ? (
+            {controls.scrollShow ? (
+              <div
+                aria-hidden={false}
+                style={{
+                  position: "absolute",
+                  left: `${controls.scrollX}%`,
+                  top: `${controls.scrollY}%`,
+                  width: `${28 * controls.scrollScale}%`,
+                  transform: `translate(-50%, -50%) rotate(${controls.scrollRotation}deg)`,
+                  zIndex: 9,
+                }}
+              >
+                <img
+                  src={assets.scroll}
+                  alt=""
+                  aria-hidden="true"
+                  decoding="async"
+                  loading="eager"
+                  draggable={false}
+                  style={{ display: "block", width: "100%", height: "auto" }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "9%",
+                    bottom: "39%",
+                    left: "20%",
+                    right: "20%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  {scrollContent}
+                </div>
+              </div>
+            ) : null}
+            {controls.dragonScrollShow ? (
+              <div
+                aria-hidden={false}
+                style={{
+                  position: "absolute",
+                  left: `${controls.dragonScrollX}%`,
+                  top: `${controls.dragonScrollY}%`,
+                  width: `${58 * controls.dragonScrollScale}%`,
+                  transform: `translate(-50%, -50%) rotate(${controls.dragonScrollRotation}deg)`,
+                  zIndex: 9,
+                }}
+              >
+                <img
+                  src={assets.dragonScroll}
+                  alt=""
+                  aria-hidden="true"
+                  decoding="async"
+                  loading="eager"
+                  draggable={false}
+                  style={{ display: "block", width: "100%", height: "auto" }}
+                />
+                {/* Panel inset measured directly off dragon-scroll-fixed-v1's
+                    own pixels (see the processing note in v8ActiveConfig.ts's
+                    v8ActiveDragonHeroOverrides) -- this image's blank panel
+                    sits further right/lower than the standalone scroll's,
+                    since the dragon's head and coils take up the left side. */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "24%",
+                    bottom: "33%",
+                    left: "56%",
+                    right: "22%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  {scrollContent}
+                </div>
+              </div>
+            ) : null}
+            {controls.tigerShow ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -364,40 +461,30 @@ export function V8HeroComposition({
             <DecorLayer src={assets.midWave} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={10} driftClassName="v8-wave-drift-mid" />
             <div style={heroStyle}>
               <div style={{ ...heroCopyStyle, left: heroBaseline.centerX, top: heroBaseline.top, width: controls.heroWidth, transform: `translate(calc(-50% + ${controls.heroX}px), ${controls.heroY}px) scale(${controls.heroScale})` }}>
-                {confirmed && activeContent ? (
-                  activeContent
-                ) : (
+                {confirmed ? null : (
                   <>
                     <p style={eyebrowStyle}>龍虎交鋒・戰局未定</p>
                     <h1 style={titleStyle}>SHUTTLE V8</h1>
-                    {confirmed ? (
-                      <p style={{ ...confirmedStyle, transform: `translateY(${controls.heroEventY}px)` }}>
-                        戰局準備中
-                      </p>
-                    ) : (
-                      <>
-                        <div style={{ ...selectorStyle, transform: `translateY(${controls.heroEventY}px)` }}>
-                          <button type="button" onClick={onPreviousEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="上一場聚會">
-                            ‹
-                          </button>
-                          <button type="button" onClick={onConfirm} disabled={confirmDisabled} style={eventButtonStyle}>
-                            {eventLabel || "選擇聚會"}
-                          </button>
-                          <button type="button" onClick={onNextEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="下一場聚會">
-                            ›
-                          </button>
-                        </div>
-                        {eventPositionLabel ? <small style={eventPositionStyle}>{eventPositionLabel}</small> : null}
-                        <button ref={confirmButtonRef ?? fallbackConfirmButtonRef} type="button" disabled={confirmDisabled} onClick={onConfirm} style={{ ...ctaStyle, transform: `translateY(${controls.heroCtaY}px)` }}>
-                          進入戰局
-                        </button>
-                      </>
-                    )}
+                    <div style={{ ...selectorStyle, transform: `translateY(${controls.heroEventY}px)` }}>
+                      <button type="button" onClick={onPreviousEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="上一場聚會">
+                        ‹
+                      </button>
+                      <button type="button" onClick={onConfirm} disabled={confirmDisabled} style={eventButtonStyle}>
+                        {eventLabel || "選擇聚會"}
+                      </button>
+                      <button type="button" onClick={onNextEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="下一場聚會">
+                        ›
+                      </button>
+                    </div>
+                    {eventPositionLabel ? <small style={eventPositionStyle}>{eventPositionLabel}</small> : null}
+                    <button ref={confirmButtonRef ?? fallbackConfirmButtonRef} type="button" disabled={confirmDisabled} onClick={onConfirm} style={{ ...ctaStyle, transform: `translateY(${controls.heroCtaY}px)` }}>
+                      進入戰局
+                    </button>
                   </>
                 )}
               </div>
             </div>
-            {showTiger && controls.tigerRacketShow ? (
+            {controls.tigerShow && controls.tigerRacketShow ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -494,12 +581,11 @@ const paperStyle: CSSProperties = {
     "radial-gradient(circle at 24% 18%, rgba(255,255,255,0.35), transparent 28%), linear-gradient(135deg, #f4e8cf 0%, #e2c795 54%, #f2dfb8 100%)",
 };
 
+// left/top/width/zIndex are always supplied at the call site from
+// controls.sunX/sunY/sunScale/sunZIndex (see v8HeroConfig.ts) -- kept out of
+// this base object so there's no stale default to accidentally fall back to.
 const sunStyle: CSSProperties = {
   position: "absolute",
-  zIndex: 4,
-  left: "23%",
-  top: "5%",
-  width: "52%",
   aspectRatio: "1",
   borderRadius: "50%",
   background: "#c64325",
@@ -637,10 +723,5 @@ const ctaStyle: CSSProperties = {
   fontWeight: 900,
 };
 
-const confirmedStyle: CSSProperties = {
-  margin: "20px 0 0",
-  color: "#20150d",
-  fontSize: 20,
-  lineHeight: 1.35,
-  fontWeight: 900,
-};
+// confirmedStyle removed -- the confirmed-state placeholder text it styled
+// no longer renders (title/date moved into the sun's sunContent).

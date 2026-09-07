@@ -105,9 +105,22 @@ export type PreviewControls = {
   activeStrandSpacingX: number;
   activeStrandRowHeight: number;
   activeStrandWaveAmplitude: number;
-  activeSunInfoOffsetX: number;
-  activeSunInfoOffsetY: number;
-  activeSunInfoFontSize: number;
+  // Active-only: the sun's own position (a container -- see V8HeroComposition's
+  // sunContent prop). Moving these carries the meetup title/date and info
+  // badges along with it, since they're positioned relative to the sun's own
+  // box, not independently.
+  activeSunX: number;
+  activeSunY: number;
+  activeSunScale: number;
+  activeSunZIndex: number;
+  activeFieldCenterXPercent: number;
+  // B_fix (season/dragon): position of dragon-scroll-fixed-v1, the user's
+  // own pre-composed dragon-gripping-a-scroll art. Only applied by
+  // ActiveCanvas when the mock character toggle is "dragon".
+  activeDragonScrollX: number;
+  activeDragonScrollY: number;
+  activeDragonScrollScale: number;
+  activeDragonScrollRotation: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -131,7 +144,8 @@ export type PreviewTargetId =
   | "FRONT FOAM"
   | "GOLD / INK"
   | "ACTIVE TOKEN"
-  | "ACTIVE SUN INFO";
+  | "ACTIVE SUN INFO"
+  | "ACTIVE DRAGON SCROLL";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -155,7 +169,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "GOLD / INK",
 ];
 
-export const activeTargetOrder: PreviewTargetId[] = ["ACTIVE TOKEN", "ACTIVE SUN INFO"];
+export const activeTargetOrder: PreviewTargetId[] = ["ACTIVE TOKEN", "ACTIVE SUN INFO", "ACTIVE DRAGON SCROLL"];
 
 // Kept for anything still importing the old flat name -- identical to
 // openingTargetOrder, since that's every target the Opening canvas has.
@@ -315,9 +329,15 @@ export const previewDefaults: PreviewControls = {
   activeStrandSpacingX: 30,
   activeStrandRowHeight: 230,
   activeStrandWaveAmplitude: 5,
-  activeSunInfoOffsetX: 0,
-  activeSunInfoOffsetY: 0,
-  activeSunInfoFontSize: 11,
+  activeSunX: 8,
+  activeSunY: 6,
+  activeSunScale: 0.75,
+  activeSunZIndex: 20,
+  activeFieldCenterXPercent: 30,
+  activeDragonScrollX: 62,
+  activeDragonScrollY: 45,
+  activeDragonScrollScale: 1,
+  activeDragonScrollRotation: 0,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -349,8 +369,15 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeStrandSpacingX",
     "activeStrandRowHeight",
     "activeStrandWaveAmplitude",
+    "activeFieldCenterXPercent",
   ],
-  "ACTIVE SUN INFO": ["activeSunInfoOffsetX", "activeSunInfoOffsetY", "activeSunInfoFontSize"],
+  "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex"],
+  "ACTIVE DRAGON SCROLL": [
+    "activeDragonScrollX",
+    "activeDragonScrollY",
+    "activeDragonScrollScale",
+    "activeDragonScrollRotation",
+  ],
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
@@ -468,9 +495,15 @@ export const controlRanges = {
   activeStrandSpacingX: { label: "Strand Spacing X %", min: 5, max: 45 },
   activeStrandRowHeight: { label: "Strand Row Height", min: 100, max: 400 },
   activeStrandWaveAmplitude: { label: "Strand Wave Amp %", min: 0, max: 15 },
-  activeSunInfoOffsetX: { label: "Sun Info X", min: -100, max: 100 },
-  activeSunInfoOffsetY: { label: "Sun Info Y", min: -100, max: 100 },
-  activeSunInfoFontSize: { label: "Sun Info Font", min: 8, max: 20 },
+  activeSunX: { label: "Sun X %", min: 0, max: 100 },
+  activeSunY: { label: "Sun Y %", min: 0, max: 100 },
+  activeSunScale: { label: "Sun Scale", min: 0.3, max: 2, step: 0.01 },
+  activeSunZIndex: { label: "Sun Z-Index", min: 0, max: 30 },
+  activeFieldCenterXPercent: { label: "Field Center X %", min: 10, max: 90 },
+  activeDragonScrollX: { label: "Dragon+Scroll X %", min: 0, max: 100 },
+  activeDragonScrollY: { label: "Dragon+Scroll Y %", min: 0, max: 100 },
+  activeDragonScrollScale: { label: "Dragon+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
+  activeDragonScrollRotation: { label: "Dragon+Scroll Rotation", min: -45, max: 45 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -623,8 +656,16 @@ Strands Per Pass: ${Math.round(controls.activeStrandsPerPass)}
 Strand Spacing X: ${Math.round(controls.activeStrandSpacingX)}
 Strand Row Height: ${Math.round(controls.activeStrandRowHeight)}
 Strand Wave Amplitude: ${Math.round(controls.activeStrandWaveAmplitude)}
+Field Center X: ${Math.round(controls.activeFieldCenterXPercent)}
 
 ACTIVE SUN INFO
-X: ${Math.round(controls.activeSunInfoOffsetX)}
-Y: ${Math.round(controls.activeSunInfoOffsetY)}
-Font Size: ${Math.round(controls.activeSunInfoFontSize)}`;
+X: ${Math.round(controls.activeSunX)}
+Y: ${Math.round(controls.activeSunY)}
+Scale: ${controls.activeSunScale.toFixed(2)}
+Z-Index: ${Math.round(controls.activeSunZIndex)}
+
+ACTIVE DRAGON SCROLL
+X: ${Math.round(controls.activeDragonScrollX)}
+Y: ${Math.round(controls.activeDragonScrollY)}
+Scale: ${controls.activeDragonScrollScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeDragonScrollRotation)}`;

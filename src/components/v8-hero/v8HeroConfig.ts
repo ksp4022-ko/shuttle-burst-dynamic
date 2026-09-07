@@ -1,4 +1,124 @@
-export const v8HeroDefaults = {
+export type V8HeroControls = {
+  dragonShow: boolean;
+  dragonX: number;
+  dragonY: number;
+  dragonScale: number;
+  dragonRotation: number;
+  clawShow: boolean;
+  clawX: number;
+  clawY: number;
+  clawScale: number;
+  clawRotation: number;
+  rearClawShow: boolean;
+  rearClawX: number;
+  rearClawY: number;
+  rearClawScale: number;
+  rearClawRotation: number;
+  bagBaseShow: boolean;
+  bagBaseX: number;
+  bagBaseY: number;
+  bagBaseScale: number;
+  bagBaseRotation: number;
+  bagStrapShow: boolean;
+  bagStrapX: number;
+  bagStrapY: number;
+  bagStrapScale: number;
+  bagStrapRotation: number;
+  tigerShow: boolean;
+  tigerX: number;
+  tigerY: number;
+  tigerScale: number;
+  tigerRotation: number;
+  tigerRacketShow: boolean;
+  tigerRacketX: number;
+  tigerRacketY: number;
+  tigerRacketScale: number;
+  tigerRacketRotation: number;
+  heroX: number;
+  heroY: number;
+  heroScale: number;
+  heroWidth: number;
+  heroEventY: number;
+  heroCtaY: number;
+  decorMode: "FULL" | "LIGHT";
+  cloudShow: boolean;
+  cloudX: number;
+  cloudY: number;
+  cloudScale: number;
+  cloudRotation: number;
+  cloudBlur: number;
+  cloudBackX: number;
+  cloudBackY: number;
+  cloudBackScale: number;
+  cloudBackRotation: number;
+  cloudBackBlur: number;
+  mountainShow: boolean;
+  mountainX: number;
+  mountainY: number;
+  mountainScale: number;
+  mountainRotation: number;
+  mountainOpacity: number;
+  mountainBlur: number;
+  backWaveShow: boolean;
+  backWaveX: number;
+  backWaveY: number;
+  backWaveScale: number;
+  backWaveRotation: number;
+  backWaveOpacity: number;
+  backWaveBlur: number;
+  midWaveShow: boolean;
+  midWaveX: number;
+  midWaveY: number;
+  midWaveScale: number;
+  midWaveRotation: number;
+  midWaveOpacity: number;
+  midWaveBlur: number;
+  frontFoamShow: boolean;
+  frontFoamX: number;
+  frontFoamY: number;
+  frontFoamScale: number;
+  frontFoamRotation: number;
+  frontFoamOpacity: number;
+  frontFoamBlur: number;
+  goldInkShow: boolean;
+  goldInkX: number;
+  goldInkY: number;
+  goldInkScale: number;
+  goldInkRotation: number;
+  goldInkOpacity: number;
+  goldInkBlur: number;
+  // Active-only: the identity/status/CTA scroll a confirmed dragon/tiger
+  // claw appears to grip (see V8HeroComposition's scrollContent prop).
+  // Defaults to hidden -- the Opening experience never shows it.
+  scrollShow: boolean;
+  scrollX: number;
+  scrollY: number;
+  scrollScale: number;
+  scrollRotation: number;
+  // Active-only: a single pre-composed dragon-gripping-a-scroll image (the
+  // user's own composite, not an app-assembled rig) -- an alternative to
+  // scrollShow's separately-positioned claw+scroll for B_fix. Defaults to
+  // hidden, same as scrollShow.
+  dragonScrollShow: boolean;
+  dragonScrollX: number;
+  dragonScrollY: number;
+  dragonScrollScale: number;
+  dragonScrollRotation: number;
+  // The sun is a positioned CONTAINER (not just a CSS circle) -- sunContent
+  // (see V8HeroComposition's prop) renders inside it, positioned relative to
+  // the sun's own box, so moving sunX/sunY/sunScale carries the meetup
+  // title/date and info badges along with it instead of leaving them
+  // behind. Independent from the Opening experience's own title/CTA
+  // (heroX/heroY etc.), which never moves the sun -- these defaults are the
+  // Opening's correct/original position; the Active page overrides them
+  // separately (see v8ActiveSunOverrides in v8ActiveConfig.ts).
+  sunX: number;
+  sunY: number;
+  sunScale: number;
+  sunZIndex: number;
+};
+
+export const v8HeroDefaults: V8HeroControls = {
   dragonShow: true,
   dragonX: 72,
   dragonY: 4,
@@ -92,7 +212,21 @@ export const v8HeroDefaults = {
   goldInkRotation: -5,
   goldInkOpacity: 43,
   goldInkBlur: 0,
-} as const;
+  scrollShow: false,
+  scrollX: 62,
+  scrollY: 30,
+  scrollScale: 1,
+  scrollRotation: 0,
+  dragonScrollShow: false,
+  dragonScrollX: 62,
+  dragonScrollY: 45,
+  dragonScrollScale: 1,
+  dragonScrollRotation: 0,
+  sunX: 23,
+  sunY: 29,
+  sunScale: 1,
+  sunZIndex: 4,
+};
 
 export const v8HeroDisplayAssets = {
   body: "dragon-body-v2-display.webp",
@@ -110,6 +244,15 @@ export const v8HeroDisplayAssets = {
   goldInk: "ukiyoe-gold-ink-v1-display.webp",
 } as const;
 
+// Active-only assets (identity/status/CTA scroll art) -- live alongside the
+// other Active art (tokens, sun-info badge) rather than the Opening-only
+// display set above.
+export const v8HeroActiveAssetFile = "scroll-identity-v1.webp";
+// The user's own pre-composed dragon-gripping-a-scroll image (not an
+// app-assembled rig) -- de-haloed/recompressed from the source they dropped
+// in 01_V8_Dragon, unmodified pose/art otherwise.
+export const v8HeroDragonScrollAssetFile = "dragon-scroll-fixed-v1.webp";
+
 export const buildV8HeroAssets = (baseUrl: string) => {
   const displayAssetBase = `${baseUrl}v8-preview/display`;
   return {
@@ -126,6 +269,8 @@ export const buildV8HeroAssets = (baseUrl: string) => {
     midWave: `${displayAssetBase}/${v8HeroDisplayAssets.midWave}`,
     frontFoam: `${displayAssetBase}/${v8HeroDisplayAssets.frontFoam}`,
     goldInk: `${displayAssetBase}/${v8HeroDisplayAssets.goldInk}`,
+    scroll: `${baseUrl}v8-preview/active/${v8HeroActiveAssetFile}`,
+    dragonScroll: `${baseUrl}v8-preview/active/${v8HeroDragonScrollAssetFile}`,
   };
 };
 
