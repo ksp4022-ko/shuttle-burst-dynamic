@@ -485,7 +485,9 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         align-items: center;
         justify-content: center;
         text-align: center;
-        overflow: hidden;
+        overflow: visible;
+        transform: scale(var(--sun-text-scale, 1));
+        transform-origin: center;
       }
 
       .v8-active-sun-title p {

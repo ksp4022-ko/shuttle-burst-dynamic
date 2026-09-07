@@ -263,13 +263,20 @@ export function V8HeroComposition({
             <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
             <DecorLayer src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
             <div
-              style={{
-                ...sunStyle,
-                left: `${controls.sunX}%`,
-                top: `${controls.sunY}%`,
-                width: `${52 * controls.sunScale}%`,
-                zIndex: controls.sunZIndex,
-              }}
+              style={
+                {
+                  ...sunStyle,
+                  left: `${controls.sunX}%`,
+                  top: `${controls.sunY}%`,
+                  width: `${52 * controls.sunScale}%`,
+                  zIndex: controls.sunZIndex,
+                  // Read by .v8-active-sun-title's transform:scale() --
+                  // independent of sunScale (which sizes the circle itself),
+                  // so the title text can be tuned separately from the
+                  // circle it sits inside.
+                  "--sun-text-scale": controls.sunTextScale,
+                } as CSSProperties
+              }
             >
               {sunContent}
             </div>
