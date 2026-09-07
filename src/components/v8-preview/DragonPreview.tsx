@@ -25,6 +25,7 @@ import { V8ActiveStyles, V8ActiveSunContent, V8IdentityScrollContent } from "@/c
 import { V8ActiveTokenField, type V8ActiveToken } from "@/components/v8-active/V8ActiveTokenField";
 import {
   buildV8ActiveAssets,
+  getV8ActiveFieldMinHeight,
   v8ActiveDragonFieldOverrides,
   type V8ActiveControls,
 } from "@/components/v8-active/v8ActiveConfig";
@@ -196,7 +197,8 @@ function ActiveCanvas({
     rowGap: controls.activeRowGap,
     ropeLength: controls.activeRopeLength,
     staggerAmplitude: controls.activeStaggerAmplitude,
-    fieldTopOffset: controls.activeFieldTopOffset,
+    fieldAnchorX: controls.activeFieldAnchorX,
+    fieldAnchorY: controls.activeFieldAnchorY,
     strandTokenTarget: controls.activeStrandTokenTarget,
     strandsPerPass: controls.activeStrandsPerPass,
     strandSpacingX: controls.activeStrandSpacingX,
@@ -244,8 +246,19 @@ function ActiveCanvas({
     status: "confirmed",
   };
 
+  const fieldMinHeight = getV8ActiveFieldMinHeight(mockTokens.length);
+
   return (
-    <div className="v8-active" style={{ position: "relative", width: "100%", minHeight: "100%" }}>
+    <div
+      className="v8-active"
+      style={
+        {
+          position: "relative",
+          width: "100%",
+          "--v8-active-field-min-height": `${fieldMinHeight}px`,
+        } as CSSProperties
+      }
+    >
       <V8ActiveStyles controls={tokenFieldControls} />
 
       <button

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
@@ -6,6 +6,7 @@ import type { AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition, eyebrowStyle, titleStyle } from "@/components/v8-hero/V8HeroComposition";
 import {
   buildV8ActiveAssets,
+  getV8ActiveFieldMinHeight,
   v8ActiveDefaults,
   v8ActiveDragonFieldOverrides,
   v8ActiveDragonHeroOverrides,
@@ -124,8 +125,10 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     }
   };
 
+  const fieldMinHeight = getV8ActiveFieldMinHeight(tokens.length);
+
   return (
-    <div className="v8-active">
+    <div className="v8-active" style={{ "--v8-active-field-min-height": `${fieldMinHeight}px` } as CSSProperties}>
       <V8ActiveStyles controls={activeControls} />
 
       <V8HeroComposition
@@ -475,6 +478,11 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         padding: 0 16px calc(env(safe-area-inset-bottom) + 32px);
         background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
         color: #20150d;
+        /* .v8-token-field is position:absolute (see fieldAnchorX/Y), so it no
+           longer reserves space in normal flow -- this min-height (a fixed
+           per-roster-count lookup, see getV8ActiveFieldMinHeight) keeps the
+           container tall enough to contain it instead of clipping. */
+        min-height: var(--v8-active-field-min-height, auto);
       }
 
       .v8-active-sun-title {
@@ -548,11 +556,6 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         text-align: center;
         color: rgba(32, 21, 13, 0.5);
         font-size: 13px;
-      }
-
-      .v8-token-field {
-        position: relative;
-        width: 100%;
       }
 
       .v8-token-unit {

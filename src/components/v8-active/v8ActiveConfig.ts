@@ -112,7 +112,17 @@ export type V8ActiveControls = {
   rowGap: number;
   ropeLength: number;
   staggerAmplitude: number;
-  fieldTopOffset: number;
+  // The token field's own container is now position:absolute (was
+  // relative/normal-flow) so it can be dragged anywhere on the canvas,
+  // including overlapping the dragon/sun above it -- fieldTopOffset (a
+  // plain marginTop, min:0, could only push it further down) couldn't do
+  // that. fieldAnchorX/Y are the container's own left/top, as % of
+  // .v8-active's box. fieldCenterXPercent (below) is a SEPARATE, smaller
+  // concern: it still only shifts the zigzag path's internal horizontal
+  // spread within the field's own width, not the field's position on the
+  // page.
+  fieldAnchorX: number;
+  fieldAnchorY: number;
   // Zigzag strand layout (see computeZigzagLayout below)
   strandTokenTarget: number;
   strandsPerPass: number;
@@ -133,7 +143,8 @@ export const v8ActiveDefaults: V8ActiveControls = {
   rowGap: 56,
   ropeLength: 34, // the confirmed/waiting/leave token frames have no rope baked in, unlike the earlier token-v2 pick
   staggerAmplitude: 12,
-  fieldTopOffset: 40,
+  fieldAnchorX: 8,
+  fieldAnchorY: 55,
   strandTokenTarget: 4,
   strandsPerPass: 3,
   strandSpacingX: 30,
@@ -149,7 +160,8 @@ export const v8ActiveControlRanges = {
   rowGap: { label: "Row Gap", min: 10, max: 100 },
   ropeLength: { label: "Rope Length", min: 10, max: 80 },
   staggerAmplitude: { label: "Stagger Amplitude", min: 0, max: 40 },
-  fieldTopOffset: { label: "Field Top Offset", min: 0, max: 200 },
+  fieldAnchorX: { label: "Field Anchor X %", min: -20, max: 100 },
+  fieldAnchorY: { label: "Field Anchor Y %", min: 0, max: 150 },
   strandTokenTarget: { label: "Tokens Per Strand", min: 2, max: 6 },
   strandsPerPass: { label: "Strands Per Pass", min: 1, max: 5 },
   strandSpacingX: { label: "Strand Spacing X %", min: 5, max: 45 },
@@ -167,6 +179,57 @@ export function tokenStaggerFor(id: string, amplitude: number) {
   }
   const normalized = ((hash % 1000) + 1000) % 1000 / 1000; // 0..1
   return (normalized * 2 - 1) * amplitude;
+}
+
+// .v8-token-field is now position:absolute (see fieldAnchorX/Y above), so it
+// no longer contributes its own height to .v8-active's normal-flow layout --
+// without this, the container would collapse to just the hero/identity card
+// height and clip the roster below it. Rather than deriving .v8-active's
+// min-height from computeZigzagLayout's formula (which the user explicitly
+// wants replaced), it's a fixed lookup table keyed by the confirmed
+// roster-count tiers, tuned by hand per-tier via /v8/preview's console.
+// These starting values are rough placeholders -- derived from the old
+// formula's per-count content height, then divided by (1 - fieldAnchorY/100)
+// (fieldAnchorY defaults to 55%) so the default placement doesn't clip the
+// bottom of its own roster out of the gate. The user will overwrite these
+// with real tuned numbers from the console once they dial in fieldAnchorY
+// per tier.
+export const v8ActiveFieldHeightByCount: Record<8 | 16 | 24 | 32, number> = {
+  8: 1050,
+  16: 1900,
+  24: 2000,
+  32: 2900,
+};
+
+// Sorted (count, height) pairs driving the interpolation below -- a fixed
+// 4-tuple (rather than reading v8ActiveFieldHeightByCount's keys at runtime)
+// so every lookup below is a statically-known index, not an array access
+// that could be out of bounds.
+type FieldHeightTier = { count: 8 | 16 | 24 | 32; height: number };
+const FIELD_HEIGHT_TIERS: [FieldHeightTier, FieldHeightTier, FieldHeightTier, FieldHeightTier] = [
+  { count: 8, height: v8ActiveFieldHeightByCount[8] },
+  { count: 16, height: v8ActiveFieldHeightByCount[16] },
+  { count: 24, height: v8ActiveFieldHeightByCount[24] },
+  { count: 32, height: v8ActiveFieldHeightByCount[32] },
+];
+
+function interpolateTier(count: number, lower: FieldHeightTier, upper: FieldHeightTier) {
+  const ratio = (count - lower.count) / (upper.count - lower.count);
+  return lower.height + (upper.height - lower.height) * ratio;
+}
+
+// Real rosters won't always land exactly on 8/16/24/32, so counts between
+// tiers are linearly interpolated between the two nearest table entries, and
+// counts outside the table's range clamp to the nearest end -- keeps the
+// container from ever collapsing/overflowing for an in-between headcount
+// without needing a 5th table entry for every possible count.
+export function getV8ActiveFieldMinHeight(count: number): number {
+  const [t8, t16, t24, t32] = FIELD_HEIGHT_TIERS;
+  if (count <= t8.count) return t8.height;
+  if (count <= t16.count) return interpolateTier(count, t8, t16);
+  if (count <= t24.count) return interpolateTier(count, t16, t24);
+  if (count <= t32.count) return interpolateTier(count, t24, t32);
+  return t32.height;
 }
 
 export type TokenLayoutSlot = { xPercent: number; y: number; rotation: number };

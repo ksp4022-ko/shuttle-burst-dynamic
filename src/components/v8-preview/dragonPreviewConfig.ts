@@ -99,7 +99,8 @@ export type PreviewControls = {
   activeRowGap: number;
   activeRopeLength: number;
   activeStaggerAmplitude: number;
-  activeFieldTopOffset: number;
+  activeFieldAnchorX: number;
+  activeFieldAnchorY: number;
   activeStrandTokenTarget: number;
   activeStrandsPerPass: number;
   activeStrandSpacingX: number;
@@ -324,7 +325,8 @@ export const previewDefaults: PreviewControls = {
   activeRowGap: 56,
   activeRopeLength: 34,
   activeStaggerAmplitude: 12,
-  activeFieldTopOffset: 40,
+  activeFieldAnchorX: 8,
+  activeFieldAnchorY: 55,
   activeStrandTokenTarget: 4,
   activeStrandsPerPass: 3,
   activeStrandSpacingX: 30,
@@ -365,7 +367,8 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRowGap",
     "activeRopeLength",
     "activeStaggerAmplitude",
-    "activeFieldTopOffset",
+    "activeFieldAnchorX",
+    "activeFieldAnchorY",
     "activeStrandTokenTarget",
     "activeStrandsPerPass",
     "activeStrandSpacingX",
@@ -491,7 +494,8 @@ export const controlRanges = {
   activeRowGap: { label: "Row Gap", min: 10, max: 100 },
   activeRopeLength: { label: "Rope Length", min: 10, max: 80 },
   activeStaggerAmplitude: { label: "Stagger Amplitude", min: 0, max: 40 },
-  activeFieldTopOffset: { label: "Field Top Offset", min: 0, max: 200 },
+  activeFieldAnchorX: { label: "Field Anchor X %", min: -20, max: 100 },
+  activeFieldAnchorY: { label: "Field Anchor Y %", min: 0, max: 150 },
   activeStrandTokenTarget: { label: "Tokens Per Strand", min: 2, max: 6 },
   activeStrandsPerPass: { label: "Strands Per Pass", min: 1, max: 5 },
   activeStrandSpacingX: { label: "Strand Spacing X %", min: 5, max: 45 },
@@ -653,7 +657,8 @@ Tokens Per Row: ${Math.round(controls.activeTokensPerRow)}
 Row Gap: ${Math.round(controls.activeRowGap)}
 Rope Length: ${Math.round(controls.activeRopeLength)}
 Stagger Amplitude: ${Math.round(controls.activeStaggerAmplitude)}
-Field Top Offset: ${Math.round(controls.activeFieldTopOffset)}
+Field Anchor X %: ${Math.round(controls.activeFieldAnchorX)}
+Field Anchor Y %: ${Math.round(controls.activeFieldAnchorY)}
 Tokens Per Strand: ${Math.round(controls.activeStrandTokenTarget)}
 Strands Per Pass: ${Math.round(controls.activeStrandsPerPass)}
 Strand Spacing X: ${Math.round(controls.activeStrandSpacingX)}
