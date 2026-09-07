@@ -109,17 +109,13 @@ export type PreviewControls = {
   activeSunInfoOffsetY: number;
   activeSunInfoFontSize: number;
   activeFieldCenterXPercent: number;
-  // B_fix (season/dragon): claw + scroll position when the dragon's claw
-  // appears to grip the identity/status/CTA scroll. Only applied by
+  // B_fix (season/dragon): position of dragon-scroll-fixed-v1, the user's
+  // own pre-composed dragon-gripping-a-scroll art. Only applied by
   // ActiveCanvas when the mock character toggle is "dragon".
-  activeDragonClawX: number;
-  activeDragonClawY: number;
-  activeDragonClawScale: number;
-  activeDragonClawRotation: number;
-  activeScrollX: number;
-  activeScrollY: number;
-  activeScrollScale: number;
-  activeScrollRotation: number;
+  activeDragonScrollX: number;
+  activeDragonScrollY: number;
+  activeDragonScrollScale: number;
+  activeDragonScrollRotation: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -144,7 +140,7 @@ export type PreviewTargetId =
   | "GOLD / INK"
   | "ACTIVE TOKEN"
   | "ACTIVE SUN INFO"
-  | "ACTIVE DRAGON RIG";
+  | "ACTIVE DRAGON SCROLL";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -168,7 +164,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "GOLD / INK",
 ];
 
-export const activeTargetOrder: PreviewTargetId[] = ["ACTIVE TOKEN", "ACTIVE SUN INFO", "ACTIVE DRAGON RIG"];
+export const activeTargetOrder: PreviewTargetId[] = ["ACTIVE TOKEN", "ACTIVE SUN INFO", "ACTIVE DRAGON SCROLL"];
 
 // Kept for anything still importing the old flat name -- identical to
 // openingTargetOrder, since that's every target the Opening canvas has.
@@ -332,14 +328,10 @@ export const previewDefaults: PreviewControls = {
   activeSunInfoOffsetY: 0,
   activeSunInfoFontSize: 11,
   activeFieldCenterXPercent: 30,
-  activeDragonClawX: -18,
-  activeDragonClawY: 24,
-  activeDragonClawScale: 0.72,
-  activeDragonClawRotation: 8,
-  activeScrollX: 66,
-  activeScrollY: 46,
-  activeScrollScale: 1,
-  activeScrollRotation: 0,
+  activeDragonScrollX: 62,
+  activeDragonScrollY: 45,
+  activeDragonScrollScale: 1,
+  activeDragonScrollRotation: 0,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -374,15 +366,11 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeFieldCenterXPercent",
   ],
   "ACTIVE SUN INFO": ["activeSunInfoOffsetX", "activeSunInfoOffsetY", "activeSunInfoFontSize"],
-  "ACTIVE DRAGON RIG": [
-    "activeDragonClawX",
-    "activeDragonClawY",
-    "activeDragonClawScale",
-    "activeDragonClawRotation",
-    "activeScrollX",
-    "activeScrollY",
-    "activeScrollScale",
-    "activeScrollRotation",
+  "ACTIVE DRAGON SCROLL": [
+    "activeDragonScrollX",
+    "activeDragonScrollY",
+    "activeDragonScrollScale",
+    "activeDragonScrollRotation",
   ],
 };
 
@@ -505,14 +493,10 @@ export const controlRanges = {
   activeSunInfoOffsetY: { label: "Sun Info Y", min: -100, max: 100 },
   activeSunInfoFontSize: { label: "Sun Info Font", min: 8, max: 20 },
   activeFieldCenterXPercent: { label: "Field Center X %", min: 10, max: 90 },
-  activeDragonClawX: { label: "Claw X", min: -100, max: 100 },
-  activeDragonClawY: { label: "Claw Y", min: -100, max: 100 },
-  activeDragonClawScale: { label: "Claw Scale", min: 0.3, max: 1.5, step: 0.01 },
-  activeDragonClawRotation: { label: "Claw Rotation", min: -180, max: 180 },
-  activeScrollX: { label: "Scroll X %", min: 0, max: 100 },
-  activeScrollY: { label: "Scroll Y %", min: 0, max: 100 },
-  activeScrollScale: { label: "Scroll Scale", min: 0.3, max: 2, step: 0.01 },
-  activeScrollRotation: { label: "Scroll Rotation", min: -45, max: 45 },
+  activeDragonScrollX: { label: "Dragon+Scroll X %", min: 0, max: 100 },
+  activeDragonScrollY: { label: "Dragon+Scroll Y %", min: 0, max: 100 },
+  activeDragonScrollScale: { label: "Dragon+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
+  activeDragonScrollRotation: { label: "Dragon+Scroll Rotation", min: -45, max: 45 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -672,12 +656,8 @@ X: ${Math.round(controls.activeSunInfoOffsetX)}
 Y: ${Math.round(controls.activeSunInfoOffsetY)}
 Font Size: ${Math.round(controls.activeSunInfoFontSize)}
 
-ACTIVE DRAGON RIG
-Claw X: ${Math.round(controls.activeDragonClawX)}
-Claw Y: ${Math.round(controls.activeDragonClawY)}
-Claw Scale: ${controls.activeDragonClawScale.toFixed(2)}
-Claw Rotation: ${Math.round(controls.activeDragonClawRotation)}
-Scroll X: ${Math.round(controls.activeScrollX)}
-Scroll Y: ${Math.round(controls.activeScrollY)}
-Scroll Scale: ${controls.activeScrollScale.toFixed(2)}
-Scroll Rotation: ${Math.round(controls.activeScrollRotation)}`;
+ACTIVE DRAGON SCROLL
+X: ${Math.round(controls.activeDragonScrollX)}
+Y: ${Math.round(controls.activeDragonScrollY)}
+Scale: ${controls.activeDragonScrollScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeDragonScrollRotation)}`;

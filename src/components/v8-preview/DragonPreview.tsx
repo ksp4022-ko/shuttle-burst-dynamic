@@ -220,20 +220,17 @@ function ActiveCanvas({
   const isDragonFix = character === "dragon";
   const heroOverrides = isDragonFix
     ? {
+        dragonShow: false,
         bagBaseShow: false,
         bagStrapShow: false,
         rearClawShow: false,
         tigerShow: false,
         tigerRacketShow: false,
-        clawX: controls.activeDragonClawX,
-        clawY: controls.activeDragonClawY,
-        clawScale: controls.activeDragonClawScale,
-        clawRotation: controls.activeDragonClawRotation,
-        scrollShow: true,
-        scrollX: controls.activeScrollX,
-        scrollY: controls.activeScrollY,
-        scrollScale: controls.activeScrollScale,
-        scrollRotation: controls.activeScrollRotation,
+        dragonScrollShow: true,
+        dragonScrollX: controls.activeDragonScrollX,
+        dragonScrollY: controls.activeDragonScrollY,
+        dragonScrollScale: controls.activeDragonScrollScale,
+        dragonScrollRotation: controls.activeDragonScrollRotation,
       }
     : { dragonShow: false };
   const fieldControls = isDragonFix

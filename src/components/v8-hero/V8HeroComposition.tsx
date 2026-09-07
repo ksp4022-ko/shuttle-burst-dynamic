@@ -398,6 +398,50 @@ export function V8HeroComposition({
                 </div>
               </div>
             ) : null}
+            {controls.dragonScrollShow ? (
+              <div
+                aria-hidden={false}
+                style={{
+                  position: "absolute",
+                  left: `${controls.dragonScrollX}%`,
+                  top: `${controls.dragonScrollY}%`,
+                  width: `${58 * controls.dragonScrollScale}%`,
+                  transform: `translate(-50%, -50%) rotate(${controls.dragonScrollRotation}deg)`,
+                  zIndex: 9,
+                }}
+              >
+                <img
+                  src={assets.dragonScroll}
+                  alt=""
+                  aria-hidden="true"
+                  decoding="async"
+                  loading="eager"
+                  draggable={false}
+                  style={{ display: "block", width: "100%", height: "auto" }}
+                />
+                {/* Panel inset measured directly off dragon-scroll-fixed-v1's
+                    own pixels (see the processing note in v8ActiveConfig.ts's
+                    v8ActiveDragonHeroOverrides) -- this image's blank panel
+                    sits further right/lower than the standalone scroll's,
+                    since the dragon's head and coils take up the left side. */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "24%",
+                    bottom: "33%",
+                    left: "56%",
+                    right: "22%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  {scrollContent}
+                </div>
+              </div>
+            ) : null}
             {controls.tigerShow ? (
               <div
                 aria-hidden="true"

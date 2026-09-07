@@ -95,6 +95,15 @@ export type V8HeroControls = {
   scrollY: number;
   scrollScale: number;
   scrollRotation: number;
+  // Active-only: a single pre-composed dragon-gripping-a-scroll image (the
+  // user's own composite, not an app-assembled rig) -- an alternative to
+  // scrollShow's separately-positioned claw+scroll for B_fix. Defaults to
+  // hidden, same as scrollShow.
+  dragonScrollShow: boolean;
+  dragonScrollX: number;
+  dragonScrollY: number;
+  dragonScrollScale: number;
+  dragonScrollRotation: number;
 };
 
 export const v8HeroDefaults: V8HeroControls = {
@@ -196,6 +205,11 @@ export const v8HeroDefaults: V8HeroControls = {
   scrollY: 30,
   scrollScale: 1,
   scrollRotation: 0,
+  dragonScrollShow: false,
+  dragonScrollX: 62,
+  dragonScrollY: 45,
+  dragonScrollScale: 1,
+  dragonScrollRotation: 0,
 };
 
 export const v8HeroDisplayAssets = {
@@ -214,10 +228,14 @@ export const v8HeroDisplayAssets = {
   goldInk: "ukiyoe-gold-ink-v1-display.webp",
 } as const;
 
-// Active-only asset (the identity/status/CTA scroll) -- lives alongside the
+// Active-only assets (identity/status/CTA scroll art) -- live alongside the
 // other Active art (tokens, sun-info badge) rather than the Opening-only
 // display set above.
 export const v8HeroActiveAssetFile = "scroll-identity-v1.webp";
+// The user's own pre-composed dragon-gripping-a-scroll image (not an
+// app-assembled rig) -- de-haloed/recompressed from the source they dropped
+// in 01_V8_Dragon, unmodified pose/art otherwise.
+export const v8HeroDragonScrollAssetFile = "dragon-scroll-fixed-v1.webp";
 
 export const buildV8HeroAssets = (baseUrl: string) => {
   const displayAssetBase = `${baseUrl}v8-preview/display`;
@@ -236,6 +254,7 @@ export const buildV8HeroAssets = (baseUrl: string) => {
     frontFoam: `${displayAssetBase}/${v8HeroDisplayAssets.frontFoam}`,
     goldInk: `${displayAssetBase}/${v8HeroDisplayAssets.goldInk}`,
     scroll: `${baseUrl}v8-preview/active/${v8HeroActiveAssetFile}`,
+    dragonScroll: `${baseUrl}v8-preview/active/${v8HeroDragonScrollAssetFile}`,
   };
 };
 

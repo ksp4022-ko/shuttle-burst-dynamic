@@ -59,26 +59,28 @@ export function buildV8ActiveAssets(baseUrl: string) {
 }
 
 // B_fix (season/dragon) layout overrides for V8HeroComposition's shared
-// canvas -- reuses the exact same dragon/claw art, just repositioned so the
-// claw appears to grip the identity scroll instead of the racket bag, per
-// the user's active_B_fix mockup. Rough/schematic placement for now (the
-// user tunes exact values via /v8/preview's ACTIVE mode afterward) -- B_temp
-// (casual/tiger) stays on the plain overlay until that mockup exists.
+// canvas. Uses dragon-scroll-fixed-v1 -- the user's own pre-composed
+// dragon-gripping-a-scroll art (dropped in 01_V8_Dragon as
+// 藍龍纏繞華麗金邊卷軸.png, de-haloed/recompressed, unmodified pose) --
+// instead of assembling the opening's separate dragon body + claw + scroll
+// layers, since that single image already has a real grip pose the
+// app-assembled rig could only approximate. Hides the opening's dragon rig
+// and bag/claw layers entirely; dragonScrollShow takes over. Rough/schematic
+// placement for now (the user tunes exact values via /v8/preview's ACTIVE
+// mode afterward) -- B_temp (casual/tiger) stays on the plain overlay until
+// that mockup exists.
 export const v8ActiveDragonHeroOverrides: Partial<V8HeroControls> = {
+  dragonShow: false,
   bagBaseShow: false,
   bagStrapShow: false,
   rearClawShow: false,
   tigerShow: false,
   tigerRacketShow: false,
-  clawX: -18,
-  clawY: 24,
-  clawScale: 0.72,
-  clawRotation: 8,
-  scrollShow: true,
-  scrollX: 66,
-  scrollY: 46,
-  scrollScale: 1,
-  scrollRotation: 0,
+  dragonScrollShow: true,
+  dragonScrollX: 62,
+  dragonScrollY: 45,
+  dragonScrollScale: 1,
+  dragonScrollRotation: 0,
 };
 
 // B_fix token field: shifted left to leave room for the dragon + scroll
