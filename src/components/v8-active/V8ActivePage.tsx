@@ -9,6 +9,7 @@ import {
   v8ActiveDefaults,
   v8ActiveDragonFieldOverrides,
   v8ActiveDragonHeroOverrides,
+  v8ActiveSunOverrides,
   type V8ActiveControls,
 } from "./v8ActiveConfig";
 import { V8ActiveTokenField, type V8ActiveToken } from "./V8ActiveTokenField";
@@ -104,13 +105,14 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   // composition takes over (see v8ActiveDragonHeroOverrides) -- reuses the
   // same dragon/claw art, just repositioned, per the user's mockup. B_temp
   // (casual/tiger) hasn't got its own mockup yet, so it (and the
-  // identity-not-chosen state) stay on the plain overlay.
+  // identity-not-chosen state) stay on the plain overlay. The sun's Active
+  // position (v8ActiveSunOverrides) applies regardless of identity -- it's
+  // always confirmed-state once this component renders at all.
   const isDragonFix = characterKind === "dragon";
-  const heroOverrides = isDragonFix
-    ? v8ActiveDragonHeroOverrides
-    : characterKind === "tiger"
-      ? { dragonShow: false }
-      : undefined;
+  const heroOverrides = {
+    ...v8ActiveSunOverrides,
+    ...(isDragonFix ? v8ActiveDragonHeroOverrides : characterKind === "tiger" ? { dragonShow: false } : {}),
+  };
   const fieldControls = isDragonFix ? { ...activeControls, ...v8ActiveDragonFieldOverrides } : activeControls;
 
   const handlePrimaryAction = () => {
@@ -129,10 +131,9 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
       <V8HeroComposition
         confirmed
         controlOverrides={heroOverrides}
-        activeContent={
-          <V8ActiveSunOverlay
+        sunContent={
+          <V8ActiveSunContent
             assets={assets}
-            controls={activeControls}
             eventDate={selectedEvent.eventDate}
             eventName={selectedEvent.name}
             courtCount={selectedEvent.courtCount}
@@ -140,16 +141,6 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             tempFee={selectedEvent.tempFee}
             scattered={isDragonFix}
           />
-        }
-        sunBadgesContent={
-          isDragonFix ? (
-            <V8ActiveSunBadgesScattered
-              assets={assets}
-              courtCount={selectedEvent.courtCount}
-              ballType={selectedEvent.ballType}
-              tempFee={selectedEvent.tempFee}
-            />
-          ) : undefined
         }
         scrollContent={
           isDragonFix && identity ? (
@@ -250,15 +241,27 @@ function V8SunInfoBadge({ assets, label }: { assets: { sunInfoBadge: string }; l
   );
 }
 
-// Replaces the opening's "SHUTTLE V8" title inside the SAME hero canvas
-// (see V8HeroComposition's activeContent prop) once a meetup is confirmed --
-// reuses that canvas's own title styles so the type treatment stays
-// consistent between the pre-confirm and active states. Exported so
-// /v8/preview's mock ACTIVE canvas renders the identical markup instead of a
-// separate hand-rolled mock.
-export function V8ActiveSunOverlay({
+// Renders as a CHILD of V8HeroComposition's sun container (passed via the
+// sunContent prop) -- every position here is relative to the sun's own box
+// (100% = the sun's own diameter), not the stage. That's the whole point:
+// moving the sun (controls.sunX/sunY/sunScale) carries the title and badges
+// with it, since they're positioned against the sun's own coordinate
+// system instead of independently against the stage. Exported so
+// /v8/preview's mock ACTIVE canvas renders the identical markup instead of
+// a separate hand-rolled mock.
+//
+// Title renders centered INSIDE the sun circle. Badge positions are rough
+// schematic placeholders (the "scattered" B_fix layout vs. the default
+// compact row below the sun) -- the user tunes exact offsets via
+// /v8/preview's ACTIVE SUN INFO target afterward.
+const SCATTERED_BADGE_POSITIONS = [
+  { left: "-75%", top: "-8%" }, // ballType, upper-left of the sun
+  { left: "95%", top: "-12%" }, // tempFee, upper-right of the sun
+  { left: "-65%", top: "85%" }, // courtCount, lower-left of the sun
+] as const;
+
+export function V8ActiveSunContent({
   assets,
-  controls,
   eventDate,
   eventName,
   courtCount,
@@ -267,76 +270,43 @@ export function V8ActiveSunOverlay({
   scattered = false,
 }: {
   assets: { sunInfoBadge: string };
-  controls: Pick<V8ActiveControls, "sunInfoOffsetX" | "sunInfoOffsetY" | "sunInfoFontSize">;
   eventDate: string;
   eventName: string;
   courtCount?: number | null | undefined;
   ballType?: string | null | undefined;
   tempFee?: number | null | undefined;
-  // When true, the badges are left out (rendered separately, scattered
-  // across the full canvas via V8ActiveSunBadgesScattered) instead of the
-  // row-under-the-title layout -- see the B_fix mockup.
+  // When true, badges scatter individually around the sun (the B_fix
+  // mockup) instead of sitting in a compact row just below it.
   scattered?: boolean;
-}) {
-  return (
-    <>
-      <p style={eyebrowStyle}>{shortDate(eventDate)}</p>
-      <h1 style={titleStyle}>{eventName}</h1>
-      {scattered ? null : (
-        <div
-          className="v8-active-sun-info"
-          style={{
-            transform: `translate(${controls.sunInfoOffsetX}px, ${controls.sunInfoOffsetY}px)`,
-            fontSize: controls.sunInfoFontSize,
-          }}
-        >
-          {courtCount ? <V8SunInfoBadge assets={assets} label={`${courtCount} 片場地`} /> : null}
-          {ballType ? <V8SunInfoBadge assets={assets} label={ballType} /> : null}
-          <V8SunInfoBadge assets={assets} label={`$${Number(tempFee || 0)}`} />
-        </div>
-      )}
-    </>
-  );
-}
-
-// B_fix scattered badge layout (see the active_B_fix mockup): each badge
-// gets its own rough position across the whole canvas instead of sitting in
-// a row under the title. Positions are schematic placeholders -- the user
-// tunes them via /v8/preview's ACTIVE mode afterward.
-const SCATTERED_BADGE_POSITIONS = [
-  { left: "6%", top: "7%" }, // ballType, top-left
-  { left: "66%", top: "5%" }, // tempFee, top-right
-  { left: "4%", top: "21%" }, // courtCount, below ballType
-] as const;
-
-export function V8ActiveSunBadgesScattered({
-  assets,
-  courtCount,
-  ballType,
-  tempFee,
-}: {
-  assets: { sunInfoBadge: string };
-  courtCount?: number | null | undefined;
-  ballType?: string | null | undefined;
-  tempFee?: number | null | undefined;
 }) {
   const badges = [
     ballType ? ballType : null,
     `$${Number(tempFee || 0)}`,
     courtCount ? `${courtCount} 片場地` : null,
   ];
+
   return (
     <>
-      {badges.map((label, index) => {
-        if (!label) return null;
-        const position = SCATTERED_BADGE_POSITIONS[index];
-        if (!position) return null;
-        return (
-          <div key={index} className="v8-sun-info-scattered" style={position}>
-            <V8SunInfoBadge assets={assets} label={label} />
-          </div>
-        );
-      })}
+      <div className="v8-active-sun-title">
+        <p style={eyebrowStyle}>{shortDate(eventDate)}</p>
+        <h1 style={titleStyle}>{eventName}</h1>
+      </div>
+      {scattered ? (
+        badges.map((label, index) => {
+          if (!label) return null;
+          const position = SCATTERED_BADGE_POSITIONS[index];
+          if (!position) return null;
+          return (
+            <div key={index} className="v8-sun-info-scattered" style={position}>
+              <V8SunInfoBadge assets={assets} label={label} />
+            </div>
+          );
+        })
+      ) : (
+        <div className="v8-active-sun-info">
+          {badges.map((label, index) => (label ? <V8SunInfoBadge key={index} assets={assets} label={label} /> : null))}
+        </div>
+      )}
     </>
   );
 }
@@ -507,13 +477,39 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         color: #20150d;
       }
 
+      .v8-active-sun-title {
+        position: absolute;
+        inset: 8%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        overflow: hidden;
+      }
+
+      .v8-active-sun-title p {
+        font-size: 11px;
+        margin: 0 0 4px;
+      }
+
+      .v8-active-sun-title h1 {
+        font-size: 15px;
+        margin: 0;
+        line-height: 1.15;
+      }
+
       .v8-active-sun-info {
-        position: relative;
-        z-index: 1;
+        position: absolute;
+        left: 50%;
+        top: 108%;
+        transform: translateX(-50%);
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 10px;
+        justify-content: center;
+        gap: 6px;
+        width: max-content;
+        max-width: 220%;
       }
 
       .v8-sun-info-scattered {

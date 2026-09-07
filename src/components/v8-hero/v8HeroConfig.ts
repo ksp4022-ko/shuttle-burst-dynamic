@@ -104,6 +104,18 @@ export type V8HeroControls = {
   dragonScrollY: number;
   dragonScrollScale: number;
   dragonScrollRotation: number;
+  // The sun is a positioned CONTAINER (not just a CSS circle) -- sunContent
+  // (see V8HeroComposition's prop) renders inside it, positioned relative to
+  // the sun's own box, so moving sunX/sunY/sunScale carries the meetup
+  // title/date and info badges along with it instead of leaving them
+  // behind. Independent from the Opening experience's own title/CTA
+  // (heroX/heroY etc.), which never moves the sun -- these defaults are the
+  // Opening's correct/original position; the Active page overrides them
+  // separately (see v8ActiveSunOverrides in v8ActiveConfig.ts).
+  sunX: number;
+  sunY: number;
+  sunScale: number;
+  sunZIndex: number;
 };
 
 export const v8HeroDefaults: V8HeroControls = {
@@ -210,6 +222,10 @@ export const v8HeroDefaults: V8HeroControls = {
   dragonScrollY: 45,
   dragonScrollScale: 1,
   dragonScrollRotation: 0,
+  sunX: 23,
+  sunY: 29,
+  sunScale: 1,
+  sunZIndex: 4,
 };
 
 export const v8HeroDisplayAssets = {

@@ -58,6 +58,20 @@ export function buildV8ActiveAssets(baseUrl: string) {
   };
 }
 
+// Applies to EVERY confirmed Active render (both this default overlay and
+// B_fix), regardless of identity -- the sun always moves to its Active
+// position once a meetup is confirmed. Top-left, shrunk a bit to leave room
+// for the info badges around it, and z-index above every other layer
+// (highest existing layer is 11) so the dragon/clouds/waves never cover it.
+// Rough/schematic placement -- the user tunes exact values via
+// /v8/preview's ACTIVE mode afterward.
+export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
+  sunX: 8,
+  sunY: 6,
+  sunScale: 0.75,
+  sunZIndex: 20,
+};
+
 // B_fix (season/dragon) layout overrides for V8HeroComposition's shared
 // canvas. Uses dragon-scroll-fixed-v1 -- the user's own pre-composed
 // dragon-gripping-a-scroll art (dropped in 01_V8_Dragon as
@@ -109,9 +123,6 @@ export type V8ActiveControls = {
   // (season/dragon) layout moves it left to leave room for the dragon +
   // identity scroll on the right instead of spanning the full width.
   fieldCenterXPercent: number;
-  sunInfoOffsetX: number;
-  sunInfoOffsetY: number;
-  sunInfoFontSize: number;
 };
 
 export const v8ActiveDefaults: V8ActiveControls = {
@@ -129,11 +140,6 @@ export const v8ActiveDefaults: V8ActiveControls = {
   strandRowHeight: 230,
   strandWaveAmplitude: 5,
   fieldCenterXPercent: 50,
-
-  // Sun info overlay (court count / ball type / fee, placed around the sun)
-  sunInfoOffsetX: 0,
-  sunInfoOffsetY: 0,
-  sunInfoFontSize: 11,
 };
 
 export const v8ActiveControlRanges = {
@@ -150,9 +156,6 @@ export const v8ActiveControlRanges = {
   strandRowHeight: { label: "Strand Row Height", min: 100, max: 400 },
   strandWaveAmplitude: { label: "Strand Wave Amp %", min: 0, max: 15 },
   fieldCenterXPercent: { label: "Field Center X %", min: 10, max: 90 },
-  sunInfoOffsetX: { label: "Sun Info X", min: -100, max: 100 },
-  sunInfoOffsetY: { label: "Sun Info Y", min: -100, max: 100 },
-  sunInfoFontSize: { label: "Sun Info Font", min: 8, max: 20 },
 } as const satisfies Record<keyof V8ActiveControls, { label: string; min: number; max: number; step?: number }>;
 
 // Deterministic per-token stagger so the layout doesn't jump around on
