@@ -116,6 +116,11 @@ export type V8HeroControls = {
   sunY: number;
   sunScale: number;
   sunZIndex: number;
+  // Independent from sunScale (which sizes the whole circle) -- scales just
+  // the title/date text block via a CSS custom property the .v8-active-sun-title
+  // rule reads. Added because shrinking the circle for the Active layout
+  // didn't shrink the text with it, so the title overflowed the sun.
+  sunTextScale: number;
 };
 
 export const v8HeroDefaults: V8HeroControls = {
@@ -226,6 +231,7 @@ export const v8HeroDefaults: V8HeroControls = {
   sunY: 29,
   sunScale: 1,
   sunZIndex: 4,
+  sunTextScale: 1,
 };
 
 export const v8HeroDisplayAssets = {

@@ -113,6 +113,7 @@ export type PreviewControls = {
   activeSunY: number;
   activeSunScale: number;
   activeSunZIndex: number;
+  activeSunTextScale: number;
   activeFieldCenterXPercent: number;
   // B_fix (season/dragon): position of dragon-scroll-fixed-v1, the user's
   // own pre-composed dragon-gripping-a-scroll art. Only applied by
@@ -333,6 +334,7 @@ export const previewDefaults: PreviewControls = {
   activeSunY: 6,
   activeSunScale: 0.75,
   activeSunZIndex: 20,
+  activeSunTextScale: 1,
   activeFieldCenterXPercent: 30,
   activeDragonScrollX: 62,
   activeDragonScrollY: 45,
@@ -371,7 +373,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeStrandWaveAmplitude",
     "activeFieldCenterXPercent",
   ],
-  "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex"],
+  "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex", "activeSunTextScale"],
   "ACTIVE DRAGON SCROLL": [
     "activeDragonScrollX",
     "activeDragonScrollY",
@@ -499,6 +501,7 @@ export const controlRanges = {
   activeSunY: { label: "Sun Y %", min: 0, max: 100 },
   activeSunScale: { label: "Sun Scale", min: 0.3, max: 2, step: 0.01 },
   activeSunZIndex: { label: "Sun Z-Index", min: 0, max: 30 },
+  activeSunTextScale: { label: "Sun Text Scale", min: 0.2, max: 2, step: 0.01 },
   activeFieldCenterXPercent: { label: "Field Center X %", min: 10, max: 90 },
   activeDragonScrollX: { label: "Dragon+Scroll X %", min: 0, max: 100 },
   activeDragonScrollY: { label: "Dragon+Scroll Y %", min: 0, max: 100 },
@@ -663,6 +666,7 @@ X: ${Math.round(controls.activeSunX)}
 Y: ${Math.round(controls.activeSunY)}
 Scale: ${controls.activeSunScale.toFixed(2)}
 Z-Index: ${Math.round(controls.activeSunZIndex)}
+Text Scale: ${controls.activeSunTextScale.toFixed(2)}
 
 ACTIVE DRAGON SCROLL
 X: ${Math.round(controls.activeDragonScrollX)}

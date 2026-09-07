@@ -217,6 +217,7 @@ function ActiveCanvas({
     sunY: controls.activeSunY,
     sunScale: controls.activeSunScale,
     sunZIndex: controls.activeSunZIndex,
+    sunTextScale: controls.activeSunTextScale,
     ...(isDragonFix
       ? {
           dragonShow: false,
@@ -557,7 +558,7 @@ export function DragonPreview() {
   return (
     <main style={pageStyle}>
       <section style={stageShellStyle} aria-label="V8 mobile composition preview">
-        <div style={stageStyle}>
+        <div style={previewMode === "ACTIVE" ? stageStyleActive : stageStyle}>
           {previewMode === "OPENING" ? (
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
           <div style={paperStyle} />
@@ -863,6 +864,19 @@ const stageStyle: CSSProperties = {
   background: "#f1e4ca",
   boxShadow: "0 18px 48px rgba(0,0,0,0.38)",
   isolation: "isolate",
+};
+
+// ACTIVE mode's content (roster tokens included) grows taller than one
+// phone-screen's worth, unlike OPENING's fixed single-card composition --
+// the fixed aspectRatio + overflow:hidden above silently clipped anything
+// past 844px, which is exactly why the token roster disappeared entirely.
+// Same visual chrome, just sized by its own content instead of a locked
+// ratio.
+const stageStyleActive: CSSProperties = {
+  ...stageStyle,
+  aspectRatio: "auto",
+  overflow: "visible",
+  minHeight: 844,
 };
 
 const paperStyle: CSSProperties = {
