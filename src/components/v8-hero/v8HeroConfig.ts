@@ -1,4 +1,103 @@
-export const v8HeroDefaults = {
+export type V8HeroControls = {
+  dragonShow: boolean;
+  dragonX: number;
+  dragonY: number;
+  dragonScale: number;
+  dragonRotation: number;
+  clawShow: boolean;
+  clawX: number;
+  clawY: number;
+  clawScale: number;
+  clawRotation: number;
+  rearClawShow: boolean;
+  rearClawX: number;
+  rearClawY: number;
+  rearClawScale: number;
+  rearClawRotation: number;
+  bagBaseShow: boolean;
+  bagBaseX: number;
+  bagBaseY: number;
+  bagBaseScale: number;
+  bagBaseRotation: number;
+  bagStrapShow: boolean;
+  bagStrapX: number;
+  bagStrapY: number;
+  bagStrapScale: number;
+  bagStrapRotation: number;
+  tigerShow: boolean;
+  tigerX: number;
+  tigerY: number;
+  tigerScale: number;
+  tigerRotation: number;
+  tigerRacketShow: boolean;
+  tigerRacketX: number;
+  tigerRacketY: number;
+  tigerRacketScale: number;
+  tigerRacketRotation: number;
+  heroX: number;
+  heroY: number;
+  heroScale: number;
+  heroWidth: number;
+  heroEventY: number;
+  heroCtaY: number;
+  decorMode: "FULL" | "LIGHT";
+  cloudShow: boolean;
+  cloudX: number;
+  cloudY: number;
+  cloudScale: number;
+  cloudRotation: number;
+  cloudBlur: number;
+  cloudBackX: number;
+  cloudBackY: number;
+  cloudBackScale: number;
+  cloudBackRotation: number;
+  cloudBackBlur: number;
+  mountainShow: boolean;
+  mountainX: number;
+  mountainY: number;
+  mountainScale: number;
+  mountainRotation: number;
+  mountainOpacity: number;
+  mountainBlur: number;
+  backWaveShow: boolean;
+  backWaveX: number;
+  backWaveY: number;
+  backWaveScale: number;
+  backWaveRotation: number;
+  backWaveOpacity: number;
+  backWaveBlur: number;
+  midWaveShow: boolean;
+  midWaveX: number;
+  midWaveY: number;
+  midWaveScale: number;
+  midWaveRotation: number;
+  midWaveOpacity: number;
+  midWaveBlur: number;
+  frontFoamShow: boolean;
+  frontFoamX: number;
+  frontFoamY: number;
+  frontFoamScale: number;
+  frontFoamRotation: number;
+  frontFoamOpacity: number;
+  frontFoamBlur: number;
+  goldInkShow: boolean;
+  goldInkX: number;
+  goldInkY: number;
+  goldInkScale: number;
+  goldInkRotation: number;
+  goldInkOpacity: number;
+  goldInkBlur: number;
+  // Active-only: the identity/status/CTA scroll a confirmed dragon/tiger
+  // claw appears to grip (see V8HeroComposition's scrollContent prop).
+  // Defaults to hidden -- the Opening experience never shows it.
+  scrollShow: boolean;
+  scrollX: number;
+  scrollY: number;
+  scrollScale: number;
+  scrollRotation: number;
+};
+
+export const v8HeroDefaults: V8HeroControls = {
   dragonShow: true,
   dragonX: 72,
   dragonY: 4,
@@ -92,7 +191,12 @@ export const v8HeroDefaults = {
   goldInkRotation: -5,
   goldInkOpacity: 43,
   goldInkBlur: 0,
-} as const;
+  scrollShow: false,
+  scrollX: 62,
+  scrollY: 30,
+  scrollScale: 1,
+  scrollRotation: 0,
+};
 
 export const v8HeroDisplayAssets = {
   body: "dragon-body-v2-display.webp",
@@ -110,6 +214,11 @@ export const v8HeroDisplayAssets = {
   goldInk: "ukiyoe-gold-ink-v1-display.webp",
 } as const;
 
+// Active-only asset (the identity/status/CTA scroll) -- lives alongside the
+// other Active art (tokens, sun-info badge) rather than the Opening-only
+// display set above.
+export const v8HeroActiveAssetFile = "scroll-identity-v1.webp";
+
 export const buildV8HeroAssets = (baseUrl: string) => {
   const displayAssetBase = `${baseUrl}v8-preview/display`;
   return {
@@ -126,6 +235,7 @@ export const buildV8HeroAssets = (baseUrl: string) => {
     midWave: `${displayAssetBase}/${v8HeroDisplayAssets.midWave}`,
     frontFoam: `${displayAssetBase}/${v8HeroDisplayAssets.frontFoam}`,
     goldInk: `${displayAssetBase}/${v8HeroDisplayAssets.goldInk}`,
+    scroll: `${baseUrl}v8-preview/active/${v8HeroActiveAssetFile}`,
   };
 };
 

@@ -108,6 +108,18 @@ export type PreviewControls = {
   activeSunInfoOffsetX: number;
   activeSunInfoOffsetY: number;
   activeSunInfoFontSize: number;
+  activeFieldCenterXPercent: number;
+  // B_fix (season/dragon): claw + scroll position when the dragon's claw
+  // appears to grip the identity/status/CTA scroll. Only applied by
+  // ActiveCanvas when the mock character toggle is "dragon".
+  activeDragonClawX: number;
+  activeDragonClawY: number;
+  activeDragonClawScale: number;
+  activeDragonClawRotation: number;
+  activeScrollX: number;
+  activeScrollY: number;
+  activeScrollScale: number;
+  activeScrollRotation: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -131,7 +143,8 @@ export type PreviewTargetId =
   | "FRONT FOAM"
   | "GOLD / INK"
   | "ACTIVE TOKEN"
-  | "ACTIVE SUN INFO";
+  | "ACTIVE SUN INFO"
+  | "ACTIVE DRAGON RIG";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -155,7 +168,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "GOLD / INK",
 ];
 
-export const activeTargetOrder: PreviewTargetId[] = ["ACTIVE TOKEN", "ACTIVE SUN INFO"];
+export const activeTargetOrder: PreviewTargetId[] = ["ACTIVE TOKEN", "ACTIVE SUN INFO", "ACTIVE DRAGON RIG"];
 
 // Kept for anything still importing the old flat name -- identical to
 // openingTargetOrder, since that's every target the Opening canvas has.
@@ -318,6 +331,15 @@ export const previewDefaults: PreviewControls = {
   activeSunInfoOffsetX: 0,
   activeSunInfoOffsetY: 0,
   activeSunInfoFontSize: 11,
+  activeFieldCenterXPercent: 30,
+  activeDragonClawX: -18,
+  activeDragonClawY: 24,
+  activeDragonClawScale: 0.72,
+  activeDragonClawRotation: 8,
+  activeScrollX: 66,
+  activeScrollY: 46,
+  activeScrollScale: 1,
+  activeScrollRotation: 0,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -349,8 +371,19 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeStrandSpacingX",
     "activeStrandRowHeight",
     "activeStrandWaveAmplitude",
+    "activeFieldCenterXPercent",
   ],
   "ACTIVE SUN INFO": ["activeSunInfoOffsetX", "activeSunInfoOffsetY", "activeSunInfoFontSize"],
+  "ACTIVE DRAGON RIG": [
+    "activeDragonClawX",
+    "activeDragonClawY",
+    "activeDragonClawScale",
+    "activeDragonClawRotation",
+    "activeScrollX",
+    "activeScrollY",
+    "activeScrollScale",
+    "activeScrollRotation",
+  ],
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
@@ -471,6 +504,15 @@ export const controlRanges = {
   activeSunInfoOffsetX: { label: "Sun Info X", min: -100, max: 100 },
   activeSunInfoOffsetY: { label: "Sun Info Y", min: -100, max: 100 },
   activeSunInfoFontSize: { label: "Sun Info Font", min: 8, max: 20 },
+  activeFieldCenterXPercent: { label: "Field Center X %", min: 10, max: 90 },
+  activeDragonClawX: { label: "Claw X", min: -100, max: 100 },
+  activeDragonClawY: { label: "Claw Y", min: -100, max: 100 },
+  activeDragonClawScale: { label: "Claw Scale", min: 0.3, max: 1.5, step: 0.01 },
+  activeDragonClawRotation: { label: "Claw Rotation", min: -180, max: 180 },
+  activeScrollX: { label: "Scroll X %", min: 0, max: 100 },
+  activeScrollY: { label: "Scroll Y %", min: 0, max: 100 },
+  activeScrollScale: { label: "Scroll Scale", min: 0.3, max: 2, step: 0.01 },
+  activeScrollRotation: { label: "Scroll Rotation", min: -45, max: 45 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -623,8 +665,19 @@ Strands Per Pass: ${Math.round(controls.activeStrandsPerPass)}
 Strand Spacing X: ${Math.round(controls.activeStrandSpacingX)}
 Strand Row Height: ${Math.round(controls.activeStrandRowHeight)}
 Strand Wave Amplitude: ${Math.round(controls.activeStrandWaveAmplitude)}
+Field Center X: ${Math.round(controls.activeFieldCenterXPercent)}
 
 ACTIVE SUN INFO
 X: ${Math.round(controls.activeSunInfoOffsetX)}
 Y: ${Math.round(controls.activeSunInfoOffsetY)}
-Font Size: ${Math.round(controls.activeSunInfoFontSize)}`;
+Font Size: ${Math.round(controls.activeSunInfoFontSize)}
+
+ACTIVE DRAGON RIG
+Claw X: ${Math.round(controls.activeDragonClawX)}
+Claw Y: ${Math.round(controls.activeDragonClawY)}
+Claw Scale: ${controls.activeDragonClawScale.toFixed(2)}
+Claw Rotation: ${Math.round(controls.activeDragonClawRotation)}
+Scroll X: ${Math.round(controls.activeScrollX)}
+Scroll Y: ${Math.round(controls.activeScrollY)}
+Scroll Scale: ${controls.activeScrollScale.toFixed(2)}
+Scroll Rotation: ${Math.round(controls.activeScrollRotation)}`;

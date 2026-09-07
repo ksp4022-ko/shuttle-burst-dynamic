@@ -21,10 +21,20 @@ import {
   tigerRigBaseline,
 } from "./dragonPreviewConfig";
 import type { HudOpacityMode, PreviewControls, PreviewMode, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
-import { V8ActiveStyles, V8ActiveSunOverlay } from "@/components/v8-active/V8ActivePage";
+import {
+  V8ActiveStyles,
+  V8ActiveSunOverlay,
+  V8ActiveSunBadgesScattered,
+  V8IdentityScrollContent,
+} from "@/components/v8-active/V8ActivePage";
 import { V8ActiveTokenField, type V8ActiveToken } from "@/components/v8-active/V8ActiveTokenField";
-import { buildV8ActiveAssets, type V8ActiveControls } from "@/components/v8-active/v8ActiveConfig";
+import {
+  buildV8ActiveAssets,
+  v8ActiveDragonFieldOverrides,
+  type V8ActiveControls,
+} from "@/components/v8-active/v8ActiveConfig";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
+import type { CurrentIdentity } from "@/hooks/use-current-identity";
 
 type DockPosition = "top" | "bottom";
 type NumericControlKey = {
@@ -197,9 +207,43 @@ function ActiveCanvas({
     strandSpacingX: controls.activeStrandSpacingX,
     strandRowHeight: controls.activeStrandRowHeight,
     strandWaveAmplitude: controls.activeStrandWaveAmplitude,
+    fieldCenterXPercent: controls.activeFieldCenterXPercent,
     sunInfoOffsetX: controls.activeSunInfoOffsetX,
     sunInfoOffsetY: controls.activeSunInfoOffsetY,
     sunInfoFontSize: controls.activeSunInfoFontSize,
+  };
+
+  // Mirrors V8ActivePage's B_fix branching (see v8ActiveDragonHeroOverrides
+  // there) so this console previews the exact same composition, just fed by
+  // this slider state instead of the frozen defaults -- "複製" then hands
+  // back the numbers to bake into that frozen object.
+  const isDragonFix = character === "dragon";
+  const heroOverrides = isDragonFix
+    ? {
+        bagBaseShow: false,
+        bagStrapShow: false,
+        rearClawShow: false,
+        tigerShow: false,
+        tigerRacketShow: false,
+        clawX: controls.activeDragonClawX,
+        clawY: controls.activeDragonClawY,
+        clawScale: controls.activeDragonClawScale,
+        clawRotation: controls.activeDragonClawRotation,
+        scrollShow: true,
+        scrollX: controls.activeScrollX,
+        scrollY: controls.activeScrollY,
+        scrollScale: controls.activeScrollScale,
+        scrollRotation: controls.activeScrollRotation,
+      }
+    : { dragonShow: false };
+  const fieldControls = isDragonFix
+    ? { ...tokenFieldControls, ...v8ActiveDragonFieldOverrides }
+    : tokenFieldControls;
+  const mockIdentity: CurrentIdentity = {
+    signupId: "mock-self",
+    name: "柯Sammy",
+    signupType: "fixed",
+    status: "confirmed",
   };
 
   return (
@@ -229,8 +273,7 @@ function ActiveCanvas({
 
       <V8HeroComposition
         confirmed
-        dragonVisible={character === "dragon"}
-        tigerVisible={character === "tiger"}
+        controlOverrides={heroOverrides}
         activeContent={
           <V8ActiveSunOverlay
             assets={assets}
@@ -240,11 +283,28 @@ function ActiveCanvas({
             courtCount={2}
             ballType="MS 101"
             tempFee={245}
+            scattered={isDragonFix}
           />
+        }
+        sunBadgesContent={
+          isDragonFix ? (
+            <V8ActiveSunBadgesScattered assets={assets} courtCount={2} ballType="MS 101" tempFee={245} />
+          ) : undefined
+        }
+        scrollContent={
+          isDragonFix ? (
+            <V8IdentityScrollContent
+              identity={mockIdentity}
+              busy={false}
+              pendingLabel={undefined}
+              onPrimaryAction={() => {}}
+              onForget={() => {}}
+            />
+          ) : undefined
         }
       />
 
-      <V8ActiveTokenField tokens={mockTokens} assets={assets} controls={tokenFieldControls} />
+      <V8ActiveTokenField tokens={mockTokens} assets={assets} controls={fieldControls} />
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import type { V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
+
 // All visual elements here are image-file-driven (PNG/SVG/WEBP), never
 // CSS-drawn shapes -- per the redesign brief, token/rope/badge art must stay
 // swappable by replacing a file, without touching layout code. Background
@@ -56,6 +58,35 @@ export function buildV8ActiveAssets(baseUrl: string) {
   };
 }
 
+// B_fix (season/dragon) layout overrides for V8HeroComposition's shared
+// canvas -- reuses the exact same dragon/claw art, just repositioned so the
+// claw appears to grip the identity scroll instead of the racket bag, per
+// the user's active_B_fix mockup. Rough/schematic placement for now (the
+// user tunes exact values via /v8/preview's ACTIVE mode afterward) -- B_temp
+// (casual/tiger) stays on the plain overlay until that mockup exists.
+export const v8ActiveDragonHeroOverrides: Partial<V8HeroControls> = {
+  bagBaseShow: false,
+  bagStrapShow: false,
+  rearClawShow: false,
+  tigerShow: false,
+  tigerRacketShow: false,
+  clawX: -18,
+  clawY: 24,
+  clawScale: 0.72,
+  clawRotation: 8,
+  scrollShow: true,
+  scrollX: 66,
+  scrollY: 46,
+  scrollScale: 1,
+  scrollRotation: 0,
+};
+
+// B_fix token field: shifted left to leave room for the dragon + scroll
+// column on the right (see v8ActiveDragonHeroOverrides above).
+export const v8ActiveDragonFieldOverrides: Partial<V8ActiveControls> = {
+  fieldCenterXPercent: 30,
+};
+
 export type V8ActiveTokenVariant = "confirmed" | "waiting" | "leave";
 
 export type V8ActiveControls = {
@@ -72,6 +103,10 @@ export type V8ActiveControls = {
   strandSpacingX: number;
   strandRowHeight: number;
   strandWaveAmplitude: number;
+  // Shifts the whole zigzag path left/right (50 = centered) -- the B_fix
+  // (season/dragon) layout moves it left to leave room for the dragon +
+  // identity scroll on the right instead of spanning the full width.
+  fieldCenterXPercent: number;
   sunInfoOffsetX: number;
   sunInfoOffsetY: number;
   sunInfoFontSize: number;
@@ -91,6 +126,7 @@ export const v8ActiveDefaults: V8ActiveControls = {
   strandSpacingX: 30,
   strandRowHeight: 230,
   strandWaveAmplitude: 5,
+  fieldCenterXPercent: 50,
 
   // Sun info overlay (court count / ball type / fee, placed around the sun)
   sunInfoOffsetX: 0,
@@ -111,6 +147,7 @@ export const v8ActiveControlRanges = {
   strandSpacingX: { label: "Strand Spacing X %", min: 5, max: 45 },
   strandRowHeight: { label: "Strand Row Height", min: 100, max: 400 },
   strandWaveAmplitude: { label: "Strand Wave Amp %", min: 0, max: 15 },
+  fieldCenterXPercent: { label: "Field Center X %", min: 10, max: 90 },
   sunInfoOffsetX: { label: "Sun Info X", min: -100, max: 100 },
   sunInfoOffsetY: { label: "Sun Info Y", min: -100, max: 100 },
   sunInfoFontSize: { label: "Sun Info Font", min: 8, max: 20 },
@@ -143,12 +180,18 @@ export function computeZigzagLayout(
   total: number,
   controls: Pick<
     V8ActiveControls,
-    "tokenSize" | "strandTokenTarget" | "strandsPerPass" | "strandSpacingX" | "strandRowHeight" | "strandWaveAmplitude"
+    | "tokenSize"
+    | "strandTokenTarget"
+    | "strandsPerPass"
+    | "strandSpacingX"
+    | "strandRowHeight"
+    | "strandWaveAmplitude"
+    | "fieldCenterXPercent"
   >,
 ): { slots: TokenLayoutSlot[]; height: number } {
   if (total <= 0) return { slots: [], height: 0 };
 
-  const { tokenSize, strandTokenTarget, strandsPerPass, strandSpacingX, strandRowHeight, strandWaveAmplitude } =
+  const { tokenSize, strandTokenTarget, strandsPerPass, strandSpacingX, strandRowHeight, strandWaveAmplitude, fieldCenterXPercent } =
     controls;
   const strandCount = Math.max(1, Math.round(total / strandTokenTarget));
   const base = Math.floor(total / strandCount);
@@ -164,11 +207,12 @@ export function computeZigzagLayout(
   const tokenVisualHeight = tokenSize / 0.7;
   const tokenPitch = tokenVisualHeight + 10;
 
-  const centerPercent = 50;
-  // Capped below 50 - (half a token's own width, roughly) so a token
-  // anchored at the widest swing plus its x-jitter still stays inside the
-  // field's own width instead of bleeding past the edge.
-  const halfSpanPercent = Math.min(36, (strandsPerPass - 1) * strandSpacingX * 0.55 + 8);
+  const centerPercent = fieldCenterXPercent;
+  // Capped below the distance to whichever edge is closer (minus room for
+  // half a token's own width) so a token anchored at the widest swing plus
+  // its x-jitter still stays inside the field even when centerPercent is
+  // shifted off 50 (e.g. the B_fix layout, which moves the whole path left).
+  const halfSpanPercent = Math.min(36, Math.min(centerPercent, 100 - centerPercent) - 8, (strandsPerPass - 1) * strandSpacingX * 0.55 + 8);
   const rowCount = Math.ceil(strandCount / strandsPerPass);
 
   // A row's vertical footprint is set by its tallest strand, never a fixed

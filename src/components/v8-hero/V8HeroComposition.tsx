@@ -10,6 +10,7 @@ import {
   tigerRacketBaseline,
   tigerRigBaseline,
   v8HeroDefaults,
+  type V8HeroControls,
 } from "./v8HeroConfig";
 
 type V8HeroCompositionProps = {
@@ -29,12 +30,22 @@ type V8HeroCompositionProps = {
   // content (meetup name/date + sun-info badges) so the Active page can
   // render inside this same canvas/card instead of stacking a second one
   // below it. Rendered inside the same centered heroCopyStyle title area.
-  activeContent?: ReactNode;
-  // Lets a confirmed identity show only its own creature instead of both --
-  // defaults to each layer's own controls.dragonShow/tigerShow (both visible,
-  // the opening's "龍虎交鋒" look) when not given.
-  dragonVisible?: boolean | undefined;
-  tigerVisible?: boolean | undefined;
+  activeContent?: ReactNode | undefined;
+  // Lets a caller reposition/hide any rig layer (dragon, claw, tiger, bag,
+  // waves...) for a confirmed identity's own composition (e.g. the Active
+  // page's dragon-holds-a-scroll layout) without needing a dedicated prop
+  // per field -- merged on top of v8HeroDefaults.
+  controlOverrides?: Partial<V8HeroControls> | undefined;
+  // Active-only identity/status/CTA content, rendered inside the scroll's
+  // blank panel (see controls.scrollShow/scrollX/scrollY/scrollScale in
+  // v8HeroConfig.ts) -- the "claw grips a scroll" companion plaque.
+  scrollContent?: ReactNode | undefined;
+  // Active-only sun-info badges, rendered as their own full-stage
+  // absolutely-positioned layer (not confined to the narrow heroCopyStyle
+  // title box) so a scattered/individual layout (the B_fix mockup) can
+  // place them anywhere across the whole canvas, not just in a row under
+  // the title.
+  sunBadgesContent?: ReactNode | undefined;
 };
 
 // Deliberately does NOT call image.decode() here -- decode() can stall
@@ -226,16 +237,15 @@ export function V8HeroComposition({
   onNextEvent = () => {},
   onConfirm = () => {},
   activeContent,
-  dragonVisible,
-  tigerVisible,
+  controlOverrides,
+  scrollContent,
+  sunBadgesContent,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
   const [assetsReady, setAssetsReady] = useState(false);
-  const controls = v8HeroDefaults;
+  const controls = controlOverrides ? { ...v8HeroDefaults, ...controlOverrides } : v8HeroDefaults;
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
   const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
-  const showDragon = dragonVisible ?? controls.dragonShow;
-  const showTiger = tigerVisible ?? controls.tigerShow;
   const fallbackConfirmButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -259,11 +269,14 @@ export function V8HeroComposition({
             <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
             <DecorLayer src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
             <div style={sunStyle} />
+            {sunBadgesContent ? (
+              <div style={{ position: "absolute", inset: 0, zIndex: 11 }}>{sunBadgesContent}</div>
+            ) : null}
             <DecorLayer src={assets.cloud} x={controls.cloudBackX} y={controls.cloudBackY} scale={controls.cloudBackScale} rotation={controls.cloudBackRotation} opacity={100} blur={decorBlur(controls.cloudBackBlur)} zIndex={5} driftClassName="v8-cloud-drift-back" />
             <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={100} blur={decorBlur(controls.cloudBlur)} zIndex={5} driftClassName="v8-cloud-drift-front" />
             <DecorLayer src={assets.mountain} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={6} />
             <DecorLayer src={assets.backWave} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} driftClassName="v8-wave-drift-back" />
-            {showDragon ? (
+            {controls.dragonShow ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -346,7 +359,46 @@ export function V8HeroComposition({
                 ) : null}
               </div>
             ) : null}
-            {showTiger ? (
+            {controls.scrollShow ? (
+              <div
+                aria-hidden={false}
+                style={{
+                  position: "absolute",
+                  left: `${controls.scrollX}%`,
+                  top: `${controls.scrollY}%`,
+                  width: `${28 * controls.scrollScale}%`,
+                  transform: `translate(-50%, -50%) rotate(${controls.scrollRotation}deg)`,
+                  zIndex: 9,
+                }}
+              >
+                <img
+                  src={assets.scroll}
+                  alt=""
+                  aria-hidden="true"
+                  decoding="async"
+                  loading="eager"
+                  draggable={false}
+                  style={{ display: "block", width: "100%", height: "auto" }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "9%",
+                    bottom: "39%",
+                    left: "20%",
+                    right: "20%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  {scrollContent}
+                </div>
+              </div>
+            ) : null}
+            {controls.tigerShow ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -397,7 +449,7 @@ export function V8HeroComposition({
                 )}
               </div>
             </div>
-            {showTiger && controls.tigerRacketShow ? (
+            {controls.tigerShow && controls.tigerRacketShow ? (
               <div
                 aria-hidden="true"
                 style={{

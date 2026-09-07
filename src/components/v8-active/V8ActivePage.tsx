@@ -4,7 +4,13 @@ import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import type { AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition, eyebrowStyle, titleStyle } from "@/components/v8-hero/V8HeroComposition";
-import { buildV8ActiveAssets, v8ActiveDefaults, type V8ActiveControls } from "./v8ActiveConfig";
+import {
+  buildV8ActiveAssets,
+  v8ActiveDefaults,
+  v8ActiveDragonFieldOverrides,
+  v8ActiveDragonHeroOverrides,
+  type V8ActiveControls,
+} from "./v8ActiveConfig";
 import { V8ActiveTokenField, type V8ActiveToken } from "./V8ActiveTokenField";
 
 const DRAGON_BADGE = "v8-preview/display/dragon-body-v2-display.webp";
@@ -94,14 +100,35 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     if (ok) setHelperMode(null);
   };
 
+  // B_fix: once identity resolves to season/dragon, the claw-grips-a-scroll
+  // composition takes over (see v8ActiveDragonHeroOverrides) -- reuses the
+  // same dragon/claw art, just repositioned, per the user's mockup. B_temp
+  // (casual/tiger) hasn't got its own mockup yet, so it (and the
+  // identity-not-chosen state) stay on the plain overlay.
+  const isDragonFix = characterKind === "dragon";
+  const heroOverrides = isDragonFix
+    ? v8ActiveDragonHeroOverrides
+    : characterKind === "tiger"
+      ? { dragonShow: false }
+      : undefined;
+  const fieldControls = isDragonFix ? { ...activeControls, ...v8ActiveDragonFieldOverrides } : activeControls;
+
+  const handlePrimaryAction = () => {
+    if (!identity) return;
+    if (identity.signupType === "fixed") {
+      void runAction(identity.status === "leave" ? "fixed-return" : "fixed-leave");
+    } else {
+      void runAction("cancel-temp");
+    }
+  };
+
   return (
     <div className="v8-active">
       <V8ActiveStyles controls={activeControls} />
 
       <V8HeroComposition
         confirmed
-        dragonVisible={characterKind === null ? undefined : characterKind === "dragon"}
-        tigerVisible={characterKind === null ? undefined : characterKind === "tiger"}
+        controlOverrides={heroOverrides}
         activeContent={
           <V8ActiveSunOverlay
             assets={assets}
@@ -111,22 +138,38 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             courtCount={selectedEvent.courtCount}
             ballType={selectedEvent.ballType}
             tempFee={selectedEvent.tempFee}
+            scattered={isDragonFix}
           />
+        }
+        sunBadgesContent={
+          isDragonFix ? (
+            <V8ActiveSunBadgesScattered
+              assets={assets}
+              courtCount={selectedEvent.courtCount}
+              ballType={selectedEvent.ballType}
+              tempFee={selectedEvent.tempFee}
+            />
+          ) : undefined
+        }
+        scrollContent={
+          isDragonFix && identity ? (
+            <V8IdentityScrollContent
+              identity={identity}
+              busy={busy}
+              pendingLabel={pendingAction?.label}
+              onPrimaryAction={handlePrimaryAction}
+              onForget={forget}
+            />
+          ) : undefined
         }
       />
 
-      {identity ? (
+      {isDragonFix ? null : identity ? (
         <V8IdentityStatusCard
           identity={identity}
           busy={busy}
           pendingLabel={pendingAction?.label}
-          onPrimaryAction={() => {
-            if (identity.signupType === "fixed") {
-              void runAction(identity.status === "leave" ? "fixed-return" : "fixed-leave");
-            } else {
-              void runAction("cancel-temp");
-            }
-          }}
+          onPrimaryAction={handlePrimaryAction}
           onForget={forget}
         />
       ) : (
@@ -193,7 +236,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
         )}
       </div>
 
-      <V8ActiveTokenField tokens={tokens} assets={assets} controls={activeControls} />
+      <V8ActiveTokenField tokens={tokens} assets={assets} controls={fieldControls} />
     </div>
   );
 }
@@ -221,6 +264,7 @@ export function V8ActiveSunOverlay({
   courtCount,
   ballType,
   tempFee,
+  scattered = false,
 }: {
   assets: { sunInfoBadge: string };
   controls: Pick<V8ActiveControls, "sunInfoOffsetX" | "sunInfoOffsetY" | "sunInfoFontSize">;
@@ -229,22 +273,70 @@ export function V8ActiveSunOverlay({
   courtCount?: number | null | undefined;
   ballType?: string | null | undefined;
   tempFee?: number | null | undefined;
+  // When true, the badges are left out (rendered separately, scattered
+  // across the full canvas via V8ActiveSunBadgesScattered) instead of the
+  // row-under-the-title layout -- see the B_fix mockup.
+  scattered?: boolean;
 }) {
   return (
     <>
       <p style={eyebrowStyle}>{shortDate(eventDate)}</p>
       <h1 style={titleStyle}>{eventName}</h1>
-      <div
-        className="v8-active-sun-info"
-        style={{
-          transform: `translate(${controls.sunInfoOffsetX}px, ${controls.sunInfoOffsetY}px)`,
-          fontSize: controls.sunInfoFontSize,
-        }}
-      >
-        {courtCount ? <V8SunInfoBadge assets={assets} label={`${courtCount} 片場地`} /> : null}
-        {ballType ? <V8SunInfoBadge assets={assets} label={ballType} /> : null}
-        <V8SunInfoBadge assets={assets} label={`$${Number(tempFee || 0)}`} />
-      </div>
+      {scattered ? null : (
+        <div
+          className="v8-active-sun-info"
+          style={{
+            transform: `translate(${controls.sunInfoOffsetX}px, ${controls.sunInfoOffsetY}px)`,
+            fontSize: controls.sunInfoFontSize,
+          }}
+        >
+          {courtCount ? <V8SunInfoBadge assets={assets} label={`${courtCount} 片場地`} /> : null}
+          {ballType ? <V8SunInfoBadge assets={assets} label={ballType} /> : null}
+          <V8SunInfoBadge assets={assets} label={`$${Number(tempFee || 0)}`} />
+        </div>
+      )}
+    </>
+  );
+}
+
+// B_fix scattered badge layout (see the active_B_fix mockup): each badge
+// gets its own rough position across the whole canvas instead of sitting in
+// a row under the title. Positions are schematic placeholders -- the user
+// tunes them via /v8/preview's ACTIVE mode afterward.
+const SCATTERED_BADGE_POSITIONS = [
+  { left: "6%", top: "7%" }, // ballType, top-left
+  { left: "66%", top: "5%" }, // tempFee, top-right
+  { left: "4%", top: "21%" }, // courtCount, below ballType
+] as const;
+
+export function V8ActiveSunBadgesScattered({
+  assets,
+  courtCount,
+  ballType,
+  tempFee,
+}: {
+  assets: { sunInfoBadge: string };
+  courtCount?: number | null | undefined;
+  ballType?: string | null | undefined;
+  tempFee?: number | null | undefined;
+}) {
+  const badges = [
+    ballType ? ballType : null,
+    `$${Number(tempFee || 0)}`,
+    courtCount ? `${courtCount} 片場地` : null,
+  ];
+  return (
+    <>
+      {badges.map((label, index) => {
+        if (!label) return null;
+        const position = SCATTERED_BADGE_POSITIONS[index];
+        if (!position) return null;
+        return (
+          <div key={index} className="v8-sun-info-scattered" style={position}>
+            <V8SunInfoBadge assets={assets} label={label} />
+          </div>
+        );
+      })}
     </>
   );
 }
@@ -288,6 +380,38 @@ function V8IdentityStatusCard({
         不是我，重新選擇身份
       </button>
     </section>
+  );
+}
+
+// B_fix (season/dragon): the same identity/status/CTA content as
+// V8IdentityStatusCard above, but stacked to fit the narrow scroll panel the
+// dragon's claw appears to grip (see V8HeroComposition's scrollContent prop)
+// instead of the wide horizontal card. Exported so /v8/preview's mock ACTIVE
+// canvas can render the identical markup.
+export function V8IdentityScrollContent({
+  identity,
+  busy,
+  pendingLabel,
+  onPrimaryAction,
+  onForget,
+}: {
+  identity: CurrentIdentity;
+  busy: boolean;
+  pendingLabel: string | undefined;
+  onPrimaryAction: () => void;
+  onForget: () => void;
+}) {
+  return (
+    <div className="v8-scroll-identity">
+      <strong className="v8-scroll-identity-name">{identity.name}</strong>
+      <span className="v8-scroll-identity-status">{statusLabel(identity)}</span>
+      <button type="button" className="v8-scroll-cta" disabled={busy} onClick={onPrimaryAction}>
+        {busy ? pendingLabel : primaryActionLabel(identity)}
+      </button>
+      <button type="button" className="v8-scroll-forget" disabled={busy} onClick={onForget}>
+        不是我
+      </button>
+    </div>
   );
 }
 
@@ -390,6 +514,11 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         flex-wrap: wrap;
         gap: 8px;
         margin-top: 10px;
+      }
+
+      .v8-sun-info-scattered {
+        position: absolute;
+        font-size: 11px;
       }
 
       .v8-sun-info-badge {
@@ -545,6 +674,50 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
 
       .v8-active-cta:disabled {
         opacity: 0.55;
+      }
+
+      .v8-scroll-identity {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+        color: #3a2a12;
+      }
+
+      .v8-scroll-identity-name {
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .v8-scroll-identity-status {
+        font-size: 11px;
+        opacity: 0.75;
+      }
+
+      .v8-scroll-cta {
+        margin-top: 4px;
+        height: 32px;
+        padding: 0 14px;
+        border: 2px solid #3a2a12;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.55);
+        color: #3a2a12;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .v8-scroll-cta:disabled {
+        opacity: 0.55;
+      }
+
+      .v8-scroll-forget {
+        margin-top: 2px;
+        border: none;
+        background: none;
+        color: rgba(58, 42, 18, 0.6);
+        font-size: 10px;
+        text-decoration: underline;
       }
 
       .v8-active-identity-prompt {
