@@ -21,9 +21,10 @@ import {
   tigerRigBaseline,
 } from "./dragonPreviewConfig";
 import type { HudOpacityMode, PreviewControls, PreviewMode, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
-import { V8ActiveStyles } from "@/components/v8-active/V8ActivePage";
+import { V8ActiveStyles, V8ActiveSunOverlay } from "@/components/v8-active/V8ActivePage";
 import { V8ActiveTokenField, type V8ActiveToken } from "@/components/v8-active/V8ActiveTokenField";
 import { buildV8ActiveAssets, type V8ActiveControls } from "@/components/v8-active/v8ActiveConfig";
+import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 
 type DockPosition = "top" | "bottom";
 type NumericControlKey = {
@@ -145,10 +146,16 @@ function SafeZoneOverlay({ controls }: { controls: PreviewControls }) {
   );
 }
 
+// 32 names covers the largest confirmed capacity tier (8/16/24/32) so the
+// zigzag layout can be checked at every tier from this one list, sliced.
 const MOCK_TOKEN_NAMES = [
   "柯Sammy", "阿牛", "美玲", "菊花", "Rich", "Roger", "蘇軾", "Kelly", "適丞",
   "Ariana", "Harry", "子齊", "宗恩", "千賀", "阿偉", "阿富", "小明", "小華", "小芳",
+  "阿德", "阿義", "小魚", "阿凱", "婷婷", "阿豪", "小玲", "阿翔", "佳佳", "阿宏",
+  "小雯", "阿成", "小安",
 ];
+
+const TOKEN_COUNT_TIERS = [8, 16, 24, 32] as const;
 
 // Live-tunes the same V8ActivePage.tsx / V8ActiveTokenField.tsx components
 // the real Active page uses, fed with mock roster data instead of a real
@@ -164,15 +171,18 @@ function ActiveCanvas({
   character: "dragon" | "tiger";
   onCharacterChange: (character: "dragon" | "tiger") => void;
 }) {
-  const mockTokens: V8ActiveToken[] = useMemo(
-    () =>
-      MOCK_TOKEN_NAMES.map((name, index) => ({
-        id: `mock-${index}`,
-        name,
-        variant: index < 12 ? "confirmed" : index < 16 ? "waiting" : "leave",
-      })),
-    [],
-  );
+  const [tokenCount, setTokenCount] = useState<number>(16);
+
+  const mockTokens: V8ActiveToken[] = useMemo(() => {
+    const names = MOCK_TOKEN_NAMES.slice(0, tokenCount);
+    const confirmedCount = Math.round(names.length * 0.65);
+    const waitingCount = Math.round(names.length * 0.2);
+    return names.map((name, index) => ({
+      id: `mock-${index}`,
+      name,
+      variant: index < confirmedCount ? "confirmed" : index < confirmedCount + waitingCount ? "waiting" : "leave",
+    }));
+  }, [tokenCount]);
 
   const tokenFieldControls: V8ActiveControls = {
     tokenSize: controls.activeTokenSize,
@@ -182,15 +192,14 @@ function ActiveCanvas({
     ropeLength: controls.activeRopeLength,
     staggerAmplitude: controls.activeStaggerAmplitude,
     fieldTopOffset: controls.activeFieldTopOffset,
+    strandTokenTarget: controls.activeStrandTokenTarget,
+    strandsPerPass: controls.activeStrandsPerPass,
+    strandSpacingX: controls.activeStrandSpacingX,
+    strandRowHeight: controls.activeStrandRowHeight,
+    strandWaveAmplitude: controls.activeStrandWaveAmplitude,
     sunInfoOffsetX: controls.activeSunInfoOffsetX,
     sunInfoOffsetY: controls.activeSunInfoOffsetY,
     sunInfoFontSize: controls.activeSunInfoFontSize,
-    characterX: controls.activeCharacterX,
-    characterY: controls.activeCharacterY,
-    characterScale: controls.activeCharacterScale,
-    breatheAmplitudeScale: controls.activeBreatheAmplitudeScale,
-    breatheOpacityRange: controls.activeBreatheOpacityRange,
-    breatheSeconds: controls.activeBreatheSeconds,
   };
 
   return (
@@ -205,53 +214,35 @@ function ActiveCanvas({
         預覽角色：{character === "dragon" ? "龍 (季打)" : "虎 (臨打)"}
       </button>
 
-      <section className="v8-active-scene" aria-label="場景預覽">
-        <img
-          className="v8-active-scene-bg"
-          src={character === "dragon" ? assets.dragonSea : assets.tigerMountain}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-        />
+      <div style={tokenCountRowStyle}>
+        {TOKEN_COUNT_TIERS.map((tier) => (
+          <button
+            key={tier}
+            type="button"
+            onClick={() => setTokenCount(tier)}
+            style={tier === tokenCount ? tokenCountButtonActiveStyle : tokenCountButtonStyle}
+          >
+            {tier} 人
+          </button>
+        ))}
+      </div>
 
-        <div className="v8-active-sun" aria-hidden="true">
-          <span className="v8-active-sun-title">9/10 康軒(預覽資料)</span>
-        </div>
-
-        <div
-          className="v8-active-sun-info"
-          style={{
-            transform: `translate(${controls.activeSunInfoOffsetX}px, ${controls.activeSunInfoOffsetY}px)`,
-            fontSize: controls.activeSunInfoFontSize,
-          }}
-        >
-          <span className="v8-sun-info-badge">
-            <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
-            <em>2 片場地</em>
-          </span>
-          <span className="v8-sun-info-badge">
-            <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
-            <em>MS 101</em>
-          </span>
-          <span className="v8-sun-info-badge">
-            <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
-            <em>$245</em>
-          </span>
-        </div>
-
-        <div className="v8-active-character-wrap">
-          <img
-            className="v8-active-character"
-            src={character === "dragon" ? assets.dragon : assets.tiger}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            style={{
-              transform: `translate(${controls.activeCharacterX}px, ${controls.activeCharacterY}px) scale(${controls.activeCharacterScale})`,
-            }}
+      <V8HeroComposition
+        confirmed
+        dragonVisible={character === "dragon"}
+        tigerVisible={character === "tiger"}
+        activeContent={
+          <V8ActiveSunOverlay
+            assets={assets}
+            controls={tokenFieldControls}
+            eventDate="2026-09-10"
+            eventName="康軒(預覽資料)"
+            courtCount={2}
+            ballType="MS 101"
+            tempFee={245}
           />
-        </div>
-      </section>
+        }
+      />
 
       <V8ActiveTokenField tokens={mockTokens} assets={assets} controls={tokenFieldControls} />
     </div>
@@ -1000,6 +991,32 @@ const activeCharacterToggleStyle: CSSProperties = {
   borderRadius: 999,
   background: "rgba(255,255,255,0.85)",
   color: "#20150d",
+};
+
+const tokenCountRowStyle: CSSProperties = {
+  position: "absolute",
+  top: 40,
+  right: 8,
+  zIndex: 20,
+  display: "flex",
+  gap: 4,
+};
+
+const tokenCountButtonStyle: CSSProperties = {
+  padding: "4px 8px",
+  fontSize: 10,
+  fontWeight: 700,
+  border: "1px solid rgba(32,21,13,0.24)",
+  borderRadius: 999,
+  background: "rgba(255,255,255,0.75)",
+  color: "#20150d",
+};
+
+const tokenCountButtonActiveStyle: CSSProperties = {
+  ...tokenCountButtonStyle,
+  background: "#20150d",
+  color: "#fff7e6",
+  border: "1px solid #20150d",
 };
 
 const modeToggleRowStyle: CSSProperties = {

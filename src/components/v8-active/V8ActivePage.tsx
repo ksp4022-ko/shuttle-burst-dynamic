@@ -3,7 +3,8 @@ import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import type { AlphaSignup } from "@/lib/database-alpha";
-import { buildV8ActiveAssets, v8ActiveDefaults } from "./v8ActiveConfig";
+import { V8HeroComposition, eyebrowStyle, titleStyle } from "@/components/v8-hero/V8HeroComposition";
+import { buildV8ActiveAssets, v8ActiveDefaults, type V8ActiveControls } from "./v8ActiveConfig";
 import { V8ActiveTokenField, type V8ActiveToken } from "./V8ActiveTokenField";
 
 const DRAGON_BADGE = "v8-preview/display/dragon-body-v2-display.webp";
@@ -97,48 +98,22 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     <div className="v8-active">
       <V8ActiveStyles controls={activeControls} />
 
-      <section className="v8-active-scene" aria-label="場景">
-        {characterKind ? (
-          <img
-            className="v8-active-scene-bg"
-            src={characterKind === "dragon" ? assets.dragonSea : assets.tigerMountain}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
+      <V8HeroComposition
+        confirmed
+        dragonVisible={characterKind === null ? undefined : characterKind === "dragon"}
+        tigerVisible={characterKind === null ? undefined : characterKind === "tiger"}
+        activeContent={
+          <V8ActiveSunOverlay
+            assets={assets}
+            controls={activeControls}
+            eventDate={selectedEvent.eventDate}
+            eventName={selectedEvent.name}
+            courtCount={selectedEvent.courtCount}
+            ballType={selectedEvent.ballType}
+            tempFee={selectedEvent.tempFee}
           />
-        ) : null}
-
-        <div className="v8-active-sun" aria-hidden="true">
-          <span className="v8-active-sun-title">{shortDate(selectedEvent.eventDate)} {selectedEvent.name}</span>
-        </div>
-
-        <div
-          className="v8-active-sun-info"
-          style={{
-            transform: `translate(${activeControls.sunInfoOffsetX}px, ${activeControls.sunInfoOffsetY}px)`,
-            fontSize: activeControls.sunInfoFontSize,
-          }}
-        >
-          {selectedEvent.courtCount ? <V8SunInfoBadge assets={assets} label={`${selectedEvent.courtCount} 片場地`} /> : null}
-          {selectedEvent.ballType ? <V8SunInfoBadge assets={assets} label={selectedEvent.ballType} /> : null}
-          <V8SunInfoBadge assets={assets} label={`$${Number(selectedEvent.tempFee || 0)}`} />
-        </div>
-
-        {characterKind ? (
-          <div className="v8-active-character-wrap">
-            <img
-              className="v8-active-character"
-              src={characterKind === "dragon" ? assets.dragon : assets.tiger}
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              style={{
-                transform: `translate(${activeControls.characterX}px, ${activeControls.characterY}px) scale(${activeControls.characterScale})`,
-              }}
-            />
-          </div>
-        ) : null}
-      </section>
+        }
+      />
 
       {identity ? (
         <V8IdentityStatusCard
@@ -229,6 +204,48 @@ function V8SunInfoBadge({ assets, label }: { assets: { sunInfoBadge: string }; l
       <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
       <em>{label}</em>
     </span>
+  );
+}
+
+// Replaces the opening's "SHUTTLE V8" title inside the SAME hero canvas
+// (see V8HeroComposition's activeContent prop) once a meetup is confirmed --
+// reuses that canvas's own title styles so the type treatment stays
+// consistent between the pre-confirm and active states. Exported so
+// /v8/preview's mock ACTIVE canvas renders the identical markup instead of a
+// separate hand-rolled mock.
+export function V8ActiveSunOverlay({
+  assets,
+  controls,
+  eventDate,
+  eventName,
+  courtCount,
+  ballType,
+  tempFee,
+}: {
+  assets: { sunInfoBadge: string };
+  controls: Pick<V8ActiveControls, "sunInfoOffsetX" | "sunInfoOffsetY" | "sunInfoFontSize">;
+  eventDate: string;
+  eventName: string;
+  courtCount?: number | null | undefined;
+  ballType?: string | null | undefined;
+  tempFee?: number | null | undefined;
+}) {
+  return (
+    <>
+      <p style={eyebrowStyle}>{shortDate(eventDate)}</p>
+      <h1 style={titleStyle}>{eventName}</h1>
+      <div
+        className="v8-active-sun-info"
+        style={{
+          transform: `translate(${controls.sunInfoOffsetX}px, ${controls.sunInfoOffsetY}px)`,
+          fontSize: controls.sunInfoFontSize,
+        }}
+      >
+        {courtCount ? <V8SunInfoBadge assets={assets} label={`${courtCount} 片場地`} /> : null}
+        {ballType ? <V8SunInfoBadge assets={assets} label={ballType} /> : null}
+        <V8SunInfoBadge assets={assets} label={`$${Number(tempFee || 0)}`} />
+      </div>
+    </>
   );
 }
 
@@ -354,9 +371,6 @@ function shortDate(value: string) {
 // character transition is unimplemented. Scene (sun/backdrop/character) and
 // the roster (token field) are the redesigned pieces this round.
 export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults }) {
-  const breatheScaleTo = 1 + controls.breatheAmplitudeScale;
-  const breatheOpacityTo = Math.max(0, 1 - controls.breatheOpacityRange);
-
   return (
     <style>{`
       .v8-active {
@@ -367,46 +381,6 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         padding: 0 16px calc(env(safe-area-inset-bottom) + 32px);
         background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
         color: #20150d;
-      }
-
-      .v8-active-scene {
-        position: relative;
-        margin: 0 -16px 20px;
-        padding: 24px 16px 8px;
-        overflow: hidden;
-        min-height: 220px;
-      }
-
-      .v8-active-scene-bg {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        opacity: 0.5;
-        z-index: 0;
-      }
-
-      .v8-active-sun {
-        position: relative;
-        z-index: 1;
-        width: 96px;
-        height: 96px;
-        border-radius: 50%;
-        background: #c64325;
-        box-shadow: 0 0 0 10px rgba(198, 67, 37, 0.10);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10px;
-      }
-
-      .v8-active-sun-title {
-        font-size: 12px;
-        font-weight: 800;
-        text-align: center;
-        color: #fdf3e2;
-        line-height: 1.3;
       }
 
       .v8-active-sun-info {
@@ -443,32 +417,6 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         padding: 0 10px;
       }
 
-      .v8-active-character-wrap {
-        position: relative;
-        z-index: 1;
-        display: flex;
-        justify-content: flex-end;
-        margin-top: -40px;
-        animation: v8-active-breathe ${controls.breatheSeconds}s ease-in-out infinite;
-        transform-origin: 70% 60%;
-      }
-
-      .v8-active-character {
-        width: 40%;
-        height: auto;
-        user-select: none;
-        pointer-events: none;
-      }
-
-      @keyframes v8-active-breathe {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(${breatheScaleTo}); opacity: ${breatheOpacityTo}; }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .v8-active-character-wrap { animation: none; }
-      }
-
       .v8-token-empty {
         text-align: center;
         color: rgba(32, 21, 13, 0.5);
@@ -476,14 +424,8 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
       }
 
       .v8-token-field {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .v8-token-row {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
+        position: relative;
+        width: 100%;
       }
 
       .v8-token-unit {
@@ -496,20 +438,37 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         display: block;
       }
 
+      .v8-token-face-wrap {
+        position: relative;
+      }
+
       .v8-token-face {
         display: block;
+        width: 100%;
+        height: auto;
         object-fit: contain;
       }
 
       .v8-token-name {
-        margin-top: 4px;
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        text-align: center;
         font-size: 11px;
         font-weight: 700;
-        max-width: 64px;
+        line-height: 1.15;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      }
+
+      .v8-token-name span {
+        display: block;
+        min-width: 0;
+        max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        text-align: center;
       }
 
       .v8-active-identity-wrap {

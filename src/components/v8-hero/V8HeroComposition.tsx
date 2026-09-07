@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import {
   bagBaseBaseline,
   bagStrapBaseline,
@@ -13,17 +13,38 @@ import {
 } from "./v8HeroConfig";
 
 type V8HeroCompositionProps = {
-  eventLabel: string;
+  // Only used pre-confirm (the meetup picker) -- optional so callers that
+  // only ever render this confirmed (the Active page reusing this same
+  // canvas) don't need to fabricate placeholder values for them.
+  eventLabel?: string;
   eventPositionLabel?: string;
-  hasMultipleEvents: boolean;
+  hasMultipleEvents?: boolean;
   confirmed: boolean;
-  confirmButtonRef: RefObject<HTMLButtonElement | null>;
-  confirmDisabled: boolean;
-  onPreviousEvent: () => void;
-  onNextEvent: () => void;
-  onConfirm: () => void;
+  confirmButtonRef?: RefObject<HTMLButtonElement | null>;
+  confirmDisabled?: boolean;
+  onPreviousEvent?: () => void;
+  onNextEvent?: () => void;
+  onConfirm?: () => void;
+  // Replaces the post-confirm placeholder text with real Active-page
+  // content (meetup name/date + sun-info badges) so the Active page can
+  // render inside this same canvas/card instead of stacking a second one
+  // below it. Rendered inside the same centered heroCopyStyle title area.
+  activeContent?: ReactNode;
+  // Lets a confirmed identity show only its own creature instead of both --
+  // defaults to each layer's own controls.dragonShow/tigerShow (both visible,
+  // the opening's "龍虎交鋒" look) when not given.
+  dragonVisible?: boolean | undefined;
+  tigerVisible?: boolean | undefined;
 };
 
+// Deliberately does NOT call image.decode() here -- decode() can stall
+// indefinitely on a backgrounded/hidden tab (a real browser quirk, not
+// speculative -- reproduced directly against these exact assets), which
+// hung this preload forever and permanently blocked assetsReady. onload
+// already guarantees the browser has the bitmap; decode() only avoided a
+// possible first-paint jank, not worth the hang risk now that
+// V8HeroComposition mounts more than once per page load (the Active page
+// reuses this same canvas) instead of just once.
 const preloadHeroImage = (src: string) =>
   new Promise<void>((resolve) => {
     const image = new Image();
@@ -33,13 +54,7 @@ const preloadHeroImage = (src: string) =>
       settled = true;
       resolve();
     };
-    image.onload = () => {
-      if (!image.decode) {
-        finish();
-        return;
-      }
-      image.decode().catch(() => undefined).finally(finish);
-    };
+    image.onload = finish;
     image.onerror = finish;
     image.decoding = "async";
     image.src = src;
@@ -203,19 +218,25 @@ function V8HeroAmbientStyles() {
 export function V8HeroComposition({
   eventLabel,
   eventPositionLabel,
-  hasMultipleEvents,
+  hasMultipleEvents = false,
   confirmed,
   confirmButtonRef,
-  confirmDisabled,
-  onPreviousEvent,
-  onNextEvent,
-  onConfirm,
+  confirmDisabled = true,
+  onPreviousEvent = () => {},
+  onNextEvent = () => {},
+  onConfirm = () => {},
+  activeContent,
+  dragonVisible,
+  tigerVisible,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
   const [assetsReady, setAssetsReady] = useState(false);
   const controls = v8HeroDefaults;
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
   const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
+  const showDragon = dragonVisible ?? controls.dragonShow;
+  const showTiger = tigerVisible ?? controls.tigerShow;
+  const fallbackConfirmButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -242,7 +263,7 @@ export function V8HeroComposition({
             <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={100} blur={decorBlur(controls.cloudBlur)} zIndex={5} driftClassName="v8-cloud-drift-front" />
             <DecorLayer src={assets.mountain} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={6} />
             <DecorLayer src={assets.backWave} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} driftClassName="v8-wave-drift-back" />
-            {controls.dragonShow ? (
+            {showDragon ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -325,7 +346,7 @@ export function V8HeroComposition({
                 ) : null}
               </div>
             ) : null}
-            {controls.tigerShow ? (
+            {showTiger ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -343,34 +364,40 @@ export function V8HeroComposition({
             <DecorLayer src={assets.midWave} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={10} driftClassName="v8-wave-drift-mid" />
             <div style={heroStyle}>
               <div style={{ ...heroCopyStyle, left: heroBaseline.centerX, top: heroBaseline.top, width: controls.heroWidth, transform: `translate(calc(-50% + ${controls.heroX}px), ${controls.heroY}px) scale(${controls.heroScale})` }}>
-                <p style={eyebrowStyle}>龍虎交鋒・戰局未定</p>
-                <h1 style={titleStyle}>SHUTTLE V8</h1>
-                {confirmed ? (
-                  <p style={{ ...confirmedStyle, transform: `translateY(${controls.heroEventY}px)` }}>
-                    戰局準備中
-                  </p>
+                {confirmed && activeContent ? (
+                  activeContent
                 ) : (
                   <>
-                    <div style={{ ...selectorStyle, transform: `translateY(${controls.heroEventY}px)` }}>
-                      <button type="button" onClick={onPreviousEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="上一場聚會">
-                        ‹
-                      </button>
-                      <button type="button" onClick={onConfirm} disabled={confirmDisabled} style={eventButtonStyle}>
-                        {eventLabel || "選擇聚會"}
-                      </button>
-                      <button type="button" onClick={onNextEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="下一場聚會">
-                        ›
-                      </button>
-                    </div>
-                    {eventPositionLabel ? <small style={eventPositionStyle}>{eventPositionLabel}</small> : null}
-                    <button ref={confirmButtonRef} type="button" disabled={confirmDisabled} onClick={onConfirm} style={{ ...ctaStyle, transform: `translateY(${controls.heroCtaY}px)` }}>
-                      進入戰局
-                    </button>
+                    <p style={eyebrowStyle}>龍虎交鋒・戰局未定</p>
+                    <h1 style={titleStyle}>SHUTTLE V8</h1>
+                    {confirmed ? (
+                      <p style={{ ...confirmedStyle, transform: `translateY(${controls.heroEventY}px)` }}>
+                        戰局準備中
+                      </p>
+                    ) : (
+                      <>
+                        <div style={{ ...selectorStyle, transform: `translateY(${controls.heroEventY}px)` }}>
+                          <button type="button" onClick={onPreviousEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="上一場聚會">
+                            ‹
+                          </button>
+                          <button type="button" onClick={onConfirm} disabled={confirmDisabled} style={eventButtonStyle}>
+                            {eventLabel || "選擇聚會"}
+                          </button>
+                          <button type="button" onClick={onNextEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="下一場聚會">
+                            ›
+                          </button>
+                        </div>
+                        {eventPositionLabel ? <small style={eventPositionStyle}>{eventPositionLabel}</small> : null}
+                        <button ref={confirmButtonRef ?? fallbackConfirmButtonRef} type="button" disabled={confirmDisabled} onClick={onConfirm} style={{ ...ctaStyle, transform: `translateY(${controls.heroCtaY}px)` }}>
+                          進入戰局
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
             </div>
-            {controls.tigerShow && controls.tigerRacketShow ? (
+            {showTiger && controls.tigerRacketShow ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -528,14 +555,14 @@ const heroCopyStyle: CSSProperties = {
   transformOrigin: "50% 0",
 };
 
-const eyebrowStyle: CSSProperties = {
+export const eyebrowStyle: CSSProperties = {
   margin: "0 0 12px",
   fontSize: 15,
   fontWeight: 800,
   letterSpacing: 1.4,
 };
 
-const titleStyle: CSSProperties = {
+export const titleStyle: CSSProperties = {
   margin: 0,
   fontSize: 42,
   lineHeight: 1,

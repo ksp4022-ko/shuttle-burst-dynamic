@@ -308,6 +308,12 @@ export function Index() {
     flow.phase,
   );
   const v8HeroStage = isV8Route && (preview || v8MeetupConfirmed);
+  // Once confirmed, V8ActivePage renders its own V8HeroComposition (same
+  // canvas, active-state content) internally -- so the standalone mount
+  // here (and the section's reserved 100svh height for it) is picker-only,
+  // or the canvas would render twice and this section would leave a blank
+  // full-viewport gap above the Active page's content.
+  const v8HeroPickerStage = v8HeroStage && !v8MeetupConfirmed;
   const legacyActiveStage = (active || rotating) && !v8HeroStage;
 
   useLayoutEffect(() => {
@@ -1021,7 +1027,7 @@ export function Index() {
       <section
         className="sd-hero"
         id="sd-hero"
-        style={v8HeroStage ? ({ minHeight: "100svh", width: "100%" } as CSSProperties) : undefined}
+        style={v8HeroPickerStage ? ({ minHeight: "100svh", width: "100%" } as CSSProperties) : undefined}
       >
         {(preview || rotating) && !v8HeroStage && (
           <div className={`sd-preview-system-title ${rotating ? "is-leaving" : ""}`}>
@@ -1098,7 +1104,7 @@ export function Index() {
           </section>
         )}
 
-        {v8HeroStage ? (
+        {v8HeroPickerStage ? (
           <V8HeroComposition
             eventLabel={selectedMeetupLabel}
             eventPositionLabel={selectedMeetupPosition}
