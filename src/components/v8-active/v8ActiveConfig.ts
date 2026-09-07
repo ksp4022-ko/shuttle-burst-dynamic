@@ -75,12 +75,6 @@ export type V8ActiveControls = {
   sunInfoOffsetX: number;
   sunInfoOffsetY: number;
   sunInfoFontSize: number;
-  characterX: number;
-  characterY: number;
-  characterScale: number;
-  breatheAmplitudeScale: number;
-  breatheOpacityRange: number;
-  breatheSeconds: number;
 };
 
 export const v8ActiveDefaults: V8ActiveControls = {
@@ -102,14 +96,6 @@ export const v8ActiveDefaults: V8ActiveControls = {
   sunInfoOffsetX: 0,
   sunInfoOffsetY: 0,
   sunInfoFontSize: 11,
-
-  // Dragon/Tiger main visual + idle breathing
-  characterX: 0,
-  characterY: 0,
-  characterScale: 1,
-  breatheAmplitudeScale: 0.03,
-  breatheOpacityRange: 0.06,
-  breatheSeconds: 6,
 };
 
 export const v8ActiveControlRanges = {
@@ -128,12 +114,6 @@ export const v8ActiveControlRanges = {
   sunInfoOffsetX: { label: "Sun Info X", min: -100, max: 100 },
   sunInfoOffsetY: { label: "Sun Info Y", min: -100, max: 100 },
   sunInfoFontSize: { label: "Sun Info Font", min: 8, max: 20 },
-  characterX: { label: "Character X", min: -100, max: 100 },
-  characterY: { label: "Character Y", min: -100, max: 100 },
-  characterScale: { label: "Character Scale", min: 0.5, max: 1.5, step: 0.01 },
-  breatheAmplitudeScale: { label: "Breathe Scale Amp", min: 0, max: 0.15, step: 0.005 },
-  breatheOpacityRange: { label: "Breathe Opacity Range", min: 0, max: 0.3, step: 0.01 },
-  breatheSeconds: { label: "Breathe Seconds", min: 2, max: 14, step: 0.1 },
 } as const satisfies Record<keyof V8ActiveControls, { label: string; min: number; max: number; step?: number }>;
 
 // Deterministic per-token stagger so the layout doesn't jump around on

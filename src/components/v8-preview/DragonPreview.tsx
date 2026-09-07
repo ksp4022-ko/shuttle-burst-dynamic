@@ -21,9 +21,10 @@ import {
   tigerRigBaseline,
 } from "./dragonPreviewConfig";
 import type { HudOpacityMode, PreviewControls, PreviewMode, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
-import { V8ActiveStyles } from "@/components/v8-active/V8ActivePage";
+import { V8ActiveStyles, V8ActiveSunOverlay } from "@/components/v8-active/V8ActivePage";
 import { V8ActiveTokenField, type V8ActiveToken } from "@/components/v8-active/V8ActiveTokenField";
 import { buildV8ActiveAssets, type V8ActiveControls } from "@/components/v8-active/v8ActiveConfig";
+import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 
 type DockPosition = "top" | "bottom";
 type NumericControlKey = {
@@ -199,12 +200,6 @@ function ActiveCanvas({
     sunInfoOffsetX: controls.activeSunInfoOffsetX,
     sunInfoOffsetY: controls.activeSunInfoOffsetY,
     sunInfoFontSize: controls.activeSunInfoFontSize,
-    characterX: controls.activeCharacterX,
-    characterY: controls.activeCharacterY,
-    characterScale: controls.activeCharacterScale,
-    breatheAmplitudeScale: controls.activeBreatheAmplitudeScale,
-    breatheOpacityRange: controls.activeBreatheOpacityRange,
-    breatheSeconds: controls.activeBreatheSeconds,
   };
 
   return (
@@ -232,53 +227,22 @@ function ActiveCanvas({
         ))}
       </div>
 
-      <section className="v8-active-scene" aria-label="場景預覽">
-        <img
-          className="v8-active-scene-bg"
-          src={character === "dragon" ? assets.dragonSea : assets.tigerMountain}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-        />
-
-        <div className="v8-active-sun" aria-hidden="true">
-          <span className="v8-active-sun-title">9/10 康軒(預覽資料)</span>
-        </div>
-
-        <div
-          className="v8-active-sun-info"
-          style={{
-            transform: `translate(${controls.activeSunInfoOffsetX}px, ${controls.activeSunInfoOffsetY}px)`,
-            fontSize: controls.activeSunInfoFontSize,
-          }}
-        >
-          <span className="v8-sun-info-badge">
-            <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
-            <em>2 片場地</em>
-          </span>
-          <span className="v8-sun-info-badge">
-            <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
-            <em>MS 101</em>
-          </span>
-          <span className="v8-sun-info-badge">
-            <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
-            <em>$245</em>
-          </span>
-        </div>
-
-        <div className="v8-active-character-wrap">
-          <img
-            className="v8-active-character"
-            src={character === "dragon" ? assets.dragon : assets.tiger}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            style={{
-              transform: `translate(${controls.activeCharacterX}px, ${controls.activeCharacterY}px) scale(${controls.activeCharacterScale})`,
-            }}
+      <V8HeroComposition
+        confirmed
+        dragonVisible={character === "dragon"}
+        tigerVisible={character === "tiger"}
+        activeContent={
+          <V8ActiveSunOverlay
+            assets={assets}
+            controls={tokenFieldControls}
+            eventDate="2026-09-10"
+            eventName="康軒(預覽資料)"
+            courtCount={2}
+            ballType="MS 101"
+            tempFee={245}
           />
-        </div>
-      </section>
+        }
+      />
 
       <V8ActiveTokenField tokens={mockTokens} assets={assets} controls={tokenFieldControls} />
     </div>
