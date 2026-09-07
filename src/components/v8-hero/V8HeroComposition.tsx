@@ -250,7 +250,7 @@ export function V8HeroComposition({
   }, [assets]);
 
   return (
-    <section className="sd-hero-meetup-picker sd-v8-hero-composition" aria-label="V8 聚會選擇" style={rootStyle}>
+    <section className="sd-v8-hero-composition" aria-label="V8 聚會選擇" style={rootStyle}>
       <V8HeroAmbientStyles />
       <div style={stageShellStyle}>
         <div style={stageStyle}>
