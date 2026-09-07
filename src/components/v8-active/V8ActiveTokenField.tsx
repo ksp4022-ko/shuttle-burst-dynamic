@@ -64,7 +64,13 @@ export function V8ActiveTokenField({
   return (
     <div
       className="v8-token-field"
-      style={{ marginTop: controls.fieldTopOffset, position: "relative", height }}
+      style={{
+        position: "absolute",
+        left: `${controls.fieldAnchorX}%`,
+        top: `${controls.fieldAnchorY}%`,
+        width: "100%",
+        height,
+      }}
     >
       {tokens.map((token, index) => {
         const slot = slots[index];
