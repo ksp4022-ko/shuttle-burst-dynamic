@@ -70,6 +70,12 @@ export function V8ActiveTokenField({
         top: `${controls.fieldAnchorY}%`,
         width: "100%",
         height,
+        // V8HeroComposition's root (dragon/sun/scroll canvas) sits at
+        // z-index:12 -- without an explicit z-index here, this field
+        // (z-index:auto) would always paint BEHIND that canvas once dragged
+        // to overlap it via fieldAnchorX/Y, defeating the point of freeing
+        // it from document flow. 15 clears the hero root comfortably.
+        zIndex: 15,
       }}
     >
       {tokens.map((token, index) => {
