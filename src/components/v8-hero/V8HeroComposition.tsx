@@ -433,13 +433,20 @@ export function V8HeroComposition({
   );
 }
 
+// `position: absolute; inset: 0` here assumed this component was always
+// nested in a sized, positioned ancestor it should fill (true for the
+// pre-confirm picker's <section id="sd-hero">) -- but the Active page nests
+// it directly in normal document flow, alongside the identity card and
+// roster below it. Since absolute positioning takes it out of flow, it
+// never reserved space for those siblings; they ended up stacked at the
+// same top offset instead of pushed below it, and this section's z-index:12
+// then painted over them. `position: relative` (a normal block, sized by
+// its own aspect-ratio content) works for both contexts: the picker
+// section has nothing else competing for space in it on V8 routes, so it
+// still effectively fills it.
 const rootStyle: CSSProperties = {
-  position: "absolute",
+  position: "relative",
   zIndex: 12,
-  inset: 0,
-  left: 0,
-  right: 0,
-  top: 0,
   margin: 0,
   padding: 0,
   animation: "none",
