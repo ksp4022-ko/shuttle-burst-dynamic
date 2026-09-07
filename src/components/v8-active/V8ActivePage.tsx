@@ -131,32 +131,34 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     <div className="v8-active" style={{ "--v8-active-field-min-height": `${fieldMinHeight}px` } as CSSProperties}>
       <V8ActiveStyles controls={activeControls} />
 
-      <V8HeroComposition
-        confirmed
-        controlOverrides={heroOverrides}
-        sunContent={
-          <V8ActiveSunContent
-            assets={assets}
-            eventDate={selectedEvent.eventDate}
-            eventName={selectedEvent.name}
-            courtCount={selectedEvent.courtCount}
-            ballType={selectedEvent.ballType}
-            tempFee={selectedEvent.tempFee}
-            scattered={isDragonFix}
-          />
-        }
-        scrollContent={
-          isDragonFix && identity ? (
-            <V8IdentityScrollContent
-              identity={identity}
-              busy={busy}
-              pendingLabel={pendingAction?.label}
-              onPrimaryAction={handlePrimaryAction}
-              onForget={forget}
+      <div className="v8-active-hero-bleed">
+        <V8HeroComposition
+          confirmed
+          controlOverrides={heroOverrides}
+          sunContent={
+            <V8ActiveSunContent
+              assets={assets}
+              eventDate={selectedEvent.eventDate}
+              eventName={selectedEvent.name}
+              courtCount={selectedEvent.courtCount}
+              ballType={selectedEvent.ballType}
+              tempFee={selectedEvent.tempFee}
+              scattered={isDragonFix}
             />
-          ) : undefined
-        }
-      />
+          }
+          scrollContent={
+            isDragonFix && identity ? (
+              <V8IdentityScrollContent
+                identity={identity}
+                busy={busy}
+                pendingLabel={pendingAction?.label}
+                onPrimaryAction={handlePrimaryAction}
+                onForget={forget}
+              />
+            ) : undefined
+          }
+        />
+      </div>
 
       {isDragonFix ? null : identity ? (
         <V8IdentityStatusCard
@@ -473,8 +475,9 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
       .v8-active {
         position: relative;
         z-index: 2;
-        margin: 0 auto;
-        max-width: 560px;
+        /* Full-bleed on every device width -- no max-width cap, so there is
+           never a gap showing .sd-page's own background on the sides. */
+        width: 100%;
         padding: 0 16px calc(env(safe-area-inset-bottom) + 32px);
         background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
         color: #20150d;
@@ -483,6 +486,23 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
            per-roster-count lookup, see getV8ActiveFieldMinHeight) keeps the
            container tall enough to contain it instead of clipping. */
         min-height: var(--v8-active-field-min-height, auto);
+      }
+
+      /* V8HeroComposition's own rounded-corner "stage" card already draws
+         itself at width:100% of ITS parent -- but that parent (the section
+         V8HeroComposition renders itself, styled by its own shared
+         rootStyle) sits inside .v8-active's 16px padding, so the card (and
+         its rounded corners) previously sat inset 16px from the real screen
+         edges on both sides instead of reaching them. This wrapper div
+         (rather than a CSS rule targeting .sd-v8-hero-composition directly)
+         is what actually bleeds it past the padding -- rootStyle sets an
+         inline margin:0 on that section for the Opening picker's own
+         context, and inline styles always beat an external stylesheet rule
+         regardless of selector specificity, so a rule targeting that
+         section directly silently loses to it. */
+      .v8-active-hero-bleed {
+        width: calc(100% + 32px);
+        margin: 0 -16px;
       }
 
       .v8-active-sun-title {
