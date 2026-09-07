@@ -498,7 +498,7 @@ const sunStyle: CSSProperties = {
   position: "absolute",
   zIndex: 4,
   left: "23%",
-  top: "29%",
+  top: "5%",
   width: "52%",
   aspectRatio: "1",
   borderRadius: "50%",
