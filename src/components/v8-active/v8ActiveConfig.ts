@@ -66,10 +66,11 @@ export function buildV8ActiveAssets(baseUrl: string) {
 // Rough/schematic placement -- the user tunes exact values via
 // /v8/preview's ACTIVE mode afterward.
 export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
-  sunX: 8,
-  sunY: 6,
-  sunScale: 0.75,
-  sunZIndex: 20,
+  sunX: 9,
+  sunY: 3,
+  sunScale: 0.68,
+  sunZIndex: 30,
+  sunTextScale: 0.58,
 };
 
 // B_fix (season/dragon) layout overrides for V8HeroComposition's shared
@@ -91,9 +92,9 @@ export const v8ActiveDragonHeroOverrides: Partial<V8HeroControls> = {
   tigerShow: false,
   tigerRacketShow: false,
   dragonScrollShow: true,
-  dragonScrollX: 62,
-  dragonScrollY: 45,
-  dragonScrollScale: 1,
+  dragonScrollX: 69,
+  dragonScrollY: 31,
+  dragonScrollScale: 1.22,
   dragonScrollRotation: 0,
 };
 
@@ -136,21 +137,22 @@ export type V8ActiveControls = {
 };
 
 export const v8ActiveDefaults: V8ActiveControls = {
-  // Token field (hanging roster)
-  tokenSize: 64,
-  tokenSpacingX: 14,
-  tokensPerRow: 9,
-  rowGap: 56,
+  // Token field (hanging roster) -- tuned via /v8/preview against the
+  // 16-person tier (2026-09-07).
+  tokenSize: 50,
+  tokenSpacingX: 18,
+  tokensPerRow: 7,
+  rowGap: 64,
   ropeLength: 34, // the confirmed/waiting/leave token frames have no rope baked in, unlike the earlier token-v2 pick
-  staggerAmplitude: 12,
-  fieldAnchorX: 8,
-  fieldAnchorY: 55,
+  staggerAmplitude: 20,
+  fieldAnchorX: 6,
+  fieldAnchorY: 14,
   strandTokenTarget: 4,
-  strandsPerPass: 3,
-  strandSpacingX: 30,
-  strandRowHeight: 230,
-  strandWaveAmplitude: 5,
-  fieldCenterXPercent: 50,
+  strandsPerPass: 4,
+  strandSpacingX: 22,
+  strandRowHeight: 196,
+  strandWaveAmplitude: 0,
+  fieldCenterXPercent: 41,
 };
 
 export const v8ActiveControlRanges = {
@@ -188,15 +190,15 @@ export function tokenStaggerFor(id: string, amplitude: number) {
 // min-height from computeZigzagLayout's formula (which the user explicitly
 // wants replaced), it's a fixed lookup table keyed by the confirmed
 // roster-count tiers, tuned by hand per-tier via /v8/preview's console.
-// These starting values are rough placeholders -- derived from the old
-// formula's per-count content height, then divided by (1 - fieldAnchorY/100)
-// (fieldAnchorY defaults to 55%) so the default placement doesn't clip the
-// bottom of its own roster out of the gate. The user will overwrite these
-// with real tuned numbers from the console once they dial in fieldAnchorY
-// per tier.
+// 16 is tuned to the real content height measured in-browser after the
+// 2026-09-07 token-field tuning pass (fieldAnchorY:14, tokenSize:50,
+// strandsPerPass:4, strandRowHeight:196 -- see v8ActiveDefaults). 8/24/32
+// are still rough placeholders left over from the old (pre-tuning) formula
+// and will read as too tall / too much blank space below the roster until
+// the user tunes those tiers too and reports back real values.
 export const v8ActiveFieldHeightByCount: Record<8 | 16 | 24 | 32, number> = {
   8: 1050,
-  16: 1900,
+  16: 700,
   24: 2000,
   32: 2900,
 };
