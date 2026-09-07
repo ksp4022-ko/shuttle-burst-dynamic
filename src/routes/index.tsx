@@ -1027,7 +1027,21 @@ export function Index() {
       <section
         className="sd-hero"
         id="sd-hero"
-        style={v8HeroPickerStage ? ({ minHeight: "100svh", width: "100%" } as CSSProperties) : undefined}
+        style={
+          v8HeroPickerStage
+            ? ({ minHeight: "100svh", width: "100%" } as CSSProperties)
+            : isV8Route
+              ? // Once confirmed, this section renders nothing (V8ActivePage
+                // mounts its own V8HeroComposition instead) -- but the base
+                // .sd-hero CSS class still carries a near-full-viewport
+                // min-height for the legacy racket intro, which isn't
+                // scoped to !isV8Route. Left alone, that leaves a tall empty
+                // section here showing the page's own dark background
+                // through it. Only override for V8 routes so the legacy
+                // flow's sizing is untouched.
+                ({ minHeight: 0, width: "100%" } as CSSProperties)
+              : undefined
+        }
       >
         {(preview || rotating) && !v8HeroStage && (
           <div className={`sd-preview-system-title ${rotating ? "is-leaving" : ""}`}>
