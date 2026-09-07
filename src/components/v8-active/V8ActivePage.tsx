@@ -131,7 +131,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     <div className="v8-active" style={{ "--v8-active-field-min-height": `${fieldMinHeight}px` } as CSSProperties}>
       <V8ActiveStyles controls={activeControls} />
 
-      <div className="v8-active-hero-bleed">
+      <div className="v8-active-hero-slot">
         <V8HeroComposition
           confirmed
           controlOverrides={heroOverrides}
@@ -160,76 +160,78 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
         />
       </div>
 
-      {isDragonFix ? null : identity ? (
-        <V8IdentityStatusCard
-          identity={identity}
-          busy={busy}
-          pendingLabel={pendingAction?.label}
-          onPrimaryAction={handlePrimaryAction}
-          onForget={forget}
-        />
-      ) : (
-        <V8IdentityPrompt
-          seasonCandidates={seasonCandidates}
-          tigerName={tigerName}
-          onTigerNameChange={setTigerName}
-          onPickSeason={(signupId) => remember(signupId)}
-          onSubmitTiger={() => void submitTigerSignup()}
-          busy={busy}
-        />
-      )}
-
-      <div className="v8-active-helper">
-        {helperMode === "signup" ? (
-          <div className="v8-active-helper-row">
-            <input
-              value={helperName}
-              onChange={(event) => setHelperName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") void submitHelperSignup();
-              }}
-              placeholder="幫誰報名？"
-              disabled={busy}
-            />
-            <button type="button" disabled={!helperName.trim() || busy} onClick={() => void submitHelperSignup()}>
-              確認
-            </button>
-            <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
-              取消
-            </button>
-          </div>
-        ) : helperMode === "cancel" ? (
-          <div className="v8-active-season-list">
-            {tempCandidates.length ? (
-              tempCandidates.map((person) => (
-                <button
-                  key={person.id}
-                  type="button"
-                  className="v8-active-season-item"
-                  disabled={busy}
-                  onClick={() => void cancelForSomeoneElse(person)}
-                >
-                  <strong>{person.name}</strong>
-                  <em>{person.status === "waiting" ? "候補" : "臨打"}</em>
-                </button>
-              ))
-            ) : (
-              <p className="sd-empty">目前沒有臨打報名可取消</p>
-            )}
-            <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
-              返回
-            </button>
-          </div>
+      <div className="v8-active-content">
+        {isDragonFix ? null : identity ? (
+          <V8IdentityStatusCard
+            identity={identity}
+            busy={busy}
+            pendingLabel={pendingAction?.label}
+            onPrimaryAction={handlePrimaryAction}
+            onForget={forget}
+          />
         ) : (
-          <div className="v8-active-helper-toggles">
-            <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("signup")}>
-              幫人報名
-            </button>
-            <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("cancel")}>
-              幫人取消
-            </button>
-          </div>
+          <V8IdentityPrompt
+            seasonCandidates={seasonCandidates}
+            tigerName={tigerName}
+            onTigerNameChange={setTigerName}
+            onPickSeason={(signupId) => remember(signupId)}
+            onSubmitTiger={() => void submitTigerSignup()}
+            busy={busy}
+          />
         )}
+
+        <div className="v8-active-helper">
+          {helperMode === "signup" ? (
+            <div className="v8-active-helper-row">
+              <input
+                value={helperName}
+                onChange={(event) => setHelperName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void submitHelperSignup();
+                }}
+                placeholder="幫誰報名？"
+                disabled={busy}
+              />
+              <button type="button" disabled={!helperName.trim() || busy} onClick={() => void submitHelperSignup()}>
+                確認
+              </button>
+              <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
+                取消
+              </button>
+            </div>
+          ) : helperMode === "cancel" ? (
+            <div className="v8-active-season-list">
+              {tempCandidates.length ? (
+                tempCandidates.map((person) => (
+                  <button
+                    key={person.id}
+                    type="button"
+                    className="v8-active-season-item"
+                    disabled={busy}
+                    onClick={() => void cancelForSomeoneElse(person)}
+                  >
+                    <strong>{person.name}</strong>
+                    <em>{person.status === "waiting" ? "候補" : "臨打"}</em>
+                  </button>
+                ))
+              ) : (
+                <p className="sd-empty">目前沒有臨打報名可取消</p>
+              )}
+              <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
+                返回
+              </button>
+            </div>
+          ) : (
+            <div className="v8-active-helper-toggles">
+              <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("signup")}>
+                幫人報名
+              </button>
+              <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("cancel")}>
+                幫人取消
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <V8ActiveTokenField tokens={tokens} assets={assets} controls={fieldControls} />
@@ -475,11 +477,22 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
       .v8-active {
         position: relative;
         z-index: 2;
+        display: flex;
+        flex-direction: column;
         /* Full-bleed on every device width -- no max-width cap, so there is
-           never a gap showing .sd-page's own background on the sides. */
+           never a gap showing .sd-page's own background on the sides. No
+           background/padding here (see .v8-active-content below) -- the
+           hero canvas's own rounded corners (border-radius:28 + overflow:
+           hidden on V8HeroComposition's "stage") cut away a small triangle
+           at each corner, and whatever is directly behind .v8-active shows
+           through that cutout. Painting a background on .v8-active itself
+           would show there instead of .sd-page's dark background + vignette
+           (.sd-page::after), which is what the Opening picker shows in the
+           same spot -- confirmed by inspecting the Opening picker in
+           production, where the hero canvas sits directly on .sd-page with
+           no .v8-active-equivalent wrapper at all.
+        */
         width: 100%;
-        padding: 0 16px calc(env(safe-area-inset-bottom) + 32px);
-        background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
         color: #20150d;
         /* .v8-token-field is position:absolute (see fieldAnchorX/Y), so it no
            longer reserves space in normal flow -- this min-height (a fixed
@@ -488,21 +501,25 @@ export function V8ActiveStyles({ controls }: { controls: typeof v8ActiveDefaults
         min-height: var(--v8-active-field-min-height, auto);
       }
 
-      /* V8HeroComposition's own rounded-corner "stage" card already draws
-         itself at width:100% of ITS parent -- but that parent (the section
-         V8HeroComposition renders itself, styled by its own shared
-         rootStyle) sits inside .v8-active's 16px padding, so the card (and
-         its rounded corners) previously sat inset 16px from the real screen
-         edges on both sides instead of reaching them. This wrapper div
-         (rather than a CSS rule targeting .sd-v8-hero-composition directly)
-         is what actually bleeds it past the padding -- rootStyle sets an
-         inline margin:0 on that section for the Opening picker's own
-         context, and inline styles always beat an external stylesheet rule
-         regardless of selector specificity, so a rule targeting that
-         section directly silently loses to it. */
-      .v8-active-hero-bleed {
-        width: calc(100% + 32px);
-        margin: 0 -16px;
+      /* Keeps the hero canvas at its own natural (aspect-ratio-driven)
+         height inside the flex column -- without this, flex's default
+         shrink behavior could compress it in a tight layout. */
+      .v8-active-hero-slot {
+        flex-shrink: 0;
+      }
+
+      /* Everything below the hero canvas (identity card, helper toggles,
+         season list) keeps the cream background and the 16px side inset --
+         moved off .v8-active itself (see the comment there) so the cream
+         fill starts right where this section begins instead of painting
+         behind the hero canvas's rounded corners too. flex:1 so it (and its
+         cream background) stretches down to fill any leftover height from
+         .v8-active's min-height, instead of leaving a stray strip of
+         .sd-page's dark background below a short identity card. */
+      .v8-active-content {
+        flex: 1 1 auto;
+        padding: 0 16px calc(env(safe-area-inset-bottom) + 32px);
+        background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
       }
 
       .v8-active-sun-title {
