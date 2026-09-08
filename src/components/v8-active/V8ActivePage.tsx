@@ -150,7 +150,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   };
 
   return (
-    <div className="v8-active">
+    <div className="v8-active" data-identity={identity ? "known" : "unknown"}>
       <V8ActiveStyles />
 
       <V8HeroComposition
@@ -601,6 +601,7 @@ export function V8ActiveStyles() {
         */
         width: 100%;
         color: #20150d;
+        touch-action: pan-y;
       }
 
       /* Everything below the hero canvas (identity card, helper toggles,
@@ -611,6 +612,11 @@ export function V8ActiveStyles() {
       .v8-active-content {
         padding: 0 16px calc(env(safe-area-inset-bottom) + 32px);
         background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
+      }
+
+      .v8-active[data-identity="known"] .v8-active-content {
+        min-height: calc(env(safe-area-inset-bottom) + 148px);
+        padding-bottom: calc(env(safe-area-inset-bottom) + 148px);
       }
 
       .v8-active-sun-title {
@@ -968,16 +974,25 @@ export function V8ActiveStyles() {
       .v8-roster-lists {
         position: absolute;
         z-index: 20;
+        pointer-events: auto;
+      }
+
+      .v8-roster-lists > img {
+        pointer-events: none;
       }
 
       .v8-roster-panel {
         position: absolute;
         overflow: hidden;
+        pointer-events: auto;
       }
 
       .v8-roster-panel-scroll {
         height: 100%;
         overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
       }
 
       .v8-roster-column {

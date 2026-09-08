@@ -441,6 +441,7 @@ export function V8HeroComposition({
                   width: `${28 * controls.scrollScale}%`,
                   transform: `translate(-50%, -50%) rotate(${controls.scrollRotation}deg)`,
                   zIndex: 9,
+                  pointerEvents: scrollContent ? "auto" : "none",
                 }}
               >
                 <img
@@ -450,7 +451,7 @@ export function V8HeroComposition({
                   decoding="async"
                   loading="eager"
                   draggable={false}
-                  style={{ display: "block", width: "100%", height: "auto" }}
+                  style={{ display: "block", width: "100%", height: "auto", pointerEvents: "none" }}
                 />
                 <div
                   style={{
@@ -464,6 +465,7 @@ export function V8HeroComposition({
                     alignItems: "center",
                     justifyContent: "center",
                     overflow: "hidden",
+                    pointerEvents: "auto",
                   }}
                 >
                   {scrollContent}
@@ -479,7 +481,8 @@ export function V8HeroComposition({
                   top: `${controls.tigerScrollY}%`,
                   width: `${58 * controls.tigerScrollScale}%`,
                   transform: `translate(-50%, -50%) rotate(${controls.tigerScrollRotation}deg)`,
-                  zIndex: 9,
+                  zIndex: scrollContent ? 35 : 9,
+                  pointerEvents: scrollContent ? "auto" : "none",
                 }}
               >
                 <img
@@ -489,7 +492,7 @@ export function V8HeroComposition({
                   decoding="async"
                   loading="eager"
                   draggable={false}
-                  style={{ display: "block", width: "100%", height: "auto" }}
+                  style={{ display: "block", width: "100%", height: "auto", pointerEvents: "none" }}
                 />
                 {/* Panel inset measured directly off tiger-scroll-fixed-v1's
                     own pixels (row-by-row contiguous-cream-run scan) -- this
@@ -508,6 +511,7 @@ export function V8HeroComposition({
                     alignItems: "center",
                     justifyContent: "center",
                     overflow: "hidden",
+                    pointerEvents: "auto",
                   }}
                 >
                   {scrollContent}
@@ -670,12 +674,14 @@ const dragonRigStyle: CSSProperties = {
   position: "absolute",
   aspectRatio: "1024 / 1536",
   transformOrigin: "50% 38%",
+  pointerEvents: "none",
 };
 
 const tigerRigStyle: CSSProperties = {
   position: "absolute",
   aspectRatio: "1122 / 1402",
   transformOrigin: "50% 45%",
+  pointerEvents: "none",
 };
 
 const rigImageStyle: CSSProperties = {
@@ -706,6 +712,7 @@ const driftWrapStyle: CSSProperties = {
   position: "absolute",
   inset: 0,
   transformOrigin: "center center",
+  pointerEvents: "none",
 };
 
 const heroStyle: CSSProperties = {
