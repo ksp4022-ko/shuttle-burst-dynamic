@@ -33,6 +33,42 @@ type NumericControlKey = {
   [Key in keyof PreviewControls]: PreviewControls[Key] extends number ? Key : never;
 }[keyof PreviewControls];
 
+// Mid-tuning autosave -- without this, a refresh (or the phone's browser
+// reclaiming a background tab) silently reset every slider back to
+// previewDefaults, discarding whatever the user had just been dialing in.
+// Merged ON TOP of previewDefaults (not used alone) so a save from before a
+// field was added/removed here still loads cleanly instead of leaving new
+// fields undefined.
+const PREVIEW_CONTROLS_STORAGE_KEY = "v8-preview-controls-v1";
+
+function loadSavedControls(): PreviewControls {
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
+    if (!raw) return previewDefaults;
+    const saved = JSON.parse(raw) as Partial<PreviewControls>;
+    return { ...previewDefaults, ...saved };
+  } catch {
+    return previewDefaults;
+  }
+}
+
+function saveControls(controls: PreviewControls) {
+  try {
+    window.localStorage.setItem(PREVIEW_CONTROLS_STORAGE_KEY, JSON.stringify(controls));
+  } catch {
+    // Private browsing / storage disabled / quota exceeded -- tuning still
+    // works for this session, it just won't survive a refresh.
+  }
+}
+
+function clearSavedControls() {
+  try {
+    window.localStorage.removeItem(PREVIEW_CONTROLS_STORAGE_KEY);
+  } catch {
+    // Same as above -- nothing to clean up if storage was never writable.
+  }
+}
+
 const preloadPreviewImage = (src: string) =>
   new Promise<void>((resolve) => {
     const image = new Image();
@@ -334,7 +370,9 @@ function DecorLayer({
 }
 
 export function DragonPreview() {
-  const [controls, setControls] = useState<PreviewControls>(previewDefaults);
+  const [controls, setControls] = useState<PreviewControls>(() =>
+    typeof window === "undefined" ? previewDefaults : loadSavedControls(),
+  );
   const [assetsReady, setAssetsReady] = useState(false);
   const [panelMinimized, setPanelMinimized] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<PreviewTargetId>("TIGER RIG");
@@ -354,6 +392,12 @@ export function DragonPreview() {
   const assets = useMemo(() => buildPreviewAssets(import.meta.env.BASE_URL), []);
   const activeAssets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
   const currentTargetOrder = previewMode === "OPENING" ? openingTargetOrder : activeTargetOrder;
+
+  // Autosave -- fires on every slider/toggle change so a refresh or a
+  // backgrounded tab getting reclaimed never loses in-progress tuning.
+  useEffect(() => {
+    saveControls(controls);
+  }, [controls]);
 
   const setPreviewModeAndTarget = (mode: PreviewMode) => {
     setPreviewMode(mode);
@@ -813,7 +857,16 @@ export function DragonPreview() {
               </div>
               <div style={resetBarStyle}>
                 <button type="button" onClick={resetTarget} style={resetButtonStyle}>Reset Target</button>
-                <button type="button" onClick={() => setControls(previewDefaults)} style={resetButtonStyle}>Reset All</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setControls(previewDefaults);
+                    clearSavedControls();
+                  }}
+                  style={resetButtonStyle}
+                >
+                  Reset All
+                </button>
               </div>
             </>
           ) : null}
