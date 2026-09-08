@@ -60,7 +60,22 @@ type NumericControlKey = {
 // Merged ON TOP of previewDefaults (not used alone) so a save from before a
 // field was added/removed here still loads cleanly instead of leaving new
 // fields undefined.
-const PREVIEW_CONTROLS_STORAGE_KEY = "v8-preview-controls-v1";
+//
+// IMPORTANT: bump the trailing -vN whenever a field's COORDINATE SYSTEM
+// changes meaning, not just when fields are added/removed (the merge above
+// already handles that safely). Adding fields is safe to merge; a value
+// that's still a number but now means something different against a
+// resized/reparented container is NOT -- it silently applies a
+// now-nonsensical old number on top of the new default instead of the new
+// default itself, with no error and no visual warning. This has already
+// bitten the user more than once this session (e.g. the roster panel
+// moving from its own fixed-height box into the hero canvas's own %-space,
+// and the Active stage's aspect ratio changing) -- old saved X/Y/etc. kept
+// silently overriding the freshly-recalibrated defaults after each of
+// those changes, and the only symptom was "it looks broken," not an error.
+// Bumping this key on that class of change forces every saved session back
+// to the new defaults instead of quietly corrupting them.
+const PREVIEW_CONTROLS_STORAGE_KEY = "v8-preview-controls-v2";
 
 function loadSavedControls(): PreviewControls {
   try {
