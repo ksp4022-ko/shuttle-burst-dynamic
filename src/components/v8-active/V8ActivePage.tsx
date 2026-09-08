@@ -21,16 +21,18 @@ import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "./V8ActiveRoster
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
-    return identity.status === "leave" ? "取消請假" : "本週請假";
+    return identity.status === "leave" ? "恢復出席" : "本週請假";
   }
-  return identity.status === "waiting" ? "取消候補" : "取消報名";
+  return "取消報名";
 }
 
-function statusLabel(identity: CurrentIdentity) {
-  if (identity.signupType === "fixed") {
-    return identity.status === "leave" ? "季打・請假中" : "季打・正取出席";
-  }
-  return identity.status === "waiting" ? "臨打・候補中" : "臨打・正取";
+function roleLabel(identity: CurrentIdentity) {
+  return identity.signupType === "fixed" ? "季打" : "臨打";
+}
+
+function meetupStatusLabel(identity: CurrentIdentity) {
+  if (identity.status === "leave") return "請假";
+  return identity.status === "waiting" ? "候補" : "正取";
 }
 
 type HelperMode = "signup" | "cancel" | null;
@@ -149,6 +151,8 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               busy={busy}
               pendingLabel={pendingAction?.label}
               onPrimaryAction={handlePrimaryAction}
+              onHelperSignup={() => setHelperMode("signup")}
+              onHelperCancel={() => setHelperMode("cancel")}
               onForget={forget}
             />
           ) : undefined
@@ -228,7 +232,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
                 返回
               </button>
             </div>
-          ) : (
+          ) : identity ? null : (
             <div className="v8-active-helper-toggles">
               <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("signup")}>
                 幫人報名
@@ -375,21 +379,45 @@ export function V8IdentityScrollContent({
   busy,
   pendingLabel,
   onPrimaryAction,
+  onHelperSignup = () => {},
+  onHelperCancel = () => {},
   onForget,
 }: {
   identity: CurrentIdentity;
   busy: boolean;
   pendingLabel: string | undefined;
   onPrimaryAction: () => void;
+  onHelperSignup?: () => void;
+  onHelperCancel?: () => void;
   onForget: () => void;
 }) {
+  const nameLength = Array.from(identity.name).length;
+  const nameSize = Math.max(13, Math.min(24, Math.floor(120 / Math.max(nameLength, 5))));
+  const status = meetupStatusLabel(identity);
+
   return (
     <div className="v8-scroll-identity">
-      <strong className="v8-scroll-identity-name">{identity.name}</strong>
-      <span className="v8-scroll-identity-status">{statusLabel(identity)}</span>
+      <div className="v8-scroll-status-mark" aria-label={`本次狀態：${status}`}>
+        {status}
+      </div>
+      <strong className="v8-scroll-identity-name" style={{ fontSize: nameSize }} title={identity.name}>
+        {identity.name}
+      </strong>
+      <div className="v8-scroll-meta" aria-label={`${roleLabel(identity)}，本次${status}`}>
+        <span>{roleLabel(identity)}</span>
+        <span>{status}</span>
+      </div>
       <button type="button" className="v8-scroll-cta" disabled={busy} onClick={onPrimaryAction}>
         {busy ? pendingLabel : primaryActionLabel(identity)}
       </button>
+      <div className="v8-scroll-secondary-actions" aria-label="代操作">
+        <button type="button" disabled={busy} onClick={onHelperSignup}>
+          幫人報名
+        </button>
+        <button type="button" disabled={busy} onClick={onHelperCancel}>
+          幫人取消
+        </button>
+      </div>
       <button type="button" className="v8-scroll-forget" disabled={busy} onClick={onForget}>
         不是我
       </button>
@@ -601,46 +629,110 @@ export function V8ActiveStyles() {
       }
 
       .v8-scroll-identity {
+        position: relative;
         display: flex;
+        width: 100%;
+        height: 100%;
+        min-width: 0;
         flex-direction: column;
         align-items: center;
-        gap: 8px;
+        justify-content: center;
+        gap: 5px;
         text-align: center;
         color: #3a2a12;
       }
 
       .v8-scroll-identity-name {
-        font-size: 16px;
-        font-weight: 800;
+        display: block;
+        width: 100%;
+        max-width: 96px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 0;
       }
 
-      .v8-scroll-identity-status {
-        font-size: 11px;
-        opacity: 0.75;
+      .v8-scroll-meta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        color: rgba(58, 42, 18, 0.68);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .v8-scroll-meta span + span {
+        padding-left: 5px;
+        border-left: 1px solid rgba(122, 42, 18, 0.24);
+      }
+
+      .v8-scroll-status-mark {
+        position: absolute;
+        left: -2px;
+        bottom: 4px;
+        display: flex;
+        width: 26px;
+        height: 22px;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid rgba(168, 35, 24, 0.76);
+        border-radius: 999px 820px 760px 920px;
+        color: rgba(168, 35, 24, 0.88);
+        font-size: 8px;
+        font-weight: 900;
+        line-height: 1;
+        transform: rotate(-10deg);
+        pointer-events: none;
       }
 
       .v8-scroll-cta {
-        margin-top: 4px;
-        height: 32px;
-        padding: 0 14px;
+        min-width: 78px;
+        height: 28px;
+        padding: 0 11px;
         border: 2px solid #3a2a12;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.62);
         color: #3a2a12;
         font-size: 12px;
-        font-weight: 800;
+        font-weight: 900;
+        white-space: nowrap;
       }
 
-      .v8-scroll-cta:disabled {
+      .v8-scroll-cta:disabled,
+      .v8-scroll-secondary-actions button:disabled,
+      .v8-scroll-forget:disabled {
         opacity: 0.55;
       }
 
+      .v8-scroll-secondary-actions {
+        display: flex;
+        gap: 4px;
+        max-width: 112px;
+      }
+
+      .v8-scroll-secondary-actions button {
+        height: 20px;
+        min-width: 0;
+        padding: 0 5px;
+        border: 1px solid rgba(58, 42, 18, 0.28);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.28);
+        color: rgba(58, 42, 18, 0.72);
+        font-size: 9px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
       .v8-scroll-forget {
-        margin-top: 2px;
         border: none;
         background: none;
-        color: rgba(58, 42, 18, 0.6);
-        font-size: 10px;
+        color: rgba(58, 42, 18, 0.52);
+        font-size: 9px;
         text-decoration: underline;
       }
 
