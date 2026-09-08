@@ -171,6 +171,16 @@ export type PreviewControls = {
   activeRosterListsFontSize: number;
   activeRosterListsLineHeight: number;
   activeRosterListsTextColor: string;
+  // Independent x/y nudge (px) for each panel's own text block, layered on
+  // top of the image-measured baseline inset -- lets each of the three
+  // lists (季打請假/正取名單/備取名單) be fine-tuned separately instead of
+  // only moving as one shared block.
+  activeRosterListsLeaveX: number;
+  activeRosterListsLeaveY: number;
+  activeRosterListsConfirmedX: number;
+  activeRosterListsConfirmedY: number;
+  activeRosterListsWaitingX: number;
+  activeRosterListsWaitingY: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -445,6 +455,12 @@ export const previewDefaults: PreviewControls = {
   activeRosterListsFontSize: 13,
   activeRosterListsLineHeight: 1.5,
   activeRosterListsTextColor: "#20150d",
+  activeRosterListsLeaveX: 0,
+  activeRosterListsLeaveY: 0,
+  activeRosterListsConfirmedX: 0,
+  activeRosterListsConfirmedY: 0,
+  activeRosterListsWaitingX: 0,
+  activeRosterListsWaitingY: 0,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -526,6 +542,12 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRosterListsFontSize",
     "activeRosterListsLineHeight",
     "activeRosterListsTextColor",
+    "activeRosterListsLeaveX",
+    "activeRosterListsLeaveY",
+    "activeRosterListsConfirmedX",
+    "activeRosterListsConfirmedY",
+    "activeRosterListsWaitingX",
+    "activeRosterListsWaitingY",
   ],
 };
 
@@ -687,6 +709,12 @@ export const controlRanges = {
   activeRosterListsRotation: { label: "Roster Rotation", min: -45, max: 45 },
   activeRosterListsFontSize: { label: "Roster Font Size", min: 8, max: 24 },
   activeRosterListsLineHeight: { label: "Roster Line Height", min: 1, max: 2.4, step: 0.05 },
+  activeRosterListsLeaveX: { label: "季打請假 X", min: -40, max: 40 },
+  activeRosterListsLeaveY: { label: "季打請假 Y", min: -40, max: 40 },
+  activeRosterListsConfirmedX: { label: "正取名單 X", min: -40, max: 40 },
+  activeRosterListsConfirmedY: { label: "正取名單 Y", min: -40, max: 40 },
+  activeRosterListsWaitingX: { label: "備取名單 X", min: -40, max: 40 },
+  activeRosterListsWaitingY: { label: "備取名單 Y", min: -40, max: 40 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -902,4 +930,7 @@ Scale: ${controls.activeRosterListsScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeRosterListsRotation)}
 Font Size: ${Math.round(controls.activeRosterListsFontSize)}
 Line Height: ${controls.activeRosterListsLineHeight.toFixed(2)}
-Text Color: ${controls.activeRosterListsTextColor}`;
+Text Color: ${controls.activeRosterListsTextColor}
+季打請假 Offset: ${Math.round(controls.activeRosterListsLeaveX)}, ${Math.round(controls.activeRosterListsLeaveY)}
+正取名單 Offset: ${Math.round(controls.activeRosterListsConfirmedX)}, ${Math.round(controls.activeRosterListsConfirmedY)}
+備取名單 Offset: ${Math.round(controls.activeRosterListsWaitingX)}, ${Math.round(controls.activeRosterListsWaitingY)}`;

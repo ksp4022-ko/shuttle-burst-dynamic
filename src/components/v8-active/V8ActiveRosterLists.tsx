@@ -90,13 +90,22 @@ export function V8ActiveRosterLists({
       }
     >
       <img src={frameSrc} alt="" aria-hidden="true" draggable={false} style={{ display: "block", width: "100%", height: "auto" }} />
-      <div className="v8-roster-panel" style={PANEL_INSETS.leave}>
+      <div
+        className="v8-roster-panel"
+        style={{ ...PANEL_INSETS.leave, transform: `translate(${controls.leave.x}px, ${controls.leave.y}px)` }}
+      >
         <RosterPanel people={leave} />
       </div>
-      <div className="v8-roster-panel" style={PANEL_INSETS.confirmed}>
+      <div
+        className="v8-roster-panel"
+        style={{ ...PANEL_INSETS.confirmed, transform: `translate(${controls.confirmed.x}px, ${controls.confirmed.y}px)` }}
+      >
         <RosterPanel people={confirmed} twoColumn />
       </div>
-      <div className="v8-roster-panel" style={PANEL_INSETS.waiting}>
+      <div
+        className="v8-roster-panel"
+        style={{ ...PANEL_INSETS.waiting, transform: `translate(${controls.waiting.x}px, ${controls.waiting.y}px)` }}
+      >
         <RosterPanel people={waiting} />
       </div>
     </div>

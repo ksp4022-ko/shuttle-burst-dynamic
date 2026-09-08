@@ -304,6 +304,9 @@ function ActiveCanvas({
     fontSize: controls.activeRosterListsFontSize,
     lineHeight: controls.activeRosterListsLineHeight,
     textColor: controls.activeRosterListsTextColor,
+    leave: { x: controls.activeRosterListsLeaveX, y: controls.activeRosterListsLeaveY },
+    confirmed: { x: controls.activeRosterListsConfirmedX, y: controls.activeRosterListsConfirmedY },
+    waiting: { x: controls.activeRosterListsWaitingX, y: controls.activeRosterListsWaitingY },
   };
 
   const sunBadgeControls: V8ActiveSunBadgesControls = {

@@ -214,6 +214,15 @@ export const v8ActiveSunBadgesRanges: Record<
 // overlapping the sun/dragon). Name-list typography (fontSize/textColor/
 // lineHeight) is shared across all three panels' lists rather than each
 // having its own set, per the user's request to keep this simple for now.
+// Each panel's own text block additionally gets an independent x/y NUDGE
+// (px, layered on top of PANEL_INSETS' image-measured baseline in
+// V8ActiveRosterLists.tsx) since the console had no way to adjust an
+// individual panel's text position separately from the other two.
+export type V8ActiveRosterPanelOffset = {
+  x: number;
+  y: number;
+};
+
 export type V8ActiveRosterListsControls = {
   show: boolean;
   x: number;
@@ -223,6 +232,9 @@ export type V8ActiveRosterListsControls = {
   fontSize: number;
   lineHeight: number;
   textColor: string;
+  leave: V8ActiveRosterPanelOffset;
+  confirmed: V8ActiveRosterPanelOffset;
+  waiting: V8ActiveRosterPanelOffset;
 };
 
 // Rough/schematic starting placement -- centered horizontally, positioned
@@ -230,7 +242,8 @@ export type V8ActiveRosterListsControls = {
 // flow (see the --v8-active-roster-min-height buffer in V8ActivePage.tsx).
 // textColor matches the dark ink tone used elsewhere on the Active page
 // (.v8-active's own color: #20150d) for contrast against the frame's cream
-// panels.
+// panels. Per-panel offsets default to 0 -- PANEL_INSETS' measured baseline
+// already lines up with the artwork, this is purely a fine-tune nudge.
 export const v8ActiveRosterListsDefaults: V8ActiveRosterListsControls = {
   show: true,
   x: 50,
@@ -240,10 +253,13 @@ export const v8ActiveRosterListsDefaults: V8ActiveRosterListsControls = {
   fontSize: 13,
   lineHeight: 1.5,
   textColor: "#20150d",
+  leave: { x: 0, y: 0 },
+  confirmed: { x: 0, y: 0 },
+  waiting: { x: 0, y: 0 },
 };
 
 export const v8ActiveRosterListsRanges: Record<
-  Exclude<keyof V8ActiveRosterListsControls, "show" | "textColor">,
+  Exclude<keyof V8ActiveRosterListsControls, "show" | "textColor" | "leave" | "confirmed" | "waiting">,
   { label: string; min: number; max: number; step?: number }
 > = {
   x: { label: "X %", min: -20, max: 120 },
@@ -253,4 +269,6 @@ export const v8ActiveRosterListsRanges: Record<
   fontSize: { label: "List Font Size", min: 8, max: 24 },
   lineHeight: { label: "List Line Height", min: 1, max: 2.4, step: 0.05 },
 };
+
+export const v8ActiveRosterPanelOffsetRange = { label: "Offset", min: -40, max: 40 } as const;
 
