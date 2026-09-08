@@ -54,7 +54,11 @@ function InfoCardLayer({
 export function V8ActiveInfoCards({ assets, controls }: { assets: Assets; controls: V8ActiveInfoCardsControls }) {
   return (
     <>
-      <InfoCardLayer src={assets.infoRope} controls={controls.rope} baseWidth={5} />
+      {/* infoRope's source art is a wide horizontal curve (see
+          v8ActiveConfig.ts), rotated 90deg by default to hang vertically --
+          baseWidth here is that pre-rotation width, i.e. the rope's visual
+          LENGTH once rotated, not its rendered width. */}
+      <InfoCardLayer src={assets.infoRope} controls={controls.rope} baseWidth={26} />
       <InfoCardLayer src={assets.infoCardRegistered} controls={controls.registered} baseWidth={15} />
       <InfoCardLayer src={assets.infoCardNeeded} controls={controls.needed} baseWidth={15} />
       <InfoCardLayer src={assets.infoCardWaitlist} controls={controls.waitlist} baseWidth={15} />

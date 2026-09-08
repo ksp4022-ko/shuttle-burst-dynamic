@@ -17,14 +17,16 @@ export const v8ActiveAssetFiles = {
 // particular draws noticeably smaller); normalized to a common 711x800
 // canvas (letterbox padding, not stretched, bottom-aligned on the tassel so
 // that stays the shared visual anchor) before export, same convention as
-// the earlier token art. rope-red-blue-v1 is a placeholder (a plain SVG
-// line) until the user supplies real rope art -- swap the file, no code
-// changes needed.
+// the earlier token art. rope-red-blue-v1 is the user's own real rope art
+// (from 05_V8_Rope_編織繩素材_2026-09-06/紅藍雙色編織垂掛繩索.png,
+// tight-cropped to content, downscaled to a UI-appropriate max 1000px,
+// re-exported as webp) -- it's a wide horizontal curve, not pre-rotated, so
+// the rope's own rotation control is what angles it to hang vertically.
 export const v8ActiveInfoCardFiles = {
   registered: "plaque-registered-v1.webp",
   needed: "plaque-needed-v1.webp",
   waitlist: "plaque-waitlist-v1.webp",
-  rope: "rope-red-blue-v1.svg",
+  rope: "rope-red-blue-v1.webp",
 } as const;
 
 // Dragon (season/fixed) pairs with a sea backdrop, Tiger (casual/temp) pairs
@@ -119,8 +121,12 @@ export type V8ActiveInfoCardsControls = {
 // Rough/schematic starting placement -- left of the dragon (which sits
 // around dragonScrollX:69, well to the right), stacked below the sun (sun
 // sits near sunY:3, small). The user tunes exact values via /v8/preview.
+// rope defaults to rotation:90 -- the source art (紅藍雙色編織垂掛繩索)
+// is a wide horizontal curve, not pre-rotated, so it needs a quarter-turn
+// to hang vertically; its baseWidth (see V8ActiveInfoCards.tsx) is tuned
+// as the rope's visual LENGTH post-rotation, not its rendered width.
 export const v8ActiveInfoCardsDefaults: V8ActiveInfoCardsControls = {
-  rope: { show: true, x: 16, y: 20, scale: 1, rotation: 0 },
+  rope: { show: true, x: 16, y: 20, scale: 1, rotation: 90 },
   registered: { show: true, x: 14, y: 36, scale: 1, rotation: -4 },
   needed: { show: true, x: 16, y: 54, scale: 1, rotation: 3 },
   waitlist: { show: true, x: 14, y: 72, scale: 1, rotation: -3 },

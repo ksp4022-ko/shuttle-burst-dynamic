@@ -351,7 +351,7 @@ export const previewDefaults: PreviewControls = {
   activeInfoRopeX: 16,
   activeInfoRopeY: 20,
   activeInfoRopeScale: 1,
-  activeInfoRopeRotation: 0,
+  activeInfoRopeRotation: 90,
   activeInfoRegisteredShow: true,
   activeInfoRegisteredX: 14,
   activeInfoRegisteredY: 36,
