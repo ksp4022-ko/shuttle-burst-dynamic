@@ -109,14 +109,11 @@ export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
 // the real Active page. 0 = no fade.
 export const v8ActiveBackgroundFadePercent = 45;
 
-// Overrides V8HeroComposition's default 390/890 stage aspect ratio (see
-// its stageAspectRatio prop) -- Opening needs the taller 890 canvas for its
-// own back-wave bleed, but Active doesn't, and with the roster panel now
-// living inside the existing artwork (see rosterListsContent) rather than
-// a separate box below it, the taller ratio just left blank space under
-// the last visible content. Tuned empirically against the roster panel's
-// own confirmed y:75/scale:1.14 position.
-export const v8ActiveStageAspectRatio = "390 / 650";
+// Matches V8HeroComposition's own default 390/890 stage aspect ratio (see
+// its stageAspectRatio prop) -- same taller canvas as Opening, per the
+// user's explicit request (2026-09-09), giving the roster panel's own
+// artwork more vertical room than the earlier 390/650 did.
+export const v8ActiveStageAspectRatio = "390 / 890";
 
 // Same dimming formula ActiveCanvas (the /v8/preview console) uses --
 // shared here so the real page and the console stay in sync instead of
