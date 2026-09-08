@@ -25,6 +25,7 @@ import { V8ActiveStyles, V8ActiveSunContent, V8IdentityScrollContent } from "@/c
 import { V8ActiveInfoCards } from "@/components/v8-active/V8ActiveInfoCards";
 import { buildV8ActiveAssets, type V8ActiveInfoCardsControls } from "@/components/v8-active/v8ActiveConfig";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
+import { v8HeroDefaults } from "@/components/v8-hero/v8HeroConfig";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 
 type DockPosition = "top" | "bottom";
@@ -167,12 +168,26 @@ function ActiveCanvas({
   // position applies unconditionally (real page: v8ActiveSunOverrides),
   // same as here.
   const isDragonFix = character === "dragon";
+  // Dims just the backdrop scenery layers (mountain/back wave/mid wave/
+  // front foam/gold-ink) -- computed off each layer's own v8HeroDefaults
+  // baseline since Active mode doesn't otherwise expose those opacities
+  // (Opening's own MOUNTAIN/BACK WAVE/etc. sliders write to the same
+  // shared controls fields, but ActiveCanvas never reads them into
+  // heroOverrides, so Active always rendered at the fixed default opacity
+  // regardless of what Opening's sliders showed). Sun/dragon/scroll/info
+  // cards/rope are untouched -- none of their opacities are touched here.
+  const backgroundFadeFactor = 1 - controls.activeBackgroundFade / 100;
   const heroOverrides = {
     sunX: controls.activeSunX,
     sunY: controls.activeSunY,
     sunScale: controls.activeSunScale,
     sunZIndex: controls.activeSunZIndex,
     sunTextScale: controls.activeSunTextScale,
+    mountainOpacity: v8HeroDefaults.mountainOpacity * backgroundFadeFactor,
+    backWaveOpacity: v8HeroDefaults.backWaveOpacity * backgroundFadeFactor,
+    midWaveOpacity: v8HeroDefaults.midWaveOpacity * backgroundFadeFactor,
+    frontFoamOpacity: v8HeroDefaults.frontFoamOpacity * backgroundFadeFactor,
+    goldInkOpacity: v8HeroDefaults.goldInkOpacity * backgroundFadeFactor,
     ...(isDragonFix
       ? {
           dragonShow: false,

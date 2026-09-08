@@ -132,6 +132,12 @@ export type PreviewControls = {
   activeInfoWaitlistY: number;
   activeInfoWaitlistScale: number;
   activeInfoWaitlistRotation: number;
+  // Active-only: one master dial that dims just the backdrop scenery layers
+  // (mountain/back wave/mid wave/front foam/gold-ink) so they read quieter
+  // behind the sun/dragon/scroll/info cards/rope while positioning those --
+  // none of those foreground layers are touched. 0 = no fade (scenery at
+  // its normal opacity), 100 = scenery fully faded out.
+  activeBackgroundFade: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -159,7 +165,8 @@ export type PreviewTargetId =
   | "ACTIVE INFO ROPE"
   | "ACTIVE INFO REGISTERED"
   | "ACTIVE INFO NEEDED"
-  | "ACTIVE INFO WAITLIST";
+  | "ACTIVE INFO WAITLIST"
+  | "ACTIVE BACKGROUND FADE";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -190,6 +197,7 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE INFO REGISTERED",
   "ACTIVE INFO NEEDED",
   "ACTIVE INFO WAITLIST",
+  "ACTIVE BACKGROUND FADE",
 ];
 
 // Kept for anything still importing the old flat name -- identical to
@@ -367,6 +375,7 @@ export const previewDefaults: PreviewControls = {
   activeInfoWaitlistY: 72,
   activeInfoWaitlistScale: 1,
   activeInfoWaitlistRotation: -3,
+  activeBackgroundFade: 0,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -414,6 +423,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeInfoWaitlistScale",
     "activeInfoWaitlistRotation",
   ],
+  "ACTIVE BACKGROUND FADE": ["activeBackgroundFade"],
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
@@ -548,6 +558,7 @@ export const controlRanges = {
   activeInfoWaitlistY: { label: "候補 Y %", min: -20, max: 140 },
   activeInfoWaitlistScale: { label: "候補 Scale", min: 0.2, max: 3, step: 0.01 },
   activeInfoWaitlistRotation: { label: "候補 Rotation", min: -180, max: 180 },
+  activeBackgroundFade: { label: "Background Fade %", min: 0, max: 100 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -726,4 +737,7 @@ Show: ${controls.activeInfoWaitlistShow ? "ON" : "OFF"}
 X: ${Math.round(controls.activeInfoWaitlistX)}
 Y: ${Math.round(controls.activeInfoWaitlistY)}
 Scale: ${controls.activeInfoWaitlistScale.toFixed(2)}
-Rotation: ${Math.round(controls.activeInfoWaitlistRotation)}`;
+Rotation: ${Math.round(controls.activeInfoWaitlistRotation)}
+
+ACTIVE BACKGROUND FADE
+Fade %: ${Math.round(controls.activeBackgroundFade)}`;
