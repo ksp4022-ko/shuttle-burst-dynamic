@@ -1,4 +1,4 @@
-import type { V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
+import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
 
 // All visual elements here are image-file-driven (PNG/SVG/WEBP), never
 // CSS-drawn shapes -- per the redesign brief, badge art must stay swappable
@@ -87,8 +87,8 @@ export function buildV8ActiveAssets(baseUrl: string) {
 // Rough/schematic placement -- the user tunes exact values via
 // /v8/preview's ACTIVE mode afterward.
 export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
-  sunX: 9,
-  sunY: 3,
+  sunX: 24,
+  sunY: 1,
   sunScale: 0.68,
   sunZIndex: 30,
   sunTextScale: 0.58,
@@ -104,6 +104,28 @@ export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
 // and bag/claw/tiger-rig layers entirely; tigerScrollShow takes over as the
 // one uniform personal-status display. Rough/schematic placement for now
 // (the user tunes exact values via /v8/preview's ACTIVE mode afterward).
+// Confirmed via /v8/preview's ACTIVE BACKGROUND FADE slider -- how much to
+// dim the backdrop scenery layers (cloud/mountain/wave/foam/gold-ink) on
+// the real Active page. 0 = no fade.
+export const v8ActiveBackgroundFadePercent = 45;
+
+// Same dimming formula ActiveCanvas (the /v8/preview console) uses --
+// shared here so the real page and the console stay in sync instead of
+// duplicating the per-layer opacity math. Sun/dragon/scroll/info cards/
+// rope/roster are untouched, only the backdrop scenery layers dim.
+export function v8ActiveBackgroundFadeOverrides(percent: number = v8ActiveBackgroundFadePercent): Partial<V8HeroControls> {
+  const factor = 1 - percent / 100;
+  return {
+    cloudOpacity: v8HeroDefaults.cloudOpacity * factor,
+    cloudBackOpacity: v8HeroDefaults.cloudBackOpacity * factor,
+    mountainOpacity: v8HeroDefaults.mountainOpacity * factor,
+    backWaveOpacity: v8HeroDefaults.backWaveOpacity * factor,
+    midWaveOpacity: v8HeroDefaults.midWaveOpacity * factor,
+    frontFoamOpacity: v8HeroDefaults.frontFoamOpacity * factor,
+    goldInkOpacity: v8HeroDefaults.goldInkOpacity * factor,
+  };
+}
+
 export const v8ActiveTigerScrollOverrides: Partial<V8HeroControls> = {
   dragonShow: false,
   bagBaseShow: false,
@@ -112,9 +134,9 @@ export const v8ActiveTigerScrollOverrides: Partial<V8HeroControls> = {
   tigerShow: false,
   tigerRacketShow: false,
   tigerScrollShow: true,
-  tigerScrollX: 69,
-  tigerScrollY: 31,
-  tigerScrollScale: 1.22,
+  tigerScrollX: 77,
+  tigerScrollY: 38,
+  tigerScrollScale: 1.74,
   tigerScrollRotation: 0,
 };
 
@@ -146,10 +168,10 @@ export type V8ActiveInfoCardsControls = {
 // to hang vertically; its baseWidth (see V8ActiveInfoCards.tsx) is tuned
 // as the rope's visual LENGTH post-rotation, not its rendered width.
 export const v8ActiveInfoCardsDefaults: V8ActiveInfoCardsControls = {
-  rope: { show: true, x: 16, y: 20, scale: 1, rotation: 90 },
-  registered: { show: true, x: 14, y: 36, scale: 1, rotation: -4 },
-  needed: { show: true, x: 16, y: 54, scale: 1, rotation: 3 },
-  waitlist: { show: true, x: 14, y: 72, scale: 1, rotation: -3 },
+  rope: { show: true, x: 30, y: 27, scale: 2.49, rotation: 9 },
+  registered: { show: true, x: 9, y: 33, scale: 1.97, rotation: 7 },
+  needed: { show: true, x: 19, y: 36, scale: 1.88, rotation: 6 },
+  waitlist: { show: true, x: 34, y: 37, scale: 1.83, rotation: -2 },
 };
 
 export const v8ActiveInfoCardsRanges: Record<
@@ -190,9 +212,9 @@ export type V8ActiveSunBadgesControls = {
 // exactly (fontSize:11 matches .v8-sun-info-scattered's old fixed 11px) --
 // this refactor only makes them tunable, not a visual change by default.
 export const v8ActiveSunBadgesDefaults: V8ActiveSunBadgesControls = {
-  ballType: { show: true, x: -75, y: -8, scale: 1, rotation: 0, fontSize: 11 },
-  tempFee: { show: true, x: 95, y: -12, scale: 1, rotation: 0, fontSize: 11 },
-  courtCount: { show: true, x: -65, y: 85, scale: 1, rotation: 0, fontSize: 11 },
+  ballType: { show: true, x: -5, y: 91, scale: 2.04, rotation: 0, fontSize: 11 },
+  tempFee: { show: true, x: 101, y: 60, scale: 1.72, rotation: -1, fontSize: 15 },
+  courtCount: { show: true, x: -46, y: 42, scale: 1.95, rotation: 0, fontSize: 11 },
 };
 
 export const v8ActiveSunBadgesRanges: Record<
@@ -249,16 +271,16 @@ export type V8ActiveRosterListsControls = {
 // with the artwork, this is purely a fine-tune nudge.
 export const v8ActiveRosterListsDefaults: V8ActiveRosterListsControls = {
   show: true,
-  x: 50,
-  y: 82,
-  scale: 1,
+  x: 51,
+  y: 75,
+  scale: 1.14,
   rotation: 0,
-  fontSize: 13,
-  lineHeight: 1.5,
-  textColor: "#20150d",
-  leave: { x: 0, y: 0 },
-  confirmed: { x: 0, y: 0 },
-  waiting: { x: 0, y: 0 },
+  fontSize: 14,
+  lineHeight: 1.1,
+  textColor: "#7a4a00",
+  leave: { x: 12, y: 1 },
+  confirmed: { x: 11, y: -21 },
+  waiting: { x: 15, y: 4 },
 };
 
 export const v8ActiveRosterListsRanges: Record<

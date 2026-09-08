@@ -6,6 +6,7 @@ import type { AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition, eyebrowStyle, titleStyle } from "@/components/v8-hero/V8HeroComposition";
 import {
   buildV8ActiveAssets,
+  v8ActiveBackgroundFadeOverrides,
   v8ActiveInfoCardsDefaults,
   v8ActiveRosterListsDefaults,
   v8ActiveSunBadgesDefaults,
@@ -101,6 +102,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const heroOverrides = {
     ...v8ActiveSunOverrides,
     ...v8ActiveTigerScrollOverrides,
+    ...v8ActiveBackgroundFadeOverrides(),
   };
 
   const rosterConfirmed: V8ActiveRosterPerson[] = confirmed.map((person) => ({ id: person.id, name: person.name }));

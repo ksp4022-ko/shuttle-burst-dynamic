@@ -26,12 +26,12 @@ import { V8ActiveInfoCards } from "@/components/v8-active/V8ActiveInfoCards";
 import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "@/components/v8-active/V8ActiveRosterLists";
 import {
   buildV8ActiveAssets,
+  v8ActiveBackgroundFadeOverrides,
   type V8ActiveInfoCardsControls,
   type V8ActiveRosterListsControls,
   type V8ActiveSunBadgesControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
-import { v8HeroDefaults } from "@/components/v8-hero/v8HeroConfig";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 
 const mockRosterConfirmed: V8ActiveRosterPerson[] = [
@@ -226,31 +226,17 @@ function ActiveCanvas({
   // layout below, which remains identity-specific.
   const isDragonFix = character === "dragon";
   // Dims just the backdrop scenery layers (cloud/mountain/back wave/mid
-  // wave/front foam/gold-ink) -- computed off each layer's own
-  // v8HeroDefaults baseline since Active mode doesn't otherwise expose
-  // those opacities (Opening's own MOUNTAIN/BACK WAVE/etc. sliders write to
-  // the same shared controls fields, but ActiveCanvas never reads them into
-  // heroOverrides, so Active always rendered at the fixed default opacity
-  // regardless of what Opening's sliders showed). Sun/dragon/scroll/info
-  // cards/rope are untouched -- none of their opacities are touched here.
-  // cloud/cloudBack were originally left out entirely (their opacity was
-  // hardcoded at the render site, driven only by the drift animation) --
-  // now that v8HeroConfig exposes cloudOpacity/cloudBackOpacity, they fade
-  // along with the rest instead of staying fixed.
-  const backgroundFadeFactor = 1 - controls.activeBackgroundFade / 100;
+  // wave/front foam/gold-ink) -- same formula the real page now uses (see
+  // v8ActiveBackgroundFadeOverrides in v8ActiveConfig.ts), just fed this
+  // slider's live value instead of the confirmed fixed percent. Sun/dragon/
+  // scroll/info cards/rope/roster are untouched.
   const heroOverrides = {
     sunX: controls.activeSunX,
     sunY: controls.activeSunY,
     sunScale: controls.activeSunScale,
     sunZIndex: controls.activeSunZIndex,
     sunTextScale: controls.activeSunTextScale,
-    cloudOpacity: v8HeroDefaults.cloudOpacity * backgroundFadeFactor,
-    cloudBackOpacity: v8HeroDefaults.cloudBackOpacity * backgroundFadeFactor,
-    mountainOpacity: v8HeroDefaults.mountainOpacity * backgroundFadeFactor,
-    backWaveOpacity: v8HeroDefaults.backWaveOpacity * backgroundFadeFactor,
-    midWaveOpacity: v8HeroDefaults.midWaveOpacity * backgroundFadeFactor,
-    frontFoamOpacity: v8HeroDefaults.frontFoamOpacity * backgroundFadeFactor,
-    goldInkOpacity: v8HeroDefaults.goldInkOpacity * backgroundFadeFactor,
+    ...v8ActiveBackgroundFadeOverrides(controls.activeBackgroundFade),
     dragonShow: false,
     bagBaseShow: false,
     bagStrapShow: false,
