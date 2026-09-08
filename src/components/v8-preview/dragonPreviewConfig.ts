@@ -682,7 +682,7 @@ export const controlRanges = {
   activeSunBadgeCourtCountRotation: { label: "場地數 Rotation", min: -180, max: 180 },
   activeSunBadgeCourtCountFontSize: { label: "場地數 Font Size", min: 6, max: 28 },
   activeRosterListsX: { label: "Roster X %", min: -20, max: 120 },
-  activeRosterListsY: { label: "Roster Y %", min: 0, max: 150 },
+  activeRosterListsY: { label: "Roster Y %", min: -150, max: 150 },
   activeRosterListsScale: { label: "Roster Scale", min: 0.3, max: 2, step: 0.01 },
   activeRosterListsRotation: { label: "Roster Rotation", min: -45, max: 45 },
   activeRosterListsFontSize: { label: "Roster Font Size", min: 8, max: 24 },

@@ -758,9 +758,16 @@ export function V8ActiveStyles() {
          (see v8ActiveRosterListsDefaults) -- a fixed height rather than
          one tiered by roster count, since the panel's own size is fixed
          and scrolls internally instead of growing. The user tunes the
-         exact height/position via /v8/preview afterward. */
+         exact height/position via /v8/preview afterward. z-index:13 (one
+         above .sd-v8-hero-composition's own 12) so a negative Y -- pulling
+         the panel up to overlap the hero canvas's lower wave/dragon area,
+         per the user's mockup -- doesn't get painted over by the hero's
+         own z-index:12 decorative layers (confirmed via computed-style
+         inspection: without this, the hero's wave/cloud layers sat above
+         this stage despite coming earlier in the DOM). */
       .v8-active-roster-stage {
         position: relative;
+        z-index: 13;
         width: 100%;
         height: 480px;
       }

@@ -247,7 +247,7 @@ export const v8ActiveRosterListsRanges: Record<
   { label: string; min: number; max: number; step?: number }
 > = {
   x: { label: "X %", min: -20, max: 120 },
-  y: { label: "Y %", min: 0, max: 150 },
+  y: { label: "Y %", min: -150, max: 150 },
   scale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
   rotation: { label: "Rotation", min: -45, max: 45 },
   fontSize: { label: "List Font Size", min: 8, max: 24 },
