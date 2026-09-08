@@ -132,6 +132,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             eventDate={selectedEvent.eventDate}
             eventName={selectedEvent.name}
             courtCount={selectedEvent.courtCount}
+            hours={selectedEvent.hours}
             ballType={selectedEvent.ballType}
             tempFee={selectedEvent.tempFee}
             scattered={isDragonFix}
@@ -292,6 +293,7 @@ export function V8ActiveSunContent({
   eventDate,
   eventName,
   courtCount,
+  hours,
   ballType,
   tempFee,
   scattered = false,
@@ -301,6 +303,7 @@ export function V8ActiveSunContent({
   eventDate: string;
   eventName: string;
   courtCount?: number | null | undefined;
+  hours?: number | null | undefined;
   ballType?: string | null | undefined;
   tempFee?: number | null | undefined;
   // When true, badges scatter individually around the sun (the B_fix
@@ -308,11 +311,11 @@ export function V8ActiveSunContent({
   scattered?: boolean;
   badgeControls?: V8ActiveSunBadgesControls;
 }) {
-  const badges = [
-    ballType ? ballType : null,
-    `$${Number(tempFee || 0)}`,
-    courtCount ? `${courtCount} 片場地` : null,
-  ];
+  // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label per the
+  // user's exact spec (courtCount:2, hours:3 -> "2場/3hr") -- courtCount
+  // alone if hours isn't set, rather than showing a dangling "/undefinedhr".
+  const courtTimeLabel = courtCount ? (hours ? `${courtCount}場/${hours}hr` : `${courtCount}場`) : null;
+  const badges = [ballType ? ballType : null, `$${Number(tempFee || 0)}`, courtTimeLabel];
 
   return (
     <>
@@ -330,10 +333,10 @@ export function V8ActiveSunContent({
             label={`$${Number(tempFee || 0)}`}
             controls={badgeControls.tempFee}
           />
-          {courtCount ? (
+          {courtTimeLabel ? (
             <V8SunInfoBadgeScattered
               src={assets.sunBadgeCourtCount}
-              label={`${courtCount} 片場地`}
+              label={courtTimeLabel}
               controls={badgeControls.courtCount}
             />
           ) : null}

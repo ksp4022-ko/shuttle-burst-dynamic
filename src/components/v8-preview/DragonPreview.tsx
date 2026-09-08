@@ -357,6 +357,7 @@ function ActiveCanvas({
             eventDate="2026-09-10"
             eventName="康軒(預覽資料)"
             courtCount={2}
+            hours={3}
             ballType="MS 101"
             tempFee={245}
             scattered={isDragonFix}
