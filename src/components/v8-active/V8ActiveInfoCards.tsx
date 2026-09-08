@@ -55,11 +55,13 @@ function InfoCardStatusLayer({
   controls,
   baseWidth,
   count,
+  fontSize,
 }: {
   src: string;
   controls: V8ActiveInfoCardControls;
   baseWidth: number;
   count: number;
+  fontSize: number;
 }) {
   if (!controls.show) return null;
   return (
@@ -76,6 +78,10 @@ function InfoCardStatusLayer({
       }
     >
       <img src={src} alt="" aria-hidden="true" draggable={false} style={{ display: "block", width: "100%", height: "auto" }} />
+      {/* Nested inside the same wrapper as the <img>, which carries the
+          rotate() transform above -- so the count text rotates together
+          with the plaque instead of staying upright, per the user's
+          request. */}
       <span
         style={
           {
@@ -85,7 +91,7 @@ function InfoCardStatusLayer({
             justifyContent: "center",
             fontWeight: 800,
             color: "#7a2a12",
-            fontSize: "1.4em",
+            fontSize: `${fontSize}px`,
             ...COUNT_INSET,
           } as CSSProperties
         }
@@ -121,9 +127,27 @@ export function V8ActiveInfoCards({
           baseWidth here is that pre-rotation width, i.e. the rope's visual
           LENGTH once rotated, not its rendered width. */}
       <InfoCardLayer src={assets.infoRope} controls={controls.rope} baseWidth={26} />
-      <InfoCardStatusLayer src={assets.infoCardRegistered} controls={controls.registered} baseWidth={15} count={counts.registered} />
-      <InfoCardStatusLayer src={assets.infoCardNeeded} controls={controls.needed} baseWidth={15} count={counts.needed} />
-      <InfoCardStatusLayer src={assets.infoCardWaitlist} controls={controls.waitlist} baseWidth={15} count={counts.waiting} />
+      <InfoCardStatusLayer
+        src={assets.infoCardRegistered}
+        controls={controls.registered}
+        baseWidth={15}
+        count={counts.registered}
+        fontSize={controls.countFontSize}
+      />
+      <InfoCardStatusLayer
+        src={assets.infoCardNeeded}
+        controls={controls.needed}
+        baseWidth={15}
+        count={counts.needed}
+        fontSize={controls.countFontSize}
+      />
+      <InfoCardStatusLayer
+        src={assets.infoCardWaitlist}
+        controls={controls.waitlist}
+        baseWidth={15}
+        count={counts.waiting}
+        fontSize={controls.countFontSize}
+      />
     </>
   );
 }

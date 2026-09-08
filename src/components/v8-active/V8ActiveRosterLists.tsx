@@ -86,6 +86,8 @@ export function V8ActiveRosterLists({
           fontSize: controls.fontSize,
           lineHeight: controls.lineHeight,
           color: controls.textColor,
+          ...(controls.fontFamily ? { fontFamily: controls.fontFamily } : {}),
+          fontWeight: controls.bold ? 700 : 400,
         } as CSSProperties
       }
     >

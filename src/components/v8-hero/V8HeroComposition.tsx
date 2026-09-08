@@ -60,6 +60,15 @@ type V8HeroCompositionProps = {
   // it -- both problems the user hit go away once it's part of this same
   // box instead of bolted on below it).
   rosterListsContent?: ReactNode | undefined;
+  // Overrides stageStyle's default 390/890 aspect ratio. The Opening reveal
+  // needs the taller 890 canvas (its own back-wave art bleeds down to
+  // y=890), but the Active page has no such requirement -- with a roster
+  // panel now tuned to sit inside the existing artwork rather than in a
+  // separate box below it (see rosterListsContent above), the default
+  // ratio just left a large flat-cornered blank gap under the last visible
+  // content before the box's own bottom edge. Active passes a shorter
+  // ratio so the box ends closer to where the artwork actually stops.
+  stageAspectRatio?: string | undefined;
 };
 
 // Deliberately does NOT call image.decode() here -- decode() can stall
@@ -255,6 +264,7 @@ export function V8HeroComposition({
   sunContent,
   infoCardsContent,
   rosterListsContent,
+  stageAspectRatio,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
   const [assetsReady, setAssetsReady] = useState(false);
@@ -278,7 +288,7 @@ export function V8HeroComposition({
     <section className="sd-v8-hero-composition" aria-label="V8 聚會選擇" style={rootStyle}>
       <V8HeroAmbientStyles />
       <div style={stageShellStyle}>
-        <div style={stageStyle}>
+        <div style={stageAspectRatio ? { ...stageStyle, aspectRatio: stageAspectRatio } : stageStyle}>
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
             <div style={paperStyle} />
             <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />

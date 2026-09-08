@@ -133,6 +133,9 @@ export type PreviewControls = {
   activeInfoWaitlistY: number;
   activeInfoWaitlistScale: number;
   activeInfoWaitlistRotation: number;
+  // Shared across all three plaques' number overlay -- see
+  // v8ActiveInfoCardsControls.countFontSize in v8ActiveConfig.ts.
+  activeInfoCountFontSize: number;
   // Active-only: one master dial that dims just the backdrop scenery layers
   // (mountain/back wave/mid wave/front foam/gold-ink) so they read quieter
   // behind the sun/dragon/scroll/info cards/rope while positioning those --
@@ -171,6 +174,10 @@ export type PreviewControls = {
   activeRosterListsFontSize: number;
   activeRosterListsLineHeight: number;
   activeRosterListsTextColor: string;
+  // "" inherits the page's default font. See v8ActiveRosterFontOptions in
+  // v8ActiveConfig.ts for the named alternatives this offers.
+  activeRosterListsFontFamily: string;
+  activeRosterListsBold: boolean;
   // Independent x/y nudge (px) for each panel's own text block, layered on
   // top of the image-measured baseline inset -- lets each of the three
   // lists (季打請假/正取名單/備取名單) be fine-tuned separately instead of
@@ -426,6 +433,7 @@ export const previewDefaults: PreviewControls = {
   activeInfoWaitlistY: 37,
   activeInfoWaitlistScale: 1.83,
   activeInfoWaitlistRotation: -2,
+  activeInfoCountFontSize: 20,
   activeBackgroundFade: 45,
   // Matches v8ActiveSunBadgesDefaults in v8ActiveConfig.ts exactly.
   activeSunBadgeBallTypeShow: true,
@@ -454,6 +462,8 @@ export const previewDefaults: PreviewControls = {
   activeRosterListsFontSize: 14,
   activeRosterListsLineHeight: 1.1,
   activeRosterListsTextColor: "#7a4a00",
+  activeRosterListsFontFamily: "",
+  activeRosterListsBold: false,
   activeRosterListsLeaveX: 12,
   activeRosterListsLeaveY: 1,
   activeRosterListsConfirmedX: 11,
@@ -492,6 +502,9 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeInfoRegisteredY",
     "activeInfoRegisteredScale",
     "activeInfoRegisteredRotation",
+    // Shared across all three plaques (not just 已報) -- lives here since
+    // this is the first of the three tabs.
+    "activeInfoCountFontSize",
   ],
   "ACTIVE INFO NEEDED": [
     "activeInfoNeededShow",
@@ -541,6 +554,8 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRosterListsFontSize",
     "activeRosterListsLineHeight",
     "activeRosterListsTextColor",
+    "activeRosterListsFontFamily",
+    "activeRosterListsBold",
     "activeRosterListsLeaveX",
     "activeRosterListsLeaveY",
     "activeRosterListsConfirmedX",
@@ -678,6 +693,7 @@ export const controlRanges = {
   activeInfoRegisteredY: { label: "已報 Y %", min: -20, max: 140 },
   activeInfoRegisteredScale: { label: "已報 Scale", min: 0.2, max: 3, step: 0.01 },
   activeInfoRegisteredRotation: { label: "已報 Rotation", min: -180, max: 180 },
+  activeInfoCountFontSize: { label: "繪馬數字 Font Size", min: 10, max: 40 },
   activeInfoNeededX: { label: "尚缺 X %", min: -20, max: 120 },
   activeInfoNeededY: { label: "尚缺 Y %", min: -20, max: 140 },
   activeInfoNeededScale: { label: "尚缺 Scale", min: 0.2, max: 3, step: 0.01 },
@@ -879,6 +895,7 @@ X: ${Math.round(controls.activeInfoRegisteredX)}
 Y: ${Math.round(controls.activeInfoRegisteredY)}
 Scale: ${controls.activeInfoRegisteredScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeInfoRegisteredRotation)}
+Count Font Size (all 3 plaques): ${Math.round(controls.activeInfoCountFontSize)}
 
 ACTIVE INFO NEEDED (尚缺)
 Show: ${controls.activeInfoNeededShow ? "ON" : "OFF"}
@@ -930,6 +947,8 @@ Rotation: ${Math.round(controls.activeRosterListsRotation)}
 Font Size: ${Math.round(controls.activeRosterListsFontSize)}
 Line Height: ${controls.activeRosterListsLineHeight.toFixed(2)}
 Text Color: ${controls.activeRosterListsTextColor}
+Font Family: ${controls.activeRosterListsFontFamily || "(default)"}
+Bold: ${controls.activeRosterListsBold ? "ON" : "OFF"}
 季打請假 Offset: ${Math.round(controls.activeRosterListsLeaveX)}, ${Math.round(controls.activeRosterListsLeaveY)}
 正取名單 Offset: ${Math.round(controls.activeRosterListsConfirmedX)}, ${Math.round(controls.activeRosterListsConfirmedY)}
 備取名單 Offset: ${Math.round(controls.activeRosterListsWaitingX)}, ${Math.round(controls.activeRosterListsWaitingY)}`;

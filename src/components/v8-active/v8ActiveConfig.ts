@@ -109,6 +109,15 @@ export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
 // the real Active page. 0 = no fade.
 export const v8ActiveBackgroundFadePercent = 45;
 
+// Overrides V8HeroComposition's default 390/890 stage aspect ratio (see
+// its stageAspectRatio prop) -- Opening needs the taller 890 canvas for its
+// own back-wave bleed, but Active doesn't, and with the roster panel now
+// living inside the existing artwork (see rosterListsContent) rather than
+// a separate box below it, the taller ratio just left blank space under
+// the last visible content. Tuned empirically against the roster panel's
+// own confirmed y:75/scale:1.14 position.
+export const v8ActiveStageAspectRatio = "390 / 650";
+
 // Same dimming formula ActiveCanvas (the /v8/preview console) uses --
 // shared here so the real page and the console stay in sync instead of
 // duplicating the per-layer opacity math. Sun/dragon/scroll/info cards/
@@ -158,6 +167,12 @@ export type V8ActiveInfoCardsControls = {
   registered: V8ActiveInfoCardControls;
   needed: V8ActiveInfoCardControls;
   waitlist: V8ActiveInfoCardControls;
+  // Shared across all three plaques' number overlay (registered/needed/
+  // waitlist) -- kept simple per the user's request (just size, no
+  // separate per-plaque color/position: the number is already centered in
+  // the plaque's blank area and rotates with it automatically since it's
+  // a child of the same rotated wrapper).
+  countFontSize: number;
 };
 
 // Rough/schematic starting placement -- left of the dragon (which sits
@@ -172,6 +187,7 @@ export const v8ActiveInfoCardsDefaults: V8ActiveInfoCardsControls = {
   registered: { show: true, x: 9, y: 33, scale: 1.97, rotation: 7 },
   needed: { show: true, x: 19, y: 36, scale: 1.88, rotation: 6 },
   waitlist: { show: true, x: 34, y: 37, scale: 1.83, rotation: -2 },
+  countFontSize: 20,
 };
 
 export const v8ActiveInfoCardsRanges: Record<
@@ -184,6 +200,8 @@ export const v8ActiveInfoCardsRanges: Record<
   scale: { label: "Scale", min: 0.2, max: 3, step: 0.01 },
   rotation: { label: "Rotation", min: -180, max: 180 },
 };
+
+export const v8ActiveInfoCardsCountFontSizeRange = { label: "Count Font Size", min: 10, max: 40 } as const;
 
 // The three scattered sun badges (球種/費用/場地數) -- x/y are % of the
 // sun's own box, same as SCATTERED_BADGE_POSITIONS used to be (no
@@ -254,10 +272,22 @@ export type V8ActiveRosterListsControls = {
   fontSize: number;
   lineHeight: number;
   textColor: string;
+  // "" inherits the page's default font (Noto Sans TC). Named brush/
+  // calligraphy alternatives are loaded in __root.tsx's Google Fonts link
+  // specifically so this control has real options to preview -- separate
+  // from (and not pre-empting) the still-undecided sitewide font question.
+  fontFamily: string;
+  bold: boolean;
   leave: V8ActiveRosterPanelOffset;
   confirmed: V8ActiveRosterPanelOffset;
   waiting: V8ActiveRosterPanelOffset;
 };
+
+export const v8ActiveRosterFontOptions = [
+  { label: "預設(思源黑體)", value: "" },
+  { label: "書法(馬善政毛筆行書)", value: "'Ma Shan Zheng', cursive" },
+  { label: "行書(志莽行書)", value: "'Zhi Mang Xing', cursive" },
+] as const;
 
 // Rendered via V8HeroComposition's rosterListsContent prop (same coordinate
 // space as sunX/infoCardX -- % of the hero canvas's own stage box, not a
@@ -278,13 +308,15 @@ export const v8ActiveRosterListsDefaults: V8ActiveRosterListsControls = {
   fontSize: 14,
   lineHeight: 1.1,
   textColor: "#7a4a00",
+  fontFamily: "",
+  bold: false,
   leave: { x: 12, y: 1 },
   confirmed: { x: 11, y: -21 },
   waiting: { x: 15, y: 4 },
 };
 
 export const v8ActiveRosterListsRanges: Record<
-  Exclude<keyof V8ActiveRosterListsControls, "show" | "textColor" | "leave" | "confirmed" | "waiting">,
+  Exclude<keyof V8ActiveRosterListsControls, "show" | "textColor" | "fontFamily" | "bold" | "leave" | "confirmed" | "waiting">,
   { label: string; min: number; max: number; step?: number }
 > = {
   x: { label: "X %", min: -20, max: 120 },

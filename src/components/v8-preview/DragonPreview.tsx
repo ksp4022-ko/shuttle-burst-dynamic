@@ -27,6 +27,8 @@ import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "@/components/v8-
 import {
   buildV8ActiveAssets,
   v8ActiveBackgroundFadeOverrides,
+  v8ActiveRosterFontOptions,
+  v8ActiveStageAspectRatio,
   type V8ActiveInfoCardsControls,
   type V8ActiveRosterListsControls,
   type V8ActiveSunBadgesControls,
@@ -285,6 +287,7 @@ function ActiveCanvas({
       scale: controls.activeInfoWaitlistScale,
       rotation: controls.activeInfoWaitlistRotation,
     },
+    countFontSize: controls.activeInfoCountFontSize,
   };
 
   const rosterListsControls: V8ActiveRosterListsControls = {
@@ -296,6 +299,8 @@ function ActiveCanvas({
     fontSize: controls.activeRosterListsFontSize,
     lineHeight: controls.activeRosterListsLineHeight,
     textColor: controls.activeRosterListsTextColor,
+    fontFamily: controls.activeRosterListsFontFamily,
+    bold: controls.activeRosterListsBold,
     leave: { x: controls.activeRosterListsLeaveX, y: controls.activeRosterListsLeaveY },
     confirmed: { x: controls.activeRosterListsConfirmedX, y: controls.activeRosterListsConfirmedY },
     waiting: { x: controls.activeRosterListsWaitingX, y: controls.activeRosterListsWaitingY },
@@ -343,6 +348,7 @@ function ActiveCanvas({
       <V8HeroComposition
         confirmed
         controlOverrides={heroOverrides}
+        stageAspectRatio={v8ActiveStageAspectRatio}
         sunContent={
           <V8ActiveSunContent
             assets={assets}
@@ -892,15 +898,38 @@ export function DragonPreview() {
               />
             ))}
             {selectedTarget === "ACTIVE ROSTER LISTS" ? (
-              <label style={inlineSelectLabelStyle}>
-                TEXT COLOR
-                <input
-                  type="color"
-                  value={controls.activeRosterListsTextColor}
-                  onChange={(event) => update("activeRosterListsTextColor", event.currentTarget.value)}
-                  style={compactSelectStyle}
-                />
-              </label>
+              <>
+                <label style={inlineSelectLabelStyle}>
+                  TEXT COLOR
+                  <input
+                    type="color"
+                    value={controls.activeRosterListsTextColor}
+                    onChange={(event) => update("activeRosterListsTextColor", event.currentTarget.value)}
+                    style={compactSelectStyle}
+                  />
+                </label>
+                <label style={inlineSelectLabelStyle}>
+                  FONT
+                  <select
+                    value={controls.activeRosterListsFontFamily}
+                    onChange={(event) => update("activeRosterListsFontFamily", event.currentTarget.value)}
+                    style={compactSelectStyle}
+                  >
+                    {v8ActiveRosterFontOptions.map((option) => (
+                      <option key={option.label} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => update("activeRosterListsBold", !controls.activeRosterListsBold)}
+                  style={smallButtonStyle}
+                >
+                  {controls.activeRosterListsBold ? "Bold ON" : "Bold OFF"}
+                </button>
+              </>
             ) : null}
           </div>
           <button type="button" onClick={() => setMoreOpen((current) => !current)} style={moreToggleStyle}>

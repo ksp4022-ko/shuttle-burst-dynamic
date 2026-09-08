@@ -9,6 +9,7 @@ import {
   v8ActiveBackgroundFadeOverrides,
   v8ActiveInfoCardsDefaults,
   v8ActiveRosterListsDefaults,
+  v8ActiveStageAspectRatio,
   v8ActiveSunBadgesDefaults,
   v8ActiveSunOverrides,
   v8ActiveTigerScrollOverrides,
@@ -128,6 +129,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
       <V8HeroComposition
         confirmed
         controlOverrides={heroOverrides}
+        stageAspectRatio={v8ActiveStageAspectRatio}
         sunContent={
           <V8ActiveSunContent
             assets={assets}
@@ -582,6 +584,9 @@ export function V8ActiveStyles() {
         font-weight: 700;
         white-space: nowrap;
         padding: 0 10px;
+        /* Matches the ema plaques' number color (#7a2a12) per the user's
+           request to keep both sets of overlay text visually consistent. */
+        color: #7a2a12;
       }
 
       .v8-active-identity {
