@@ -614,11 +614,6 @@ export function V8ActiveStyles() {
         background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
       }
 
-      .v8-active[data-identity="known"] .v8-active-content {
-        min-height: calc(env(safe-area-inset-bottom) + 148px);
-        padding-bottom: calc(env(safe-area-inset-bottom) + 148px);
-      }
-
       .v8-active-sun-title {
         position: absolute;
         inset: 8%;

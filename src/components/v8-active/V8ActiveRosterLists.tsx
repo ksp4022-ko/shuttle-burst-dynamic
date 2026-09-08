@@ -8,9 +8,23 @@ export type V8ActiveRosterPerson = { id: string; name: string };
 // tiger-scroll panel) -- three separate blank areas inside one wide image:
 // a narrower panel on each side (季打請假 left / 備取名單 right) flanking
 // a wider center panel (正取名單).
+//
+// confirmed's top/bottom were re-measured 2026-09-09 (real canvas pixel
+// scan of the production image, several x-columns across the panel's
+// width) after the user reported the panel visibly cutting off names that
+// should fit -- the ORIGINAL top:54%/bottom:27% had just been copied from
+// leave/waiting (which measure correctly, ~54%/~73%), but confirmed is
+// the widest panel and its actual blank cream rectangle in the artwork
+// runs from ~46% to ~80% of the image height, not 54%-73%. Kept a couple
+// points conservative (46%/75% instead of the full 44%-81% some columns
+// scanned) since one sample column (~65% across, near the panel's right
+// edge) showed a decorative element dipping into the blank area a little
+// earlier than the rest -- this stays safely inside cream for the whole
+// panel width instead of risking text under the right column overlapping
+// artwork.
 const PANEL_INSETS = {
   leave: { top: "54%", bottom: "27%", left: "8%", right: "72%" },
-  confirmed: { top: "54%", bottom: "27%", left: "31%", right: "31%" },
+  confirmed: { top: "46%", bottom: "25%", left: "31%", right: "31%" },
   waiting: { top: "54%", bottom: "27%", left: "73%", right: "7%" },
 } as const;
 
