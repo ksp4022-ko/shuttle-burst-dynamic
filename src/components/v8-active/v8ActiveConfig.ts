@@ -12,6 +12,21 @@ export const v8ActiveAssetFiles = {
   sunInfoBadge: "sun-info-badge-v2.webp",
 } as const;
 
+// The three status plaques (已報/尚缺/候補) -- each generated separately so
+// their content isn't the same size within its own canvas (尚缺 in
+// particular draws noticeably smaller); normalized to a common 711x800
+// canvas (letterbox padding, not stretched, bottom-aligned on the tassel so
+// that stays the shared visual anchor) before export, same convention as
+// the earlier token art. rope-red-blue-v1 is a placeholder (a plain SVG
+// line) until the user supplies real rope art -- swap the file, no code
+// changes needed.
+export const v8ActiveInfoCardFiles = {
+  registered: "plaque-registered-v1.webp",
+  needed: "plaque-needed-v1.webp",
+  waitlist: "plaque-waitlist-v1.webp",
+  rope: "rope-red-blue-v1.svg",
+} as const;
+
 // Dragon (season/fixed) pairs with a sea backdrop, Tiger (casual/temp) pairs
 // with a mountain backdrop -- reuses the existing locked ukiyo-e assets
 // rather than new placeholder art, since these already exist.
@@ -34,6 +49,10 @@ export function buildV8ActiveAssets(baseUrl: string) {
     tigerMountain: `${displayBase}/${v8ActiveBackgroundFiles.tigerMountain}`,
     dragon: `${displayBase}/${v8ActiveCharacterFiles.dragon}`,
     tiger: `${displayBase}/${v8ActiveCharacterFiles.tiger}`,
+    infoCardRegistered: `${activeBase}/${v8ActiveInfoCardFiles.registered}`,
+    infoCardNeeded: `${activeBase}/${v8ActiveInfoCardFiles.needed}`,
+    infoCardWaitlist: `${activeBase}/${v8ActiveInfoCardFiles.waitlist}`,
+    infoRope: `${activeBase}/${v8ActiveInfoCardFiles.rope}`,
   };
 }
 
@@ -75,5 +94,46 @@ export const v8ActiveDragonHeroOverrides: Partial<V8HeroControls> = {
   dragonScrollY: 31,
   dragonScrollScale: 1.22,
   dragonScrollRotation: 0,
+};
+
+// Each of the three status plaques (已報/尚缺/候補) plus the shared rope is
+// independently positioned -- x/y are %, matching sunX/dragonScrollX's
+// convention (percent of the hero canvas's own box, anchor centered via
+// translate(-50%,-50%) at render time), scale multiplies each object's own
+// base width, rotation in degrees, show toggles visibility.
+export type V8ActiveInfoCardControls = {
+  show: boolean;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+};
+
+export type V8ActiveInfoCardsControls = {
+  rope: V8ActiveInfoCardControls;
+  registered: V8ActiveInfoCardControls;
+  needed: V8ActiveInfoCardControls;
+  waitlist: V8ActiveInfoCardControls;
+};
+
+// Rough/schematic starting placement -- left of the dragon (which sits
+// around dragonScrollX:69, well to the right), stacked below the sun (sun
+// sits near sunY:3, small). The user tunes exact values via /v8/preview.
+export const v8ActiveInfoCardsDefaults: V8ActiveInfoCardsControls = {
+  rope: { show: true, x: 16, y: 20, scale: 1, rotation: 0 },
+  registered: { show: true, x: 14, y: 36, scale: 1, rotation: -4 },
+  needed: { show: true, x: 16, y: 54, scale: 1, rotation: 3 },
+  waitlist: { show: true, x: 14, y: 72, scale: 1, rotation: -3 },
+};
+
+export const v8ActiveInfoCardsRanges: Record<
+  keyof V8ActiveInfoCardControls,
+  { label: string; min: number; max: number; step?: number }
+> = {
+  show: { label: "Show", min: 0, max: 1 },
+  x: { label: "X %", min: -20, max: 120 },
+  y: { label: "Y %", min: -20, max: 140 },
+  scale: { label: "Scale", min: 0.2, max: 3, step: 0.01 },
+  rotation: { label: "Rotation", min: -180, max: 180 },
 };
 

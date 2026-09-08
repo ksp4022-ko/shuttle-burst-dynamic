@@ -22,7 +22,8 @@ import {
 } from "./dragonPreviewConfig";
 import type { HudOpacityMode, PreviewControls, PreviewMode, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
 import { V8ActiveStyles, V8ActiveSunContent, V8IdentityScrollContent } from "@/components/v8-active/V8ActivePage";
-import { buildV8ActiveAssets } from "@/components/v8-active/v8ActiveConfig";
+import { V8ActiveInfoCards } from "@/components/v8-active/V8ActiveInfoCards";
+import { buildV8ActiveAssets, type V8ActiveInfoCardsControls } from "@/components/v8-active/v8ActiveConfig";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 
@@ -195,6 +196,37 @@ function ActiveCanvas({
     status: "confirmed",
   };
 
+  const infoCardsControls: V8ActiveInfoCardsControls = {
+    rope: {
+      show: controls.activeInfoRopeShow,
+      x: controls.activeInfoRopeX,
+      y: controls.activeInfoRopeY,
+      scale: controls.activeInfoRopeScale,
+      rotation: controls.activeInfoRopeRotation,
+    },
+    registered: {
+      show: controls.activeInfoRegisteredShow,
+      x: controls.activeInfoRegisteredX,
+      y: controls.activeInfoRegisteredY,
+      scale: controls.activeInfoRegisteredScale,
+      rotation: controls.activeInfoRegisteredRotation,
+    },
+    needed: {
+      show: controls.activeInfoNeededShow,
+      x: controls.activeInfoNeededX,
+      y: controls.activeInfoNeededY,
+      scale: controls.activeInfoNeededScale,
+      rotation: controls.activeInfoNeededRotation,
+    },
+    waitlist: {
+      show: controls.activeInfoWaitlistShow,
+      x: controls.activeInfoWaitlistX,
+      y: controls.activeInfoWaitlistY,
+      scale: controls.activeInfoWaitlistScale,
+      rotation: controls.activeInfoWaitlistRotation,
+    },
+  };
+
   return (
     <div className="v8-active" style={{ position: "relative", width: "100%" } as CSSProperties}>
       <V8ActiveStyles />
@@ -232,6 +264,7 @@ function ActiveCanvas({
             />
           ) : undefined
         }
+        infoCardsContent={<V8ActiveInfoCards assets={assets} controls={infoCardsControls} />}
       />
     </div>
   );

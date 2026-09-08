@@ -109,6 +109,29 @@ export type PreviewControls = {
   activeDragonScrollY: number;
   activeDragonScrollScale: number;
   activeDragonScrollRotation: number;
+  // Active-only: the three status plaques (已報/尚缺/候補) + their shared
+  // rope, left of the dragon below the sun -- each independently
+  // show/size/position/rotation-controlled (see V8ActiveInfoCards).
+  activeInfoRopeShow: boolean;
+  activeInfoRopeX: number;
+  activeInfoRopeY: number;
+  activeInfoRopeScale: number;
+  activeInfoRopeRotation: number;
+  activeInfoRegisteredShow: boolean;
+  activeInfoRegisteredX: number;
+  activeInfoRegisteredY: number;
+  activeInfoRegisteredScale: number;
+  activeInfoRegisteredRotation: number;
+  activeInfoNeededShow: boolean;
+  activeInfoNeededX: number;
+  activeInfoNeededY: number;
+  activeInfoNeededScale: number;
+  activeInfoNeededRotation: number;
+  activeInfoWaitlistShow: boolean;
+  activeInfoWaitlistX: number;
+  activeInfoWaitlistY: number;
+  activeInfoWaitlistScale: number;
+  activeInfoWaitlistRotation: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -132,7 +155,11 @@ export type PreviewTargetId =
   | "FRONT FOAM"
   | "GOLD / INK"
   | "ACTIVE SUN INFO"
-  | "ACTIVE DRAGON SCROLL";
+  | "ACTIVE DRAGON SCROLL"
+  | "ACTIVE INFO ROPE"
+  | "ACTIVE INFO REGISTERED"
+  | "ACTIVE INFO NEEDED"
+  | "ACTIVE INFO WAITLIST";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -156,7 +183,14 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "GOLD / INK",
 ];
 
-export const activeTargetOrder: PreviewTargetId[] = ["ACTIVE SUN INFO", "ACTIVE DRAGON SCROLL"];
+export const activeTargetOrder: PreviewTargetId[] = [
+  "ACTIVE SUN INFO",
+  "ACTIVE DRAGON SCROLL",
+  "ACTIVE INFO ROPE",
+  "ACTIVE INFO REGISTERED",
+  "ACTIVE INFO NEEDED",
+  "ACTIVE INFO WAITLIST",
+];
 
 // Kept for anything still importing the old flat name -- identical to
 // openingTargetOrder, since that's every target the Opening canvas has.
@@ -313,6 +347,26 @@ export const previewDefaults: PreviewControls = {
   activeDragonScrollY: 31,
   activeDragonScrollScale: 1.22,
   activeDragonScrollRotation: 0,
+  activeInfoRopeShow: true,
+  activeInfoRopeX: 16,
+  activeInfoRopeY: 20,
+  activeInfoRopeScale: 1,
+  activeInfoRopeRotation: 0,
+  activeInfoRegisteredShow: true,
+  activeInfoRegisteredX: 14,
+  activeInfoRegisteredY: 36,
+  activeInfoRegisteredScale: 1,
+  activeInfoRegisteredRotation: -4,
+  activeInfoNeededShow: true,
+  activeInfoNeededX: 16,
+  activeInfoNeededY: 54,
+  activeInfoNeededScale: 1,
+  activeInfoNeededRotation: 3,
+  activeInfoWaitlistShow: true,
+  activeInfoWaitlistX: 14,
+  activeInfoWaitlistY: 72,
+  activeInfoWaitlistScale: 1,
+  activeInfoWaitlistRotation: -3,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -338,6 +392,28 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeDragonScrollScale",
     "activeDragonScrollRotation",
   ],
+  "ACTIVE INFO ROPE": ["activeInfoRopeShow", "activeInfoRopeX", "activeInfoRopeY", "activeInfoRopeScale", "activeInfoRopeRotation"],
+  "ACTIVE INFO REGISTERED": [
+    "activeInfoRegisteredShow",
+    "activeInfoRegisteredX",
+    "activeInfoRegisteredY",
+    "activeInfoRegisteredScale",
+    "activeInfoRegisteredRotation",
+  ],
+  "ACTIVE INFO NEEDED": [
+    "activeInfoNeededShow",
+    "activeInfoNeededX",
+    "activeInfoNeededY",
+    "activeInfoNeededScale",
+    "activeInfoNeededRotation",
+  ],
+  "ACTIVE INFO WAITLIST": [
+    "activeInfoWaitlistShow",
+    "activeInfoWaitlistX",
+    "activeInfoWaitlistY",
+    "activeInfoWaitlistScale",
+    "activeInfoWaitlistRotation",
+  ],
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
@@ -356,6 +432,10 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "MID WAVE": "midWaveShow",
   "FRONT FOAM": "frontFoamShow",
   "GOLD / INK": "goldInkShow",
+  "ACTIVE INFO ROPE": "activeInfoRopeShow",
+  "ACTIVE INFO REGISTERED": "activeInfoRegisteredShow",
+  "ACTIVE INFO NEEDED": "activeInfoNeededShow",
+  "ACTIVE INFO WAITLIST": "activeInfoWaitlistShow",
 };
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
@@ -452,6 +532,22 @@ export const controlRanges = {
   activeDragonScrollY: { label: "Dragon+Scroll Y %", min: 0, max: 100 },
   activeDragonScrollScale: { label: "Dragon+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
   activeDragonScrollRotation: { label: "Dragon+Scroll Rotation", min: -45, max: 45 },
+  activeInfoRopeX: { label: "Info Rope X %", min: -20, max: 120 },
+  activeInfoRopeY: { label: "Info Rope Y %", min: -20, max: 140 },
+  activeInfoRopeScale: { label: "Info Rope Scale", min: 0.2, max: 3, step: 0.01 },
+  activeInfoRopeRotation: { label: "Info Rope Rotation", min: -180, max: 180 },
+  activeInfoRegisteredX: { label: "已報 X %", min: -20, max: 120 },
+  activeInfoRegisteredY: { label: "已報 Y %", min: -20, max: 140 },
+  activeInfoRegisteredScale: { label: "已報 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeInfoRegisteredRotation: { label: "已報 Rotation", min: -180, max: 180 },
+  activeInfoNeededX: { label: "尚缺 X %", min: -20, max: 120 },
+  activeInfoNeededY: { label: "尚缺 Y %", min: -20, max: 140 },
+  activeInfoNeededScale: { label: "尚缺 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeInfoNeededRotation: { label: "尚缺 Rotation", min: -180, max: 180 },
+  activeInfoWaitlistX: { label: "候補 X %", min: -20, max: 120 },
+  activeInfoWaitlistY: { label: "候補 Y %", min: -20, max: 140 },
+  activeInfoWaitlistScale: { label: "候補 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeInfoWaitlistRotation: { label: "候補 Rotation", min: -180, max: 180 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -602,4 +698,32 @@ ACTIVE DRAGON SCROLL
 X: ${Math.round(controls.activeDragonScrollX)}
 Y: ${Math.round(controls.activeDragonScrollY)}
 Scale: ${controls.activeDragonScrollScale.toFixed(2)}
-Rotation: ${Math.round(controls.activeDragonScrollRotation)}`;
+Rotation: ${Math.round(controls.activeDragonScrollRotation)}
+
+ACTIVE INFO ROPE
+Show: ${controls.activeInfoRopeShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeInfoRopeX)}
+Y: ${Math.round(controls.activeInfoRopeY)}
+Scale: ${controls.activeInfoRopeScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeInfoRopeRotation)}
+
+ACTIVE INFO REGISTERED (已報)
+Show: ${controls.activeInfoRegisteredShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeInfoRegisteredX)}
+Y: ${Math.round(controls.activeInfoRegisteredY)}
+Scale: ${controls.activeInfoRegisteredScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeInfoRegisteredRotation)}
+
+ACTIVE INFO NEEDED (尚缺)
+Show: ${controls.activeInfoNeededShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeInfoNeededX)}
+Y: ${Math.round(controls.activeInfoNeededY)}
+Scale: ${controls.activeInfoNeededScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeInfoNeededRotation)}
+
+ACTIVE INFO WAITLIST (候補)
+Show: ${controls.activeInfoWaitlistShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeInfoWaitlistX)}
+Y: ${Math.round(controls.activeInfoWaitlistY)}
+Scale: ${controls.activeInfoWaitlistScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeInfoWaitlistRotation)}`;

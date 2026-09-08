@@ -41,6 +41,12 @@ type V8HeroCompositionProps = {
   // positioned -- moving the sun carries this content with it. Replaces the
   // Opening's title/CTA in that same on-canvas spot once confirmed.
   sunContent?: ReactNode | undefined;
+  // Active-only status plaques (已報/尚缺/候補) + their shared rope,
+  // rendered directly into the hero canvas's own positioned box (see
+  // V8ActiveInfoCards) so their %-based x/y controls share the same
+  // coordinate space as sunX/dragonScrollX etc., keeping them visually
+  // locked to the sun/dragon regardless of viewport width.
+  infoCardsContent?: ReactNode | undefined;
 };
 
 // Deliberately does NOT call image.decode() here -- decode() can stall
@@ -234,6 +240,7 @@ export function V8HeroComposition({
   controlOverrides,
   scrollContent,
   sunContent,
+  infoCardsContent,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
   const [assetsReady, setAssetsReady] = useState(false);
@@ -520,6 +527,7 @@ export function V8HeroComposition({
                 />
               </div>
             ) : null}
+            {infoCardsContent}
           </div>
         </div>
       </div>

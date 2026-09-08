@@ -4,7 +4,13 @@ import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import type { AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition, eyebrowStyle, titleStyle } from "@/components/v8-hero/V8HeroComposition";
-import { buildV8ActiveAssets, v8ActiveDragonHeroOverrides, v8ActiveSunOverrides } from "./v8ActiveConfig";
+import {
+  buildV8ActiveAssets,
+  v8ActiveDragonHeroOverrides,
+  v8ActiveInfoCardsDefaults,
+  v8ActiveSunOverrides,
+} from "./v8ActiveConfig";
+import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 
 const DRAGON_BADGE = "v8-preview/display/dragon-body-v2-display.webp";
 const TIGER_BADGE = "v8-preview/display/tiger-body-v1-display.webp";
@@ -134,6 +140,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             />
           ) : undefined
         }
+        infoCardsContent={<V8ActiveInfoCards assets={assets} controls={v8ActiveInfoCardsDefaults} />}
       />
 
       <div className="v8-active-content">
