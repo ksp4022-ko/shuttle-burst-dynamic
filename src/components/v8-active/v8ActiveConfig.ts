@@ -12,6 +12,17 @@ export const v8ActiveAssetFiles = {
   sunInfoBadge: "sun-info-badge-v2.webp",
 } as const;
 
+// The three sun-side info badges (球種/費用/場地數) -- courtCount uses a
+// visually distinct cloud-banner design (from 04_V8_Cloud_Mist_雲霧素材
+// _2026-09-06/金雲流彩浮世繪對話框.png) so the three badges aren't all
+// identical, per the user's request for "some variation" -- ballType and
+// tempFee stay on the original sun-info-badge-v2 design.
+export const v8ActiveSunBadgeFiles = {
+  ballType: "sun-info-badge-v2.webp",
+  tempFee: "sun-info-badge-v2.webp",
+  courtCount: "sun-info-badge-alt-v1.webp",
+} as const;
+
 // The three status plaques (已報/尚缺/候補) -- each generated separately so
 // their content isn't the same size within its own canvas (尚缺 in
 // particular draws noticeably smaller); normalized to a common 711x800
@@ -55,6 +66,9 @@ export function buildV8ActiveAssets(baseUrl: string) {
     infoCardNeeded: `${activeBase}/${v8ActiveInfoCardFiles.needed}`,
     infoCardWaitlist: `${activeBase}/${v8ActiveInfoCardFiles.waitlist}`,
     infoRope: `${activeBase}/${v8ActiveInfoCardFiles.rope}`,
+    sunBadgeBallType: `${activeBase}/${v8ActiveSunBadgeFiles.ballType}`,
+    sunBadgeTempFee: `${activeBase}/${v8ActiveSunBadgeFiles.tempFee}`,
+    sunBadgeCourtCount: `${activeBase}/${v8ActiveSunBadgeFiles.courtCount}`,
   };
 }
 
@@ -141,5 +155,49 @@ export const v8ActiveInfoCardsRanges: Record<
   y: { label: "Y %", min: -20, max: 140 },
   scale: { label: "Scale", min: 0.2, max: 3, step: 0.01 },
   rotation: { label: "Rotation", min: -180, max: 180 },
+};
+
+// The three scattered sun badges (球種/費用/場地數) -- x/y are % of the
+// sun's own box, same as SCATTERED_BADGE_POSITIONS used to be (no
+// translate(-50%,-50%) centering here, unlike the info cards -- left/top is
+// the badge's own top-left corner, matching the original hardcoded
+// positions exactly so this refactor doesn't shift anything). scale/
+// rotation apply via transform on the badge's wrapper (image + text
+// together); fontSize is independent of scale so the text can be tuned
+// without also resizing the badge artwork.
+export type V8ActiveSunBadgeControls = {
+  show: boolean;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  fontSize: number;
+};
+
+export type V8ActiveSunBadgesControls = {
+  ballType: V8ActiveSunBadgeControls;
+  tempFee: V8ActiveSunBadgeControls;
+  courtCount: V8ActiveSunBadgeControls;
+};
+
+// Starting values match the previous hardcoded SCATTERED_BADGE_POSITIONS
+// exactly (fontSize:11 matches .v8-sun-info-scattered's old fixed 11px) --
+// this refactor only makes them tunable, not a visual change by default.
+export const v8ActiveSunBadgesDefaults: V8ActiveSunBadgesControls = {
+  ballType: { show: true, x: -75, y: -8, scale: 1, rotation: 0, fontSize: 11 },
+  tempFee: { show: true, x: 95, y: -12, scale: 1, rotation: 0, fontSize: 11 },
+  courtCount: { show: true, x: -65, y: 85, scale: 1, rotation: 0, fontSize: 11 },
+};
+
+export const v8ActiveSunBadgesRanges: Record<
+  keyof V8ActiveSunBadgeControls,
+  { label: string; min: number; max: number; step?: number }
+> = {
+  show: { label: "Show", min: 0, max: 1 },
+  x: { label: "X %", min: -150, max: 150 },
+  y: { label: "Y %", min: -150, max: 150 },
+  scale: { label: "Scale", min: 0.2, max: 3, step: 0.01 },
+  rotation: { label: "Rotation", min: -180, max: 180 },
+  fontSize: { label: "Font Size", min: 6, max: 28 },
 };
 

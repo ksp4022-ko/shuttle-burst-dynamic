@@ -138,6 +138,27 @@ export type PreviewControls = {
   // none of those foreground layers are touched. 0 = no fade (scenery at
   // its normal opacity), 100 = scenery fully faded out.
   activeBackgroundFade: number;
+  // The three scattered sun badges (球種/費用/場地數) -- each independently
+  // show/x/y/scale/rotation/fontSize-controlled (see V8SunInfoBadgeScattered
+  // in V8ActivePage.tsx).
+  activeSunBadgeBallTypeShow: boolean;
+  activeSunBadgeBallTypeX: number;
+  activeSunBadgeBallTypeY: number;
+  activeSunBadgeBallTypeScale: number;
+  activeSunBadgeBallTypeRotation: number;
+  activeSunBadgeBallTypeFontSize: number;
+  activeSunBadgeTempFeeShow: boolean;
+  activeSunBadgeTempFeeX: number;
+  activeSunBadgeTempFeeY: number;
+  activeSunBadgeTempFeeScale: number;
+  activeSunBadgeTempFeeRotation: number;
+  activeSunBadgeTempFeeFontSize: number;
+  activeSunBadgeCourtCountShow: boolean;
+  activeSunBadgeCourtCountX: number;
+  activeSunBadgeCourtCountY: number;
+  activeSunBadgeCourtCountScale: number;
+  activeSunBadgeCourtCountRotation: number;
+  activeSunBadgeCourtCountFontSize: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -166,7 +187,10 @@ export type PreviewTargetId =
   | "ACTIVE INFO REGISTERED"
   | "ACTIVE INFO NEEDED"
   | "ACTIVE INFO WAITLIST"
-  | "ACTIVE BACKGROUND FADE";
+  | "ACTIVE BACKGROUND FADE"
+  | "ACTIVE SUN BADGE BALLTYPE"
+  | "ACTIVE SUN BADGE TEMPFEE"
+  | "ACTIVE SUN BADGE COURTCOUNT";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -198,6 +222,9 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE INFO NEEDED",
   "ACTIVE INFO WAITLIST",
   "ACTIVE BACKGROUND FADE",
+  "ACTIVE SUN BADGE BALLTYPE",
+  "ACTIVE SUN BADGE TEMPFEE",
+  "ACTIVE SUN BADGE COURTCOUNT",
 ];
 
 // Kept for anything still importing the old flat name -- identical to
@@ -376,6 +403,26 @@ export const previewDefaults: PreviewControls = {
   activeInfoWaitlistScale: 1,
   activeInfoWaitlistRotation: -3,
   activeBackgroundFade: 0,
+  // Matches v8ActiveSunBadgesDefaults in v8ActiveConfig.ts exactly (which
+  // in turn matches the old hardcoded SCATTERED_BADGE_POSITIONS).
+  activeSunBadgeBallTypeShow: true,
+  activeSunBadgeBallTypeX: -75,
+  activeSunBadgeBallTypeY: -8,
+  activeSunBadgeBallTypeScale: 1,
+  activeSunBadgeBallTypeRotation: 0,
+  activeSunBadgeBallTypeFontSize: 11,
+  activeSunBadgeTempFeeShow: true,
+  activeSunBadgeTempFeeX: 95,
+  activeSunBadgeTempFeeY: -12,
+  activeSunBadgeTempFeeScale: 1,
+  activeSunBadgeTempFeeRotation: 0,
+  activeSunBadgeTempFeeFontSize: 11,
+  activeSunBadgeCourtCountShow: true,
+  activeSunBadgeCourtCountX: -65,
+  activeSunBadgeCourtCountY: 85,
+  activeSunBadgeCourtCountScale: 1,
+  activeSunBadgeCourtCountRotation: 0,
+  activeSunBadgeCourtCountFontSize: 11,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -424,6 +471,30 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeInfoWaitlistRotation",
   ],
   "ACTIVE BACKGROUND FADE": ["activeBackgroundFade"],
+  "ACTIVE SUN BADGE BALLTYPE": [
+    "activeSunBadgeBallTypeShow",
+    "activeSunBadgeBallTypeX",
+    "activeSunBadgeBallTypeY",
+    "activeSunBadgeBallTypeScale",
+    "activeSunBadgeBallTypeRotation",
+    "activeSunBadgeBallTypeFontSize",
+  ],
+  "ACTIVE SUN BADGE TEMPFEE": [
+    "activeSunBadgeTempFeeShow",
+    "activeSunBadgeTempFeeX",
+    "activeSunBadgeTempFeeY",
+    "activeSunBadgeTempFeeScale",
+    "activeSunBadgeTempFeeRotation",
+    "activeSunBadgeTempFeeFontSize",
+  ],
+  "ACTIVE SUN BADGE COURTCOUNT": [
+    "activeSunBadgeCourtCountShow",
+    "activeSunBadgeCourtCountX",
+    "activeSunBadgeCourtCountY",
+    "activeSunBadgeCourtCountScale",
+    "activeSunBadgeCourtCountRotation",
+    "activeSunBadgeCourtCountFontSize",
+  ],
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
@@ -446,6 +517,9 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE INFO REGISTERED": "activeInfoRegisteredShow",
   "ACTIVE INFO NEEDED": "activeInfoNeededShow",
   "ACTIVE INFO WAITLIST": "activeInfoWaitlistShow",
+  "ACTIVE SUN BADGE BALLTYPE": "activeSunBadgeBallTypeShow",
+  "ACTIVE SUN BADGE TEMPFEE": "activeSunBadgeTempFeeShow",
+  "ACTIVE SUN BADGE COURTCOUNT": "activeSunBadgeCourtCountShow",
 };
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
@@ -559,6 +633,21 @@ export const controlRanges = {
   activeInfoWaitlistScale: { label: "候補 Scale", min: 0.2, max: 3, step: 0.01 },
   activeInfoWaitlistRotation: { label: "候補 Rotation", min: -180, max: 180 },
   activeBackgroundFade: { label: "Background Fade %", min: 0, max: 100 },
+  activeSunBadgeBallTypeX: { label: "球種 X %", min: -150, max: 150 },
+  activeSunBadgeBallTypeY: { label: "球種 Y %", min: -150, max: 150 },
+  activeSunBadgeBallTypeScale: { label: "球種 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunBadgeBallTypeRotation: { label: "球種 Rotation", min: -180, max: 180 },
+  activeSunBadgeBallTypeFontSize: { label: "球種 Font Size", min: 6, max: 28 },
+  activeSunBadgeTempFeeX: { label: "費用 X %", min: -150, max: 150 },
+  activeSunBadgeTempFeeY: { label: "費用 Y %", min: -150, max: 150 },
+  activeSunBadgeTempFeeScale: { label: "費用 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunBadgeTempFeeRotation: { label: "費用 Rotation", min: -180, max: 180 },
+  activeSunBadgeTempFeeFontSize: { label: "費用 Font Size", min: 6, max: 28 },
+  activeSunBadgeCourtCountX: { label: "場地數 X %", min: -150, max: 150 },
+  activeSunBadgeCourtCountY: { label: "場地數 Y %", min: -150, max: 150 },
+  activeSunBadgeCourtCountScale: { label: "場地數 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunBadgeCourtCountRotation: { label: "場地數 Rotation", min: -180, max: 180 },
+  activeSunBadgeCourtCountFontSize: { label: "場地數 Font Size", min: 6, max: 28 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -740,4 +829,28 @@ Scale: ${controls.activeInfoWaitlistScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeInfoWaitlistRotation)}
 
 ACTIVE BACKGROUND FADE
-Fade %: ${Math.round(controls.activeBackgroundFade)}`;
+Fade %: ${Math.round(controls.activeBackgroundFade)}
+
+ACTIVE SUN BADGE BALLTYPE (球種)
+Show: ${controls.activeSunBadgeBallTypeShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeSunBadgeBallTypeX)}
+Y: ${Math.round(controls.activeSunBadgeBallTypeY)}
+Scale: ${controls.activeSunBadgeBallTypeScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeSunBadgeBallTypeRotation)}
+Font Size: ${Math.round(controls.activeSunBadgeBallTypeFontSize)}
+
+ACTIVE SUN BADGE TEMPFEE (費用)
+Show: ${controls.activeSunBadgeTempFeeShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeSunBadgeTempFeeX)}
+Y: ${Math.round(controls.activeSunBadgeTempFeeY)}
+Scale: ${controls.activeSunBadgeTempFeeScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeSunBadgeTempFeeRotation)}
+Font Size: ${Math.round(controls.activeSunBadgeTempFeeFontSize)}
+
+ACTIVE SUN BADGE COURTCOUNT (場地數)
+Show: ${controls.activeSunBadgeCourtCountShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeSunBadgeCourtCountX)}
+Y: ${Math.round(controls.activeSunBadgeCourtCountY)}
+Scale: ${controls.activeSunBadgeCourtCountScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeSunBadgeCourtCountRotation)}
+Font Size: ${Math.round(controls.activeSunBadgeCourtCountFontSize)}`;

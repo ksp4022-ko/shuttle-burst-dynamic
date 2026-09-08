@@ -23,7 +23,11 @@ import {
 import type { HudOpacityMode, PreviewControls, PreviewMode, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
 import { V8ActiveStyles, V8ActiveSunContent, V8IdentityScrollContent } from "@/components/v8-active/V8ActivePage";
 import { V8ActiveInfoCards } from "@/components/v8-active/V8ActiveInfoCards";
-import { buildV8ActiveAssets, type V8ActiveInfoCardsControls } from "@/components/v8-active/v8ActiveConfig";
+import {
+  buildV8ActiveAssets,
+  type V8ActiveInfoCardsControls,
+  type V8ActiveSunBadgesControls,
+} from "@/components/v8-active/v8ActiveConfig";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import { v8HeroDefaults } from "@/components/v8-hero/v8HeroConfig";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
@@ -278,6 +282,33 @@ function ActiveCanvas({
     },
   };
 
+  const sunBadgeControls: V8ActiveSunBadgesControls = {
+    ballType: {
+      show: controls.activeSunBadgeBallTypeShow,
+      x: controls.activeSunBadgeBallTypeX,
+      y: controls.activeSunBadgeBallTypeY,
+      scale: controls.activeSunBadgeBallTypeScale,
+      rotation: controls.activeSunBadgeBallTypeRotation,
+      fontSize: controls.activeSunBadgeBallTypeFontSize,
+    },
+    tempFee: {
+      show: controls.activeSunBadgeTempFeeShow,
+      x: controls.activeSunBadgeTempFeeX,
+      y: controls.activeSunBadgeTempFeeY,
+      scale: controls.activeSunBadgeTempFeeScale,
+      rotation: controls.activeSunBadgeTempFeeRotation,
+      fontSize: controls.activeSunBadgeTempFeeFontSize,
+    },
+    courtCount: {
+      show: controls.activeSunBadgeCourtCountShow,
+      x: controls.activeSunBadgeCourtCountX,
+      y: controls.activeSunBadgeCourtCountY,
+      scale: controls.activeSunBadgeCourtCountScale,
+      rotation: controls.activeSunBadgeCourtCountRotation,
+      fontSize: controls.activeSunBadgeCourtCountFontSize,
+    },
+  };
+
   return (
     <div className="v8-active" style={{ position: "relative", width: "100%" } as CSSProperties}>
       <V8ActiveStyles />
@@ -302,6 +333,7 @@ function ActiveCanvas({
             ballType="MS 101"
             tempFee={245}
             scattered={isDragonFix}
+            badgeControls={sunBadgeControls}
           />
         }
         scrollContent={

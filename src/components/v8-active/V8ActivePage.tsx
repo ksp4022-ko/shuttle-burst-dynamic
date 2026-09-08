@@ -8,7 +8,10 @@ import {
   buildV8ActiveAssets,
   v8ActiveDragonHeroOverrides,
   v8ActiveInfoCardsDefaults,
+  v8ActiveSunBadgesDefaults,
   v8ActiveSunOverrides,
+  type V8ActiveSunBadgeControls,
+  type V8ActiveSunBadgesControls,
 } from "./v8ActiveConfig";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 
@@ -220,12 +223,46 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   );
 }
 
-function V8SunInfoBadge({ assets, label }: { assets: { sunInfoBadge: string }; label: string }) {
+function V8SunInfoBadge({ src, label }: { src: string; label: string }) {
   return (
     <span className="v8-sun-info-badge">
-      <img src={assets.sunInfoBadge} alt="" aria-hidden="true" draggable={false} />
+      <img src={src} alt="" aria-hidden="true" draggable={false} />
       <em>{label}</em>
     </span>
+  );
+}
+
+// The scattered (B_fix) layout's per-badge version -- unlike the info
+// cards, there's no translate(-50%,-50%) centering here: x/y is the
+// badge's own top-left corner, matching what the old hardcoded
+// SCATTERED_BADGE_POSITIONS used, so this refactor (making them tunable)
+// doesn't shift anything by default. scale/rotation apply to the whole
+// badge (image + text) via the wrapper's transform; fontSize is
+// independent of scale so text can be retuned without resizing the artwork.
+function V8SunInfoBadgeScattered({
+  src,
+  label,
+  controls,
+}: {
+  src: string;
+  label: string;
+  controls: V8ActiveSunBadgeControls;
+}) {
+  if (!controls.show) return null;
+  return (
+    <div
+      className="v8-sun-info-scattered"
+      style={
+        {
+          left: `${controls.x}%`,
+          top: `${controls.y}%`,
+          fontSize: controls.fontSize,
+          transform: `scale(${controls.scale}) rotate(${controls.rotation}deg)`,
+        } as CSSProperties
+      }
+    >
+      <V8SunInfoBadge src={src} label={label} />
+    </div>
   );
 }
 
@@ -238,16 +275,11 @@ function V8SunInfoBadge({ assets, label }: { assets: { sunInfoBadge: string }; l
 // /v8/preview's mock ACTIVE canvas renders the identical markup instead of
 // a separate hand-rolled mock.
 //
-// Title renders centered INSIDE the sun circle. Badge positions are rough
-// schematic placeholders (the "scattered" B_fix layout vs. the default
-// compact row below the sun) -- the user tunes exact offsets via
-// /v8/preview's ACTIVE SUN INFO target afterward.
-const SCATTERED_BADGE_POSITIONS = [
-  { left: "-75%", top: "-8%" }, // ballType, upper-left of the sun
-  { left: "95%", top: "-12%" }, // tempFee, upper-right of the sun
-  { left: "-65%", top: "85%" }, // courtCount, lower-left of the sun
-] as const;
-
+// Title renders centered INSIDE the sun circle. The scattered (B_fix)
+// layout's three badges are each independently show/x/y/scale/rotation/
+// fontSize-controlled (see v8ActiveSunBadgesDefaults) -- the default
+// (non-scattered) compact row below the sun stays a plain shared-asset row,
+// not independently tunable, since B_temp (casual/tiger) has no mockup yet.
 export function V8ActiveSunContent({
   assets,
   eventDate,
@@ -256,8 +288,9 @@ export function V8ActiveSunContent({
   ballType,
   tempFee,
   scattered = false,
+  badgeControls = v8ActiveSunBadgesDefaults,
 }: {
-  assets: { sunInfoBadge: string };
+  assets: { sunInfoBadge: string; sunBadgeBallType: string; sunBadgeTempFee: string; sunBadgeCourtCount: string };
   eventDate: string;
   eventName: string;
   courtCount?: number | null | undefined;
@@ -266,6 +299,7 @@ export function V8ActiveSunContent({
   // When true, badges scatter individually around the sun (the B_fix
   // mockup) instead of sitting in a compact row just below it.
   scattered?: boolean;
+  badgeControls?: V8ActiveSunBadgesControls;
 }) {
   const badges = [
     ballType ? ballType : null,
@@ -280,19 +314,28 @@ export function V8ActiveSunContent({
         <h1 style={titleStyle}>{eventName}</h1>
       </div>
       {scattered ? (
-        badges.map((label, index) => {
-          if (!label) return null;
-          const position = SCATTERED_BADGE_POSITIONS[index];
-          if (!position) return null;
-          return (
-            <div key={index} className="v8-sun-info-scattered" style={position}>
-              <V8SunInfoBadge assets={assets} label={label} />
-            </div>
-          );
-        })
+        <>
+          {ballType ? (
+            <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={ballType} controls={badgeControls.ballType} />
+          ) : null}
+          <V8SunInfoBadgeScattered
+            src={assets.sunBadgeTempFee}
+            label={`$${Number(tempFee || 0)}`}
+            controls={badgeControls.tempFee}
+          />
+          {courtCount ? (
+            <V8SunInfoBadgeScattered
+              src={assets.sunBadgeCourtCount}
+              label={`${courtCount} 片場地`}
+              controls={badgeControls.courtCount}
+            />
+          ) : null}
+        </>
       ) : (
         <div className="v8-active-sun-info">
-          {badges.map((label, index) => (label ? <V8SunInfoBadge key={index} assets={assets} label={label} /> : null))}
+          {badges.map((label, index) =>
+            label ? <V8SunInfoBadge key={index} src={assets.sunInfoBadge} label={label} /> : null,
+          )}
         </div>
       )}
     </>
@@ -523,8 +566,9 @@ export function V8ActiveStyles() {
       }
 
       .v8-sun-info-scattered {
+        /* font-size comes from the inline style (controls.fontSize) now --
+           see V8SunInfoBadgeScattered. */
         position: absolute;
-        font-size: 11px;
       }
 
       .v8-sun-info-badge {
