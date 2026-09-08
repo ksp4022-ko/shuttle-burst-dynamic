@@ -1,3 +1,11 @@
+import { v8ActiveBackgroundFadeOverrides } from "@/components/v8-active/v8ActiveConfig";
+import type {
+  V8ActiveInfoCardsControls,
+  V8ActiveRosterListsControls,
+  V8ActiveSunBadgesControls,
+} from "@/components/v8-active/v8ActiveConfig";
+import type { V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
+
 export type PreviewControls = {
   dragonShow: boolean;
   dragonX: number;
@@ -952,3 +960,175 @@ Bold: ${controls.activeRosterListsBold ? "ON" : "OFF"}
 季打請假 Offset: ${Math.round(controls.activeRosterListsLeaveX)}, ${Math.round(controls.activeRosterListsLeaveY)}
 正取名單 Offset: ${Math.round(controls.activeRosterListsConfirmedX)}, ${Math.round(controls.activeRosterListsConfirmedY)}
 備取名單 Offset: ${Math.round(controls.activeRosterListsWaitingX)}, ${Math.round(controls.activeRosterListsWaitingY)}`;
+
+// Mid-tuning autosave -- shared between the /v8/preview console
+// (DragonPreview.tsx) and the real Active page's own embedded tuning
+// panel (see V8ActivePage.tsx's hidden corner trigger) so both read/write
+// the SAME saved session: tune from either entry point and the other
+// picks up the same values. Without this, a refresh (or the phone's
+// browser reclaiming a background tab) silently reset every slider back
+// to previewDefaults, discarding whatever the user had just been dialing
+// in. Merged ON TOP of previewDefaults (not used alone) so a save from
+// before a field was added/removed here still loads cleanly instead of
+// leaving new fields undefined.
+//
+// IMPORTANT: bump the trailing -vN whenever a field's COORDINATE SYSTEM
+// changes meaning, not just when fields are added/removed (the merge
+// above already handles that safely). Adding fields is safe to merge; a
+// value that's still a number but now means something different against a
+// resized/reparented container is NOT -- it silently applies a
+// now-nonsensical old number on top of the new default instead of the new
+// default itself, with no error and no visual warning. This has already
+// bitten the user more than once (e.g. the roster panel moving from its
+// own fixed-height box into the hero canvas's own %-space, and the Active
+// stage's aspect ratio changing) -- old saved X/Y/etc. kept silently
+// overriding the freshly-recalibrated defaults after each of those
+// changes, and the only symptom was "it looks broken," not an error.
+// Bumping this key on that class of change forces every saved session
+// back to the new defaults instead of quietly corrupting them.
+export const PREVIEW_CONTROLS_STORAGE_KEY = "v8-preview-controls-v2";
+
+export function loadSavedControls(): PreviewControls {
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
+    if (!raw) return previewDefaults;
+    const saved = JSON.parse(raw) as Partial<PreviewControls>;
+    return { ...previewDefaults, ...saved };
+  } catch {
+    return previewDefaults;
+  }
+}
+
+export function saveControls(controls: PreviewControls) {
+  try {
+    window.localStorage.setItem(PREVIEW_CONTROLS_STORAGE_KEY, JSON.stringify(controls));
+  } catch {
+    // Private browsing / storage disabled / quota exceeded -- tuning still
+    // works for this session, it just won't survive a refresh.
+  }
+}
+
+export function clearSavedControls() {
+  try {
+    window.localStorage.removeItem(PREVIEW_CONTROLS_STORAGE_KEY);
+  } catch {
+    // Same as above -- nothing to clean up if storage was never writable.
+  }
+}
+
+// Shared builders that turn the flat PreviewControls (this file's own
+// single-source-of-truth state) into the shaped controls objects
+// V8HeroComposition/V8ActiveInfoCards/V8ActiveSunContent/
+// V8ActiveRosterLists actually take. Used by BOTH the /v8/preview mock
+// console (DragonPreview.tsx's ActiveCanvas) and the real Active page's
+// own embedded tuning panel (V8ActivePage.tsx's hidden corner trigger) --
+// factored out here instead of being duplicated in both places so the two
+// can't drift out of sync the way the old parallel "two default systems"
+// (v8ActiveConfig.ts's static exports vs. this file's previewDefaults) did
+// repeatedly this session (see the -vN storage-key comment above for the
+// user-visible fallout of that).
+export function buildV8ActiveHeroOverrides(controls: PreviewControls): Partial<V8HeroControls> {
+  return {
+    sunX: controls.activeSunX,
+    sunY: controls.activeSunY,
+    sunScale: controls.activeSunScale,
+    sunZIndex: controls.activeSunZIndex,
+    sunTextScale: controls.activeSunTextScale,
+    ...v8ActiveBackgroundFadeOverrides(controls.activeBackgroundFade),
+    // Uniform tiger-scroll personal-status display for every confirmed
+    // identity (season or casual) -- not itself user-tunable, only its
+    // position/scale/rotation are.
+    dragonShow: false,
+    bagBaseShow: false,
+    bagStrapShow: false,
+    rearClawShow: false,
+    tigerShow: false,
+    tigerRacketShow: false,
+    tigerScrollShow: true,
+    tigerScrollX: controls.activeTigerScrollX,
+    tigerScrollY: controls.activeTigerScrollY,
+    tigerScrollScale: controls.activeTigerScrollScale,
+    tigerScrollRotation: controls.activeTigerScrollRotation,
+  };
+}
+
+export function buildV8ActiveInfoCardsControls(controls: PreviewControls): V8ActiveInfoCardsControls {
+  return {
+    rope: {
+      show: controls.activeInfoRopeShow,
+      x: controls.activeInfoRopeX,
+      y: controls.activeInfoRopeY,
+      scale: controls.activeInfoRopeScale,
+      rotation: controls.activeInfoRopeRotation,
+    },
+    registered: {
+      show: controls.activeInfoRegisteredShow,
+      x: controls.activeInfoRegisteredX,
+      y: controls.activeInfoRegisteredY,
+      scale: controls.activeInfoRegisteredScale,
+      rotation: controls.activeInfoRegisteredRotation,
+    },
+    needed: {
+      show: controls.activeInfoNeededShow,
+      x: controls.activeInfoNeededX,
+      y: controls.activeInfoNeededY,
+      scale: controls.activeInfoNeededScale,
+      rotation: controls.activeInfoNeededRotation,
+    },
+    waitlist: {
+      show: controls.activeInfoWaitlistShow,
+      x: controls.activeInfoWaitlistX,
+      y: controls.activeInfoWaitlistY,
+      scale: controls.activeInfoWaitlistScale,
+      rotation: controls.activeInfoWaitlistRotation,
+    },
+    countFontSize: controls.activeInfoCountFontSize,
+  };
+}
+
+export function buildV8ActiveSunBadgesControls(controls: PreviewControls): V8ActiveSunBadgesControls {
+  return {
+    ballType: {
+      show: controls.activeSunBadgeBallTypeShow,
+      x: controls.activeSunBadgeBallTypeX,
+      y: controls.activeSunBadgeBallTypeY,
+      scale: controls.activeSunBadgeBallTypeScale,
+      rotation: controls.activeSunBadgeBallTypeRotation,
+      fontSize: controls.activeSunBadgeBallTypeFontSize,
+    },
+    tempFee: {
+      show: controls.activeSunBadgeTempFeeShow,
+      x: controls.activeSunBadgeTempFeeX,
+      y: controls.activeSunBadgeTempFeeY,
+      scale: controls.activeSunBadgeTempFeeScale,
+      rotation: controls.activeSunBadgeTempFeeRotation,
+      fontSize: controls.activeSunBadgeTempFeeFontSize,
+    },
+    courtCount: {
+      show: controls.activeSunBadgeCourtCountShow,
+      x: controls.activeSunBadgeCourtCountX,
+      y: controls.activeSunBadgeCourtCountY,
+      scale: controls.activeSunBadgeCourtCountScale,
+      rotation: controls.activeSunBadgeCourtCountRotation,
+      fontSize: controls.activeSunBadgeCourtCountFontSize,
+    },
+  };
+}
+
+export function buildV8ActiveRosterListsControls(controls: PreviewControls): V8ActiveRosterListsControls {
+  return {
+    show: controls.activeRosterListsShow,
+    x: controls.activeRosterListsX,
+    y: controls.activeRosterListsY,
+    scale: controls.activeRosterListsScale,
+    rotation: controls.activeRosterListsRotation,
+    fontSize: controls.activeRosterListsFontSize,
+    lineHeight: controls.activeRosterListsLineHeight,
+    textColor: controls.activeRosterListsTextColor,
+    fontFamily: controls.activeRosterListsFontFamily,
+    bold: controls.activeRosterListsBold,
+    leave: { x: controls.activeRosterListsLeaveX, y: controls.activeRosterListsLeaveY },
+    confirmed: { x: controls.activeRosterListsConfirmedX, y: controls.activeRosterListsConfirmedY },
+    waiting: { x: controls.activeRosterListsWaitingX, y: controls.activeRosterListsWaitingY },
+  };
+}

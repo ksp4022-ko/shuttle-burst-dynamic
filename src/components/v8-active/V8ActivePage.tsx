@@ -1,18 +1,26 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import type { AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition, eyebrowStyle, titleStyle } from "@/components/v8-hero/V8HeroComposition";
 import {
+  activeTargetOrder,
+  buildV8ActiveHeroOverrides,
+  buildV8ActiveInfoCardsControls,
+  buildV8ActiveRosterListsControls,
+  buildV8ActiveSunBadgesControls,
+  loadSavedControls,
+  previewDefaults,
+  saveControls,
+  type PreviewControls,
+  type PreviewTargetId,
+} from "@/components/v8-preview/dragonPreviewConfig";
+import { V8TuningPanel } from "@/components/v8-preview/V8TuningPanel";
+import {
   buildV8ActiveAssets,
-  v8ActiveBackgroundFadeOverrides,
-  v8ActiveInfoCardsDefaults,
-  v8ActiveRosterListsDefaults,
   v8ActiveStageAspectRatio,
   v8ActiveSunBadgesDefaults,
-  v8ActiveSunOverrides,
-  v8ActiveTigerScrollOverrides,
   type V8ActiveSunBadgeControls,
   type V8ActiveSunBadgesControls,
 } from "./v8ActiveConfig";
@@ -21,16 +29,18 @@ import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "./V8ActiveRoster
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
-    return identity.status === "leave" ? "取消請假" : "本週請假";
+    return identity.status === "leave" ? "恢復出席" : "本週請假";
   }
-  return identity.status === "waiting" ? "取消候補" : "取消報名";
+  return "取消報名";
 }
 
-function statusLabel(identity: CurrentIdentity) {
-  if (identity.signupType === "fixed") {
-    return identity.status === "leave" ? "季打・請假中" : "季打・正取出席";
-  }
-  return identity.status === "waiting" ? "臨打・候補中" : "臨打・正取";
+function roleLabel(identity: CurrentIdentity) {
+  return identity.signupType === "fixed" ? "季打" : "臨打";
+}
+
+function meetupStatusLabel(identity: CurrentIdentity) {
+  if (identity.status === "leave") return "請假";
+  return identity.status === "waiting" ? "候補" : "正取";
 }
 
 type HelperMode = "signup" | "cancel" | null;
@@ -42,6 +52,21 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
   const assets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
+
+  // Live tuning, opened via the hidden corner easter-egg button below --
+  // reads/writes the SAME localStorage session as /v8/preview (see
+  // PREVIEW_CONTROLS_STORAGE_KEY in dragonPreviewConfig.ts), so tuning from
+  // either entry point picks up the other's values. Tunes this page's own
+  // REAL data directly, not a mock -- see buildV8Active*Controls below.
+  const [tuningOpen, setTuningOpen] = useState(false);
+  const [tuningControls, setTuningControls] = useState<PreviewControls>(() =>
+    typeof window === "undefined" ? previewDefaults : loadSavedControls(),
+  );
+  const [tuningTarget, setTuningTarget] = useState<PreviewTargetId>("ACTIVE SUN INFO");
+
+  useEffect(() => {
+    saveControls(tuningControls);
+  }, [tuningControls]);
 
   const seasonCandidates = useMemo<AlphaSignup[]>(
     () => [...(roster?.fixedConfirmed || []), ...(roster?.fixedLeave || [])],
@@ -94,17 +119,19 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   };
 
   // The tiger-scroll (personal status display) and sun position both apply
-  // to EVERY confirmed render regardless of identity now -- see
-  // v8ActiveTigerScrollOverrides' doc comment. isDragonFix is kept only for
-  // the sun badges' scattered-vs-compact layout below (scattered={isDragonFix}),
-  // which is still identity-gated since B_temp (casual/tiger) has no
-  // scattered mockup yet.
+  // to EVERY confirmed render regardless of identity now. isDragonFix is
+  // kept only for the sun badges' scattered-vs-compact layout below
+  // (scattered={isDragonFix}), which is still identity-gated since B_temp
+  // (casual/tiger) has no scattered mockup yet.
   const isDragonFix = characterKind === "dragon";
-  const heroOverrides = {
-    ...v8ActiveSunOverrides,
-    ...v8ActiveTigerScrollOverrides,
-    ...v8ActiveBackgroundFadeOverrides(),
-  };
+  // Built from the SAME shared functions the /v8/preview console uses (see
+  // dragonPreviewConfig.ts) -- this page's own hidden tuning panel (below)
+  // edits tuningControls directly, so what you tune here IS what's live,
+  // not a mock standing in for it.
+  const heroOverrides = buildV8ActiveHeroOverrides(tuningControls);
+  const infoCardsControls = buildV8ActiveInfoCardsControls(tuningControls);
+  const rosterListsControls = buildV8ActiveRosterListsControls(tuningControls);
+  const sunBadgeControls = buildV8ActiveSunBadgesControls(tuningControls);
 
   const rosterConfirmed: V8ActiveRosterPerson[] = confirmed.map((person) => ({ id: person.id, name: person.name }));
   const rosterLeave: V8ActiveRosterPerson[] = (roster.fixedLeave || []).map((person) => ({
@@ -140,6 +167,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             ballType={selectedEvent.ballType}
             tempFee={selectedEvent.tempFee}
             scattered={isDragonFix}
+            badgeControls={sunBadgeControls}
           />
         }
         scrollContent={
@@ -150,13 +178,15 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               pendingLabel={pendingAction?.label}
               onPrimaryAction={handlePrimaryAction}
               onForget={forget}
+              onHelperSignup={() => setHelperMode("signup")}
+              onHelperCancel={() => setHelperMode("cancel")}
             />
           ) : undefined
         }
         infoCardsContent={
           <V8ActiveInfoCards
             assets={assets}
-            controls={v8ActiveInfoCardsDefaults}
+            controls={infoCardsControls}
             counts={{
               registered: roster.summary.confirmedCount,
               needed: roster.summary.remainCount,
@@ -170,7 +200,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             confirmed={rosterConfirmed}
             leave={rosterLeave}
             waiting={rosterWaiting}
-            controls={v8ActiveRosterListsDefaults}
+            controls={rosterListsControls}
           />
         }
       />
@@ -228,7 +258,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
                 返回
               </button>
             </div>
-          ) : (
+          ) : identity ? null : (
             <div className="v8-active-helper-toggles">
               <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("signup")}>
                 幫人報名
@@ -240,6 +270,65 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
           )}
         </div>
       </div>
+
+      {/* Hidden tuning-panel trigger -- a small, mostly-invisible easter
+          egg in the bottom-left corner (per the user's request) rather
+          than a labeled button, so it doesn't clutter the real page for
+          ordinary visitors. Opens the exact same V8TuningPanel the
+          /v8/preview console uses, reading/writing the same saved session
+          (see PREVIEW_CONTROLS_STORAGE_KEY), but tuning THIS page's own
+          live data directly -- what you adjust here is what every visitor
+          sees, not a mock standing in for it. */}
+      {tuningOpen ? null : (
+        <button
+          type="button"
+          onClick={() => setTuningOpen(true)}
+          aria-label="Open tuning panel"
+          style={{
+            position: "fixed",
+            left: 6,
+            bottom: 6,
+            width: 30,
+            height: 30,
+            border: "none",
+            borderRadius: "50%",
+            background: "transparent",
+            opacity: 0.001,
+            zIndex: 40,
+          } as CSSProperties}
+        />
+      )}
+      {tuningOpen ? (
+        <V8TuningPanel
+          controls={tuningControls}
+          setControls={setTuningControls}
+          targetOrder={activeTargetOrder}
+          selectedTarget={tuningTarget}
+          onSelectTarget={setTuningTarget}
+        />
+      ) : null}
+      {tuningOpen ? (
+        <button
+          type="button"
+          onClick={() => setTuningOpen(false)}
+          aria-label="Close tuning panel"
+          style={{
+            position: "fixed",
+            left: 6,
+            bottom: 6,
+            width: 30,
+            height: 30,
+            border: "1px solid rgba(247, 239, 224, 0.3)",
+            borderRadius: "50%",
+            background: "rgba(24, 17, 13, 0.5)",
+            color: "#f7efe0",
+            fontSize: 10,
+            zIndex: 40,
+          } as CSSProperties}
+        >
+          ×
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -376,20 +465,44 @@ export function V8IdentityScrollContent({
   pendingLabel,
   onPrimaryAction,
   onForget,
+  onHelperSignup,
+  onHelperCancel,
 }: {
   identity: CurrentIdentity;
   busy: boolean;
   pendingLabel: string | undefined;
   onPrimaryAction: () => void;
   onForget: () => void;
+  onHelperSignup: () => void;
+  onHelperCancel: () => void;
 }) {
+  const nameLength = Array.from(identity.name).length;
+  const nameSize = Math.max(13, Math.min(24, Math.floor(120 / Math.max(nameLength, 5))));
+  const status = meetupStatusLabel(identity);
+
   return (
     <div className="v8-scroll-identity">
-      <strong className="v8-scroll-identity-name">{identity.name}</strong>
-      <span className="v8-scroll-identity-status">{statusLabel(identity)}</span>
+      <div className="v8-scroll-status-mark" aria-label={`本次狀態：${status}`}>
+        {status}
+      </div>
+      <strong className="v8-scroll-identity-name" style={{ fontSize: nameSize }} title={identity.name}>
+        {identity.name}
+      </strong>
+      <div className="v8-scroll-meta" aria-label={`${roleLabel(identity)}，本次${status}`}>
+        <span>{roleLabel(identity)}</span>
+        <span>{status}</span>
+      </div>
       <button type="button" className="v8-scroll-cta" disabled={busy} onClick={onPrimaryAction}>
         {busy ? pendingLabel : primaryActionLabel(identity)}
       </button>
+      <div className="v8-scroll-secondary-actions" aria-label="代操作">
+        <button type="button" disabled={busy} onClick={onHelperSignup}>
+          幫人報名
+        </button>
+        <button type="button" disabled={busy} onClick={onHelperCancel}>
+          幫人取消
+        </button>
+      </div>
       <button type="button" className="v8-scroll-forget" disabled={busy} onClick={onForget}>
         不是我
       </button>
@@ -601,46 +714,110 @@ export function V8ActiveStyles() {
       }
 
       .v8-scroll-identity {
+        position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 8px;
+        justify-content: center;
+        gap: 5px;
+        width: 100%;
+        height: 100%;
+        min-width: 0;
         text-align: center;
         color: #3a2a12;
       }
 
       .v8-scroll-identity-name {
-        font-size: 16px;
-        font-weight: 800;
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
-      .v8-scroll-identity-status {
-        font-size: 11px;
-        opacity: 0.75;
+      .v8-scroll-meta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        font-size: 10px;
+        line-height: 1;
+        font-weight: 800;
+        color: rgba(58, 42, 18, 0.76);
+      }
+
+      .v8-scroll-meta span + span {
+        padding-left: 5px;
+        border-left: 1px solid rgba(122, 42, 18, 0.28);
+      }
+
+      .v8-scroll-status-mark {
+        position: absolute;
+        left: -2px;
+        bottom: 4px;
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 22px;
+        border: 2px solid rgba(154, 23, 18, 0.72);
+        border-radius: 48% 52% 44% 56%;
+        color: rgba(154, 23, 18, 0.86);
+        font-size: 9px;
+        font-weight: 900;
+        line-height: 1;
+        transform: rotate(-10deg);
+        pointer-events: none;
       }
 
       .v8-scroll-cta {
-        margin-top: 4px;
-        height: 32px;
-        padding: 0 14px;
+        min-width: 78px;
+        height: 28px;
+        padding: 0 10px;
         border: 2px solid #3a2a12;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.68);
         color: #3a2a12;
         font-size: 12px;
-        font-weight: 800;
+        font-weight: 900;
+        white-space: nowrap;
       }
 
-      .v8-scroll-cta:disabled {
+      .v8-scroll-cta:disabled,
+      .v8-scroll-secondary-actions button:disabled,
+      .v8-scroll-forget:disabled {
         opacity: 0.55;
       }
 
+      .v8-scroll-secondary-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 100%;
+      }
+
+      .v8-scroll-secondary-actions button {
+        height: 20px;
+        padding: 0 5px;
+        border: 1px solid rgba(58, 42, 18, 0.26);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.32);
+        color: rgba(58, 42, 18, 0.7);
+        font-size: 9px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
       .v8-scroll-forget {
-        margin-top: 2px;
         border: none;
         background: none;
-        color: rgba(58, 42, 18, 0.6);
-        font-size: 10px;
+        color: rgba(58, 42, 18, 0.52);
+        font-size: 9px;
+        line-height: 1;
         text-decoration: underline;
       }
 
@@ -843,3 +1020,6 @@ export function V8ActiveStyles() {
     `}</style>
   );
 }
+
+
+

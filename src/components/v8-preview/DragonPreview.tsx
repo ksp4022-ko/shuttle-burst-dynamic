@@ -1,38 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, MouseEvent, PointerEvent, TouchEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   activeTargetOrder,
   bagBaseBaseline,
   bagStrapBaseline,
   buildPreviewAssets,
+  buildV8ActiveHeroOverrides,
+  buildV8ActiveInfoCardsControls,
+  buildV8ActiveRosterListsControls,
+  buildV8ActiveSunBadgesControls,
   clawBaseline,
-  controlRanges,
   decorBaseline,
-  formatPreviewSettings,
-  getButtonStep,
   heroBaseline,
+  loadSavedControls,
   openingTargetOrder,
   previewDefaults,
   rearClawBaseline,
   safeZoneBaseline,
-  targetControlKeys,
-  targetVisibilityKeys,
+  saveControls,
   tigerRacketBaseline,
   tigerRigBaseline,
 } from "./dragonPreviewConfig";
-import type { HudOpacityMode, PreviewControls, PreviewMode, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
+import type { PreviewControls, PreviewMode, PreviewTargetId } from "./dragonPreviewConfig";
+import { V8TuningPanel } from "./V8TuningPanel";
 import { V8ActiveStyles, V8ActiveSunContent, V8IdentityScrollContent } from "@/components/v8-active/V8ActivePage";
 import { V8ActiveInfoCards } from "@/components/v8-active/V8ActiveInfoCards";
 import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "@/components/v8-active/V8ActiveRosterLists";
-import {
-  buildV8ActiveAssets,
-  v8ActiveBackgroundFadeOverrides,
-  v8ActiveRosterFontOptions,
-  v8ActiveStageAspectRatio,
-  type V8ActiveInfoCardsControls,
-  type V8ActiveRosterListsControls,
-  type V8ActiveSunBadgesControls,
-} from "@/components/v8-active/v8ActiveConfig";
+import { buildV8ActiveAssets, v8ActiveStageAspectRatio } from "@/components/v8-active/v8ActiveConfig";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 
@@ -48,62 +42,6 @@ const mockRosterWaiting: V8ActiveRosterPerson[] = [
   { id: "mock-w1", name: "黃亭亭" },
   { id: "mock-w2", name: "吳建宏" },
 ];
-
-type DockPosition = "top" | "bottom";
-type NumericControlKey = {
-  [Key in keyof PreviewControls]: PreviewControls[Key] extends number ? Key : never;
-}[keyof PreviewControls];
-
-// Mid-tuning autosave -- without this, a refresh (or the phone's browser
-// reclaiming a background tab) silently reset every slider back to
-// previewDefaults, discarding whatever the user had just been dialing in.
-// Merged ON TOP of previewDefaults (not used alone) so a save from before a
-// field was added/removed here still loads cleanly instead of leaving new
-// fields undefined.
-//
-// IMPORTANT: bump the trailing -vN whenever a field's COORDINATE SYSTEM
-// changes meaning, not just when fields are added/removed (the merge above
-// already handles that safely). Adding fields is safe to merge; a value
-// that's still a number but now means something different against a
-// resized/reparented container is NOT -- it silently applies a
-// now-nonsensical old number on top of the new default instead of the new
-// default itself, with no error and no visual warning. This has already
-// bitten the user more than once this session (e.g. the roster panel
-// moving from its own fixed-height box into the hero canvas's own %-space,
-// and the Active stage's aspect ratio changing) -- old saved X/Y/etc. kept
-// silently overriding the freshly-recalibrated defaults after each of
-// those changes, and the only symptom was "it looks broken," not an error.
-// Bumping this key on that class of change forces every saved session back
-// to the new defaults instead of quietly corrupting them.
-const PREVIEW_CONTROLS_STORAGE_KEY = "v8-preview-controls-v2";
-
-function loadSavedControls(): PreviewControls {
-  try {
-    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
-    if (!raw) return previewDefaults;
-    const saved = JSON.parse(raw) as Partial<PreviewControls>;
-    return { ...previewDefaults, ...saved };
-  } catch {
-    return previewDefaults;
-  }
-}
-
-function saveControls(controls: PreviewControls) {
-  try {
-    window.localStorage.setItem(PREVIEW_CONTROLS_STORAGE_KEY, JSON.stringify(controls));
-  } catch {
-    // Private browsing / storage disabled / quota exceeded -- tuning still
-    // works for this session, it just won't survive a refresh.
-  }
-}
-
-function clearSavedControls() {
-  try {
-    window.localStorage.removeItem(PREVIEW_CONTROLS_STORAGE_KEY);
-  } catch {
-    // Same as above -- nothing to clean up if storage was never writable.
-  }
-}
 
 const preloadPreviewImage = (src: string) =>
   new Promise<void>((resolve) => {
@@ -141,54 +79,6 @@ const preloadPreviewImagesWithTimeout = (sources: string[]) =>
     preloadPreviewImages(sources),
     new Promise<void>((resolve) => window.setTimeout(resolve, PREVIEW_ASSET_PRELOAD_TIMEOUT_MS)),
   ]);
-
-function isNumericControlKey(key: keyof PreviewControls): key is NumericControlKey {
-  return typeof previewDefaults[key] === "number";
-}
-
-function RangeControl({
-  controlKey,
-  value,
-  stepMode,
-  onChange,
-}: {
-  controlKey: NumericControlKey;
-  value: number;
-  stepMode: StepMode;
-  onChange: (value: number) => void;
-}) {
-  const range = controlRanges[controlKey];
-  const sliderStep = "step" in range ? range.step : 1;
-  const buttonStep = getButtonStep(controlKey, stepMode);
-  const decimals = sliderStep < 1 || buttonStep < 1 ? 2 : 0;
-  const setValue = (nextValue: number) => {
-    const clamped = Math.max(range.min, Math.min(range.max, Number(nextValue.toFixed(decimals))));
-    onChange(clamped);
-  };
-
-  return (
-    <div style={controlRowStyle}>
-      <span style={controlLabelStyle}>{range.label}</span>
-      <button type="button" aria-label={`${range.label} down`} onClick={() => setValue(value - buttonStep)} style={stepperStyle}>
-        -
-      </button>
-      <input
-        aria-label={range.label}
-        type="range"
-        min={range.min}
-        max={range.max}
-        step={sliderStep}
-        value={value}
-        onChange={(event) => onChange(Number(event.currentTarget.value))}
-        style={sliderStyle}
-      />
-      <span style={controlValueStyle}>{value.toFixed(decimals)}</span>
-      <button type="button" aria-label={`${range.label} up`} onClick={() => setValue(value + buttonStep)} style={stepperStyle}>
-        +
-      </button>
-    </div>
-  );
-}
 
 function HeroCopy({ controls, highlighted }: { controls: PreviewControls; highlighted: boolean }) {
   return (
@@ -256,30 +146,11 @@ function ActiveCanvas({
   // isDragonFix only still gates the sun badges' scattered-vs-compact
   // layout below, which remains identity-specific.
   const isDragonFix = character === "dragon";
-  // Dims just the backdrop scenery layers (cloud/mountain/back wave/mid
-  // wave/front foam/gold-ink) -- same formula the real page now uses (see
-  // v8ActiveBackgroundFadeOverrides in v8ActiveConfig.ts), just fed this
-  // slider's live value instead of the confirmed fixed percent. Sun/dragon/
-  // scroll/info cards/rope/roster are untouched.
-  const heroOverrides = {
-    sunX: controls.activeSunX,
-    sunY: controls.activeSunY,
-    sunScale: controls.activeSunScale,
-    sunZIndex: controls.activeSunZIndex,
-    sunTextScale: controls.activeSunTextScale,
-    ...v8ActiveBackgroundFadeOverrides(controls.activeBackgroundFade),
-    dragonShow: false,
-    bagBaseShow: false,
-    bagStrapShow: false,
-    rearClawShow: false,
-    tigerShow: false,
-    tigerRacketShow: false,
-    tigerScrollShow: true,
-    tigerScrollX: controls.activeTigerScrollX,
-    tigerScrollY: controls.activeTigerScrollY,
-    tigerScrollScale: controls.activeTigerScrollScale,
-    tigerScrollRotation: controls.activeTigerScrollRotation,
-  };
+  // Built from the SAME shared functions the real Active page's own
+  // embedded tuning panel uses (see dragonPreviewConfig.ts) -- fed this
+  // slider state instead of the real page's live controls, so the two
+  // can't drift out of sync with each other.
+  const heroOverrides = buildV8ActiveHeroOverrides(controls);
   const mockIdentity: CurrentIdentity = {
     signupId: "mock-self",
     name: "柯Sammy",
@@ -287,80 +158,9 @@ function ActiveCanvas({
     status: "confirmed",
   };
 
-  const infoCardsControls: V8ActiveInfoCardsControls = {
-    rope: {
-      show: controls.activeInfoRopeShow,
-      x: controls.activeInfoRopeX,
-      y: controls.activeInfoRopeY,
-      scale: controls.activeInfoRopeScale,
-      rotation: controls.activeInfoRopeRotation,
-    },
-    registered: {
-      show: controls.activeInfoRegisteredShow,
-      x: controls.activeInfoRegisteredX,
-      y: controls.activeInfoRegisteredY,
-      scale: controls.activeInfoRegisteredScale,
-      rotation: controls.activeInfoRegisteredRotation,
-    },
-    needed: {
-      show: controls.activeInfoNeededShow,
-      x: controls.activeInfoNeededX,
-      y: controls.activeInfoNeededY,
-      scale: controls.activeInfoNeededScale,
-      rotation: controls.activeInfoNeededRotation,
-    },
-    waitlist: {
-      show: controls.activeInfoWaitlistShow,
-      x: controls.activeInfoWaitlistX,
-      y: controls.activeInfoWaitlistY,
-      scale: controls.activeInfoWaitlistScale,
-      rotation: controls.activeInfoWaitlistRotation,
-    },
-    countFontSize: controls.activeInfoCountFontSize,
-  };
-
-  const rosterListsControls: V8ActiveRosterListsControls = {
-    show: controls.activeRosterListsShow,
-    x: controls.activeRosterListsX,
-    y: controls.activeRosterListsY,
-    scale: controls.activeRosterListsScale,
-    rotation: controls.activeRosterListsRotation,
-    fontSize: controls.activeRosterListsFontSize,
-    lineHeight: controls.activeRosterListsLineHeight,
-    textColor: controls.activeRosterListsTextColor,
-    fontFamily: controls.activeRosterListsFontFamily,
-    bold: controls.activeRosterListsBold,
-    leave: { x: controls.activeRosterListsLeaveX, y: controls.activeRosterListsLeaveY },
-    confirmed: { x: controls.activeRosterListsConfirmedX, y: controls.activeRosterListsConfirmedY },
-    waiting: { x: controls.activeRosterListsWaitingX, y: controls.activeRosterListsWaitingY },
-  };
-
-  const sunBadgeControls: V8ActiveSunBadgesControls = {
-    ballType: {
-      show: controls.activeSunBadgeBallTypeShow,
-      x: controls.activeSunBadgeBallTypeX,
-      y: controls.activeSunBadgeBallTypeY,
-      scale: controls.activeSunBadgeBallTypeScale,
-      rotation: controls.activeSunBadgeBallTypeRotation,
-      fontSize: controls.activeSunBadgeBallTypeFontSize,
-    },
-    tempFee: {
-      show: controls.activeSunBadgeTempFeeShow,
-      x: controls.activeSunBadgeTempFeeX,
-      y: controls.activeSunBadgeTempFeeY,
-      scale: controls.activeSunBadgeTempFeeScale,
-      rotation: controls.activeSunBadgeTempFeeRotation,
-      fontSize: controls.activeSunBadgeTempFeeFontSize,
-    },
-    courtCount: {
-      show: controls.activeSunBadgeCourtCountShow,
-      x: controls.activeSunBadgeCourtCountX,
-      y: controls.activeSunBadgeCourtCountY,
-      scale: controls.activeSunBadgeCourtCountScale,
-      rotation: controls.activeSunBadgeCourtCountRotation,
-      fontSize: controls.activeSunBadgeCourtCountFontSize,
-    },
-  };
+  const infoCardsControls = buildV8ActiveInfoCardsControls(controls);
+  const rosterListsControls = buildV8ActiveRosterListsControls(controls);
+  const sunBadgeControls = buildV8ActiveSunBadgesControls(controls);
 
   return (
     <div className="v8-active" style={{ position: "relative", width: "100%" } as CSSProperties}>
@@ -398,6 +198,8 @@ function ActiveCanvas({
             pendingLabel={undefined}
             onPrimaryAction={() => {}}
             onForget={() => {}}
+            onHelperSignup={() => {}}
+            onHelperCancel={() => {}}
           />
         }
         infoCardsContent={
@@ -474,20 +276,10 @@ export function DragonPreview() {
     typeof window === "undefined" ? previewDefaults : loadSavedControls(),
   );
   const [assetsReady, setAssetsReady] = useState(false);
-  const [panelMinimized, setPanelMinimized] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<PreviewTargetId>("TIGER RIG");
-  const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
-  const [dockPosition, setDockPosition] = useState<DockPosition>("bottom");
-  const [dragTop, setDragTop] = useState<number | null>(null);
-  const [hudOpacity, setHudOpacity] = useState<HudOpacityMode>("normal");
-  const [stepMode, setStepMode] = useState<StepMode>("Normal");
   const [highlightEnabled, setHighlightEnabled] = useState(true);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("OPENING");
   const [activePreviewCharacter, setActivePreviewCharacter] = useState<"dragon" | "tiger">("dragon");
-  const panelRef = useRef<HTMLElement | null>(null);
-  const copyFeedbackTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-  const dragRef = useRef<{ pointerId: number | null; offsetY: number } | null>(null);
 
   const assets = useMemo(() => buildPreviewAssets(import.meta.env.BASE_URL), []);
   const activeAssets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
@@ -508,110 +300,6 @@ export function DragonPreview() {
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
   const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
 
-  const update = <Key extends keyof PreviewControls>(key: Key, value: PreviewControls[Key]) => {
-    setControls((current) => ({ ...current, [key]: value }));
-  };
-
-  const resetTarget = () => {
-    setControls((current) => {
-      const next = { ...current };
-      for (const key of targetControlKeys[selectedTarget]) {
-        next[key] = previewDefaults[key] as never;
-      }
-      return next;
-    });
-  };
-
-  const writeClipboard = async (text: string) => {
-    if (navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(text);
-        return;
-      } catch {
-        // Fall through for stricter mobile Safari contexts.
-      }
-    }
-
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-    textarea.style.top = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    const copied = document.execCommand("copy");
-    document.body.removeChild(textarea);
-    if (!copied) throw new Error("Clipboard copy failed");
-  };
-
-  const copySettings = async () => {
-    await writeClipboard(formatPreviewSettings(controls));
-    setCopyStatus("copied");
-    if (copyFeedbackTimer.current) window.clearTimeout(copyFeedbackTimer.current);
-    copyFeedbackTimer.current = window.setTimeout(() => setCopyStatus("idle"), 1700);
-  };
-
-  const clampPanelTop = (nextTop: number) => {
-    const panelHeight = panelRef.current?.getBoundingClientRect().height ?? 260;
-    const topLimit = 10;
-    const bottomLimit = Math.max(topLimit, window.innerHeight - panelHeight - 10);
-    return Math.max(topLimit, Math.min(bottomLimit, nextTop));
-  };
-
-  const beginPanelDrag = (clientY: number, pointerId: number | null = null) => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    const rect = panel.getBoundingClientRect();
-    dragRef.current = { pointerId, offsetY: clientY - rect.top };
-    setDragTop(rect.top);
-  };
-
-  const updatePanelDrag = (clientY: number) => {
-    if (!dragRef.current) return;
-    setDragTop(clampPanelTop(clientY - dragRef.current.offsetY));
-  };
-
-  const finishPanelDrag = () => {
-    const rect = panelRef.current?.getBoundingClientRect();
-    dragRef.current = null;
-    if (rect) setDockPosition(rect.top + rect.height / 2 < window.innerHeight / 2 ? "top" : "bottom");
-    setDragTop(null);
-  };
-
-  const startPanelDrag = (event: PointerEvent<HTMLElement>) => {
-    if (event.button !== 0) return;
-    beginPanelDrag(event.clientY, event.pointerId);
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const movePanelDrag = (event: PointerEvent<HTMLElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
-    updatePanelDrag(event.clientY);
-  };
-
-  const endPanelDrag = (event: PointerEvent<HTMLElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    finishPanelDrag();
-  };
-
-  const startPanelMouseDrag = (event: MouseEvent<HTMLElement>) => {
-    if (dragRef.current || event.button !== 0) return;
-    beginPanelDrag(event.clientY);
-  };
-
-  const startPanelTouchDrag = (event: TouchEvent<HTMLElement>) => {
-    if (dragRef.current || event.touches.length !== 1) return;
-    beginPanelDrag(event.touches[0].clientY);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (copyFeedbackTimer.current) window.clearTimeout(copyFeedbackTimer.current);
-    };
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
     setAssetsReady(false);
@@ -622,66 +310,6 @@ export function DragonPreview() {
       cancelled = true;
     };
   }, [assets]);
-
-  useEffect(() => {
-    const handleMouseMove = (event: globalThis.MouseEvent) => {
-      if (dragRef.current?.pointerId !== null) return;
-      updatePanelDrag(event.clientY);
-    };
-    const handleMouseUp = () => {
-      if (dragRef.current?.pointerId !== null) return;
-      finishPanelDrag();
-    };
-    const handleTouchMove = (event: globalThis.TouchEvent) => {
-      if (dragRef.current?.pointerId !== null || event.touches.length !== 1) return;
-      event.preventDefault();
-      updatePanelDrag(event.touches[0].clientY);
-    };
-    const handleTouchEnd = () => {
-      if (dragRef.current?.pointerId !== null) return;
-      finishPanelDrag();
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    window.addEventListener("touchend", handleTouchEnd);
-    window.addEventListener("touchcancel", handleTouchEnd);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-      window.removeEventListener("touchcancel", handleTouchEnd);
-    };
-  }, []);
-
-  const panelPositionStyle: CSSProperties =
-    dragTop === null
-      ? {
-          ...panelStyle,
-          background: hudOpacity === "ghost" ? "rgba(24, 17, 13, 0.38)" : "rgba(24, 17, 13, 0.6)",
-          ...(dockPosition === "top"
-            ? { top: "calc(10px + env(safe-area-inset-top, 0px))", bottom: "auto" }
-            : { bottom: "calc(10px + env(safe-area-inset-bottom, 0px))" }),
-        }
-      : {
-          ...panelStyle,
-          background: hudOpacity === "ghost" ? "rgba(24, 17, 13, 0.38)" : "rgba(24, 17, 13, 0.6)",
-          top: dragTop,
-          bottom: "auto",
-        };
-
-  const pillPositionStyle: CSSProperties = {
-    ...panelPillStyle,
-    ...(dockPosition === "top"
-      ? { top: "calc(14px + env(safe-area-inset-top, 0px))", bottom: "auto" }
-      : { bottom: "calc(14px + env(safe-area-inset-bottom, 0px))" }),
-  };
-
-  const selectedControlKeys = targetControlKeys[selectedTarget].filter(isNumericControlKey);
-  const selectedVisibilityKey = targetVisibilityKeys[selectedTarget];
-  const selectedVisible = selectedVisibilityKey ? controls[selectedVisibilityKey] : null;
 
   return (
     <main style={pageStyle}>
@@ -853,159 +481,18 @@ export function DragonPreview() {
         </div>
       </section>
 
-      {panelMinimized ? (
-        <button type="button" onClick={() => setPanelMinimized(false)} style={pillPositionStyle} aria-label="Open tuning controls">
-          調整
-        </button>
-      ) : (
-        <section ref={panelRef} style={panelPositionStyle} aria-label="V8 preview tuning HUD">
-          <div
-            style={panelHeaderStyle}
-            onPointerDown={startPanelDrag}
-            onPointerMove={movePanelDrag}
-            onPointerUp={endPanelDrag}
-            onPointerCancel={endPanelDrag}
-            onMouseDown={startPanelMouseDrag}
-            onTouchStart={startPanelTouchDrag}
-          >
-            <div style={modeToggleRowStyle} onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()}>
-              <button
-                type="button"
-                style={previewMode === "OPENING" ? modeToggleActiveStyle : modeToggleStyle}
-                onClick={() => setPreviewModeAndTarget("OPENING")}
-              >
-                OPENING
-              </button>
-              <button
-                type="button"
-                style={previewMode === "ACTIVE" ? modeToggleActiveStyle : modeToggleStyle}
-                onClick={() => setPreviewModeAndTarget("ACTIVE")}
-              >
-                ACTIVE
-              </button>
-            </div>
-            <label style={targetSelectLabelStyle} onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()}>
-              <span style={targetPrefixStyle}>TARGET</span>
-              <select value={selectedTarget} onChange={(event) => setSelectedTarget(event.currentTarget.value as PreviewTargetId)} style={targetSelectStyle}>
-                {currentTargetOrder.map((target) => (
-                  <option key={target} value={target}>
-                    {target}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div style={panelActionsStyle}>
-              {selectedVisibilityKey ? (
-                <button
-                  type="button"
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onClick={() => update(selectedVisibilityKey, !controls[selectedVisibilityKey])}
-                  style={visibilityButtonStyle}
-                >
-                  顯示 {selectedVisible ? "ON" : "OFF"}
-                </button>
-              ) : null}
-              <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={copySettings} style={panelActionButtonStyle}>
-                {copyStatus === "copied" ? "已複製" : "複製"}
-              </button>
-              <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setHudOpacity((current) => (current === "normal" ? "ghost" : "normal"))} style={panelIconButtonStyle}>
-                透
-              </button>
-              <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setPanelMinimized(true)} style={panelIconButtonStyle} aria-label="Minimize tuning HUD">
-                -
-              </button>
-            </div>
-          </div>
-          <div style={panelBodyStyle}>
-            {selectedControlKeys.map((key) => (
-              <RangeControl
-                key={key}
-                controlKey={key}
-                value={controls[key]}
-                stepMode={stepMode}
-                onChange={(value) => update(key, value as PreviewControls[typeof key])}
-              />
-            ))}
-            {selectedTarget === "ACTIVE ROSTER LISTS" ? (
-              <>
-                <label style={inlineSelectLabelStyle}>
-                  TEXT COLOR
-                  <input
-                    type="color"
-                    value={controls.activeRosterListsTextColor}
-                    onChange={(event) => update("activeRosterListsTextColor", event.currentTarget.value)}
-                    style={compactSelectStyle}
-                  />
-                </label>
-                <label style={inlineSelectLabelStyle}>
-                  FONT
-                  <select
-                    value={controls.activeRosterListsFontFamily}
-                    onChange={(event) => update("activeRosterListsFontFamily", event.currentTarget.value)}
-                    style={compactSelectStyle}
-                  >
-                    {v8ActiveRosterFontOptions.map((option) => (
-                      <option key={option.label} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => update("activeRosterListsBold", !controls.activeRosterListsBold)}
-                  style={smallButtonStyle}
-                >
-                  {controls.activeRosterListsBold ? "Bold ON" : "Bold OFF"}
-                </button>
-              </>
-            ) : null}
-          </div>
-          <button type="button" onClick={() => setMoreOpen((current) => !current)} style={moreToggleStyle}>
-            {moreOpen ? "收起更多" : "⋯ 更多"}
-          </button>
-          {moreOpen ? (
-            <>
-              <div style={toolbarStyle}>
-                <label style={inlineSelectLabelStyle}>
-                  STEP
-                  <select value={stepMode} onChange={(event) => setStepMode(event.currentTarget.value as StepMode)} style={compactSelectStyle}>
-                    <option value="Fine">Fine</option>
-                    <option value="Normal">Normal</option>
-                    <option value="Large">Large</option>
-                  </select>
-                </label>
-                <label style={inlineSelectLabelStyle}>
-                  DECOR
-                  <select value={controls.decorMode} onChange={(event) => update("decorMode", event.currentTarget.value as PreviewControls["decorMode"])} style={compactSelectStyle}>
-                    <option value="FULL">FULL</option>
-                    <option value="LIGHT">LIGHT</option>
-                  </select>
-                </label>
-                <button type="button" onClick={() => setHighlightEnabled((current) => !current)} style={smallButtonStyle}>
-                  {highlightEnabled ? "Highlight ON" : "Highlight OFF"}
-                </button>
-                <button type="button" onClick={() => setDockPosition((current) => (current === "top" ? "bottom" : "top"))} style={smallButtonStyle}>
-                  {dockPosition === "top" ? "移下" : "移上"}
-                </button>
-              </div>
-              <div style={resetBarStyle}>
-                <button type="button" onClick={resetTarget} style={resetButtonStyle}>Reset Target</button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setControls(previewDefaults);
-                    clearSavedControls();
-                  }}
-                  style={resetButtonStyle}
-                >
-                  Reset All
-                </button>
-              </div>
-            </>
-          ) : null}
-        </section>
-      )}
+      <V8TuningPanel
+        controls={controls}
+        setControls={setControls}
+        targetOrder={currentTargetOrder}
+        selectedTarget={selectedTarget}
+        onSelectTarget={setSelectedTarget}
+        showModeToggle
+        mode={previewMode}
+        onModeChange={setPreviewModeAndTarget}
+        highlightEnabled={highlightEnabled}
+        onHighlightChange={setHighlightEnabled}
+      />
     </main>
   );
 }
@@ -1188,33 +675,6 @@ const selectedTargetStyle: CSSProperties = {
   borderRadius: 8,
 };
 
-const panelStyle: CSSProperties = {
-  position: "fixed",
-  left: 10,
-  right: 10,
-  zIndex: 30,
-  maxWidth: 390,
-  margin: "0 auto",
-  display: "block",
-  overflow: "hidden",
-  borderRadius: 14,
-  boxShadow: "0 14px 42px rgba(0,0,0,0.34)",
-  border: "1px solid rgba(247, 239, 224, 0.2)",
-  backdropFilter: "blur(7px)",
-};
-
-const panelHeaderStyle: CSSProperties = {
-  minHeight: 46,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 8,
-  padding: "7px 8px",
-  borderBottom: "1px solid rgba(247, 239, 224, 0.12)",
-  touchAction: "none",
-  cursor: "grab",
-};
-
 const activeCharacterToggleStyle: CSSProperties = {
   position: "absolute",
   top: 8,
@@ -1229,233 +689,4 @@ const activeCharacterToggleStyle: CSSProperties = {
   color: "#20150d",
 };
 
-const modeToggleRowStyle: CSSProperties = {
-  display: "flex",
-  gap: 4,
-  marginRight: 6,
-};
 
-const modeToggleStyle: CSSProperties = {
-  padding: "3px 8px",
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: 0.4,
-  border: "1px solid rgba(247,239,224,0.28)",
-  borderRadius: 999,
-  background: "transparent",
-  color: "rgba(247,239,224,0.6)",
-};
-
-const modeToggleActiveStyle: CSSProperties = {
-  ...modeToggleStyle,
-  background: "rgba(216,185,94,0.85)",
-  border: "1px solid rgba(216,185,94,0.85)",
-  color: "#20150d",
-};
-
-const targetSelectLabelStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "auto minmax(0, 1fr)",
-  alignItems: "center",
-  gap: 6,
-  minWidth: 0,
-  flex: "1 1 auto",
-};
-
-const targetPrefixStyle: CSSProperties = {
-  color: "rgba(247,239,224,0.72)",
-  fontSize: 10,
-  fontWeight: 900,
-  letterSpacing: 0.8,
-};
-
-const targetSelectStyle: CSSProperties = {
-  minWidth: 0,
-  height: 34,
-  border: "1px solid rgba(247, 239, 224, 0.24)",
-  borderRadius: 8,
-  background: "rgba(247, 239, 224, 0.14)",
-  color: "#f7efe0",
-  fontSize: 13,
-  fontWeight: 900,
-};
-
-const panelActionsStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 5,
-  flexShrink: 0,
-};
-
-const panelActionButtonStyle: CSSProperties = {
-  minHeight: 34,
-  border: "1px solid rgba(247, 239, 224, 0.22)",
-  borderRadius: 8,
-  background: "rgba(247, 239, 224, 0.14)",
-  color: "#f7efe0",
-  padding: "0 8px",
-  fontSize: 12,
-  fontWeight: 900,
-};
-
-const visibilityButtonStyle: CSSProperties = {
-  minHeight: 34,
-  border: "1px solid rgba(247, 239, 224, 0.25)",
-  borderRadius: 8,
-  background: "rgba(247, 239, 224, 0.16)",
-  color: "#f7efe0",
-  padding: "0 6px",
-  fontSize: 10,
-  fontWeight: 900,
-  whiteSpace: "nowrap",
-};
-
-const panelIconButtonStyle: CSSProperties = {
-  width: 34,
-  height: 34,
-  border: "1px solid rgba(247, 239, 224, 0.22)",
-  borderRadius: 8,
-  background: "rgba(247, 239, 224, 0.14)",
-  color: "#f7efe0",
-  fontSize: 13,
-  fontWeight: 900,
-};
-
-const toolbarStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr auto auto",
-  alignItems: "center",
-  gap: 6,
-  padding: "6px 8px",
-  borderBottom: "1px solid rgba(247, 239, 224, 0.1)",
-};
-
-const inlineSelectLabelStyle: CSSProperties = {
-  minWidth: 0,
-  display: "grid",
-  gridTemplateColumns: "auto minmax(0, 1fr)",
-  alignItems: "center",
-  gap: 5,
-  color: "rgba(247,239,224,0.72)",
-  fontSize: 10,
-  fontWeight: 900,
-};
-
-const compactSelectStyle: CSSProperties = {
-  minWidth: 0,
-  height: 30,
-  border: "1px solid rgba(247, 239, 224, 0.22)",
-  borderRadius: 7,
-  background: "rgba(247, 239, 224, 0.13)",
-  color: "#f7efe0",
-  fontSize: 12,
-  fontWeight: 800,
-};
-
-const smallButtonStyle: CSSProperties = {
-  minHeight: 30,
-  border: "1px solid rgba(247, 239, 224, 0.2)",
-  borderRadius: 7,
-  background: "rgba(247, 239, 224, 0.12)",
-  color: "#f7efe0",
-  padding: "0 7px",
-  fontSize: 11,
-  fontWeight: 900,
-  whiteSpace: "nowrap",
-};
-
-const panelBodyStyle: CSSProperties = {
-  maxHeight: 180,
-  minHeight: 0,
-  overflowY: "auto",
-  WebkitOverflowScrolling: "touch",
-  overscrollBehavior: "contain",
-  display: "grid",
-  gap: 5,
-  padding: "7px 8px",
-};
-
-const controlRowStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "58px 30px minmax(62px, 1fr) 42px 30px",
-  alignItems: "center",
-  gap: 5,
-  minHeight: 36,
-  color: "#f7efe0",
-};
-
-const controlLabelStyle: CSSProperties = {
-  minWidth: 0,
-  overflowWrap: "anywhere",
-  fontSize: 11,
-  lineHeight: 1.1,
-  fontWeight: 800,
-};
-
-const sliderStyle: CSSProperties = {
-  width: "100%",
-};
-
-const controlValueStyle: CSSProperties = {
-  textAlign: "right",
-  fontVariantNumeric: "tabular-nums",
-  fontSize: 11,
-  color: "rgba(247,239,224,0.78)",
-};
-
-const stepperStyle: CSSProperties = {
-  width: 30,
-  height: 30,
-  border: "1px solid rgba(247, 239, 224, 0.22)",
-  borderRadius: 7,
-  background: "rgba(247, 239, 224, 0.14)",
-  color: "#f7efe0",
-  fontSize: 16,
-  fontWeight: 900,
-  lineHeight: 1,
-};
-
-const moreToggleStyle: CSSProperties = {
-  width: "100%",
-  minHeight: 30,
-  border: 0,
-  borderTop: "1px solid rgba(247, 239, 224, 0.1)",
-  background: "rgba(247, 239, 224, 0.08)",
-  color: "#f7efe0",
-  fontSize: 11,
-  fontWeight: 900,
-};
-
-const resetBarStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: 7,
-  padding: "7px 8px 8px",
-  borderTop: "1px solid rgba(247, 239, 224, 0.1)",
-};
-
-const resetButtonStyle: CSSProperties = {
-  minHeight: 32,
-  border: "1px solid rgba(247, 239, 224, 0.2)",
-  borderRadius: 8,
-  background: "rgba(247, 239, 224, 0.14)",
-  color: "#f7efe0",
-  fontSize: 12,
-  fontWeight: 900,
-};
-
-const panelPillStyle: CSSProperties = {
-  position: "fixed",
-  right: 12,
-  zIndex: 30,
-  minWidth: 74,
-  minHeight: 44,
-  border: "1px solid rgba(247, 239, 224, 0.24)",
-  borderRadius: 999,
-  background: "rgba(24, 17, 13, 0.6)",
-  boxShadow: "0 12px 34px rgba(0,0,0,0.38)",
-  color: "#f7efe0",
-  fontSize: 15,
-  fontWeight: 900,
-  backdropFilter: "blur(7px)",
-};
