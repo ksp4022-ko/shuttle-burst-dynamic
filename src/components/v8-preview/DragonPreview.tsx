@@ -23,14 +23,29 @@ import {
 import type { HudOpacityMode, PreviewControls, PreviewMode, PreviewTargetId, StepMode } from "./dragonPreviewConfig";
 import { V8ActiveStyles, V8ActiveSunContent, V8IdentityScrollContent } from "@/components/v8-active/V8ActivePage";
 import { V8ActiveInfoCards } from "@/components/v8-active/V8ActiveInfoCards";
+import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "@/components/v8-active/V8ActiveRosterLists";
 import {
   buildV8ActiveAssets,
   type V8ActiveInfoCardsControls,
+  type V8ActiveRosterListsControls,
   type V8ActiveSunBadgesControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import { v8HeroDefaults } from "@/components/v8-hero/v8HeroConfig";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
+
+const mockRosterConfirmed: V8ActiveRosterPerson[] = [
+  { id: "mock-c1", name: "柯Sammy" },
+  { id: "mock-c2", name: "陳大文" },
+  { id: "mock-c3", name: "林小美" },
+  { id: "mock-c4", name: "王志明" },
+  { id: "mock-c5", name: "張家豪" },
+];
+const mockRosterLeave: V8ActiveRosterPerson[] = [{ id: "mock-l1", name: "李國強" }];
+const mockRosterWaiting: V8ActiveRosterPerson[] = [
+  { id: "mock-w1", name: "黃亭亭" },
+  { id: "mock-w2", name: "吳建宏" },
+];
 
 type DockPosition = "top" | "bottom";
 type NumericControlKey = {
@@ -201,12 +216,14 @@ function ActiveCanvas({
   character: "dragon" | "tiger";
   onCharacterChange: (character: "dragon" | "tiger") => void;
 }) {
-  // Mirrors V8ActivePage's B_fix branching (see v8ActiveDragonHeroOverrides
-  // there) so this console previews the exact same composition, just fed by
-  // this slider state instead of the frozen defaults -- "複製" then hands
-  // back the numbers to bake into that frozen object. The sun's Active
-  // position applies unconditionally (real page: v8ActiveSunOverrides),
-  // same as here.
+  // Mirrors V8ActivePage's composition so this console previews the exact
+  // same output, just fed by this slider state instead of the frozen
+  // defaults -- "複製" then hands back the numbers to bake into that frozen
+  // object. The sun position AND the tiger-scroll (personal status display)
+  // both apply unconditionally regardless of the mock character toggle
+  // (real page: v8ActiveSunOverrides + v8ActiveTigerScrollOverrides) --
+  // isDragonFix only still gates the sun badges' scattered-vs-compact
+  // layout below, which remains identity-specific.
   const isDragonFix = character === "dragon";
   // Dims just the backdrop scenery layers (mountain/back wave/mid wave/
   // front foam/gold-ink) -- computed off each layer's own v8HeroDefaults
@@ -228,21 +245,17 @@ function ActiveCanvas({
     midWaveOpacity: v8HeroDefaults.midWaveOpacity * backgroundFadeFactor,
     frontFoamOpacity: v8HeroDefaults.frontFoamOpacity * backgroundFadeFactor,
     goldInkOpacity: v8HeroDefaults.goldInkOpacity * backgroundFadeFactor,
-    ...(isDragonFix
-      ? {
-          dragonShow: false,
-          bagBaseShow: false,
-          bagStrapShow: false,
-          rearClawShow: false,
-          tigerShow: false,
-          tigerRacketShow: false,
-          dragonScrollShow: true,
-          dragonScrollX: controls.activeDragonScrollX,
-          dragonScrollY: controls.activeDragonScrollY,
-          dragonScrollScale: controls.activeDragonScrollScale,
-          dragonScrollRotation: controls.activeDragonScrollRotation,
-        }
-      : { dragonShow: false }),
+    dragonShow: false,
+    bagBaseShow: false,
+    bagStrapShow: false,
+    rearClawShow: false,
+    tigerShow: false,
+    tigerRacketShow: false,
+    tigerScrollShow: true,
+    tigerScrollX: controls.activeTigerScrollX,
+    tigerScrollY: controls.activeTigerScrollY,
+    tigerScrollScale: controls.activeTigerScrollScale,
+    tigerScrollRotation: controls.activeTigerScrollRotation,
   };
   const mockIdentity: CurrentIdentity = {
     signupId: "mock-self",
@@ -280,6 +293,17 @@ function ActiveCanvas({
       scale: controls.activeInfoWaitlistScale,
       rotation: controls.activeInfoWaitlistRotation,
     },
+  };
+
+  const rosterListsControls: V8ActiveRosterListsControls = {
+    show: controls.activeRosterListsShow,
+    x: controls.activeRosterListsX,
+    y: controls.activeRosterListsY,
+    scale: controls.activeRosterListsScale,
+    rotation: controls.activeRosterListsRotation,
+    fontSize: controls.activeRosterListsFontSize,
+    lineHeight: controls.activeRosterListsLineHeight,
+    textColor: controls.activeRosterListsTextColor,
   };
 
   const sunBadgeControls: V8ActiveSunBadgesControls = {
@@ -337,18 +361,26 @@ function ActiveCanvas({
           />
         }
         scrollContent={
-          isDragonFix ? (
-            <V8IdentityScrollContent
-              identity={mockIdentity}
-              busy={false}
-              pendingLabel={undefined}
-              onPrimaryAction={() => {}}
-              onForget={() => {}}
-            />
-          ) : undefined
+          <V8IdentityScrollContent
+            identity={mockIdentity}
+            busy={false}
+            pendingLabel={undefined}
+            onPrimaryAction={() => {}}
+            onForget={() => {}}
+          />
         }
         infoCardsContent={<V8ActiveInfoCards assets={assets} controls={infoCardsControls} />}
       />
+
+      <div className="v8-active-roster-stage">
+        <V8ActiveRosterLists
+          frameSrc={assets.rosterFrame}
+          confirmed={mockRosterConfirmed}
+          leave={mockRosterLeave}
+          waiting={mockRosterWaiting}
+          controls={rosterListsControls}
+        />
+      </div>
     </div>
   );
 }
@@ -858,6 +890,17 @@ export function DragonPreview() {
                 onChange={(value) => update(key, value as PreviewControls[typeof key])}
               />
             ))}
+            {selectedTarget === "ACTIVE ROSTER LISTS" ? (
+              <label style={inlineSelectLabelStyle}>
+                TEXT COLOR
+                <input
+                  type="color"
+                  value={controls.activeRosterListsTextColor}
+                  onChange={(event) => update("activeRosterListsTextColor", event.currentTarget.value)}
+                  style={compactSelectStyle}
+                />
+              </label>
+            ) : null}
           </div>
           <button type="button" onClick={() => setMoreOpen((current) => !current)} style={moreToggleStyle}>
             {moreOpen ? "收起更多" : "⋯ 更多"}

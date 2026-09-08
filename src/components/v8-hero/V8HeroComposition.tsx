@@ -413,20 +413,20 @@ export function V8HeroComposition({
                 </div>
               </div>
             ) : null}
-            {controls.dragonScrollShow ? (
+            {controls.tigerScrollShow ? (
               <div
                 aria-hidden={false}
                 style={{
                   position: "absolute",
-                  left: `${controls.dragonScrollX}%`,
-                  top: `${controls.dragonScrollY}%`,
-                  width: `${58 * controls.dragonScrollScale}%`,
-                  transform: `translate(-50%, -50%) rotate(${controls.dragonScrollRotation}deg)`,
+                  left: `${controls.tigerScrollX}%`,
+                  top: `${controls.tigerScrollY}%`,
+                  width: `${58 * controls.tigerScrollScale}%`,
+                  transform: `translate(-50%, -50%) rotate(${controls.tigerScrollRotation}deg)`,
                   zIndex: 9,
                 }}
               >
                 <img
-                  src={assets.dragonScroll}
+                  src={assets.tigerScroll}
                   alt=""
                   aria-hidden="true"
                   decoding="async"
@@ -434,18 +434,18 @@ export function V8HeroComposition({
                   draggable={false}
                   style={{ display: "block", width: "100%", height: "auto" }}
                 />
-                {/* Panel inset measured directly off dragon-scroll-fixed-v1's
-                    own pixels (see the processing note in v8ActiveConfig.ts's
-                    v8ActiveDragonHeroOverrides) -- this image's blank panel
-                    sits further right/lower than the standalone scroll's,
-                    since the dragon's head and coils take up the left side. */}
+                {/* Panel inset measured directly off tiger-scroll-fixed-v1's
+                    own pixels (row-by-row contiguous-cream-run scan) -- this
+                    composite's blank panel is narrower and lower than the
+                    standalone scroll's, since the tiger's body and the
+                    mountain backdrop take up most of the frame. */}
                 <div
                   style={{
                     position: "absolute",
-                    top: "24%",
-                    bottom: "33%",
-                    left: "56%",
-                    right: "22%",
+                    top: "42%",
+                    bottom: "23%",
+                    left: "27%",
+                    right: "48%",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",

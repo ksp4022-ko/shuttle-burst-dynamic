@@ -6,17 +6,16 @@ import type { AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition, eyebrowStyle, titleStyle } from "@/components/v8-hero/V8HeroComposition";
 import {
   buildV8ActiveAssets,
-  v8ActiveDragonHeroOverrides,
   v8ActiveInfoCardsDefaults,
+  v8ActiveRosterListsDefaults,
   v8ActiveSunBadgesDefaults,
   v8ActiveSunOverrides,
+  v8ActiveTigerScrollOverrides,
   type V8ActiveSunBadgeControls,
   type V8ActiveSunBadgesControls,
 } from "./v8ActiveConfig";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
-
-const DRAGON_BADGE = "v8-preview/display/dragon-body-v2-display.webp";
-const TIGER_BADGE = "v8-preview/display/tiger-body-v1-display.webp";
+import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
@@ -35,7 +34,7 @@ function statusLabel(identity: CurrentIdentity) {
 type HelperMode = "signup" | "cancel" | null;
 
 export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
-  const { roster, selectedEvent, pendingAction, selectedEventId } = flow;
+  const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting } = flow;
   const { identity, remember, forget } = useCurrentIdentity(roster, selectedEventId);
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
@@ -92,18 +91,24 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     if (ok) setHelperMode(null);
   };
 
-  // B_fix: once identity resolves to season/dragon, the claw-grips-a-scroll
-  // composition takes over (see v8ActiveDragonHeroOverrides) -- reuses the
-  // same dragon/claw art, just repositioned, per the user's mockup. B_temp
-  // (casual/tiger) hasn't got its own mockup yet, so it (and the
-  // identity-not-chosen state) stay on the plain overlay. The sun's Active
-  // position (v8ActiveSunOverrides) applies regardless of identity -- it's
-  // always confirmed-state once this component renders at all.
+  // The tiger-scroll (personal status display) and sun position both apply
+  // to EVERY confirmed render regardless of identity now -- see
+  // v8ActiveTigerScrollOverrides' doc comment. isDragonFix is kept only for
+  // the sun badges' scattered-vs-compact layout below (scattered={isDragonFix}),
+  // which is still identity-gated since B_temp (casual/tiger) has no
+  // scattered mockup yet.
   const isDragonFix = characterKind === "dragon";
   const heroOverrides = {
     ...v8ActiveSunOverrides,
-    ...(isDragonFix ? v8ActiveDragonHeroOverrides : characterKind === "tiger" ? { dragonShow: false } : {}),
+    ...v8ActiveTigerScrollOverrides,
   };
+
+  const rosterConfirmed: V8ActiveRosterPerson[] = confirmed.map((person) => ({ id: person.id, name: person.name }));
+  const rosterLeave: V8ActiveRosterPerson[] = (roster.fixedLeave || []).map((person) => ({
+    id: person.id,
+    name: person.name,
+  }));
+  const rosterWaiting: V8ActiveRosterPerson[] = waiting.map((person) => ({ id: person.id, name: person.name }));
 
   const handlePrimaryAction = () => {
     if (!identity) return;
@@ -133,7 +138,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
           />
         }
         scrollContent={
-          isDragonFix && identity ? (
+          identity ? (
             <V8IdentityScrollContent
               identity={identity}
               busy={busy}
@@ -147,15 +152,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
       />
 
       <div className="v8-active-content">
-        {isDragonFix ? null : identity ? (
-          <V8IdentityStatusCard
-            identity={identity}
-            busy={busy}
-            pendingLabel={pendingAction?.label}
-            onPrimaryAction={handlePrimaryAction}
-            onForget={forget}
-          />
-        ) : (
+        {identity ? null : (
           <V8IdentityPrompt
             seasonCandidates={seasonCandidates}
             tigerName={tigerName}
@@ -217,6 +214,16 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               </button>
             </div>
           )}
+        </div>
+
+        <div className="v8-active-roster-stage">
+          <V8ActiveRosterLists
+            frameSrc={assets.rosterFrame}
+            confirmed={rosterConfirmed}
+            leave={rosterLeave}
+            waiting={rosterWaiting}
+            controls={v8ActiveRosterListsDefaults}
+          />
         </div>
       </div>
     </div>
@@ -342,53 +349,11 @@ export function V8ActiveSunContent({
   );
 }
 
-function V8IdentityStatusCard({
-  identity,
-  busy,
-  pendingLabel,
-  onPrimaryAction,
-  onForget,
-}: {
-  identity: CurrentIdentity;
-  busy: boolean;
-  pendingLabel: string | undefined;
-  onPrimaryAction: () => void;
-  onForget: () => void;
-}) {
-  const badge = identity.signupType === "fixed" ? DRAGON_BADGE : TIGER_BADGE;
-
-  return (
-    <section className="v8-active-identity-wrap">
-      <section className="v8-active-identity" aria-label="我的狀態">
-        <img
-          className="v8-active-badge"
-          src={`${import.meta.env.BASE_URL}${badge}`}
-          alt=""
-          aria-hidden="true"
-          decoding="async"
-          loading="eager"
-          draggable={false}
-        />
-        <div className="v8-active-identity-text">
-          <strong>{identity.name}</strong>
-          <span>{statusLabel(identity)}</span>
-        </div>
-        <button type="button" className="v8-active-cta" disabled={busy} onClick={onPrimaryAction}>
-          {busy ? pendingLabel : primaryActionLabel(identity)}
-        </button>
-      </section>
-      <button type="button" className="v8-active-forget" disabled={busy} onClick={onForget}>
-        不是我，重新選擇身份
-      </button>
-    </section>
-  );
-}
-
-// B_fix (season/dragon): the same identity/status/CTA content as
-// V8IdentityStatusCard above, but stacked to fit the narrow scroll panel the
-// dragon's claw appears to grip (see V8HeroComposition's scrollContent prop)
-// instead of the wide horizontal card. Exported so /v8/preview's mock ACTIVE
-// canvas can render the identical markup.
+// The identity/status/CTA content stacked to fit the narrow scroll panel
+// the tiger-scroll art's claw appears to grip (see V8HeroComposition's
+// scrollContent prop) -- now the uniform personal-status display for every
+// identified user (season or casual), not just B_fix. Exported so
+// /v8/preview's mock ACTIVE canvas can render the identical markup.
 export function V8IdentityScrollContent({
   identity,
   busy,
@@ -596,10 +561,6 @@ export function V8ActiveStyles() {
         padding: 0 10px;
       }
 
-      .v8-active-identity-wrap {
-        margin-bottom: 16px;
-      }
-
       .v8-active-identity {
         display: flex;
         align-items: center;
@@ -609,67 +570,6 @@ export function V8ActiveStyles() {
         background: rgba(255, 255, 255, 0.5);
         border: 1px solid rgba(32, 21, 13, 0.10);
         margin-bottom: 8px;
-      }
-
-      .v8-active-forget {
-        display: block;
-        margin: 0 auto;
-        background: transparent;
-        border: none;
-        font-size: 11px;
-        color: rgba(32, 21, 13, 0.5);
-        text-decoration: underline;
-      }
-
-      .v8-active-forget:disabled {
-        opacity: 0.5;
-      }
-
-      .v8-active-badge {
-        width: 56px;
-        height: auto;
-        object-fit: contain;
-        flex-shrink: 0;
-        user-select: none;
-        pointer-events: none;
-      }
-
-      .v8-active-identity-text {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      .v8-active-identity-text strong {
-        font-size: 16px;
-        font-weight: 800;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .v8-active-identity-text span {
-        font-size: 12px;
-        font-weight: 700;
-        color: rgba(32, 21, 13, 0.64);
-      }
-
-      .v8-active-cta {
-        flex-shrink: 0;
-        height: 40px;
-        padding: 0 18px;
-        border: 2px solid #20150d;
-        border-radius: 999px;
-        background: rgba(245, 237, 219, 0.9);
-        color: #20150d;
-        font-size: 14px;
-        font-weight: 800;
-      }
-
-      .v8-active-cta:disabled {
-        opacity: 0.55;
       }
 
       .v8-scroll-identity {
@@ -852,6 +752,62 @@ export function V8ActiveStyles() {
         border: none !important;
         color: rgba(32, 21, 13, 0.56);
         text-decoration: underline;
+      }
+
+      /* Positioned ancestor for V8ActiveRosterLists' own %-based x/y/scale
+         (see v8ActiveRosterListsDefaults) -- a fixed height rather than
+         one tiered by roster count, since the panel's own size is fixed
+         and scrolls internally instead of growing. The user tunes the
+         exact height/position via /v8/preview afterward. */
+      .v8-active-roster-stage {
+        position: relative;
+        width: 100%;
+        height: 480px;
+      }
+
+      .v8-roster-lists {
+        position: absolute;
+      }
+
+      .v8-roster-panel {
+        position: absolute;
+        overflow: hidden;
+      }
+
+      .v8-roster-panel-scroll {
+        height: 100%;
+        overflow-y: auto;
+      }
+
+      .v8-roster-column {
+        list-style: none;
+        margin: 0;
+        padding: 0 4px;
+      }
+
+      .v8-roster-column li {
+        padding: 2px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .v8-roster-two-col {
+        display: flex;
+        gap: 8px;
+      }
+
+      .v8-roster-two-col .v8-roster-column {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .v8-roster-empty {
+        margin: 0;
+        padding: 4px;
+        text-align: center;
+        opacity: 0.6;
+        font-size: 0.9em;
       }
 
     `}</style>

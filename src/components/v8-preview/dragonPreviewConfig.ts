@@ -102,13 +102,14 @@ export type PreviewControls = {
   activeSunScale: number;
   activeSunZIndex: number;
   activeSunTextScale: number;
-  // B_fix (season/dragon): position of dragon-scroll-fixed-v1, the user's
-  // own pre-composed dragon-gripping-a-scroll art. Only applied by
-  // ActiveCanvas when the mock character toggle is "dragon".
-  activeDragonScrollX: number;
-  activeDragonScrollY: number;
-  activeDragonScrollScale: number;
-  activeDragonScrollRotation: number;
+  // The user's own pre-composed tiger-gripping-a-scroll art (replaces the
+  // earlier dragon-gripped version) -- applied by ActiveCanvas regardless of
+  // the mock character toggle, matching v8ActiveTigerScrollOverrides' now-
+  // unconditional real-page behavior.
+  activeTigerScrollX: number;
+  activeTigerScrollY: number;
+  activeTigerScrollScale: number;
+  activeTigerScrollRotation: number;
   // Active-only: the three status plaques (已報/尚缺/候補) + their shared
   // rope, left of the dragon below the sun -- each independently
   // show/size/position/rotation-controlled (see V8ActiveInfoCards).
@@ -159,6 +160,17 @@ export type PreviewControls = {
   activeSunBadgeCourtCountScale: number;
   activeSunBadgeCourtCountRotation: number;
   activeSunBadgeCourtCountFontSize: number;
+  // The three-panel roster frame (季打請假/正取名單/備取名單) -- one panel
+  // wrapper, positioned/sized/rotated as a whole; name-list typography is
+  // shared across all three panels (see V8ActiveRosterLists).
+  activeRosterListsShow: boolean;
+  activeRosterListsX: number;
+  activeRosterListsY: number;
+  activeRosterListsScale: number;
+  activeRosterListsRotation: number;
+  activeRosterListsFontSize: number;
+  activeRosterListsLineHeight: number;
+  activeRosterListsTextColor: string;
 };
 
 export type PreviewBooleanControlKey = {
@@ -182,7 +194,7 @@ export type PreviewTargetId =
   | "FRONT FOAM"
   | "GOLD / INK"
   | "ACTIVE SUN INFO"
-  | "ACTIVE DRAGON SCROLL"
+  | "ACTIVE TIGER SCROLL"
   | "ACTIVE INFO ROPE"
   | "ACTIVE INFO REGISTERED"
   | "ACTIVE INFO NEEDED"
@@ -190,7 +202,8 @@ export type PreviewTargetId =
   | "ACTIVE BACKGROUND FADE"
   | "ACTIVE SUN BADGE BALLTYPE"
   | "ACTIVE SUN BADGE TEMPFEE"
-  | "ACTIVE SUN BADGE COURTCOUNT";
+  | "ACTIVE SUN BADGE COURTCOUNT"
+  | "ACTIVE ROSTER LISTS";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -216,7 +229,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
 
 export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE SUN INFO",
-  "ACTIVE DRAGON SCROLL",
+  "ACTIVE TIGER SCROLL",
   "ACTIVE INFO ROPE",
   "ACTIVE INFO REGISTERED",
   "ACTIVE INFO NEEDED",
@@ -225,6 +238,7 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE SUN BADGE BALLTYPE",
   "ACTIVE SUN BADGE TEMPFEE",
   "ACTIVE SUN BADGE COURTCOUNT",
+  "ACTIVE ROSTER LISTS",
 ];
 
 // Kept for anything still importing the old flat name -- identical to
@@ -378,10 +392,10 @@ export const previewDefaults: PreviewControls = {
   activeSunScale: 0.68,
   activeSunZIndex: 30,
   activeSunTextScale: 0.58,
-  activeDragonScrollX: 69,
-  activeDragonScrollY: 31,
-  activeDragonScrollScale: 1.22,
-  activeDragonScrollRotation: 0,
+  activeTigerScrollX: 69,
+  activeTigerScrollY: 31,
+  activeTigerScrollScale: 1.22,
+  activeTigerScrollRotation: 0,
   activeInfoRopeShow: true,
   activeInfoRopeX: 16,
   activeInfoRopeY: 20,
@@ -423,6 +437,14 @@ export const previewDefaults: PreviewControls = {
   activeSunBadgeCourtCountScale: 1,
   activeSunBadgeCourtCountRotation: 0,
   activeSunBadgeCourtCountFontSize: 11,
+  activeRosterListsShow: true,
+  activeRosterListsX: 50,
+  activeRosterListsY: 78,
+  activeRosterListsScale: 1,
+  activeRosterListsRotation: 0,
+  activeRosterListsFontSize: 13,
+  activeRosterListsLineHeight: 1.5,
+  activeRosterListsTextColor: "#20150d",
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -442,11 +464,11 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "FRONT FOAM": ["frontFoamShow", "frontFoamX", "frontFoamY", "frontFoamScale", "frontFoamRotation", "frontFoamOpacity", "frontFoamBlur"],
   "GOLD / INK": ["goldInkShow", "goldInkX", "goldInkY", "goldInkScale", "goldInkRotation", "goldInkOpacity", "goldInkBlur"],
   "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex", "activeSunTextScale"],
-  "ACTIVE DRAGON SCROLL": [
-    "activeDragonScrollX",
-    "activeDragonScrollY",
-    "activeDragonScrollScale",
-    "activeDragonScrollRotation",
+  "ACTIVE TIGER SCROLL": [
+    "activeTigerScrollX",
+    "activeTigerScrollY",
+    "activeTigerScrollScale",
+    "activeTigerScrollRotation",
   ],
   "ACTIVE INFO ROPE": ["activeInfoRopeShow", "activeInfoRopeX", "activeInfoRopeY", "activeInfoRopeScale", "activeInfoRopeRotation"],
   "ACTIVE INFO REGISTERED": [
@@ -495,6 +517,16 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunBadgeCourtCountRotation",
     "activeSunBadgeCourtCountFontSize",
   ],
+  "ACTIVE ROSTER LISTS": [
+    "activeRosterListsShow",
+    "activeRosterListsX",
+    "activeRosterListsY",
+    "activeRosterListsScale",
+    "activeRosterListsRotation",
+    "activeRosterListsFontSize",
+    "activeRosterListsLineHeight",
+    "activeRosterListsTextColor",
+  ],
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
@@ -520,6 +552,7 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE SUN BADGE BALLTYPE": "activeSunBadgeBallTypeShow",
   "ACTIVE SUN BADGE TEMPFEE": "activeSunBadgeTempFeeShow",
   "ACTIVE SUN BADGE COURTCOUNT": "activeSunBadgeCourtCountShow",
+  "ACTIVE ROSTER LISTS": "activeRosterListsShow",
 };
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
@@ -612,10 +645,10 @@ export const controlRanges = {
   activeSunScale: { label: "Sun Scale", min: 0.3, max: 2, step: 0.01 },
   activeSunZIndex: { label: "Sun Z-Index", min: 0, max: 30 },
   activeSunTextScale: { label: "Sun Text Scale", min: 0.2, max: 2, step: 0.01 },
-  activeDragonScrollX: { label: "Dragon+Scroll X %", min: 0, max: 100 },
-  activeDragonScrollY: { label: "Dragon+Scroll Y %", min: 0, max: 100 },
-  activeDragonScrollScale: { label: "Dragon+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
-  activeDragonScrollRotation: { label: "Dragon+Scroll Rotation", min: -45, max: 45 },
+  activeTigerScrollX: { label: "Tiger+Scroll X %", min: 0, max: 100 },
+  activeTigerScrollY: { label: "Tiger+Scroll Y %", min: 0, max: 100 },
+  activeTigerScrollScale: { label: "Tiger+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
+  activeTigerScrollRotation: { label: "Tiger+Scroll Rotation", min: -45, max: 45 },
   activeInfoRopeX: { label: "Info Rope X %", min: -20, max: 120 },
   activeInfoRopeY: { label: "Info Rope Y %", min: -20, max: 140 },
   activeInfoRopeScale: { label: "Info Rope Scale", min: 0.2, max: 3, step: 0.01 },
@@ -648,6 +681,12 @@ export const controlRanges = {
   activeSunBadgeCourtCountScale: { label: "場地數 Scale", min: 0.2, max: 3, step: 0.01 },
   activeSunBadgeCourtCountRotation: { label: "場地數 Rotation", min: -180, max: 180 },
   activeSunBadgeCourtCountFontSize: { label: "場地數 Font Size", min: 6, max: 28 },
+  activeRosterListsX: { label: "Roster X %", min: -20, max: 120 },
+  activeRosterListsY: { label: "Roster Y %", min: 0, max: 150 },
+  activeRosterListsScale: { label: "Roster Scale", min: 0.3, max: 2, step: 0.01 },
+  activeRosterListsRotation: { label: "Roster Rotation", min: -45, max: 45 },
+  activeRosterListsFontSize: { label: "Roster Font Size", min: 8, max: 24 },
+  activeRosterListsLineHeight: { label: "Roster Line Height", min: 1, max: 2.4, step: 0.05 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -794,11 +833,11 @@ Scale: ${controls.activeSunScale.toFixed(2)}
 Z-Index: ${Math.round(controls.activeSunZIndex)}
 Text Scale: ${controls.activeSunTextScale.toFixed(2)}
 
-ACTIVE DRAGON SCROLL
-X: ${Math.round(controls.activeDragonScrollX)}
-Y: ${Math.round(controls.activeDragonScrollY)}
-Scale: ${controls.activeDragonScrollScale.toFixed(2)}
-Rotation: ${Math.round(controls.activeDragonScrollRotation)}
+ACTIVE TIGER SCROLL
+X: ${Math.round(controls.activeTigerScrollX)}
+Y: ${Math.round(controls.activeTigerScrollY)}
+Scale: ${controls.activeTigerScrollScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeTigerScrollRotation)}
 
 ACTIVE INFO ROPE
 Show: ${controls.activeInfoRopeShow ? "ON" : "OFF"}
@@ -853,4 +892,14 @@ X: ${Math.round(controls.activeSunBadgeCourtCountX)}
 Y: ${Math.round(controls.activeSunBadgeCourtCountY)}
 Scale: ${controls.activeSunBadgeCourtCountScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeSunBadgeCourtCountRotation)}
-Font Size: ${Math.round(controls.activeSunBadgeCourtCountFontSize)}`;
+Font Size: ${Math.round(controls.activeSunBadgeCourtCountFontSize)}
+
+ACTIVE ROSTER LISTS
+Show: ${controls.activeRosterListsShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeRosterListsX)}
+Y: ${Math.round(controls.activeRosterListsY)}
+Scale: ${controls.activeRosterListsScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeRosterListsRotation)}
+Font Size: ${Math.round(controls.activeRosterListsFontSize)}
+Line Height: ${controls.activeRosterListsLineHeight.toFixed(2)}
+Text Color: ${controls.activeRosterListsTextColor}`;

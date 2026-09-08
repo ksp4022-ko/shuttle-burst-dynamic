@@ -23,6 +23,12 @@ export const v8ActiveSunBadgeFiles = {
   courtCount: "sun-info-badge-alt-v1.webp",
 } as const;
 
+// The three-panel roster frame (季打請假/正取名單/備取名單) -- the new
+// roster display replacing the removed token card field. Panel titles are
+// baked into the artwork itself (not rendered text); only the name lists
+// inside each blank panel are live content.
+export const v8ActiveRosterFrameFile = "dragon-triple-list-v1.webp";
+
 // The three status plaques (已報/尚缺/候補) -- each generated separately so
 // their content isn't the same size within its own canvas (尚缺 in
 // particular draws noticeably smaller); normalized to a common 711x800
@@ -69,6 +75,7 @@ export function buildV8ActiveAssets(baseUrl: string) {
     sunBadgeBallType: `${activeBase}/${v8ActiveSunBadgeFiles.ballType}`,
     sunBadgeTempFee: `${activeBase}/${v8ActiveSunBadgeFiles.tempFee}`,
     sunBadgeCourtCount: `${activeBase}/${v8ActiveSunBadgeFiles.courtCount}`,
+    rosterFrame: `${activeBase}/${v8ActiveRosterFrameFile}`,
   };
 }
 
@@ -87,29 +94,28 @@ export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
   sunTextScale: 0.58,
 };
 
-// B_fix (season/dragon) layout overrides for V8HeroComposition's shared
-// canvas. Uses dragon-scroll-fixed-v1 -- the user's own pre-composed
-// dragon-gripping-a-scroll art (dropped in 01_V8_Dragon as
-// 藍龍纏繞華麗金邊卷軸.png, de-haloed/recompressed, unmodified pose) --
-// instead of assembling the opening's separate dragon body + claw + scroll
+// Layout overrides for V8HeroComposition's shared canvas -- applies to
+// EVERY confirmed render regardless of identity (season or casual), unlike
+// the earlier dragon-only version this replaced. Uses tiger-scroll-fixed-v1
+// -- the user's own pre-composed tiger-gripping-a-scroll art -- instead of
+// assembling the opening's separate dragon/tiger body + claw + scroll
 // layers, since that single image already has a real grip pose the
 // app-assembled rig could only approximate. Hides the opening's dragon rig
-// and bag/claw layers entirely; dragonScrollShow takes over. Rough/schematic
-// placement for now (the user tunes exact values via /v8/preview's ACTIVE
-// mode afterward) -- B_temp (casual/tiger) stays on the plain overlay until
-// that mockup exists.
-export const v8ActiveDragonHeroOverrides: Partial<V8HeroControls> = {
+// and bag/claw/tiger-rig layers entirely; tigerScrollShow takes over as the
+// one uniform personal-status display. Rough/schematic placement for now
+// (the user tunes exact values via /v8/preview's ACTIVE mode afterward).
+export const v8ActiveTigerScrollOverrides: Partial<V8HeroControls> = {
   dragonShow: false,
   bagBaseShow: false,
   bagStrapShow: false,
   rearClawShow: false,
   tigerShow: false,
   tigerRacketShow: false,
-  dragonScrollShow: true,
-  dragonScrollX: 69,
-  dragonScrollY: 31,
-  dragonScrollScale: 1.22,
-  dragonScrollRotation: 0,
+  tigerScrollShow: true,
+  tigerScrollX: 69,
+  tigerScrollY: 31,
+  tigerScrollScale: 1.22,
+  tigerScrollRotation: 0,
 };
 
 // Each of the three status plaques (已報/尚缺/候補) plus the shared rope is
@@ -199,5 +205,52 @@ export const v8ActiveSunBadgesRanges: Record<
   scale: { label: "Scale", min: 0.2, max: 3, step: 0.01 },
   rotation: { label: "Rotation", min: -180, max: 180 },
   fontSize: { label: "Font Size", min: 6, max: 28 },
+};
+
+// The three-panel roster frame -- one panel wrapper, positioned/sized/
+// rotated as a whole (same "basic control parameters" convention as the
+// info cards: show/x/y/scale/rotation, % of .v8-active's own box, not the
+// hero canvas -- this panel sits below the hero+identity content, not
+// overlapping the sun/dragon). Name-list typography (fontSize/textColor/
+// lineHeight) is shared across all three panels' lists rather than each
+// having its own set, per the user's request to keep this simple for now.
+export type V8ActiveRosterListsControls = {
+  show: boolean;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  fontSize: number;
+  lineHeight: number;
+  textColor: string;
+};
+
+// Rough/schematic starting placement -- centered horizontally, positioned
+// low enough to clear the hero canvas + identity card below them in normal
+// flow (see the --v8-active-roster-min-height buffer in V8ActivePage.tsx).
+// textColor matches the dark ink tone used elsewhere on the Active page
+// (.v8-active's own color: #20150d) for contrast against the frame's cream
+// panels.
+export const v8ActiveRosterListsDefaults: V8ActiveRosterListsControls = {
+  show: true,
+  x: 50,
+  y: 78,
+  scale: 1,
+  rotation: 0,
+  fontSize: 13,
+  lineHeight: 1.5,
+  textColor: "#20150d",
+};
+
+export const v8ActiveRosterListsRanges: Record<
+  Exclude<keyof V8ActiveRosterListsControls, "show" | "textColor">,
+  { label: string; min: number; max: number; step?: number }
+> = {
+  x: { label: "X %", min: -20, max: 120 },
+  y: { label: "Y %", min: 0, max: 150 },
+  scale: { label: "Scale", min: 0.3, max: 2, step: 0.01 },
+  rotation: { label: "Rotation", min: -45, max: 45 },
+  fontSize: { label: "List Font Size", min: 8, max: 24 },
+  lineHeight: { label: "List Line Height", min: 1, max: 2.4, step: 0.05 },
 };
 

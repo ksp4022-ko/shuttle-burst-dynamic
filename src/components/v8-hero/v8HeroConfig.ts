@@ -95,15 +95,17 @@ export type V8HeroControls = {
   scrollY: number;
   scrollScale: number;
   scrollRotation: number;
-  // Active-only: a single pre-composed dragon-gripping-a-scroll image (the
+  // Active-only: a single pre-composed tiger-gripping-a-scroll image (the
   // user's own composite, not an app-assembled rig) -- an alternative to
-  // scrollShow's separately-positioned claw+scroll for B_fix. Defaults to
-  // hidden, same as scrollShow.
-  dragonScrollShow: boolean;
-  dragonScrollX: number;
-  dragonScrollY: number;
-  dragonScrollScale: number;
-  dragonScrollRotation: number;
+  // scrollShow's separately-positioned claw+scroll. The uniform personal-
+  // status display for EVERY identified user (season or casual) -- not
+  // identity-gated, unlike the dragon-gripped version this replaced.
+  // Defaults to hidden, same as scrollShow.
+  tigerScrollShow: boolean;
+  tigerScrollX: number;
+  tigerScrollY: number;
+  tigerScrollScale: number;
+  tigerScrollRotation: number;
   // The sun is a positioned CONTAINER (not just a CSS circle) -- sunContent
   // (see V8HeroComposition's prop) renders inside it, positioned relative to
   // the sun's own box, so moving sunX/sunY/sunScale carries the meetup
@@ -222,11 +224,11 @@ export const v8HeroDefaults: V8HeroControls = {
   scrollY: 30,
   scrollScale: 1,
   scrollRotation: 0,
-  dragonScrollShow: false,
-  dragonScrollX: 62,
-  dragonScrollY: 45,
-  dragonScrollScale: 1,
-  dragonScrollRotation: 0,
+  tigerScrollShow: false,
+  tigerScrollX: 69,
+  tigerScrollY: 31,
+  tigerScrollScale: 1.22,
+  tigerScrollRotation: 0,
   sunX: 23,
   sunY: 29,
   sunScale: 1,
@@ -254,10 +256,12 @@ export const v8HeroDisplayAssets = {
 // other Active art (tokens, sun-info badge) rather than the Opening-only
 // display set above.
 export const v8HeroActiveAssetFile = "scroll-identity-v1.webp";
-// The user's own pre-composed dragon-gripping-a-scroll image (not an
-// app-assembled rig) -- de-haloed/recompressed from the source they dropped
-// in 01_V8_Dragon, unmodified pose/art otherwise.
-export const v8HeroDragonScrollAssetFile = "dragon-scroll-fixed-v1.webp";
+// The user's own pre-composed tiger-gripping-a-scroll image (not an
+// app-assembled rig) -- tight-cropped from their own art, unmodified pose
+// otherwise. Replaces the earlier dragon-gripping-a-scroll composite
+// (dragon-scroll-fixed-v1.webp, still on disk unreferenced) as the uniform
+// personal-status display for every identified user.
+export const v8HeroTigerScrollAssetFile = "tiger-scroll-fixed-v1.webp";
 
 export const buildV8HeroAssets = (baseUrl: string) => {
   const displayAssetBase = `${baseUrl}v8-preview/display`;
@@ -276,7 +280,7 @@ export const buildV8HeroAssets = (baseUrl: string) => {
     frontFoam: `${displayAssetBase}/${v8HeroDisplayAssets.frontFoam}`,
     goldInk: `${displayAssetBase}/${v8HeroDisplayAssets.goldInk}`,
     scroll: `${baseUrl}v8-preview/active/${v8HeroActiveAssetFile}`,
-    dragonScroll: `${baseUrl}v8-preview/active/${v8HeroDragonScrollAssetFile}`,
+    tigerScroll: `${baseUrl}v8-preview/active/${v8HeroTigerScrollAssetFile}`,
   };
 };
 
