@@ -424,6 +424,23 @@ export function Index() {
     const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
     if (!targetId) return;
     setCountdownRemaining(null);
+    // The auto-countdown effect below fires this regardless of route (it
+    // only checks `preview`, i.e. flow.phase === "meetup-preview"), so on
+    // /v8 this must take the same branch confirmV8MeetupSelection does
+    // (mark v8MeetupConfirmed instead of flow.enterActive) -- otherwise
+    // flow.phase flips to "active" while v8MeetupConfirmed stays false,
+    // V8ActivePage's `isV8Route && v8MeetupConfirmed` guard never passes,
+    // and the legacy .sd-roster view shows through instead once the
+    // countdown reaches zero before the user manually taps 進入戰局.
+    if (isV8Route) {
+      setV8MeetupConfirmed(true);
+      if (targetId === flow.selectedEventId) {
+        flow.setPendingSwitchEventId("");
+        return;
+      }
+      void flow.switchMeetup();
+      return;
+    }
     if (targetId === flow.selectedEventId) {
       flow.setPendingSwitchEventId("");
       flow.enterActive();
@@ -436,6 +453,7 @@ export function Index() {
     flow.selectedEventId,
     flow.setPendingSwitchEventId,
     flow.switchMeetup,
+    isV8Route,
   ]);
 
   const selectAdjacentV8Meetup = useCallback(
