@@ -379,7 +379,13 @@ function ActiveCanvas({
             onForget={() => {}}
           />
         }
-        infoCardsContent={<V8ActiveInfoCards assets={assets} controls={infoCardsControls} />}
+        infoCardsContent={
+          <V8ActiveInfoCards
+            assets={assets}
+            controls={infoCardsControls}
+            counts={{ registered: 16, needed: 6, waiting: 0 }}
+          />
+        }
         rosterListsContent={
           <V8ActiveRosterLists
             frameSrc={assets.rosterFrame}

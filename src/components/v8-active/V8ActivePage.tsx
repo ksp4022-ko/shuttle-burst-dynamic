@@ -149,7 +149,17 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             />
           ) : undefined
         }
-        infoCardsContent={<V8ActiveInfoCards assets={assets} controls={v8ActiveInfoCardsDefaults} />}
+        infoCardsContent={
+          <V8ActiveInfoCards
+            assets={assets}
+            controls={v8ActiveInfoCardsDefaults}
+            counts={{
+              registered: roster.summary.confirmedCount,
+              needed: roster.summary.remainCount,
+              waiting: roster.summary.waitingCount,
+            }}
+          />
+        }
         rosterListsContent={
           <V8ActiveRosterLists
             frameSrc={assets.rosterFrame}
