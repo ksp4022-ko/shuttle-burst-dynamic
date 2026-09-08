@@ -96,6 +96,22 @@ const preloadHeroImage = (src: string) =>
 
 const preloadHeroImages = (sources: string[]) => Promise.all([...new Set(sources)].map(preloadHeroImage));
 
+// Safety net for the asset-preload gate below: if a single image's request
+// hangs at the network level (flaky/slow connection -- neither onload nor
+// onerror ever fires, so preloadHeroImages' Promise.all never settles),
+// assetsReady stayed false forever and the whole canvas stayed invisible
+// with no way to recover short of a reload. Racing against a timeout caps
+// how long a stuck load can block the reveal -- the images that DID load
+// still show immediately, and any that are genuinely still in flight just
+// keep loading in the background and pop in as their <img> tags resolve
+// instead of holding up every other layer.
+const ASSET_PRELOAD_TIMEOUT_MS = 4000;
+const preloadHeroImagesWithTimeout = (sources: string[]) =>
+  Promise.race([
+    preloadHeroImages(sources),
+    new Promise<void>((resolve) => window.setTimeout(resolve, ASSET_PRELOAD_TIMEOUT_MS)),
+  ]);
+
 function DecorLayer({
   src,
   x,
@@ -276,7 +292,7 @@ export function V8HeroComposition({
   useEffect(() => {
     let cancelled = false;
     setAssetsReady(false);
-    preloadHeroImages(Object.values(assets)).then(() => {
+    preloadHeroImagesWithTimeout(Object.values(assets)).then(() => {
       if (!cancelled) setAssetsReady(true);
     });
     return () => {

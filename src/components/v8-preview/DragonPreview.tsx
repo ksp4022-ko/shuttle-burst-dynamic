@@ -113,6 +113,20 @@ const preloadPreviewImage = (src: string) =>
 
 const preloadPreviewImages = (sources: string[]) => Promise.all([...new Set(sources)].map(preloadPreviewImage));
 
+// Safety net matching V8HeroComposition's preloadHeroImagesWithTimeout --
+// this preview canvas's own preloadPreviewImage still calls image.decode()
+// (unlike V8HeroComposition's, which dropped it after decode() was found
+// to stall indefinitely on a backgrounded/hidden tab), so it's exposed to
+// that same hang risk plus the flaky-network case. Racing against a
+// timeout caps how long a stuck load can leave the OPENING preview canvas
+// invisible.
+const PREVIEW_ASSET_PRELOAD_TIMEOUT_MS = 4000;
+const preloadPreviewImagesWithTimeout = (sources: string[]) =>
+  Promise.race([
+    preloadPreviewImages(sources),
+    new Promise<void>((resolve) => window.setTimeout(resolve, PREVIEW_ASSET_PRELOAD_TIMEOUT_MS)),
+  ]);
+
 function isNumericControlKey(key: keyof PreviewControls): key is NumericControlKey {
   return typeof previewDefaults[key] === "number";
 }
@@ -586,7 +600,7 @@ export function DragonPreview() {
   useEffect(() => {
     let cancelled = false;
     setAssetsReady(false);
-    preloadPreviewImages(Object.values(assets)).then(() => {
+    preloadPreviewImagesWithTimeout(Object.values(assets)).then(() => {
       if (!cancelled) setAssetsReady(true);
     });
     return () => {
