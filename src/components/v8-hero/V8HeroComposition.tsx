@@ -60,6 +60,16 @@ type V8HeroCompositionProps = {
   // it -- both problems the user hit go away once it's part of this same
   // box instead of bolted on below it).
   rosterListsContent?: ReactNode | undefined;
+  // sunContent/infoCardsContent/rosterListsContent are opaque ReactNode --
+  // their own <img> tags aren't visible to buildV8HeroAssets, so the
+  // assetsReady gate below has no way to know about them and can't hold
+  // the reveal for them. Without this, those images render unguarded and
+  // pop in / briefly show at a collapsed size while loading (confirmed:
+  // .v8-roster-lists measured height:0 right after an identity change,
+  // then the correct height about 1s later, matching exactly the "roster
+  // cut off" screenshots). Callers pass the same URLs they hand to those
+  // content props so this gate covers them too.
+  extraPreloadSrcs?: string[] | undefined;
   // Overrides stageStyle's default 390/890 aspect ratio. The Opening reveal
   // needs the taller 890 canvas (its own back-wave art bleeds down to
   // y=890), but the Active page has no such requirement -- with a roster
@@ -280,6 +290,7 @@ export function V8HeroComposition({
   sunContent,
   infoCardsContent,
   rosterListsContent,
+  extraPreloadSrcs,
   stageAspectRatio,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
@@ -292,12 +303,18 @@ export function V8HeroComposition({
   useEffect(() => {
     let cancelled = false;
     setAssetsReady(false);
-    preloadHeroImagesWithTimeout(Object.values(assets)).then(() => {
+    preloadHeroImagesWithTimeout([...Object.values(assets), ...(extraPreloadSrcs || [])]).then(() => {
       if (!cancelled) setAssetsReady(true);
     });
     return () => {
       cancelled = true;
     };
+    // extraPreloadSrcs is a fresh array every render (built inline at call
+    // sites) -- depending on it directly would re-trigger this effect (and
+    // the fade-out-then-in flicker) on every render. Its actual values are
+    // static asset URLs from buildV8ActiveAssets, which never change after
+    // mount, so it's safe to read once here without listing it as a dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assets]);
 
   return (

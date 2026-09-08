@@ -129,23 +129,16 @@ function SafeZoneOverlay({ controls }: { controls: PreviewControls }) {
 function ActiveCanvas({
   controls,
   assets,
-  character,
-  onCharacterChange,
 }: {
   controls: PreviewControls;
   assets: ReturnType<typeof buildV8ActiveAssets>;
-  character: "dragon" | "tiger";
-  onCharacterChange: (character: "dragon" | "tiger") => void;
 }) {
   // Mirrors V8ActivePage's composition so this console previews the exact
   // same output, just fed by this slider state instead of the frozen
   // defaults -- "複製" then hands back the numbers to bake into that frozen
-  // object. The sun position AND the tiger-scroll (personal status display)
-  // both apply unconditionally regardless of the mock character toggle
-  // (real page: v8ActiveSunOverrides + v8ActiveTigerScrollOverrides) --
-  // isDragonFix only still gates the sun badges' scattered-vs-compact
-  // layout below, which remains identity-specific.
-  const isDragonFix = character === "dragon";
+  // object. No more season/casual (B_fix/B_temp) branching -- the real
+  // page always renders this same layout regardless of identity now, so
+  // there's nothing left for a mock character toggle to preview.
   // Built from the SAME shared functions the real Active page's own
   // embedded tuning panel uses (see dragonPreviewConfig.ts) -- fed this
   // slider state instead of the real page's live controls, so the two
@@ -161,23 +154,27 @@ function ActiveCanvas({
   const infoCardsControls = buildV8ActiveInfoCardsControls(controls);
   const rosterListsControls = buildV8ActiveRosterListsControls(controls);
   const sunBadgeControls = buildV8ActiveSunBadgesControls(controls);
+  const extraPreloadSrcs = [
+    assets.sunInfoBadge,
+    assets.sunBadgeBallType,
+    assets.sunBadgeTempFee,
+    assets.sunBadgeCourtCount,
+    assets.infoCardRegistered,
+    assets.infoCardNeeded,
+    assets.infoCardWaitlist,
+    assets.infoRope,
+    assets.rosterFrame,
+  ];
 
   return (
     <div className="v8-active" style={{ position: "relative", width: "100%" } as CSSProperties}>
       <V8ActiveStyles />
 
-      <button
-        type="button"
-        onClick={() => onCharacterChange(character === "dragon" ? "tiger" : "dragon")}
-        style={activeCharacterToggleStyle}
-      >
-        預覽角色：{character === "dragon" ? "龍 (季打)" : "虎 (臨打)"}
-      </button>
-
       <V8HeroComposition
         confirmed
         controlOverrides={heroOverrides}
         stageAspectRatio={v8ActiveStageAspectRatio}
+        extraPreloadSrcs={extraPreloadSrcs}
         sunContent={
           <V8ActiveSunContent
             assets={assets}
@@ -187,7 +184,6 @@ function ActiveCanvas({
             hours={3}
             ballType="MS 101"
             tempFee={245}
-            scattered={isDragonFix}
             badgeControls={sunBadgeControls}
           />
         }
@@ -279,7 +275,6 @@ export function DragonPreview() {
   const [selectedTarget, setSelectedTarget] = useState<PreviewTargetId>("TIGER RIG");
   const [highlightEnabled, setHighlightEnabled] = useState(true);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("OPENING");
-  const [activePreviewCharacter, setActivePreviewCharacter] = useState<"dragon" | "tiger">("dragon");
 
   const assets = useMemo(() => buildPreviewAssets(import.meta.env.BASE_URL), []);
   const activeAssets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
@@ -471,12 +466,7 @@ export function DragonPreview() {
           <SafeZoneOverlay controls={controls} />
           </div>
           ) : (
-            <ActiveCanvas
-              controls={controls}
-              assets={activeAssets}
-              character={activePreviewCharacter}
-              onCharacterChange={setActivePreviewCharacter}
-            />
+            <ActiveCanvas controls={controls} assets={activeAssets} />
           )}
         </div>
       </section>
@@ -674,19 +664,4 @@ const selectedTargetStyle: CSSProperties = {
   boxShadow: "0 0 0 1px rgba(24, 17, 13, 0.18), 0 0 18px rgba(184, 242, 46, 0.24)",
   borderRadius: 8,
 };
-
-const activeCharacterToggleStyle: CSSProperties = {
-  position: "absolute",
-  top: 8,
-  right: 8,
-  zIndex: 20,
-  padding: "6px 12px",
-  fontSize: 11,
-  fontWeight: 700,
-  border: "1px solid rgba(32,21,13,0.24)",
-  borderRadius: 999,
-  background: "rgba(255,255,255,0.85)",
-  color: "#20150d",
-};
-
 

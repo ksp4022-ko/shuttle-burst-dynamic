@@ -79,8 +79,8 @@ export function buildV8ActiveAssets(baseUrl: string) {
   };
 }
 
-// Applies to EVERY confirmed Active render (both this default overlay and
-// B_fix), regardless of identity -- the sun always moves to its Active
+// Applies to EVERY confirmed Active render, regardless of identity --
+// the sun always moves to its Active
 // position once a meetup is confirmed. Top-left, shrunk a bit to leave room
 // for the info badges around it, and z-index above every other layer
 // (highest existing layer is 11) so the dragon/clouds/waves never cover it.

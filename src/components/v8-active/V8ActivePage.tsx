@@ -78,16 +78,6 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     [roster],
   );
 
-  // Dragon before an identity is known would be arbitrary (we don't know
-  // yet whether they're season or casual), so the character + backdrop
-  // only appear once identified. Before that, only the sun/meetup info and
-  // the identity prompt show.
-  const characterKind: "dragon" | "tiger" | null = identity
-    ? identity.signupType === "fixed"
-      ? "dragon"
-      : "tiger"
-    : null;
-
   if (!selectedEvent || !roster) return null;
 
   const busy = Boolean(pendingAction);
@@ -118,12 +108,6 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     if (ok) setHelperMode(null);
   };
 
-  // The tiger-scroll (personal status display) and sun position both apply
-  // to EVERY confirmed render regardless of identity now. isDragonFix is
-  // kept only for the sun badges' scattered-vs-compact layout below
-  // (scattered={isDragonFix}), which is still identity-gated since B_temp
-  // (casual/tiger) has no scattered mockup yet.
-  const isDragonFix = characterKind === "dragon";
   // Built from the SAME shared functions the /v8/preview console uses (see
   // dragonPreviewConfig.ts) -- this page's own hidden tuning panel (below)
   // edits tuningControls directly, so what you tune here IS what's live,
@@ -132,6 +116,22 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const infoCardsControls = buildV8ActiveInfoCardsControls(tuningControls);
   const rosterListsControls = buildV8ActiveRosterListsControls(tuningControls);
   const sunBadgeControls = buildV8ActiveSunBadgesControls(tuningControls);
+
+  // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
+  // URLs handed to sunContent/infoCardsContent/rosterListsContent below,
+  // added to the canvas's own asset-preload gate so they can't pop in or
+  // render collapsed while loading.
+  const extraPreloadSrcs = [
+    assets.sunInfoBadge,
+    assets.sunBadgeBallType,
+    assets.sunBadgeTempFee,
+    assets.sunBadgeCourtCount,
+    assets.infoCardRegistered,
+    assets.infoCardNeeded,
+    assets.infoCardWaitlist,
+    assets.infoRope,
+    assets.rosterFrame,
+  ];
 
   const rosterConfirmed: V8ActiveRosterPerson[] = confirmed.map((person) => ({ id: person.id, name: person.name }));
   const rosterLeave: V8ActiveRosterPerson[] = (roster.fixedLeave || []).map((person) => ({
@@ -157,6 +157,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
         confirmed
         controlOverrides={heroOverrides}
         stageAspectRatio={v8ActiveStageAspectRatio}
+        extraPreloadSrcs={extraPreloadSrcs}
         sunContent={
           <V8ActiveSunContent
             assets={assets}
@@ -166,7 +167,6 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             hours={selectedEvent.hours}
             ballType={selectedEvent.ballType}
             tempFee={selectedEvent.tempFee}
-            scattered={isDragonFix}
             badgeControls={sunBadgeControls}
           />
         }
@@ -205,18 +205,31 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
         }
       />
 
-      <div className="v8-active-content">
-        {identity ? null : (
-          <V8IdentityPrompt
-            seasonCandidates={seasonCandidates}
-            tigerName={tigerName}
-            onTigerNameChange={setTigerName}
-            onPickSeason={(signupId) => remember(signupId)}
-            onSubmitTiger={() => void submitTigerSignup()}
-            busy={busy}
-          />
-        )}
+      {/* Full-screen identity gate -- until an identity is picked, this
+          floats (position:fixed, backdrop-filter:blur) on top of the
+          already-rendering canvas, deliberately obscuring the sun/badges/
+          roster underneath rather than just blocking clicks, so the visitor
+          sees only this card and must pick an identity first. "不是我"
+          (forget) sets identity back to null, which re-renders this same
+          gate -- no special-casing needed. Confirmed with the user: same
+          treatment for both the first-visit and the "不是我" case, layered
+          over the canvas rather than deferring/changing its render timing. */}
+      {identity ? null : (
+        <div className="v8-identity-gate">
+          <div className="v8-identity-gate-card">
+            <V8IdentityPrompt
+              seasonCandidates={seasonCandidates}
+              tigerName={tigerName}
+              onTigerNameChange={setTigerName}
+              onPickSeason={(signupId) => remember(signupId)}
+              onSubmitTiger={() => void submitTigerSignup()}
+              busy={busy}
+            />
+          </div>
+        </div>
+      )}
 
+      <div className="v8-active-content">
         <div className="v8-active-helper">
           {helperMode === "signup" ? (
             <div className="v8-active-helper-row">
@@ -258,16 +271,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
                 返回
               </button>
             </div>
-          ) : identity ? null : (
-            <div className="v8-active-helper-toggles">
-              <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("signup")}>
-                幫人報名
-              </button>
-              <button type="button" className="v8-active-helper-toggle" onClick={() => setHelperMode("cancel")}>
-                幫人取消
-              </button>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -342,7 +346,7 @@ function V8SunInfoBadge({ src, label }: { src: string; label: string }) {
   );
 }
 
-// The scattered (B_fix) layout's per-badge version -- unlike the info
+// The scattered sun-badge layout's per-badge version -- unlike the info
 // cards, there's no translate(-50%,-50%) centering here: x/y is the
 // badge's own top-left corner, matching what the old hardcoded
 // SCATTERED_BADGE_POSITIONS used, so this refactor (making them tunable)
@@ -385,11 +389,13 @@ function V8SunInfoBadgeScattered({
 // /v8/preview's mock ACTIVE canvas renders the identical markup instead of
 // a separate hand-rolled mock.
 //
-// Title renders centered INSIDE the sun circle. The scattered (B_fix)
-// layout's three badges are each independently show/x/y/scale/rotation/
-// fontSize-controlled (see v8ActiveSunBadgesDefaults) -- the default
-// (non-scattered) compact row below the sun stays a plain shared-asset row,
-// not independently tunable, since B_temp (casual/tiger) has no mockup yet.
+// Title renders centered INSIDE the sun circle. The three badges (球種/
+// 費用/場時) scatter individually around it, each independently show/x/y/
+// scale/rotation/fontSize-controlled (see v8ActiveSunBadgesDefaults) --
+// this used to be identity-gated (season got this scattered layout, casual
+// fell back to a plain compact row) since casual had no mockup of its own
+// yet. Per the user's redefined flow there is no longer a season/casual
+// distinction at all -- every identified user gets this same layout.
 export function V8ActiveSunContent({
   assets,
   eventDate,
@@ -398,26 +404,21 @@ export function V8ActiveSunContent({
   hours,
   ballType,
   tempFee,
-  scattered = false,
   badgeControls = v8ActiveSunBadgesDefaults,
 }: {
-  assets: { sunInfoBadge: string; sunBadgeBallType: string; sunBadgeTempFee: string; sunBadgeCourtCount: string };
+  assets: { sunBadgeBallType: string; sunBadgeTempFee: string; sunBadgeCourtCount: string };
   eventDate: string;
   eventName: string;
   courtCount?: number | null | undefined;
   hours?: number | null | undefined;
   ballType?: string | null | undefined;
   tempFee?: number | null | undefined;
-  // When true, badges scatter individually around the sun (the B_fix
-  // mockup) instead of sitting in a compact row just below it.
-  scattered?: boolean;
   badgeControls?: V8ActiveSunBadgesControls;
 }) {
   // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label per the
   // user's exact spec (courtCount:2, hours:3 -> "2場/3hr") -- courtCount
   // alone if hours isn't set, rather than showing a dangling "/undefinedhr".
   const courtTimeLabel = courtCount ? (hours ? `${courtCount}場/${hours}hr` : `${courtCount}場`) : null;
-  const badges = [ballType ? ballType : null, `$${Number(tempFee || 0)}`, courtTimeLabel];
 
   return (
     <>
@@ -425,39 +426,29 @@ export function V8ActiveSunContent({
         <p style={eyebrowStyle}>{shortDate(eventDate)}</p>
         <h1 style={titleStyle}>{eventName}</h1>
       </div>
-      {scattered ? (
-        <>
-          {ballType ? (
-            <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={ballType} controls={badgeControls.ballType} />
-          ) : null}
-          <V8SunInfoBadgeScattered
-            src={assets.sunBadgeTempFee}
-            label={`$${Number(tempFee || 0)}`}
-            controls={badgeControls.tempFee}
-          />
-          {courtTimeLabel ? (
-            <V8SunInfoBadgeScattered
-              src={assets.sunBadgeCourtCount}
-              label={courtTimeLabel}
-              controls={badgeControls.courtCount}
-            />
-          ) : null}
-        </>
-      ) : (
-        <div className="v8-active-sun-info">
-          {badges.map((label, index) =>
-            label ? <V8SunInfoBadge key={index} src={assets.sunInfoBadge} label={label} /> : null,
-          )}
-        </div>
-      )}
+      {ballType ? (
+        <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={ballType} controls={badgeControls.ballType} />
+      ) : null}
+      <V8SunInfoBadgeScattered
+        src={assets.sunBadgeTempFee}
+        label={`$${Number(tempFee || 0)}`}
+        controls={badgeControls.tempFee}
+      />
+      {courtTimeLabel ? (
+        <V8SunInfoBadgeScattered
+          src={assets.sunBadgeCourtCount}
+          label={courtTimeLabel}
+          controls={badgeControls.courtCount}
+        />
+      ) : null}
     </>
   );
 }
 
 // The identity/status/CTA content stacked to fit the narrow scroll panel
 // the tiger-scroll art's claw appears to grip (see V8HeroComposition's
-// scrollContent prop) -- now the uniform personal-status display for every
-// identified user (season or casual), not just B_fix. Exported so
+// scrollContent prop) -- the uniform personal-status display for every
+// identified user, with no season/casual distinction. Exported so
 // /v8/preview's mock ACTIVE canvas can render the identical markup.
 export function V8IdentityScrollContent({
   identity,
@@ -646,19 +637,6 @@ export function V8ActiveStyles() {
         line-height: 1.15;
       }
 
-      .v8-active-sun-info {
-        position: absolute;
-        left: 50%;
-        top: 108%;
-        transform: translateX(-50%);
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 6px;
-        width: max-content;
-        max-width: 220%;
-      }
-
       .v8-sun-info-scattered {
         /* font-size comes from the inline style (controls.fontSize) now --
            see V8SunInfoBadgeScattered. width:max-content -- without an
@@ -702,13 +680,46 @@ export function V8ActiveStyles() {
         color: #7a2a12;
       }
 
+      /* Full-screen identity gate -- fixed over the whole viewport (not
+         just .v8-active) so it also covers whatever sits above/below the
+         hero canvas, blocking interaction AND (via backdrop-filter) visibly
+         obscuring it rather than just dimming a click-catcher on top --
+         deliberate per the user's confirmed design (forces identity choice
+         before anything else is usable). z-index sits below the hidden
+         tuning trigger/panel (40) so that admin control stays reachable
+         even while this gate is up. -webkit- prefix for iOS Safari, the
+         primary target device class for this app. */
+      .v8-identity-gate {
+        position: fixed;
+        inset: 0;
+        z-index: 35;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(20, 15, 10, 0.45);
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+      }
+
+      .v8-identity-gate-card {
+        width: 100%;
+        max-width: 360px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        border-radius: 20px;
+      }
+
       .v8-active-identity {
         display: flex;
         align-items: center;
         gap: 12px;
         padding: 16px;
         border-radius: 20px;
-        background: rgba(255, 255, 255, 0.5);
+        /* More opaque than the old inline-card treatment (0.5) -- this now
+           floats over a blurred dark backdrop instead of sitting on the
+           page's own cream background, so it needs more contrast of its
+           own to stay legible. */
+        background: rgba(255, 255, 255, 0.95);
         border: 1px solid rgba(32, 21, 13, 0.10);
         margin-bottom: 8px;
       }
@@ -907,23 +918,6 @@ export function V8ActiveStyles() {
       .v8-active-helper {
         margin-bottom: 20px;
         text-align: center;
-      }
-
-      .v8-active-helper-toggles {
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-      }
-
-      .v8-active-helper-toggle {
-        height: 34px;
-        padding: 0 16px;
-        border: 1px solid rgba(32, 21, 13, 0.24);
-        border-radius: 999px;
-        background: transparent;
-        font-size: 12px;
-        font-weight: 700;
-        color: rgba(32, 21, 13, 0.72);
       }
 
       .v8-active-helper-row {
