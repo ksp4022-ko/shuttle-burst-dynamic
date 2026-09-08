@@ -12,14 +12,17 @@ export const v8ActiveAssetFiles = {
   sunInfoBadge: "sun-info-badge-v2.webp",
 } as const;
 
-// The three sun-side info badges (球種/費用/場地數) -- courtCount uses a
-// visually distinct cloud-banner design (from 04_V8_Cloud_Mist_雲霧素材
-// _2026-09-06/金雲流彩浮世繪對話框.png) so the three badges aren't all
-// identical, per the user's request for "some variation" -- ballType and
-// tempFee stay on the original sun-info-badge-v2 design.
+// The three sun-side info badges (球種/費用/場地數) -- each now uses a
+// distinct cloud-banner design with its own category label baked into the
+// artwork (球種/費用/場時, 2026-09-08 batch). courtCount still points at
+// the older sun-info-badge-alt-v1 (場地數) pending confirmation of what
+// the new "場時" asset (sun-info-badge-courttime-v1) should actually show
+// -- its baked-in label reads "場時" (venue+time), not "場地" (court
+// count), so wiring it to courtCount's "X 片場地" text would misrepresent
+// it. Swap once confirmed.
 export const v8ActiveSunBadgeFiles = {
-  ballType: "sun-info-badge-v2.webp",
-  tempFee: "sun-info-badge-v2.webp",
+  ballType: "sun-info-badge-balltype-v2.webp",
+  tempFee: "sun-info-badge-tempfee-v2.webp",
   courtCount: "sun-info-badge-alt-v1.webp",
 } as const;
 

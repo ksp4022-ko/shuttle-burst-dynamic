@@ -532,8 +532,17 @@ export function V8ActiveStyles() {
 
       .v8-sun-info-scattered {
         /* font-size comes from the inline style (controls.fontSize) now --
-           see V8SunInfoBadgeScattered. */
+           see V8SunInfoBadgeScattered. width:max-content -- without an
+           explicit width, an absolutely-positioned box with only left set
+           (no right) shrink-to-fits into "containing block width minus
+           left offset" (the sun's own box, since sunStyle is the nearest
+           positioned ancestor); once left percent pushes past roughly the
+           sun's own edge that available space shrinks toward/past zero and
+           the browser visibly squashes the badge. max-content sizes to the
+           label's natural width instead, ignoring that shrinking budget,
+           so nudging X far past the sun no longer compresses it. */
         position: absolute;
+        width: max-content;
       }
 
       .v8-sun-info-badge {
