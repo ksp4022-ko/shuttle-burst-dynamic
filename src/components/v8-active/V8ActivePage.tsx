@@ -150,6 +150,15 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
           ) : undefined
         }
         infoCardsContent={<V8ActiveInfoCards assets={assets} controls={v8ActiveInfoCardsDefaults} />}
+        rosterListsContent={
+          <V8ActiveRosterLists
+            frameSrc={assets.rosterFrame}
+            confirmed={rosterConfirmed}
+            leave={rosterLeave}
+            waiting={rosterWaiting}
+            controls={v8ActiveRosterListsDefaults}
+          />
+        }
       />
 
       <div className="v8-active-content">
@@ -215,16 +224,6 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               </button>
             </div>
           )}
-        </div>
-
-        <div className="v8-active-roster-stage">
-          <V8ActiveRosterLists
-            frameSrc={assets.rosterFrame}
-            confirmed={rosterConfirmed}
-            leave={rosterLeave}
-            waiting={rosterWaiting}
-            controls={v8ActiveRosterListsDefaults}
-          />
         </div>
       </div>
     </div>
@@ -766,26 +765,21 @@ export function V8ActiveStyles() {
         text-decoration: underline;
       }
 
-      /* Positioned ancestor for V8ActiveRosterLists' own %-based x/y/scale
-         (see v8ActiveRosterListsDefaults) -- a fixed height rather than
-         one tiered by roster count, since the panel's own size is fixed
-         and scrolls internally instead of growing. The user tunes the
-         exact height/position via /v8/preview afterward. z-index:13 (one
-         above .sd-v8-hero-composition's own 12) so a negative Y -- pulling
-         the panel up to overlap the hero canvas's lower wave/dragon area,
-         per the user's mockup -- doesn't get painted over by the hero's
-         own z-index:12 decorative layers (confirmed via computed-style
-         inspection: without this, the hero's wave/cloud layers sat above
-         this stage despite coming earlier in the DOM). */
-      .v8-active-roster-stage {
-        position: relative;
-        z-index: 13;
-        width: 100%;
-        height: 480px;
-      }
-
+      /* V8ActiveRosterLists is rendered via V8HeroComposition's
+         rosterListsContent prop now (same as infoCardsContent) -- its
+         %-based x/y/scale are relative to the hero canvas's own stage box,
+         sharing that box's rounded-corner/overflow:hidden clipping
+         automatically instead of needing a separate fixed-height
+         positioned box below the hero canvas. Still needs its own
+         z-index (20, matching .v8-active-info-card's convention) since
+         DOM order alone doesn't out-rank the hero's own explicitly
+         z-indexed decor layers (sun:30, wave/cloud/mountain layers up to
+         11) even within the same stacking context -- confirmed via
+         elementFromPoint(): without this the roster frame was completely
+         hidden behind an unnamed decor div despite being last in the DOM. */
       .v8-roster-lists {
         position: absolute;
+        z-index: 20;
       }
 
       .v8-roster-panel {

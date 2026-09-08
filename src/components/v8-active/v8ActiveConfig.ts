@@ -237,17 +237,20 @@ export type V8ActiveRosterListsControls = {
   waiting: V8ActiveRosterPanelOffset;
 };
 
-// Rough/schematic starting placement -- centered horizontally, positioned
-// low enough to clear the hero canvas + identity card below them in normal
-// flow (see the --v8-active-roster-min-height buffer in V8ActivePage.tsx).
-// textColor matches the dark ink tone used elsewhere on the Active page
-// (.v8-active's own color: #20150d) for contrast against the frame's cream
-// panels. Per-panel offsets default to 0 -- PANEL_INSETS' measured baseline
-// already lines up with the artwork, this is purely a fine-tune nudge.
+// Rendered via V8HeroComposition's rosterListsContent prop (same coordinate
+// space as sunX/infoCardX -- % of the hero canvas's own stage box, not a
+// separate box below it). y:82 overlaps the wave/dragon art low in that
+// box, tested empirically to sit fully within the stage's own bounds (so
+// it's clipped to the same rounded corners as the rest of the artwork,
+// with no leftover blank space below it in normal flow). textColor matches
+// the dark ink tone used elsewhere on the Active page (.v8-active's own
+// color: #20150d) for contrast against the frame's cream panels. Per-panel
+// offsets default to 0 -- PANEL_INSETS' measured baseline already lines up
+// with the artwork, this is purely a fine-tune nudge.
 export const v8ActiveRosterListsDefaults: V8ActiveRosterListsControls = {
   show: true,
   x: 50,
-  y: 78,
+  y: 82,
   scale: 1,
   rotation: 0,
   fontSize: 13,

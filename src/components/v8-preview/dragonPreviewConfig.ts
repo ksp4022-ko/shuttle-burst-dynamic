@@ -449,7 +449,7 @@ export const previewDefaults: PreviewControls = {
   activeSunBadgeCourtCountFontSize: 11,
   activeRosterListsShow: true,
   activeRosterListsX: 50,
-  activeRosterListsY: 78,
+  activeRosterListsY: 82,
   activeRosterListsScale: 1,
   activeRosterListsRotation: 0,
   activeRosterListsFontSize: 13,

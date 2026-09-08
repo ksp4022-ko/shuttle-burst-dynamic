@@ -47,6 +47,19 @@ type V8HeroCompositionProps = {
   // coordinate space as sunX/dragonScrollX etc., keeping them visually
   // locked to the sun/dragon regardless of viewport width.
   infoCardsContent?: ReactNode | undefined;
+  // Active-only three-panel roster frame (see V8ActiveRosterLists) -- like
+  // infoCardsContent, rendered directly into the hero canvas's own
+  // positioned+clipped "stage" box instead of a separate box below it, so
+  // it (a) shares the same rounded-corner/overflow:hidden clipping as the
+  // rest of the artwork -- no separate corner styling needed -- and (b)
+  // shares the same stacking context as the wave/dragon decor layers, so
+  // it doesn't need its own z-index to paint above them (previously a
+  // standalone .v8-active-roster-stage box below .v8-active-content needed
+  // both a large fixed height, most of it blank, and an explicit z-index
+  // just to sit in front of the hero's own decor once nudged up to overlap
+  // it -- both problems the user hit go away once it's part of this same
+  // box instead of bolted on below it).
+  rosterListsContent?: ReactNode | undefined;
 };
 
 // Deliberately does NOT call image.decode() here -- decode() can stall
@@ -241,6 +254,7 @@ export function V8HeroComposition({
   scrollContent,
   sunContent,
   infoCardsContent,
+  rosterListsContent,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
   const [assetsReady, setAssetsReady] = useState(false);
@@ -287,8 +301,8 @@ export function V8HeroComposition({
             >
               {sunContent}
             </div>
-            <DecorLayer src={assets.cloud} x={controls.cloudBackX} y={controls.cloudBackY} scale={controls.cloudBackScale} rotation={controls.cloudBackRotation} opacity={100} blur={decorBlur(controls.cloudBackBlur)} zIndex={5} driftClassName="v8-cloud-drift-back" />
-            <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={100} blur={decorBlur(controls.cloudBlur)} zIndex={5} driftClassName="v8-cloud-drift-front" />
+            <DecorLayer src={assets.cloud} x={controls.cloudBackX} y={controls.cloudBackY} scale={controls.cloudBackScale} rotation={controls.cloudBackRotation} opacity={controls.cloudBackOpacity} blur={decorBlur(controls.cloudBackBlur)} zIndex={5} driftClassName="v8-cloud-drift-back" />
+            <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={5} driftClassName="v8-cloud-drift-front" />
             <DecorLayer src={assets.mountain} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={6} />
             <DecorLayer src={assets.backWave} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} driftClassName="v8-wave-drift-back" />
             {controls.dragonShow ? (
@@ -528,6 +542,7 @@ export function V8HeroComposition({
               </div>
             ) : null}
             {infoCardsContent}
+            {rosterListsContent}
           </div>
         </div>
       </div>

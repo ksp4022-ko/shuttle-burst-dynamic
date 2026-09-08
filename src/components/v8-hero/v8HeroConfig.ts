@@ -46,11 +46,18 @@ export type V8HeroControls = {
   cloudY: number;
   cloudScale: number;
   cloudRotation: number;
+  // Was hardcoded to 100 at the render site (the "breathing" opacity comes
+  // from a CSS animation, v8-cloud-drift-front, not a static value) --
+  // added so the Active page's background-fade tool can dim the cloud
+  // layers along with the rest of the backdrop scenery. Opening's own
+  // defaults keep this at 100 so nothing changes there.
+  cloudOpacity: number;
   cloudBlur: number;
   cloudBackX: number;
   cloudBackY: number;
   cloudBackScale: number;
   cloudBackRotation: number;
+  cloudBackOpacity: number;
   cloudBackBlur: number;
   mountainShow: boolean;
   mountainX: number;
@@ -168,14 +175,16 @@ export const v8HeroDefaults: V8HeroControls = {
   heroEventY: -16,
   heroCtaY: -31,
   decorMode: "FULL",
-  // Front cloud layer. Opacity is animation-driven (breathing, see
-  // V8HeroWaveStyles' v8-cloud-drift-front keyframes) rather than a static
-  // value, so there's no cloudOpacity here.
+  // Front cloud layer. The "breathing" look still comes from a CSS
+  // animation (V8HeroWaveStyles' v8-cloud-drift-front keyframes) -- this
+  // opacity is a separate top-level dial multiplied on top of that, at 100
+  // (fully on) by default so the Opening reveal is unchanged.
   cloudShow: true,
   cloudX: -72,
   cloudY: -20,
   cloudScale: 0.8,
   cloudRotation: 0,
+  cloudOpacity: 100,
   cloudBlur: 0,
   // Back cloud layer -- same source image as the front layer, rendered as a
   // second, larger/softer/slower copy underneath it.
@@ -183,6 +192,7 @@ export const v8HeroDefaults: V8HeroControls = {
   cloudBackY: -20,
   cloudBackScale: 0.84,
   cloudBackRotation: 0,
+  cloudBackOpacity: 100,
   cloudBackBlur: 1,
   mountainShow: true,
   mountainX: 139,
