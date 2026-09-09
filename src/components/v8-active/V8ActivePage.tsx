@@ -7,6 +7,7 @@ import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
   activeTargetOrder,
   buildV8ActiveHeroOverrides,
+  buildV8ActiveIdentityCardControls,
   buildV8ActiveInfoCardsControls,
   buildV8ActiveRosterListsControls,
   buildV8ActiveSunBadgesControls,
@@ -23,6 +24,8 @@ import {
   v8ActiveStageAspectRatio,
   v8ActiveSunBadgesDefaults,
   v8ActiveSunMessagesDefaults,
+  type V8ActiveIdentityCardControls,
+  type V8ActiveIdentityVisualControls,
   type V8ActiveSunBadgeControls,
   type V8ActiveSunBadgesControls,
   type V8ActiveSunMessageControls,
@@ -169,6 +172,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const rosterListsControls = buildV8ActiveRosterListsControls(tuningControls);
   const sunBadgeControls = buildV8ActiveSunBadgesControls(tuningControls);
   const sunMessageControls = buildV8ActiveSunMessagesControls(tuningControls);
+  const identityCardControls = buildV8ActiveIdentityCardControls(tuningControls);
 
   // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
   // URLs handed to sunContent/infoCardsContent/rosterListsContent below,
@@ -232,6 +236,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             <V8IdentityScrollContent
               identity={identity}
               assets={assets}
+              controls={identityCardControls}
               busy={busy}
               pendingLabel={pendingAction?.label}
               onPrimaryAction={handlePrimaryAction}
@@ -759,9 +764,32 @@ type V8IdentityAssets = {
   ctaHelperCancel: string;
 };
 
+// Per docs/V8_COMPONENT_CONTROL_BASELINE.md -- turns one console-tunable
+// visual-control group into the transform/opacity/z-index style applied to
+// an element's own WRAPPER (not its CSS-sized <img>/text content), so the
+// baseline's X/Y/Scale/Rotation/Opacity/Z-index sit on top of the tiny
+// panel's existing (already content-fitted, see the 2026-09-10 fix comment
+// on v8ActiveConfig.ts's V8ActiveIdentityCardControls) flex layout instead
+// of replacing it. X/Y are px nudges, not canvas %.
+// Does NOT set `position` -- most of these elements are plain flex children
+// (position: static by default) where z-index needs a position value added,
+// but the status-mark corner badge already has its own position: absolute
+// from .v8-scroll-status-mark (see the CSS below) and setting position here
+// too would override that inline, breaking its top-left overlap placement.
+// Callers that need position:relative for z-index to take effect add it
+// themselves in their own style object (see the JSX below).
+function identityVisualStyle(c: V8ActiveIdentityVisualControls): CSSProperties {
+  return {
+    zIndex: c.zIndex,
+    opacity: c.opacity / 100,
+    transform: `translate(${c.x}px, ${c.y}px) scale(${c.scale}) rotate(${c.rotation}deg)`,
+  };
+}
+
 export function V8IdentityScrollContent({
   identity,
   assets,
+  controls,
   busy,
   pendingLabel,
   onPrimaryAction,
@@ -771,6 +799,7 @@ export function V8IdentityScrollContent({
 }: {
   identity: CurrentIdentity;
   assets: V8IdentityAssets;
+  controls: V8ActiveIdentityCardControls;
   busy: boolean;
   pendingLabel: string | undefined;
   onPrimaryAction: () => void;
@@ -778,24 +807,48 @@ export function V8IdentityScrollContent({
   onHelperSignup: () => void;
   onHelperCancel: () => void;
 }) {
+  if (!controls.show) return null;
+
   const nameLength = Array.from(identity.name).length;
-  const nameSize = Math.max(9, Math.min(13, Math.floor(60 / Math.max(nameLength, 5))));
+  // Auto-fit/shrink for long names (per baseline's Max Width note) -- the
+  // console's Font Size control sets the CEILING, short names still grow up
+  // to it, long names still shrink below it, never an ellipsis truncation.
+  const nameSize = Math.max(9, Math.min(controls.name.fontSize, Math.floor(60 / Math.max(nameLength, 5))));
   const status = meetupStatusLabel(identity);
 
   return (
     <div className="v8-scroll-identity">
-      <div className="v8-scroll-status-mark" aria-label={`本次狀態：${status}`}>
+      <div className="v8-scroll-status-mark" style={identityVisualStyle(controls.statusMark)} aria-label={`本次狀態：${status}`}>
         <img src={statusStampAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
-      <strong className="v8-scroll-identity-name" style={{ fontSize: nameSize }} title={identity.name}>
+      <strong
+        className="v8-scroll-identity-name"
+        style={{
+          position: "relative",
+          ...identityVisualStyle(controls.name),
+          fontSize: nameSize,
+          width: controls.name.maxWidth,
+          margin: "0 auto",
+          letterSpacing: controls.name.letterSpacing,
+          lineHeight: controls.name.lineHeight,
+          textAlign: controls.name.textAlign,
+          fontWeight: controls.name.fontWeight,
+        }}
+        title={identity.name}
+      >
         {identity.name}
       </strong>
-      <div className="v8-scroll-identity-tag" aria-label={roleLabel(identity)}>
+      <div
+        className="v8-scroll-identity-tag"
+        style={{ position: "relative", ...identityVisualStyle(controls.tag) }}
+        aria-label={roleLabel(identity)}
+      >
         <img src={identityTagAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
       <button
         type="button"
         className="v8-scroll-cta v8-scroll-cta-img"
+        style={{ position: "relative", ...identityVisualStyle(controls.cta) }}
         disabled={busy}
         onClick={onPrimaryAction}
         aria-label={busy ? pendingLabel : primaryActionLabel(identity)}
@@ -803,14 +856,43 @@ export function V8IdentityScrollContent({
         <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </button>
       <div className="v8-scroll-secondary-actions" aria-label="代操作">
-        <button type="button" className="v8-scroll-helper-btn" disabled={busy} onClick={onHelperSignup} aria-label="幫人報名">
+        <button
+          type="button"
+          className="v8-scroll-helper-btn"
+          style={{ position: "relative", ...identityVisualStyle(controls.helperSignup) }}
+          disabled={busy}
+          onClick={onHelperSignup}
+          aria-label="幫人報名"
+        >
           <img src={assets.ctaHelperSignup} alt="" aria-hidden="true" draggable={false} />
         </button>
-        <button type="button" className="v8-scroll-helper-btn" disabled={busy} onClick={onHelperCancel} aria-label="幫人取消">
+        <button
+          type="button"
+          className="v8-scroll-helper-btn"
+          style={{ position: "relative", ...identityVisualStyle(controls.helperCancel) }}
+          disabled={busy}
+          onClick={onHelperCancel}
+          aria-label="幫人取消"
+        >
           <img src={assets.ctaHelperCancel} alt="" aria-hidden="true" draggable={false} />
         </button>
       </div>
-      <button type="button" className="v8-scroll-forget" disabled={busy} onClick={onForget}>
+      <button
+        type="button"
+        className="v8-scroll-forget"
+        style={{
+          position: "relative",
+          ...identityVisualStyle(controls.forget),
+          fontSize: controls.forget.fontSize,
+          width: controls.forget.maxWidth,
+          letterSpacing: controls.forget.letterSpacing,
+          lineHeight: controls.forget.lineHeight,
+          textAlign: controls.forget.textAlign,
+          fontWeight: controls.forget.fontWeight,
+        }}
+        disabled={busy}
+        onClick={onForget}
+      >
         不是我
       </button>
     </div>

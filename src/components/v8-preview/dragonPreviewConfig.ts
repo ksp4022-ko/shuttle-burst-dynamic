@@ -1,5 +1,6 @@
 import { v8ActiveBackgroundFadeOverrides } from "@/components/v8-active/v8ActiveConfig";
 import type {
+  V8ActiveIdentityCardControls,
   V8ActiveInfoCardsControls,
   V8ActiveRosterListsControls,
   V8ActiveSunBadgesControls,
@@ -227,6 +228,67 @@ export type PreviewControls = {
   activeRosterListsConfirmedY: number;
   activeRosterListsWaitingX: number;
   activeRosterListsWaitingY: number;
+  // Identity card (個人資訊區) -- status stamp/name/identity tag/CTA
+  // plaque/helper buttons/forget link on the tiger scroll (see
+  // V8IdentityScrollContent in V8ActivePage.tsx and the long comment on
+  // V8ActiveIdentityCardControls in v8ActiveConfig.ts for the px-nudge
+  // convention and why show is ONE shared toggle, not per-element). Per
+  // docs/V8_COMPONENT_CONTROL_BASELINE.md.
+  activeIdentityShow: boolean;
+  activeIdentityStatusMarkX: number;
+  activeIdentityStatusMarkY: number;
+  activeIdentityStatusMarkScale: number;
+  activeIdentityStatusMarkRotation: number;
+  activeIdentityStatusMarkOpacity: number;
+  activeIdentityStatusMarkZIndex: number;
+  activeIdentityNameX: number;
+  activeIdentityNameY: number;
+  activeIdentityNameScale: number;
+  activeIdentityNameRotation: number;
+  activeIdentityNameOpacity: number;
+  activeIdentityNameZIndex: number;
+  activeIdentityNameFontSize: number;
+  activeIdentityNameMaxWidth: number;
+  activeIdentityNameLetterSpacing: number;
+  activeIdentityNameLineHeight: number;
+  activeIdentityNameTextAlign: "left" | "center" | "right";
+  activeIdentityNameFontWeight: number;
+  activeIdentityTagX: number;
+  activeIdentityTagY: number;
+  activeIdentityTagScale: number;
+  activeIdentityTagRotation: number;
+  activeIdentityTagOpacity: number;
+  activeIdentityTagZIndex: number;
+  activeIdentityCtaX: number;
+  activeIdentityCtaY: number;
+  activeIdentityCtaScale: number;
+  activeIdentityCtaRotation: number;
+  activeIdentityCtaOpacity: number;
+  activeIdentityCtaZIndex: number;
+  activeIdentityHelperSignupX: number;
+  activeIdentityHelperSignupY: number;
+  activeIdentityHelperSignupScale: number;
+  activeIdentityHelperSignupRotation: number;
+  activeIdentityHelperSignupOpacity: number;
+  activeIdentityHelperSignupZIndex: number;
+  activeIdentityHelperCancelX: number;
+  activeIdentityHelperCancelY: number;
+  activeIdentityHelperCancelScale: number;
+  activeIdentityHelperCancelRotation: number;
+  activeIdentityHelperCancelOpacity: number;
+  activeIdentityHelperCancelZIndex: number;
+  activeIdentityForgetX: number;
+  activeIdentityForgetY: number;
+  activeIdentityForgetScale: number;
+  activeIdentityForgetRotation: number;
+  activeIdentityForgetOpacity: number;
+  activeIdentityForgetZIndex: number;
+  activeIdentityForgetFontSize: number;
+  activeIdentityForgetMaxWidth: number;
+  activeIdentityForgetLetterSpacing: number;
+  activeIdentityForgetLineHeight: number;
+  activeIdentityForgetTextAlign: "left" | "center" | "right";
+  activeIdentityForgetFontWeight: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -254,6 +316,13 @@ export type PreviewTargetId =
   | "ACTIVE SUN NAME"
   | "ACTIVE SUN NOTE"
   | "ACTIVE TIGER SCROLL"
+  | "ACTIVE IDENTITY STATUS MARK"
+  | "ACTIVE IDENTITY NAME"
+  | "ACTIVE IDENTITY TAG"
+  | "ACTIVE IDENTITY CTA"
+  | "ACTIVE IDENTITY HELPER SIGNUP"
+  | "ACTIVE IDENTITY HELPER CANCEL"
+  | "ACTIVE IDENTITY FORGET"
   | "ACTIVE INFO ROPE"
   | "ACTIVE INFO REGISTERED"
   | "ACTIVE INFO NEEDED"
@@ -292,6 +361,13 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE SUN NAME",
   "ACTIVE SUN NOTE",
   "ACTIVE TIGER SCROLL",
+  "ACTIVE IDENTITY STATUS MARK",
+  "ACTIVE IDENTITY NAME",
+  "ACTIVE IDENTITY TAG",
+  "ACTIVE IDENTITY CTA",
+  "ACTIVE IDENTITY HELPER SIGNUP",
+  "ACTIVE IDENTITY HELPER CANCEL",
+  "ACTIVE IDENTITY FORGET",
   "ACTIVE INFO ROPE",
   "ACTIVE INFO REGISTERED",
   "ACTIVE INFO NEEDED",
@@ -542,6 +618,66 @@ export const previewDefaults: PreviewControls = {
   activeRosterListsConfirmedY: 2,
   activeRosterListsWaitingX: 3,
   activeRosterListsWaitingY: 4,
+  // All nudges/rotation at 0, scale 1, opacity 100, zIndex 0 -- reproduces
+  // the identity card's current flex-layout look exactly, no default visual
+  // change. name/forget font values match the live CSS this replaces
+  // (.v8-scroll-identity-name's font-weight:900/line-height:1.1 and
+  // .v8-scroll-forget's font-size:7px) -- see V8ActivePage.tsx.
+  activeIdentityShow: true,
+  activeIdentityStatusMarkX: 0,
+  activeIdentityStatusMarkY: 0,
+  activeIdentityStatusMarkScale: 1,
+  activeIdentityStatusMarkRotation: 0,
+  activeIdentityStatusMarkOpacity: 100,
+  activeIdentityStatusMarkZIndex: 0,
+  activeIdentityNameX: 0,
+  activeIdentityNameY: 0,
+  activeIdentityNameScale: 1,
+  activeIdentityNameRotation: 0,
+  activeIdentityNameOpacity: 100,
+  activeIdentityNameZIndex: 0,
+  activeIdentityNameFontSize: 13,
+  activeIdentityNameMaxWidth: 80,
+  activeIdentityNameLetterSpacing: 0,
+  activeIdentityNameLineHeight: 1.1,
+  activeIdentityNameTextAlign: "center",
+  activeIdentityNameFontWeight: 900,
+  activeIdentityTagX: 0,
+  activeIdentityTagY: 0,
+  activeIdentityTagScale: 1,
+  activeIdentityTagRotation: 0,
+  activeIdentityTagOpacity: 100,
+  activeIdentityTagZIndex: 0,
+  activeIdentityCtaX: 0,
+  activeIdentityCtaY: 0,
+  activeIdentityCtaScale: 1,
+  activeIdentityCtaRotation: 0,
+  activeIdentityCtaOpacity: 100,
+  activeIdentityCtaZIndex: 0,
+  activeIdentityHelperSignupX: 0,
+  activeIdentityHelperSignupY: 0,
+  activeIdentityHelperSignupScale: 1,
+  activeIdentityHelperSignupRotation: 0,
+  activeIdentityHelperSignupOpacity: 100,
+  activeIdentityHelperSignupZIndex: 0,
+  activeIdentityHelperCancelX: 0,
+  activeIdentityHelperCancelY: 0,
+  activeIdentityHelperCancelScale: 1,
+  activeIdentityHelperCancelRotation: 0,
+  activeIdentityHelperCancelOpacity: 100,
+  activeIdentityHelperCancelZIndex: 0,
+  activeIdentityForgetX: 0,
+  activeIdentityForgetY: 0,
+  activeIdentityForgetScale: 1,
+  activeIdentityForgetRotation: 0,
+  activeIdentityForgetOpacity: 100,
+  activeIdentityForgetZIndex: 0,
+  activeIdentityForgetFontSize: 7,
+  activeIdentityForgetMaxWidth: 60,
+  activeIdentityForgetLetterSpacing: 0,
+  activeIdentityForgetLineHeight: 1,
+  activeIdentityForgetTextAlign: "center",
+  activeIdentityForgetFontWeight: 400,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -593,6 +729,81 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeTigerScrollY",
     "activeTigerScrollScale",
     "activeTigerScrollRotation",
+  ],
+  "ACTIVE IDENTITY STATUS MARK": [
+    "activeIdentityShow",
+    "activeIdentityStatusMarkX",
+    "activeIdentityStatusMarkY",
+    "activeIdentityStatusMarkScale",
+    "activeIdentityStatusMarkRotation",
+    "activeIdentityStatusMarkOpacity",
+    "activeIdentityStatusMarkZIndex",
+  ],
+  "ACTIVE IDENTITY NAME": [
+    "activeIdentityShow",
+    "activeIdentityNameX",
+    "activeIdentityNameY",
+    "activeIdentityNameScale",
+    "activeIdentityNameRotation",
+    "activeIdentityNameOpacity",
+    "activeIdentityNameZIndex",
+    "activeIdentityNameFontSize",
+    "activeIdentityNameMaxWidth",
+    "activeIdentityNameLetterSpacing",
+    "activeIdentityNameLineHeight",
+    "activeIdentityNameTextAlign",
+    "activeIdentityNameFontWeight",
+  ],
+  "ACTIVE IDENTITY TAG": [
+    "activeIdentityShow",
+    "activeIdentityTagX",
+    "activeIdentityTagY",
+    "activeIdentityTagScale",
+    "activeIdentityTagRotation",
+    "activeIdentityTagOpacity",
+    "activeIdentityTagZIndex",
+  ],
+  "ACTIVE IDENTITY CTA": [
+    "activeIdentityShow",
+    "activeIdentityCtaX",
+    "activeIdentityCtaY",
+    "activeIdentityCtaScale",
+    "activeIdentityCtaRotation",
+    "activeIdentityCtaOpacity",
+    "activeIdentityCtaZIndex",
+  ],
+  "ACTIVE IDENTITY HELPER SIGNUP": [
+    "activeIdentityShow",
+    "activeIdentityHelperSignupX",
+    "activeIdentityHelperSignupY",
+    "activeIdentityHelperSignupScale",
+    "activeIdentityHelperSignupRotation",
+    "activeIdentityHelperSignupOpacity",
+    "activeIdentityHelperSignupZIndex",
+  ],
+  "ACTIVE IDENTITY HELPER CANCEL": [
+    "activeIdentityShow",
+    "activeIdentityHelperCancelX",
+    "activeIdentityHelperCancelY",
+    "activeIdentityHelperCancelScale",
+    "activeIdentityHelperCancelRotation",
+    "activeIdentityHelperCancelOpacity",
+    "activeIdentityHelperCancelZIndex",
+  ],
+  "ACTIVE IDENTITY FORGET": [
+    "activeIdentityShow",
+    "activeIdentityForgetX",
+    "activeIdentityForgetY",
+    "activeIdentityForgetScale",
+    "activeIdentityForgetRotation",
+    "activeIdentityForgetOpacity",
+    "activeIdentityForgetZIndex",
+    "activeIdentityForgetFontSize",
+    "activeIdentityForgetMaxWidth",
+    "activeIdentityForgetLetterSpacing",
+    "activeIdentityForgetLineHeight",
+    "activeIdentityForgetTextAlign",
+    "activeIdentityForgetFontWeight",
   ],
   "ACTIVE INFO ROPE": ["activeInfoRopeShow", "activeInfoRopeX", "activeInfoRopeY", "activeInfoRopeScale", "activeInfoRopeRotation"],
   "ACTIVE INFO REGISTERED": [
@@ -689,6 +900,13 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE SUN DATE": "activeSunDateShow",
   "ACTIVE SUN NAME": "activeSunNameShow",
   "ACTIVE SUN NOTE": "activeSunNoteShow",
+  "ACTIVE IDENTITY STATUS MARK": "activeIdentityShow",
+  "ACTIVE IDENTITY NAME": "activeIdentityShow",
+  "ACTIVE IDENTITY TAG": "activeIdentityShow",
+  "ACTIVE IDENTITY CTA": "activeIdentityShow",
+  "ACTIVE IDENTITY HELPER SIGNUP": "activeIdentityShow",
+  "ACTIVE IDENTITY HELPER CANCEL": "activeIdentityShow",
+  "ACTIVE IDENTITY FORGET": "activeIdentityShow",
   "ACTIVE INFO ROPE": "activeInfoRopeShow",
   "ACTIVE INFO REGISTERED": "activeInfoRegisteredShow",
   "ACTIVE INFO NEEDED": "activeInfoNeededShow",
@@ -807,6 +1025,58 @@ export const controlRanges = {
   activeSunNoteScale: { label: "備註 Scale", min: 0.2, max: 3, step: 0.01 },
   activeSunNoteRotation: { label: "備註 Rotation", min: -180, max: 180 },
   activeSunNoteFontSize: { label: "備註 Font Size", min: 4, max: 48 },
+  activeIdentityStatusMarkX: { label: "印章 X (px)", min: -40, max: 40 },
+  activeIdentityStatusMarkY: { label: "印章 Y (px)", min: -40, max: 40 },
+  activeIdentityStatusMarkScale: { label: "印章 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeIdentityStatusMarkRotation: { label: "印章 Rotation", min: -180, max: 180 },
+  activeIdentityStatusMarkOpacity: { label: "印章 Opacity", min: 0, max: 100 },
+  activeIdentityStatusMarkZIndex: { label: "印章 Z-Index", min: 0, max: 20 },
+  activeIdentityNameX: { label: "姓名 X (px)", min: -40, max: 40 },
+  activeIdentityNameY: { label: "姓名 Y (px)", min: -40, max: 40 },
+  activeIdentityNameScale: { label: "姓名 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeIdentityNameRotation: { label: "姓名 Rotation", min: -180, max: 180 },
+  activeIdentityNameOpacity: { label: "姓名 Opacity", min: 0, max: 100 },
+  activeIdentityNameZIndex: { label: "姓名 Z-Index", min: 0, max: 20 },
+  activeIdentityNameFontSize: { label: "姓名 Font Size", min: 6, max: 24 },
+  activeIdentityNameMaxWidth: { label: "姓名 Max Width", min: 30, max: 160 },
+  activeIdentityNameLetterSpacing: { label: "姓名 Letter Spacing", min: -2, max: 4, step: 0.1 },
+  activeIdentityNameLineHeight: { label: "姓名 Line Height", min: 0.8, max: 2.4, step: 0.05 },
+  activeIdentityNameFontWeight: { label: "姓名 Font Weight", min: 400, max: 900, step: 100 },
+  activeIdentityTagX: { label: "身份吊牌 X (px)", min: -40, max: 40 },
+  activeIdentityTagY: { label: "身份吊牌 Y (px)", min: -40, max: 40 },
+  activeIdentityTagScale: { label: "身份吊牌 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeIdentityTagRotation: { label: "身份吊牌 Rotation", min: -180, max: 180 },
+  activeIdentityTagOpacity: { label: "身份吊牌 Opacity", min: 0, max: 100 },
+  activeIdentityTagZIndex: { label: "身份吊牌 Z-Index", min: 0, max: 20 },
+  activeIdentityCtaX: { label: "主要按鈕 X (px)", min: -40, max: 40 },
+  activeIdentityCtaY: { label: "主要按鈕 Y (px)", min: -40, max: 40 },
+  activeIdentityCtaScale: { label: "主要按鈕 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeIdentityCtaRotation: { label: "主要按鈕 Rotation", min: -180, max: 180 },
+  activeIdentityCtaOpacity: { label: "主要按鈕 Opacity", min: 0, max: 100 },
+  activeIdentityCtaZIndex: { label: "主要按鈕 Z-Index", min: 0, max: 20 },
+  activeIdentityHelperSignupX: { label: "代報 X (px)", min: -40, max: 40 },
+  activeIdentityHelperSignupY: { label: "代報 Y (px)", min: -40, max: 40 },
+  activeIdentityHelperSignupScale: { label: "代報 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeIdentityHelperSignupRotation: { label: "代報 Rotation", min: -180, max: 180 },
+  activeIdentityHelperSignupOpacity: { label: "代報 Opacity", min: 0, max: 100 },
+  activeIdentityHelperSignupZIndex: { label: "代報 Z-Index", min: 0, max: 20 },
+  activeIdentityHelperCancelX: { label: "代退 X (px)", min: -40, max: 40 },
+  activeIdentityHelperCancelY: { label: "代退 Y (px)", min: -40, max: 40 },
+  activeIdentityHelperCancelScale: { label: "代退 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeIdentityHelperCancelRotation: { label: "代退 Rotation", min: -180, max: 180 },
+  activeIdentityHelperCancelOpacity: { label: "代退 Opacity", min: 0, max: 100 },
+  activeIdentityHelperCancelZIndex: { label: "代退 Z-Index", min: 0, max: 20 },
+  activeIdentityForgetX: { label: "不是我 X (px)", min: -40, max: 40 },
+  activeIdentityForgetY: { label: "不是我 Y (px)", min: -40, max: 40 },
+  activeIdentityForgetScale: { label: "不是我 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeIdentityForgetRotation: { label: "不是我 Rotation", min: -180, max: 180 },
+  activeIdentityForgetOpacity: { label: "不是我 Opacity", min: 0, max: 100 },
+  activeIdentityForgetZIndex: { label: "不是我 Z-Index", min: 0, max: 20 },
+  activeIdentityForgetFontSize: { label: "不是我 Font Size", min: 5, max: 16 },
+  activeIdentityForgetMaxWidth: { label: "不是我 Max Width", min: 20, max: 120 },
+  activeIdentityForgetLetterSpacing: { label: "不是我 Letter Spacing", min: -2, max: 4, step: 0.1 },
+  activeIdentityForgetLineHeight: { label: "不是我 Line Height", min: 0.8, max: 2, step: 0.05 },
+  activeIdentityForgetFontWeight: { label: "不是我 Font Weight", min: 400, max: 900, step: 100 },
   activeInfoRopeX: { label: "Info Rope X %", min: -20, max: 120 },
   activeInfoRopeY: { label: "Info Rope Y %", min: -20, max: 140 },
   activeInfoRopeScale: { label: "Info Rope Scale", min: 0.2, max: 3, step: 0.01 },
@@ -1095,6 +1365,16 @@ Rotation: ${Math.round(controls.activeSunBadgeCourtCountRotation)}
 Font Size: ${Math.round(controls.activeSunBadgeCourtCountFontSize)}
 Text Offset: ${Math.round(controls.activeSunBadgeCourtCountTextOffsetX)}, ${Math.round(controls.activeSunBadgeCourtCountTextOffsetY)}
 
+ACTIVE IDENTITY CARD (個人資訊區)
+Show: ${controls.activeIdentityShow ? "ON" : "OFF"}
+印章 (status mark): X ${Math.round(controls.activeIdentityStatusMarkX)}, Y ${Math.round(controls.activeIdentityStatusMarkY)}, Scale ${controls.activeIdentityStatusMarkScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityStatusMarkRotation)}, Opacity ${Math.round(controls.activeIdentityStatusMarkOpacity)}, Z ${Math.round(controls.activeIdentityStatusMarkZIndex)}
+姓名 (name): X ${Math.round(controls.activeIdentityNameX)}, Y ${Math.round(controls.activeIdentityNameY)}, Scale ${controls.activeIdentityNameScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityNameRotation)}, Opacity ${Math.round(controls.activeIdentityNameOpacity)}, Z ${Math.round(controls.activeIdentityNameZIndex)}, Font ${Math.round(controls.activeIdentityNameFontSize)}, Max Width ${Math.round(controls.activeIdentityNameMaxWidth)}, Letter Spacing ${controls.activeIdentityNameLetterSpacing.toFixed(1)}, Line Height ${controls.activeIdentityNameLineHeight.toFixed(2)}, Align ${controls.activeIdentityNameTextAlign}, Weight ${Math.round(controls.activeIdentityNameFontWeight)}
+身份吊牌 (tag): X ${Math.round(controls.activeIdentityTagX)}, Y ${Math.round(controls.activeIdentityTagY)}, Scale ${controls.activeIdentityTagScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityTagRotation)}, Opacity ${Math.round(controls.activeIdentityTagOpacity)}, Z ${Math.round(controls.activeIdentityTagZIndex)}
+主要按鈕 (cta): X ${Math.round(controls.activeIdentityCtaX)}, Y ${Math.round(controls.activeIdentityCtaY)}, Scale ${controls.activeIdentityCtaScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityCtaRotation)}, Opacity ${Math.round(controls.activeIdentityCtaOpacity)}, Z ${Math.round(controls.activeIdentityCtaZIndex)}
+代報 (helper signup): X ${Math.round(controls.activeIdentityHelperSignupX)}, Y ${Math.round(controls.activeIdentityHelperSignupY)}, Scale ${controls.activeIdentityHelperSignupScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityHelperSignupRotation)}, Opacity ${Math.round(controls.activeIdentityHelperSignupOpacity)}, Z ${Math.round(controls.activeIdentityHelperSignupZIndex)}
+代退 (helper cancel): X ${Math.round(controls.activeIdentityHelperCancelX)}, Y ${Math.round(controls.activeIdentityHelperCancelY)}, Scale ${controls.activeIdentityHelperCancelScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityHelperCancelRotation)}, Opacity ${Math.round(controls.activeIdentityHelperCancelOpacity)}, Z ${Math.round(controls.activeIdentityHelperCancelZIndex)}
+不是我 (forget): X ${Math.round(controls.activeIdentityForgetX)}, Y ${Math.round(controls.activeIdentityForgetY)}, Scale ${controls.activeIdentityForgetScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityForgetRotation)}, Opacity ${Math.round(controls.activeIdentityForgetOpacity)}, Z ${Math.round(controls.activeIdentityForgetZIndex)}, Font ${Math.round(controls.activeIdentityForgetFontSize)}, Max Width ${Math.round(controls.activeIdentityForgetMaxWidth)}, Letter Spacing ${controls.activeIdentityForgetLetterSpacing.toFixed(1)}, Line Height ${controls.activeIdentityForgetLineHeight.toFixed(2)}, Align ${controls.activeIdentityForgetTextAlign}, Weight ${Math.round(controls.activeIdentityForgetFontWeight)}
+
 ACTIVE ROSTER LISTS
 Show: ${controls.activeRosterListsShow ? "ON" : "OFF"}
 X: ${Math.round(controls.activeRosterListsX)}
@@ -1316,5 +1596,79 @@ export function buildV8ActiveRosterListsControls(controls: PreviewControls): V8A
     leave: { x: controls.activeRosterListsLeaveX, y: controls.activeRosterListsLeaveY },
     confirmed: { x: controls.activeRosterListsConfirmedX, y: controls.activeRosterListsConfirmedY },
     waiting: { x: controls.activeRosterListsWaitingX, y: controls.activeRosterListsWaitingY },
+  };
+}
+
+export function buildV8ActiveIdentityCardControls(controls: PreviewControls): V8ActiveIdentityCardControls {
+  return {
+    show: controls.activeIdentityShow,
+    statusMark: {
+      x: controls.activeIdentityStatusMarkX,
+      y: controls.activeIdentityStatusMarkY,
+      scale: controls.activeIdentityStatusMarkScale,
+      rotation: controls.activeIdentityStatusMarkRotation,
+      opacity: controls.activeIdentityStatusMarkOpacity,
+      zIndex: controls.activeIdentityStatusMarkZIndex,
+    },
+    name: {
+      x: controls.activeIdentityNameX,
+      y: controls.activeIdentityNameY,
+      scale: controls.activeIdentityNameScale,
+      rotation: controls.activeIdentityNameRotation,
+      opacity: controls.activeIdentityNameOpacity,
+      zIndex: controls.activeIdentityNameZIndex,
+      fontSize: controls.activeIdentityNameFontSize,
+      maxWidth: controls.activeIdentityNameMaxWidth,
+      letterSpacing: controls.activeIdentityNameLetterSpacing,
+      lineHeight: controls.activeIdentityNameLineHeight,
+      textAlign: controls.activeIdentityNameTextAlign,
+      fontWeight: controls.activeIdentityNameFontWeight,
+    },
+    tag: {
+      x: controls.activeIdentityTagX,
+      y: controls.activeIdentityTagY,
+      scale: controls.activeIdentityTagScale,
+      rotation: controls.activeIdentityTagRotation,
+      opacity: controls.activeIdentityTagOpacity,
+      zIndex: controls.activeIdentityTagZIndex,
+    },
+    cta: {
+      x: controls.activeIdentityCtaX,
+      y: controls.activeIdentityCtaY,
+      scale: controls.activeIdentityCtaScale,
+      rotation: controls.activeIdentityCtaRotation,
+      opacity: controls.activeIdentityCtaOpacity,
+      zIndex: controls.activeIdentityCtaZIndex,
+    },
+    helperSignup: {
+      x: controls.activeIdentityHelperSignupX,
+      y: controls.activeIdentityHelperSignupY,
+      scale: controls.activeIdentityHelperSignupScale,
+      rotation: controls.activeIdentityHelperSignupRotation,
+      opacity: controls.activeIdentityHelperSignupOpacity,
+      zIndex: controls.activeIdentityHelperSignupZIndex,
+    },
+    helperCancel: {
+      x: controls.activeIdentityHelperCancelX,
+      y: controls.activeIdentityHelperCancelY,
+      scale: controls.activeIdentityHelperCancelScale,
+      rotation: controls.activeIdentityHelperCancelRotation,
+      opacity: controls.activeIdentityHelperCancelOpacity,
+      zIndex: controls.activeIdentityHelperCancelZIndex,
+    },
+    forget: {
+      x: controls.activeIdentityForgetX,
+      y: controls.activeIdentityForgetY,
+      scale: controls.activeIdentityForgetScale,
+      rotation: controls.activeIdentityForgetRotation,
+      opacity: controls.activeIdentityForgetOpacity,
+      zIndex: controls.activeIdentityForgetZIndex,
+      fontSize: controls.activeIdentityForgetFontSize,
+      maxWidth: controls.activeIdentityForgetMaxWidth,
+      letterSpacing: controls.activeIdentityForgetLetterSpacing,
+      lineHeight: controls.activeIdentityForgetLineHeight,
+      textAlign: controls.activeIdentityForgetTextAlign,
+      fontWeight: controls.activeIdentityForgetFontWeight,
+    },
   };
 }

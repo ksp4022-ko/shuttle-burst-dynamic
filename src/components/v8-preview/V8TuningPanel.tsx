@@ -391,6 +391,34 @@ export function V8TuningPanel({
             {controls.activeSunNoteBold ? "Bold ON" : "Bold OFF"}
           </button>
         ) : null}
+        {selectedTarget === "ACTIVE IDENTITY NAME" ? (
+          <label style={inlineSelectLabelStyle}>
+            ALIGN
+            <select
+              value={controls.activeIdentityNameTextAlign}
+              onChange={(event) => update("activeIdentityNameTextAlign", event.currentTarget.value as PreviewControls["activeIdentityNameTextAlign"])}
+              style={compactSelectStyle}
+            >
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </label>
+        ) : null}
+        {selectedTarget === "ACTIVE IDENTITY FORGET" ? (
+          <label style={inlineSelectLabelStyle}>
+            ALIGN
+            <select
+              value={controls.activeIdentityForgetTextAlign}
+              onChange={(event) => update("activeIdentityForgetTextAlign", event.currentTarget.value as PreviewControls["activeIdentityForgetTextAlign"])}
+              style={compactSelectStyle}
+            >
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </label>
+        ) : null}
       </div>
       <button type="button" onClick={() => setMoreOpen((current) => !current)} style={moreToggleStyle}>
         {moreOpen ? "收起更多" : "⋯ 更多"}

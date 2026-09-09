@@ -423,3 +423,53 @@ export const v8ActiveRosterListsRanges: Record<
 
 export const v8ActiveRosterPanelOffsetRange = { label: "Offset", min: -40, max: 40 } as const;
 
+// Identity card (個人資訊區) -- the tiger-scroll status stamp/name/identity
+// tag/CTA plaques/helper buttons/forget link (see V8IdentityScrollContent in
+// V8ActivePage.tsx). Per docs/V8_COMPONENT_CONTROL_BASELINE.md, each of
+// these 7 independently-positioned elements gets the standard visual
+// controls (X/Y/Scale/Rotation/Opacity/Z-index); name + forget additionally
+// get the text controls (Font Size/Max Width/Letter Spacing/Line
+// Height/Text Align/Font Weight). Visibility is ONE shared toggle
+// (activeIdentityShow in dragonPreviewConfig.ts) covering the whole card,
+// per the baseline's "no per-component Visible" rule -- not seven separate
+// switches.
+//
+// X/Y here are PX NUDGES layered on top of the element's own existing flex
+// layout (same convention as activeSunBadge*TextOffsetX/Y and
+// activeRosterLists*X/Y panel offsets), not a full canvas %-position -- the
+// panel this card renders inside is a small fixed box (~83x134px measured
+// live, see V8HeroComposition's tigerScroll inset), already tuned to fit its
+// own content exactly (2026-09-10 fix: a name that collapsed to 0px height
+// under flex-shrink). Rebuilding every element as an absolutely-positioned
+// layer would risk reintroducing that overflow/collapse bug for no real
+// benefit at this size; a transform nudge on top of the proven-safe flex
+// layout gives the same tunability without the risk.
+export type V8ActiveIdentityVisualControls = {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  zIndex: number;
+};
+
+export type V8ActiveIdentityTextControls = V8ActiveIdentityVisualControls & {
+  fontSize: number;
+  maxWidth: number;
+  letterSpacing: number;
+  lineHeight: number;
+  textAlign: "left" | "center" | "right";
+  fontWeight: number;
+};
+
+export type V8ActiveIdentityCardControls = {
+  show: boolean;
+  statusMark: V8ActiveIdentityVisualControls;
+  name: V8ActiveIdentityTextControls;
+  tag: V8ActiveIdentityVisualControls;
+  cta: V8ActiveIdentityVisualControls;
+  helperSignup: V8ActiveIdentityVisualControls;
+  helperCancel: V8ActiveIdentityVisualControls;
+  forget: V8ActiveIdentityTextControls;
+};
+

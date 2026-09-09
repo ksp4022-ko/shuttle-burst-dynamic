@@ -6,6 +6,7 @@ import {
   bagStrapBaseline,
   buildPreviewAssets,
   buildV8ActiveHeroOverrides,
+  buildV8ActiveIdentityCardControls,
   buildV8ActiveInfoCardsControls,
   buildV8ActiveRosterListsControls,
   buildV8ActiveSunBadgesControls,
@@ -156,6 +157,7 @@ function ActiveCanvas({
   const rosterListsControls = buildV8ActiveRosterListsControls(controls);
   const sunBadgeControls = buildV8ActiveSunBadgesControls(controls);
   const sunMessageControls = buildV8ActiveSunMessagesControls(controls);
+  const identityCardControls = buildV8ActiveIdentityCardControls(controls);
   const extraPreloadSrcs = [
     assets.sunInfoBadge,
     assets.sunBadgeBallType,
@@ -195,6 +197,7 @@ function ActiveCanvas({
           <V8IdentityScrollContent
             identity={mockIdentity}
             assets={assets}
+            controls={identityCardControls}
             busy={false}
             pendingLabel={undefined}
             onPrimaryAction={() => {}}
