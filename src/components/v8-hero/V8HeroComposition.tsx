@@ -334,11 +334,6 @@ export function V8HeroComposition({
                   top: `${controls.sunY}%`,
                   width: `${52 * controls.sunScale}%`,
                   zIndex: controls.sunZIndex,
-                  // Read by .v8-active-sun-title's transform:scale() --
-                  // independent of sunScale (which sizes the circle itself),
-                  // so the title text can be tuned separately from the
-                  // circle it sits inside.
-                  "--sun-text-scale": controls.sunTextScale,
                 } as CSSProperties
               }
             >

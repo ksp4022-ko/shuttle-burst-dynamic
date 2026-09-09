@@ -110,7 +110,6 @@ export type PreviewControls = {
   activeSunY: number;
   activeSunScale: number;
   activeSunZIndex: number;
-  activeSunTextScale: number;
   // The user's own pre-composed tiger-gripping-a-scroll art (replaces the
   // earlier dragon-gripped version) -- applied by ActiveCanvas regardless of
   // the mock character toggle, matching v8ActiveTigerScrollOverrides' now-
@@ -448,7 +447,6 @@ export const previewDefaults: PreviewControls = {
   activeSunY: 1,
   activeSunScale: 0.68,
   activeSunZIndex: 30,
-  activeSunTextScale: 0.58,
   activeTigerScrollX: 77,
   activeTigerScrollY: 42,
   activeTigerScrollScale: 1.74,
@@ -550,7 +548,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "MID WAVE": ["midWaveShow", "midWaveX", "midWaveY", "midWaveScale", "midWaveRotation", "midWaveOpacity", "midWaveBlur"],
   "FRONT FOAM": ["frontFoamShow", "frontFoamX", "frontFoamY", "frontFoamScale", "frontFoamRotation", "frontFoamOpacity", "frontFoamBlur"],
   "GOLD / INK": ["goldInkShow", "goldInkX", "goldInkY", "goldInkScale", "goldInkRotation", "goldInkOpacity", "goldInkBlur"],
-  "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex", "activeSunTextScale"],
+  "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex"],
   "ACTIVE SUN DATE": [
     "activeSunDateShow",
     "activeSunDateX",
@@ -772,7 +770,6 @@ export const controlRanges = {
   activeSunY: { label: "Sun Y %", min: 0, max: 100 },
   activeSunScale: { label: "Sun Scale", min: 0.3, max: 2, step: 0.01 },
   activeSunZIndex: { label: "Sun Z-Index", min: 0, max: 30 },
-  activeSunTextScale: { label: "Sun Text Scale", min: 0.2, max: 2, step: 0.01 },
   activeTigerScrollX: { label: "Tiger+Scroll X %", min: 0, max: 100 },
   activeTigerScrollY: { label: "Tiger+Scroll Y %", min: 0, max: 100 },
   activeTigerScrollScale: { label: "Tiger+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
@@ -981,7 +978,6 @@ X: ${Math.round(controls.activeSunX)}
 Y: ${Math.round(controls.activeSunY)}
 Scale: ${controls.activeSunScale.toFixed(2)}
 Z-Index: ${Math.round(controls.activeSunZIndex)}
-Text Scale: ${controls.activeSunTextScale.toFixed(2)}
 
 ACTIVE SUN DATE
 Show: ${controls.activeSunDateShow ? "ON" : "OFF"}
@@ -1159,7 +1155,6 @@ export function buildV8ActiveHeroOverrides(controls: PreviewControls): Partial<V
     sunY: controls.activeSunY,
     sunScale: controls.activeSunScale,
     sunZIndex: controls.activeSunZIndex,
-    sunTextScale: controls.activeSunTextScale,
     ...v8ActiveBackgroundFadeOverrides(controls.activeBackgroundFade),
     // Uniform tiger-scroll personal-status display for every confirmed
     // identity (season or casual) -- not itself user-tunable, only its

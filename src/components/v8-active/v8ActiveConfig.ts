@@ -91,16 +91,6 @@ export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
   sunY: 1,
   sunScale: 0.68,
   sunZIndex: 30,
-  // Superseded 2026-09-09 by each sun message's own independent
-  // show/x/y/scale/rotation/fontSize/bold controls (see
-  // V8ActiveSunMessageControls below) -- this multiplier used to scale a
-  // single shared title block, which no longer exists now that date/name/
-  // note are three independently positioned elements. Left wired through
-  // (still settable, still reaches V8HeroComposition's sun container as
-  // the --sun-text-scale CSS var) rather than ripped out, since removing
-  // it means bumping the storage-key version and losing every other
-  // saved tuning value along with it -- just has no visual effect now.
-  sunTextScale: 0.58,
 };
 
 // Each of the three sun messages (date/name/note) is independently
@@ -109,7 +99,8 @@ export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
 // translate(-50%,-50%) like the info cards (these are short text blocks
 // meant to read as centered, not badges anchored by a corner). fontSize
 // is a real px size (not a multiplier), since the old shared
-// --sun-text-scale wrapper this replaces is gone (see sunTextScale above).
+// --sun-text-scale wrapper this replaces (and the now-removed
+// sunTextScale control that drove it) is gone.
 export type V8ActiveSunMessageControls = {
   show: boolean;
   x: number;
