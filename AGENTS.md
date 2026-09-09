@@ -127,3 +127,25 @@ or
 ```
 
 Task-specific prompts may request additional fields. Do not repeat large explanations if the task passes.
+
+## V8 UI Component Baseline
+
+For any V8 frontend UI / visual-component work, you MUST read:
+
+`docs/V8_COMPONENT_CONTROL_BASELINE.md`
+
+before editing.
+
+Treat that document as the single source of truth for V8 component-control parameters.
+
+When adding a new independently positioned V8 component:
+
+- implement the controls defined by the baseline;
+- add text controls when applicable;
+- use the existing shared visibility system;
+- do not introduce per-component Visible controls;
+- do not implement Safe Area / Guide systems unless explicitly requested.
+
+Do not duplicate a separate V8 control baseline in AGENTS.md.
+
+V7 must remain unchanged unless explicitly requested.
