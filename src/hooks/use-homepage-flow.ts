@@ -90,7 +90,6 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [lastChangedId, setLastChangedId] = useState("");
-  const [burstKey, setBurstKey] = useState(0);
   const didInit = useRef(false);
   const handoffTimingRef = useRef<HomepageHandoffTiming>({
     preHoldMs: DEFAULT_PRE_HOLD_MS,
@@ -281,7 +280,6 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
       setMeetupPickerOpen(false);
       setPendingSwitchEventId("");
       setNotice("已切換聚會");
-      setBurstKey((key) => key + 1);
       if (phase !== "active") enterActive();
     } catch (reason) {
       setNotice(reason instanceof Error ? reason.message : "切換聚會失敗，已保留原聚會。");
@@ -308,7 +306,6 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
         const result = await createAlphaTempSignup(selectedEventId, trimmed);
         await loadRoster(selectedEventId, { silent: true });
         setLastChangedId(trimmed);
-        setBurstKey((key) => key + 1);
         setNotice(`${trimmed} 已完成報名`);
         return { ok: true, signupId: result.signupId };
       } catch (reason) {
@@ -342,7 +339,6 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
 
         await loadRoster(selectedEventId, { silent: true });
         setLastChangedId(signup.id);
-        setBurstKey((key) => key + 1);
         setNotice(
           action === "fixed-leave"
             ? `${signup.name} 已請假`
@@ -400,7 +396,6 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
 
       await loadRoster(selectedEventId, { silent: true });
       setLastChangedId(person.id);
-      setBurstKey((key) => key + 1);
       setNotice(
         memberPickerMode === "season-leave"
           ? `${person.name} 已請假`
@@ -441,7 +436,6 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     notice,
     error,
     lastChangedId,
-    burstKey,
     meetupPickerOpen,
     pendingSwitchEventId,
     setNotice,

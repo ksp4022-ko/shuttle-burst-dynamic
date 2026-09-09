@@ -59,6 +59,35 @@ export const v8ActiveCharacterFiles = {
   tiger: "tiger-body-v1-display.webp",
 } as const;
 
+// Status stamps (正取/候補/請假) and identity tags (季打/臨打) -- replace
+// the identity card's old plain-text "季打｜正取" combined label with
+// separate images for each half, per the user's request (2026-09-09/10).
+export const v8ActiveStatusStampFiles = {
+  confirmed: "status-stamp-confirmed-v1.webp",
+  waiting: "status-stamp-waiting-v1.webp",
+  leave: "status-stamp-leave-v1.webp",
+} as const;
+
+export const v8ActiveIdentityTagFiles = {
+  season: "identity-tag-season-v1.webp",
+  temp: "identity-tag-temp-v1.webp",
+} as const;
+
+// CTA plaques replacing the identity card's text buttons -- 告假/歸陣 are
+// the season member's own leave/return toggle (primaryActionLabel's
+// 本週請假/恢復出席), 退陣 is a temp member's own cancel (取消報名), 應戰
+// is V8IdentityPrompt's own "我要報名" (temp self-signup, a different
+// component entirely), and 代報/代退 are the helper-mode triggers (幫人
+//報名/幫人取消).
+export const v8ActiveCtaPlaqueFiles = {
+  seasonLeave: "cta-plaque-leave-v1.webp",
+  seasonReturn: "cta-plaque-return-v1.webp",
+  tempCancel: "cta-plaque-temp-cancel-v1.webp",
+  tempSignup: "cta-plaque-temp-signup-v1.webp",
+  helperSignup: "cta-plaque-helper-v1.webp",
+  helperCancel: "cta-plaque-helper-leave-v1.webp",
+} as const;
+
 export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
@@ -76,6 +105,17 @@ export function buildV8ActiveAssets(baseUrl: string) {
     sunBadgeTempFee: `${activeBase}/${v8ActiveSunBadgeFiles.tempFee}`,
     sunBadgeCourtCount: `${activeBase}/${v8ActiveSunBadgeFiles.courtCount}`,
     rosterFrame: `${activeBase}/${v8ActiveRosterFrameFile}`,
+    statusStampConfirmed: `${activeBase}/${v8ActiveStatusStampFiles.confirmed}`,
+    statusStampWaiting: `${activeBase}/${v8ActiveStatusStampFiles.waiting}`,
+    statusStampLeave: `${activeBase}/${v8ActiveStatusStampFiles.leave}`,
+    identityTagSeason: `${activeBase}/${v8ActiveIdentityTagFiles.season}`,
+    identityTagTemp: `${activeBase}/${v8ActiveIdentityTagFiles.temp}`,
+    ctaSeasonLeave: `${activeBase}/${v8ActiveCtaPlaqueFiles.seasonLeave}`,
+    ctaSeasonReturn: `${activeBase}/${v8ActiveCtaPlaqueFiles.seasonReturn}`,
+    ctaTempCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.tempCancel}`,
+    ctaTempSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.tempSignup}`,
+    ctaHelperSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperSignup}`,
+    ctaHelperCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperCancel}`,
   };
 }
 

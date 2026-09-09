@@ -1302,13 +1302,15 @@ export function Index() {
 
       {isV8Route && v8MeetupConfirmed ? <V8ActivePage flow={flow} /> : null}
 
-      <HomepageToast
-        notice={flow.notice}
-        motionMode={flow.motionMode}
-        originRef={toastOriginRef}
-        eventTitleRef={eventTitleRef}
-        setNotice={flow.setNotice}
-      />
+      {!isV8Route && (
+        <HomepageToast
+          notice={flow.notice}
+          motionMode={flow.motionMode}
+          originRef={toastOriginRef}
+          eventTitleRef={eventTitleRef}
+          setNotice={flow.setNotice}
+        />
+      )}
 
       <MeetupSheet
         open={flow.meetupPickerOpen}

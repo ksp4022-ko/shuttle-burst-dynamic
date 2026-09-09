@@ -194,6 +194,7 @@ function ActiveCanvas({
         scrollContent={
           <V8IdentityScrollContent
             identity={mockIdentity}
+            assets={assets}
             busy={false}
             pendingLabel={undefined}
             onPrimaryAction={() => {}}

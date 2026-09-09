@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
@@ -30,6 +30,7 @@ import {
 } from "./v8ActiveConfig";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
+import { V8Toast } from "./V8Toast";
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
@@ -50,7 +51,7 @@ function meetupStatusLabel(identity: CurrentIdentity) {
 type HelperMode = "signup" | "cancel" | null;
 
 export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
-  const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting } = flow;
+  const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
   const { identity, remember, forget } = useCurrentIdentity(roster, selectedEventId);
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
@@ -77,6 +78,24 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     saveControls(tuningControls);
   }, [tuningControls]);
 
+  // Direct-switch meetup (arrows/swipe on the sun) -- per the user's
+  // request, tapping/swiping should switch immediately, not stage a
+  // preview + require a separate confirm tap the way the Opening page's
+  // own picker does. flow.switchMeetup() reads flow.pendingSwitchEventId
+  // via its own closure, so calling setPendingSwitchEventId(next) and
+  // switchMeetup() back-to-back in the same handler would race against a
+  // stale closure (switchMeetup wouldn't see the id just set). Watching
+  // pendingSwitchEventId in an effect instead defers the actual switch
+  // until after the state update has propagated -- same underlying
+  // switchMeetup() the Opening page's own confirm button calls, just
+  // triggered automatically instead of by a second explicit tap.
+  useEffect(() => {
+    if (flow.pendingSwitchEventId && flow.pendingSwitchEventId !== flow.selectedEventId) {
+      void flow.switchMeetup();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flow.pendingSwitchEventId]);
+
   const seasonCandidates = useMemo<AlphaSignup[]>(
     () => [...(roster?.fixedConfirmed || []), ...(roster?.fixedLeave || [])],
     [roster],
@@ -100,6 +119,15 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const runAction = async (action: "fixed-leave" | "fixed-return" | "cancel-temp") => {
     if (!identity) return;
     await flow.runIdentityAction(action, { id: identity.signupId, name: identity.name });
+  };
+
+  const switchToAdjacentMeetup = (direction: -1 | 1) => {
+    if (!events.length || pendingAction) return;
+    const currentIndex = Math.max(0, events.findIndex((event) => event.id === selectedEventId));
+    const nextIndex = (currentIndex + direction + events.length) % events.length;
+    const nextEvent = events[nextIndex];
+    if (!nextEvent || nextEvent.id === selectedEventId) return;
+    flow.setPendingSwitchEventId(nextEvent.id);
   };
 
   const submitTigerSignup = async () => {
@@ -195,12 +223,15 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             tempFee={selectedEvent.tempFee}
             badgeControls={sunBadgeControls}
             messageControls={sunMessageControls}
+            onPreviousEvent={() => switchToAdjacentMeetup(-1)}
+            onNextEvent={() => switchToAdjacentMeetup(1)}
           />
         }
         scrollContent={
           identity ? (
             <V8IdentityScrollContent
               identity={identity}
+              assets={assets}
               busy={busy}
               pendingLabel={pendingAction?.label}
               onPrimaryAction={handlePrimaryAction}
@@ -254,6 +285,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               onPickSeason={(signupId) => remember(signupId)}
               onSubmitTiger={() => void submitTigerSignup()}
               busy={busy}
+              ctaTempSignupSrc={assets.ctaTempSignup}
             />
           </div>
         </div>
@@ -427,6 +459,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
           ×
         </button>
       ) : null}
+      <V8Toast notice={flow.notice} motionMode={flow.motionMode} setNotice={flow.setNotice} />
     </div>
   );
 }
@@ -543,6 +576,55 @@ function V8SunMessage({ text, controls }: { text: string; controls: V8ActiveSunM
   );
 }
 
+// Meetup switcher -- a transparent swipe-catcher sized to the sun itself
+// (so a swipe anywhere on the red circle works, not just a small arrow
+// hit-target) plus two small arrow icons at the sun's left/right edge as
+// a visible hint that it's swipeable, also directly tappable. Both paths
+// call the same onPrevious/onNextEvent, which just stage a target id
+// (see switchToAdjacentMeetup in V8ActivePage) -- the actual switch fires
+// from a separate effect once that state change propagates.
+const SWIPE_THRESHOLD_PX = 40;
+
+function V8SunMeetupSwitcher({
+  onPreviousEvent,
+  onNextEvent,
+}: {
+  onPreviousEvent: () => void;
+  onNextEvent: () => void;
+}) {
+  const startXRef = useRef<number | null>(null);
+
+  const handleTouchStart = (event: TouchEvent) => {
+    startXRef.current = event.touches[0]?.clientX ?? 0;
+  };
+
+  const handleTouchEnd = (event: TouchEvent) => {
+    if (startXRef.current === null) return;
+    const endX = event.changedTouches[0]?.clientX ?? startXRef.current;
+    const delta = endX - startXRef.current;
+    if (delta > SWIPE_THRESHOLD_PX) onPreviousEvent();
+    else if (delta < -SWIPE_THRESHOLD_PX) onNextEvent();
+    startXRef.current = null;
+  };
+
+  return (
+    <>
+      <div
+        className="v8-sun-swipe-zone"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        aria-hidden="true"
+      />
+      <button type="button" className="v8-sun-switch-arrow v8-sun-switch-arrow-prev" onClick={onPreviousEvent} aria-label="上一場聚會">
+        ‹
+      </button>
+      <button type="button" className="v8-sun-switch-arrow v8-sun-switch-arrow-next" onClick={onNextEvent} aria-label="下一場聚會">
+        ›
+      </button>
+    </>
+  );
+}
+
 // Renders as a CHILD of V8HeroComposition's sun container (passed via the
 // sunContent prop) -- every position here is relative to the sun's own box
 // (100% = the sun's own diameter), not the stage. That's the whole point:
@@ -575,6 +657,8 @@ export function V8ActiveSunContent({
   tempFee,
   badgeControls = v8ActiveSunBadgesDefaults,
   messageControls = v8ActiveSunMessagesDefaults,
+  onPreviousEvent,
+  onNextEvent,
 }: {
   assets: { sunBadgeBallType: string; sunBadgeTempFee: string; sunBadgeCourtCount: string };
   eventDate: string;
@@ -586,6 +670,12 @@ export function V8ActiveSunContent({
   tempFee?: number | null | undefined;
   badgeControls?: V8ActiveSunBadgesControls;
   messageControls?: V8ActiveSunMessagesControls;
+  // Meetup switcher -- arrows at the sun's own left/right edge + swipe
+  // anywhere on the sun. Optional so the /v8/preview mock canvas (which
+  // has no real event list to switch between) can simply omit them and
+  // get no switcher UI at all, instead of a non-functional one.
+  onPreviousEvent?: () => void;
+  onNextEvent?: () => void;
 }) {
   // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label per the
   // user's exact spec (courtCount:2, hours:3 -> "2場/3hr") -- courtCount
@@ -594,6 +684,9 @@ export function V8ActiveSunContent({
 
   return (
     <>
+      {onPreviousEvent && onNextEvent ? (
+        <V8SunMeetupSwitcher onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
+      ) : null}
       <V8SunMessage text={shortDate(eventDate)} controls={messageControls.date} />
       <V8SunMessage text={eventName} controls={messageControls.name} />
       <V8SunMessage text={eventNote || ""} controls={messageControls.note} />
@@ -628,8 +721,47 @@ export function V8ActiveSunContent({
 // scrollContent prop) -- the uniform personal-status display for every
 // identified user, with no season/casual distinction. Exported so
 // /v8/preview's mock ACTIVE canvas can render the identical markup.
+// Status stamp (正取/候補/請假) and identity tag (季打/臨打) images --
+// replace the old plain-text "季打｜正取" combined label (previously two
+// <span>s joined by a border, still visually read as one string) with two
+// separate themed images, per the user's explicit request and matching
+// docs/V8_COMPONENT_CONTROL_BASELINE.md's rule against merging identity
+// and meeting-status into one label.
+function statusStampAsset(identity: CurrentIdentity, assets: V8IdentityAssets) {
+  if (identity.status === "leave") return assets.statusStampLeave;
+  return identity.status === "waiting" ? assets.statusStampWaiting : assets.statusStampConfirmed;
+}
+
+function identityTagAsset(identity: CurrentIdentity, assets: V8IdentityAssets) {
+  return identity.signupType === "fixed" ? assets.identityTagSeason : assets.identityTagTemp;
+}
+
+// Same mapping primaryActionLabel used for text -- now picks the matching
+// CTA plaque image instead (告假=本週請假, 歸陣=恢復出席, 退陣=取消報名).
+function primaryActionAsset(identity: CurrentIdentity, assets: V8IdentityAssets) {
+  if (identity.signupType === "fixed") {
+    return identity.status === "leave" ? assets.ctaSeasonReturn : assets.ctaSeasonLeave;
+  }
+  return assets.ctaTempCancel;
+}
+
+type V8IdentityAssets = {
+  statusStampConfirmed: string;
+  statusStampWaiting: string;
+  statusStampLeave: string;
+  identityTagSeason: string;
+  identityTagTemp: string;
+  ctaSeasonLeave: string;
+  ctaSeasonReturn: string;
+  ctaTempCancel: string;
+  ctaTempSignup: string;
+  ctaHelperSignup: string;
+  ctaHelperCancel: string;
+};
+
 export function V8IdentityScrollContent({
   identity,
+  assets,
   busy,
   pendingLabel,
   onPrimaryAction,
@@ -638,6 +770,7 @@ export function V8IdentityScrollContent({
   onHelperCancel,
 }: {
   identity: CurrentIdentity;
+  assets: V8IdentityAssets;
   busy: boolean;
   pendingLabel: string | undefined;
   onPrimaryAction: () => void;
@@ -646,30 +779,35 @@ export function V8IdentityScrollContent({
   onHelperCancel: () => void;
 }) {
   const nameLength = Array.from(identity.name).length;
-  const nameSize = Math.max(13, Math.min(24, Math.floor(120 / Math.max(nameLength, 5))));
+  const nameSize = Math.max(9, Math.min(13, Math.floor(60 / Math.max(nameLength, 5))));
   const status = meetupStatusLabel(identity);
 
   return (
     <div className="v8-scroll-identity">
       <div className="v8-scroll-status-mark" aria-label={`本次狀態：${status}`}>
-        {status}
+        <img src={statusStampAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
       <strong className="v8-scroll-identity-name" style={{ fontSize: nameSize }} title={identity.name}>
         {identity.name}
       </strong>
-      <div className="v8-scroll-meta" aria-label={`${roleLabel(identity)}，本次${status}`}>
-        <span>{roleLabel(identity)}</span>
-        <span>{status}</span>
+      <div className="v8-scroll-identity-tag" aria-label={roleLabel(identity)}>
+        <img src={identityTagAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
-      <button type="button" className="v8-scroll-cta" disabled={busy} onClick={onPrimaryAction}>
-        {busy ? pendingLabel : primaryActionLabel(identity)}
+      <button
+        type="button"
+        className="v8-scroll-cta v8-scroll-cta-img"
+        disabled={busy}
+        onClick={onPrimaryAction}
+        aria-label={busy ? pendingLabel : primaryActionLabel(identity)}
+      >
+        <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </button>
       <div className="v8-scroll-secondary-actions" aria-label="代操作">
-        <button type="button" disabled={busy} onClick={onHelperSignup}>
-          幫人報名
+        <button type="button" className="v8-scroll-helper-btn" disabled={busy} onClick={onHelperSignup} aria-label="幫人報名">
+          <img src={assets.ctaHelperSignup} alt="" aria-hidden="true" draggable={false} />
         </button>
-        <button type="button" disabled={busy} onClick={onHelperCancel}>
-          幫人取消
+        <button type="button" className="v8-scroll-helper-btn" disabled={busy} onClick={onHelperCancel} aria-label="幫人取消">
+          <img src={assets.ctaHelperCancel} alt="" aria-hidden="true" draggable={false} />
         </button>
       </div>
       <button type="button" className="v8-scroll-forget" disabled={busy} onClick={onForget}>
@@ -686,6 +824,7 @@ function V8IdentityPrompt({
   onPickSeason,
   onSubmitTiger,
   busy,
+  ctaTempSignupSrc,
 }: {
   seasonCandidates: AlphaSignup[];
   tigerName: string;
@@ -693,6 +832,7 @@ function V8IdentityPrompt({
   onPickSeason: (signupId: string) => void;
   onSubmitTiger: () => void;
   busy: boolean;
+  ctaTempSignupSrc: string;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -736,8 +876,14 @@ function V8IdentityPrompt({
               placeholder="輸入姓名"
               disabled={busy}
             />
-            <button type="button" disabled={!tigerName.trim() || busy} onClick={onSubmitTiger}>
-              我要報名
+            <button
+              type="button"
+              className="v8-active-prompt-tiger-cta"
+              disabled={!tigerName.trim() || busy}
+              onClick={onSubmitTiger}
+              aria-label="我要報名"
+            >
+              <img src={ctaTempSignupSrc} alt="" aria-hidden="true" draggable={false} />
             </button>
           </div>
         </div>
@@ -795,6 +941,44 @@ export function V8ActiveStyles() {
            so nudging X far past the sun no longer compresses it. */
         position: absolute;
         width: max-content;
+      }
+
+      /* Swipe-catcher sized to the sun's own circular box (inset:0 of the
+         sun container) -- covers the whole red circle so a swipe anywhere
+         on it works, not just a narrow strip. Sits BEHIND the sun's own
+         content (z-index default, painted first in DOM order) so it
+         doesn't block taps on the date/name/note text or badges layered
+         on top of it. */
+      .v8-sun-swipe-zone {
+        position: absolute;
+        inset: 0;
+        touch-action: pan-y;
+      }
+
+      .v8-sun-switch-arrow {
+        position: absolute;
+        top: 50%;
+        width: 30px;
+        height: 30px;
+        border: 2px solid rgba(32, 21, 13, 0.55);
+        border-radius: 50%;
+        background: rgba(245, 237, 219, 0.72);
+        color: #20150d;
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1;
+        display: grid;
+        place-items: center;
+        transform: translateY(-50%);
+        z-index: 5;
+      }
+
+      .v8-sun-switch-arrow-prev {
+        left: -8%;
+      }
+
+      .v8-sun-switch-arrow-next {
+        left: 108%;
       }
 
       .v8-sun-info-badge {
@@ -875,7 +1059,7 @@ export function V8ActiveStyles() {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 5px;
+        gap: 3px;
         width: 100%;
         height: 100%;
         min-width: 0;
@@ -883,11 +1067,15 @@ export function V8ActiveStyles() {
         color: #3a2a12;
       }
 
+      /* The tiger-scroll panel is a fixed, small box (~83x134px on a
+         typical phone -- see V8HeroComposition's tigerScroll inset), so
+         every child below is sized to that real budget, not guessed. */
       .v8-scroll-identity-name {
         display: block;
+        flex-shrink: 0;
         width: 100%;
         max-width: 100%;
-        line-height: 1;
+        line-height: 1.1;
         font-weight: 900;
         letter-spacing: 0;
         white-space: nowrap;
@@ -895,51 +1083,50 @@ export function V8ActiveStyles() {
         text-overflow: ellipsis;
       }
 
-      .v8-scroll-meta {
-        display: inline-flex;
+      /* Identity tag (季打/臨打) -- replaces the old .v8-scroll-meta pair
+         of text spans (role + status joined by a border, still visually
+         read as one combined "季打｜正取" label). Just the identity half
+         now; status has its own stamp image (.v8-scroll-status-mark
+         below) instead of the old second span. */
+      .v8-scroll-identity-tag {
+        display: flex;
+        flex-shrink: 0;
         align-items: center;
         justify-content: center;
-        gap: 5px;
-        font-size: 10px;
-        line-height: 1;
-        font-weight: 800;
-        color: rgba(58, 42, 18, 0.76);
       }
 
-      .v8-scroll-meta span + span {
-        padding-left: 5px;
-        border-left: 1px solid rgba(122, 42, 18, 0.28);
+      .v8-scroll-identity-tag img {
+        display: block;
+        height: 16px;
+        width: auto;
       }
 
       .v8-scroll-status-mark {
         position: absolute;
-        left: -2px;
-        bottom: 4px;
+        left: -4px;
+        top: -4px;
         display: grid;
         place-items: center;
-        width: 26px;
-        height: 22px;
-        border: 2px solid rgba(154, 23, 18, 0.72);
-        border-radius: 48% 52% 44% 56%;
-        color: rgba(154, 23, 18, 0.86);
-        font-size: 9px;
-        font-weight: 900;
-        line-height: 1;
-        transform: rotate(-10deg);
         pointer-events: none;
       }
 
+      .v8-scroll-status-mark img {
+        display: block;
+        height: 18px;
+        width: auto;
+      }
+
       .v8-scroll-cta {
-        min-width: 78px;
-        height: 28px;
-        padding: 0 10px;
-        border: 2px solid #3a2a12;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.68);
-        color: #3a2a12;
-        font-size: 12px;
-        font-weight: 900;
-        white-space: nowrap;
+        flex-shrink: 0;
+        border: none;
+        background: none;
+        padding: 0;
+      }
+
+      .v8-scroll-cta-img img {
+        display: block;
+        width: 50px;
+        height: auto;
       }
 
       .v8-scroll-cta:disabled,
@@ -950,29 +1137,31 @@ export function V8ActiveStyles() {
 
       .v8-scroll-secondary-actions {
         display: flex;
+        flex-shrink: 0;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 3px;
         width: 100%;
       }
 
-      .v8-scroll-secondary-actions button {
-        height: 20px;
-        padding: 0 5px;
-        border: 1px solid rgba(58, 42, 18, 0.26);
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.32);
-        color: rgba(58, 42, 18, 0.7);
-        font-size: 9px;
-        font-weight: 800;
-        white-space: nowrap;
+      .v8-scroll-helper-btn {
+        border: none;
+        background: none;
+        padding: 0;
+      }
+
+      .v8-scroll-helper-btn img {
+        display: block;
+        width: 30px;
+        height: auto;
       }
 
       .v8-scroll-forget {
+        flex-shrink: 0;
         border: none;
         background: none;
         color: rgba(58, 42, 18, 0.52);
-        font-size: 9px;
+        font-size: 7px;
         line-height: 1;
         text-decoration: underline;
       }
@@ -1032,6 +1221,25 @@ export function V8ActiveStyles() {
       .v8-active-prompt-tiger button:disabled,
       .v8-active-prompt-season:disabled {
         opacity: 0.55;
+      }
+
+      /* 應戰 CTA plaque replacing the old text "我要報名" button. Extra
+         specificity (two classes) needed to win over the plain
+         ".v8-active-prompt-tiger button" rule above, which still matches
+         this element too (still a <button> inside that container). */
+      .v8-active-prompt-tiger .v8-active-prompt-tiger-cta {
+        height: 44px;
+        padding: 0;
+        border: none;
+        background: none;
+        display: flex;
+        align-items: center;
+      }
+
+      .v8-active-prompt-tiger-cta img {
+        display: block;
+        height: 44px;
+        width: auto;
       }
 
       .v8-active-season-list {
