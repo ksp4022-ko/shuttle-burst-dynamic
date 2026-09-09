@@ -184,18 +184,24 @@ export type PreviewControls = {
   activeSunBadgeBallTypeScale: number;
   activeSunBadgeBallTypeRotation: number;
   activeSunBadgeBallTypeFontSize: number;
+  activeSunBadgeBallTypeTextOffsetX: number;
+  activeSunBadgeBallTypeTextOffsetY: number;
   activeSunBadgeTempFeeShow: boolean;
   activeSunBadgeTempFeeX: number;
   activeSunBadgeTempFeeY: number;
   activeSunBadgeTempFeeScale: number;
   activeSunBadgeTempFeeRotation: number;
   activeSunBadgeTempFeeFontSize: number;
+  activeSunBadgeTempFeeTextOffsetX: number;
+  activeSunBadgeTempFeeTextOffsetY: number;
   activeSunBadgeCourtCountShow: boolean;
   activeSunBadgeCourtCountX: number;
   activeSunBadgeCourtCountY: number;
   activeSunBadgeCourtCountScale: number;
   activeSunBadgeCourtCountRotation: number;
   activeSunBadgeCourtCountFontSize: number;
+  activeSunBadgeCourtCountTextOffsetX: number;
+  activeSunBadgeCourtCountTextOffsetY: number;
   // The three-panel roster frame (季打請假/正取名單/備取名單) -- one panel
   // wrapper, positioned/sized/rotated as a whole; name-list typography is
   // shared across all three panels (see V8ActiveRosterLists).
@@ -502,18 +508,24 @@ export const previewDefaults: PreviewControls = {
   activeSunBadgeBallTypeScale: 2.04,
   activeSunBadgeBallTypeRotation: 0,
   activeSunBadgeBallTypeFontSize: 11,
+  activeSunBadgeBallTypeTextOffsetX: 0,
+  activeSunBadgeBallTypeTextOffsetY: 0,
   activeSunBadgeTempFeeShow: true,
   activeSunBadgeTempFeeX: 101,
   activeSunBadgeTempFeeY: 60,
   activeSunBadgeTempFeeScale: 1.72,
   activeSunBadgeTempFeeRotation: -1,
   activeSunBadgeTempFeeFontSize: 15,
+  activeSunBadgeTempFeeTextOffsetX: 0,
+  activeSunBadgeTempFeeTextOffsetY: 0,
   activeSunBadgeCourtCountShow: true,
   activeSunBadgeCourtCountX: -46,
   activeSunBadgeCourtCountY: 42,
   activeSunBadgeCourtCountScale: 1.95,
   activeSunBadgeCourtCountRotation: 0,
   activeSunBadgeCourtCountFontSize: 11,
+  activeSunBadgeCourtCountTextOffsetX: 0,
+  activeSunBadgeCourtCountTextOffsetY: 0,
   activeRosterListsShow: true,
   activeRosterListsX: 50,
   activeRosterListsY: 82,
@@ -615,6 +627,8 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunBadgeBallTypeScale",
     "activeSunBadgeBallTypeRotation",
     "activeSunBadgeBallTypeFontSize",
+    "activeSunBadgeBallTypeTextOffsetX",
+    "activeSunBadgeBallTypeTextOffsetY",
   ],
   "ACTIVE SUN BADGE TEMPFEE": [
     "activeSunBadgeTempFeeShow",
@@ -623,6 +637,8 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunBadgeTempFeeScale",
     "activeSunBadgeTempFeeRotation",
     "activeSunBadgeTempFeeFontSize",
+    "activeSunBadgeTempFeeTextOffsetX",
+    "activeSunBadgeTempFeeTextOffsetY",
   ],
   "ACTIVE SUN BADGE COURTCOUNT": [
     "activeSunBadgeCourtCountShow",
@@ -631,6 +647,8 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunBadgeCourtCountScale",
     "activeSunBadgeCourtCountRotation",
     "activeSunBadgeCourtCountFontSize",
+    "activeSunBadgeCourtCountTextOffsetX",
+    "activeSunBadgeCourtCountTextOffsetY",
   ],
   "ACTIVE ROSTER LISTS": [
     "activeRosterListsShow",
@@ -812,16 +830,22 @@ export const controlRanges = {
   activeSunBadgeBallTypeScale: { label: "球種 Scale", min: 0.2, max: 3, step: 0.01 },
   activeSunBadgeBallTypeRotation: { label: "球種 Rotation", min: -180, max: 180 },
   activeSunBadgeBallTypeFontSize: { label: "球種 Font Size", min: 6, max: 28 },
+  activeSunBadgeBallTypeTextOffsetX: { label: "球種 Text Offset X", min: -40, max: 40 },
+  activeSunBadgeBallTypeTextOffsetY: { label: "球種 Text Offset Y", min: -40, max: 40 },
   activeSunBadgeTempFeeX: { label: "費用 X %", min: -150, max: 150 },
   activeSunBadgeTempFeeY: { label: "費用 Y %", min: -150, max: 150 },
   activeSunBadgeTempFeeScale: { label: "費用 Scale", min: 0.2, max: 3, step: 0.01 },
   activeSunBadgeTempFeeRotation: { label: "費用 Rotation", min: -180, max: 180 },
   activeSunBadgeTempFeeFontSize: { label: "費用 Font Size", min: 6, max: 28 },
+  activeSunBadgeTempFeeTextOffsetX: { label: "費用 Text Offset X", min: -40, max: 40 },
+  activeSunBadgeTempFeeTextOffsetY: { label: "費用 Text Offset Y", min: -40, max: 40 },
   activeSunBadgeCourtCountX: { label: "場地數 X %", min: -150, max: 150 },
   activeSunBadgeCourtCountY: { label: "場地數 Y %", min: -150, max: 150 },
   activeSunBadgeCourtCountScale: { label: "場地數 Scale", min: 0.2, max: 3, step: 0.01 },
   activeSunBadgeCourtCountRotation: { label: "場地數 Rotation", min: -180, max: 180 },
   activeSunBadgeCourtCountFontSize: { label: "場地數 Font Size", min: 6, max: 28 },
+  activeSunBadgeCourtCountTextOffsetX: { label: "場地數 Text Offset X", min: -40, max: 40 },
+  activeSunBadgeCourtCountTextOffsetY: { label: "場地數 Text Offset Y", min: -40, max: 40 },
   activeRosterListsX: { label: "Roster X %", min: -20, max: 120 },
   activeRosterListsY: { label: "Roster Y %", min: -150, max: 150 },
   activeRosterListsScale: { label: "Roster Scale", min: 0.3, max: 2, step: 0.01 },
@@ -1051,6 +1075,7 @@ Y: ${Math.round(controls.activeSunBadgeBallTypeY)}
 Scale: ${controls.activeSunBadgeBallTypeScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeSunBadgeBallTypeRotation)}
 Font Size: ${Math.round(controls.activeSunBadgeBallTypeFontSize)}
+Text Offset: ${Math.round(controls.activeSunBadgeBallTypeTextOffsetX)}, ${Math.round(controls.activeSunBadgeBallTypeTextOffsetY)}
 
 ACTIVE SUN BADGE TEMPFEE (費用)
 Show: ${controls.activeSunBadgeTempFeeShow ? "ON" : "OFF"}
@@ -1059,6 +1084,7 @@ Y: ${Math.round(controls.activeSunBadgeTempFeeY)}
 Scale: ${controls.activeSunBadgeTempFeeScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeSunBadgeTempFeeRotation)}
 Font Size: ${Math.round(controls.activeSunBadgeTempFeeFontSize)}
+Text Offset: ${Math.round(controls.activeSunBadgeTempFeeTextOffsetX)}, ${Math.round(controls.activeSunBadgeTempFeeTextOffsetY)}
 
 ACTIVE SUN BADGE COURTCOUNT (場地數)
 Show: ${controls.activeSunBadgeCourtCountShow ? "ON" : "OFF"}
@@ -1067,6 +1093,7 @@ Y: ${Math.round(controls.activeSunBadgeCourtCountY)}
 Scale: ${controls.activeSunBadgeCourtCountScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeSunBadgeCourtCountRotation)}
 Font Size: ${Math.round(controls.activeSunBadgeCourtCountFontSize)}
+Text Offset: ${Math.round(controls.activeSunBadgeCourtCountTextOffsetX)}, ${Math.round(controls.activeSunBadgeCourtCountTextOffsetY)}
 
 ACTIVE ROSTER LISTS
 Show: ${controls.activeRosterListsShow ? "ON" : "OFF"}
@@ -1248,6 +1275,8 @@ export function buildV8ActiveSunBadgesControls(controls: PreviewControls): V8Act
       scale: controls.activeSunBadgeBallTypeScale,
       rotation: controls.activeSunBadgeBallTypeRotation,
       fontSize: controls.activeSunBadgeBallTypeFontSize,
+      textOffsetX: controls.activeSunBadgeBallTypeTextOffsetX,
+      textOffsetY: controls.activeSunBadgeBallTypeTextOffsetY,
     },
     tempFee: {
       show: controls.activeSunBadgeTempFeeShow,
@@ -1256,6 +1285,8 @@ export function buildV8ActiveSunBadgesControls(controls: PreviewControls): V8Act
       scale: controls.activeSunBadgeTempFeeScale,
       rotation: controls.activeSunBadgeTempFeeRotation,
       fontSize: controls.activeSunBadgeTempFeeFontSize,
+      textOffsetX: controls.activeSunBadgeTempFeeTextOffsetX,
+      textOffsetY: controls.activeSunBadgeTempFeeTextOffsetY,
     },
     courtCount: {
       show: controls.activeSunBadgeCourtCountShow,
@@ -1264,6 +1295,8 @@ export function buildV8ActiveSunBadgesControls(controls: PreviewControls): V8Act
       scale: controls.activeSunBadgeCourtCountScale,
       rotation: controls.activeSunBadgeCourtCountRotation,
       fontSize: controls.activeSunBadgeCourtCountFontSize,
+      textOffsetX: controls.activeSunBadgeCourtCountTextOffsetX,
+      textOffsetY: controls.activeSunBadgeCourtCountTextOffsetY,
     },
   };
 }

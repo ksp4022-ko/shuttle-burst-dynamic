@@ -263,6 +263,13 @@ export type V8ActiveSunBadgeControls = {
   scale: number;
   rotation: number;
   fontSize: number;
+  // px nudge for the dynamic VALUE text within the badge, layered on top
+  // of BADGE_TEXT_INSETS' per-badge safe area (see V8ActivePage.tsx) --
+  // independent of x/y above, which move the WHOLE badge (image+text).
+  // Added 2026-09-09 per the user's request; the safe area only sets a
+  // sensible default position, it doesn't clamp this offset.
+  textOffsetX: number;
+  textOffsetY: number;
 };
 
 export type V8ActiveSunBadgesControls = {
@@ -275,9 +282,9 @@ export type V8ActiveSunBadgesControls = {
 // exactly (fontSize:11 matches .v8-sun-info-scattered's old fixed 11px) --
 // this refactor only makes them tunable, not a visual change by default.
 export const v8ActiveSunBadgesDefaults: V8ActiveSunBadgesControls = {
-  ballType: { show: true, x: -5, y: 91, scale: 2.04, rotation: 0, fontSize: 11 },
-  tempFee: { show: true, x: 101, y: 60, scale: 1.72, rotation: -1, fontSize: 15 },
-  courtCount: { show: true, x: -46, y: 42, scale: 1.95, rotation: 0, fontSize: 11 },
+  ballType: { show: true, x: -5, y: 91, scale: 2.04, rotation: 0, fontSize: 11, textOffsetX: 0, textOffsetY: 0 },
+  tempFee: { show: true, x: 101, y: 60, scale: 1.72, rotation: -1, fontSize: 15, textOffsetX: 0, textOffsetY: 0 },
+  courtCount: { show: true, x: -46, y: 42, scale: 1.95, rotation: 0, fontSize: 11, textOffsetX: 0, textOffsetY: 0 },
 };
 
 export const v8ActiveSunBadgesRanges: Record<
@@ -290,6 +297,8 @@ export const v8ActiveSunBadgesRanges: Record<
   scale: { label: "Scale", min: 0.2, max: 3, step: 0.01 },
   rotation: { label: "Rotation", min: -180, max: 180 },
   fontSize: { label: "Font Size", min: 6, max: 28 },
+  textOffsetX: { label: "Text Offset X", min: -40, max: 40 },
+  textOffsetY: { label: "Text Offset Y", min: -40, max: 40 },
 };
 
 // The three-panel roster frame -- one panel wrapper, positioned/sized/

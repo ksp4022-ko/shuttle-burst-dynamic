@@ -72,6 +72,7 @@ function InfoCardStatusLayer({
   count,
   fontSize,
   countInset,
+  zIndex = 20,
 }: {
   src: string;
   controls: V8ActiveInfoCardControls;
@@ -79,6 +80,7 @@ function InfoCardStatusLayer({
   count: number;
   fontSize: number;
   countInset: (typeof COUNT_INSETS)[keyof typeof COUNT_INSETS];
+  zIndex?: number;
 }) {
   if (!controls.show) return null;
   return (
@@ -90,7 +92,7 @@ function InfoCardStatusLayer({
           top: `${controls.y}%`,
           width: `${baseWidth * controls.scale}%`,
           transform: `translate(-50%, -50%) rotate(${controls.rotation}deg)`,
-          zIndex: 20,
+          zIndex,
         } as CSSProperties
       }
     >
@@ -160,6 +162,10 @@ export function V8ActiveInfoCards({
         fontSize={controls.countFontSize}
         countInset={COUNT_INSETS.needed}
       />
+      {/* z-index 36 (not the default 20) -- moved in front of the tiger-
+          scroll panel (z-index 35 in V8HeroComposition.tsx) per the user's
+          request, so 候補 sits on top when the two overlap instead of
+          being covered by it. */}
       <InfoCardStatusLayer
         src={assets.infoCardWaitlist}
         controls={controls.waitlist}
@@ -167,6 +173,7 @@ export function V8ActiveInfoCards({
         countInset={COUNT_INSETS.waitlist}
         count={counts.waiting}
         fontSize={controls.countFontSize}
+        zIndex={36}
       />
     </>
   );

@@ -55,6 +55,11 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
+  // Two-step cancel (select, then a separate confirm button) -- the old
+  // single-tap-to-cancel design had no undo/confirm step at all, so a
+  // mis-tap directly cancelled someone's signup with no chance to back
+  // out. Reset whenever the cancel screen (re)opens or closes.
+  const [selectedCancelPerson, setSelectedCancelPerson] = useState<AlphaSignup | null>(null);
   const assets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
 
   // Live tuning, opened via the hidden corner easter-egg button below --
@@ -81,6 +86,12 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     () => [...(roster?.tempConfirmed || []), ...(roster?.tempWaiting || [])],
     [roster],
   );
+  // Kept separate (not just filtered from tempCandidates by status) so the
+  // 幫人取消 screen can render them as two clearly labelled groups instead
+  // of one flat, undifferentiated list mixing confirmed and waitlisted
+  // people together.
+  const tempConfirmedCandidates = roster?.tempConfirmed || [];
+  const tempWaitingCandidates = roster?.tempWaiting || [];
 
   if (!selectedEvent || !roster) return null;
 
@@ -107,8 +118,17 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     }
   };
 
+  // NOTE (data design, not yet wired to the backend): when real LINE
+  // identity lands, this is where an "initiated by <identity.name>" field
+  // would attach to the cancel/signup request, so only the original
+  // helper (or an admin) could act on someone they signed up. Not sent
+  // today -- identity is a self-picked device-memory stub (see
+  // use-current-identity.ts), not authentication, so a permission check
+  // against it right now would just be security theater. Recorded here so
+  // the field is designed before it's needed, not bolted on later.
   const cancelForSomeoneElse = async (person: AlphaSignup) => {
     const ok = await flow.runIdentityAction("cancel-temp", { id: person.id, name: person.name });
+    setSelectedCancelPerson(null);
     if (ok) setHelperMode(null);
   };
 
@@ -186,7 +206,10 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               onPrimaryAction={handlePrimaryAction}
               onForget={forget}
               onHelperSignup={() => setHelperMode("signup")}
-              onHelperCancel={() => setHelperMode("cancel")}
+              onHelperCancel={() => {
+                setSelectedCancelPerson(null);
+                setHelperMode("cancel");
+              }}
             />
           ) : undefined
         }
@@ -247,46 +270,98 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
           known, so they never need to layer on top of each other). */}
       {helperMode ? (
         <div className="v8-identity-gate">
-          <div className="v8-identity-gate-card">
+          <div className="v8-identity-gate-card v8-helper-card">
             {helperMode === "signup" ? (
-              <div className="v8-active-helper-row">
+              <div className="v8-helper-signup">
+                <p className="v8-helper-title">幫誰報名？</p>
                 <input
+                  className="v8-helper-signup-input"
                   value={helperName}
                   onChange={(event) => setHelperName(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") void submitHelperSignup();
                   }}
-                  placeholder="幫誰報名？"
+                  placeholder="輸入姓名"
                   disabled={busy}
                   autoFocus
                 />
-                <button type="button" disabled={!helperName.trim() || busy} onClick={() => void submitHelperSignup()}>
-                  確認
+                <button
+                  type="button"
+                  className="v8-helper-cta"
+                  disabled={!helperName.trim() || busy}
+                  onClick={() => void submitHelperSignup()}
+                >
+                  {busy ? "報名中" : "確認報名"}
                 </button>
                 <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
                   取消
                 </button>
               </div>
             ) : (
-              <div className="v8-active-season-list">
+              <div className="v8-helper-cancel">
+                <p className="v8-helper-title">幫誰取消？</p>
                 {tempCandidates.length ? (
-                  tempCandidates.map((person) => (
-                    <button
-                      key={person.id}
-                      type="button"
-                      className="v8-active-season-item"
-                      disabled={busy}
-                      onClick={() => void cancelForSomeoneElse(person)}
-                    >
-                      <strong>{person.name}</strong>
-                      <em>{person.status === "waiting" ? "候補" : "臨打"}</em>
-                    </button>
-                  ))
+                  <div className="v8-helper-person-list">
+                    {tempConfirmedCandidates.length ? (
+                      <>
+                        <p className="v8-helper-group-label">臨打</p>
+                        {tempConfirmedCandidates.map((person) => (
+                          <button
+                            key={person.id}
+                            type="button"
+                            className={
+                              "v8-helper-person-row" +
+                              (selectedCancelPerson?.id === person.id ? " is-selected" : "")
+                            }
+                            disabled={busy}
+                            onClick={() => setSelectedCancelPerson(person)}
+                          >
+                            <span className="v8-helper-stamp">臨打</span>
+                            <span className="v8-helper-person-name">{person.name}</span>
+                          </button>
+                        ))}
+                      </>
+                    ) : null}
+                    {tempWaitingCandidates.length ? (
+                      <>
+                        <p className="v8-helper-group-label">候補</p>
+                        {tempWaitingCandidates.map((person) => (
+                          <button
+                            key={person.id}
+                            type="button"
+                            className={
+                              "v8-helper-person-row" +
+                              (selectedCancelPerson?.id === person.id ? " is-selected" : "")
+                            }
+                            disabled={busy}
+                            onClick={() => setSelectedCancelPerson(person)}
+                          >
+                            <span className="v8-helper-stamp v8-helper-stamp-waiting">候補</span>
+                            <span className="v8-helper-person-name">{person.name}</span>
+                          </button>
+                        ))}
+                      </>
+                    ) : null}
+                  </div>
                 ) : (
                   <p className="sd-empty">目前沒有臨打報名可取消</p>
                 )}
-                <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
-                  返回
+                {selectedCancelPerson ? (
+                  <button
+                    type="button"
+                    className="v8-helper-cta v8-helper-cta-danger"
+                    disabled={busy}
+                    onClick={() => void cancelForSomeoneElse(selectedCancelPerson)}
+                  >
+                    {busy ? "取消中" : `確認取消 ${selectedCancelPerson.name}`}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="v8-active-helper-cancel"
+                  onClick={() => (selectedCancelPerson ? setSelectedCancelPerson(null) : setHelperMode(null))}
+                >
+                  {selectedCancelPerson ? "重新選擇" : "返回"}
                 </button>
               </div>
             )}
@@ -376,15 +451,23 @@ function V8SunInfoBadge({
   src,
   label,
   textInset,
+  textOffsetX = 0,
+  textOffsetY = 0,
 }: {
   src: string;
   label: string;
   textInset: (typeof BADGE_TEXT_INSETS)[keyof typeof BADGE_TEXT_INSETS];
+  textOffsetX?: number;
+  textOffsetY?: number;
 }) {
   return (
     <span className="v8-sun-info-badge">
       <img src={src} alt="" aria-hidden="true" draggable={false} />
-      <em style={textInset as CSSProperties}>{label}</em>
+      {/* textOffsetX/Y (px) is a free nudge on top of textInset's safe-area
+          default -- not clamped to it, per the user's request. */}
+      <em style={{ ...textInset, transform: `translate(${textOffsetX}px, ${textOffsetY}px)` } as CSSProperties}>
+        {label}
+      </em>
     </span>
   );
 }
@@ -420,7 +503,13 @@ function V8SunInfoBadgeScattered({
         } as CSSProperties
       }
     >
-      <V8SunInfoBadge src={src} label={label} textInset={textInset} />
+      <V8SunInfoBadge
+        src={src}
+        label={label}
+        textInset={textInset}
+        textOffsetX={controls.textOffsetX}
+        textOffsetY={controls.textOffsetY}
+      />
     </div>
   );
 }
@@ -971,38 +1060,153 @@ export function V8ActiveStyles() {
         color: rgba(32, 21, 13, 0.56);
       }
 
-      .v8-active-helper-row {
-        display: flex;
-        gap: 8px;
-        text-align: center;
-      }
-
-      .v8-active-helper-row input {
-        flex: 1;
-        min-width: 0;
-        height: 38px;
-        padding: 0 12px;
-        border: 1px solid rgba(32, 21, 13, 0.24);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.7);
-      }
-
-      .v8-active-helper-row button {
-        height: 38px;
-        padding: 0 14px;
-        border: 1px solid rgba(32, 21, 13, 0.24);
-        border-radius: 12px;
-        background: rgba(245, 237, 219, 0.9);
-        font-size: 12px;
-        font-weight: 700;
-        white-space: nowrap;
-      }
-
       .v8-active-helper-cancel {
         background: transparent !important;
         border: none !important;
         color: rgba(32, 21, 13, 0.56);
         text-decoration: underline;
+        margin-top: 4px;
+      }
+
+      /* 幫人報名/取消 -- redesigned 2026-09-09 per the user's request: no
+         table-like rows, no generic browser-style buttons, full-width name
+         rows with a real font size instead of the old cramped inline
+         input+button+link row (which overflowed the card's own 360px max-
+         width, pushing "取消" out into the blurred backdrop where its low-
+         contrast text was nearly invisible -- confirmed via screenshot).
+         Card itself stretches a little wider than the identity gate's
+         default since person names + a stamp need more breathing room. */
+      .v8-helper-card {
+        max-width: 320px;
+      }
+
+      .v8-helper-title {
+        margin: 0 0 12px;
+        text-align: center;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .v8-helper-signup {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .v8-helper-signup-input {
+        height: 46px;
+        padding: 0 14px;
+        border: 1px solid rgba(32, 21, 13, 0.24);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.75);
+        font-size: 15px;
+      }
+
+      /* Same pill shape as the tiger-scroll identity card's own CTA
+         (.v8-scroll-cta) -- deliberately reused so this reads as the same
+         "themed action button" instead of a second, different-looking
+         button style. */
+      .v8-helper-cta {
+        height: 46px;
+        padding: 0 16px;
+        border: 2px solid #3a2a12;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.75);
+        color: #3a2a12;
+        font-size: 15px;
+        font-weight: 900;
+      }
+
+      .v8-helper-cta:disabled {
+        opacity: 0.5;
+      }
+
+      .v8-helper-cta-danger {
+        border-color: rgba(154, 23, 18, 0.75);
+        color: rgba(154, 23, 18, 0.9);
+        background: rgba(255, 255, 255, 0.85);
+        margin-top: 4px;
+      }
+
+      .v8-helper-cancel {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .v8-helper-person-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 320px;
+        overflow-y: auto;
+      }
+
+      .v8-helper-group-label {
+        margin: 10px 0 2px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        color: rgba(32, 21, 13, 0.5);
+      }
+
+      .v8-helper-group-label:first-child {
+        margin-top: 0;
+      }
+
+      /* Full-width tappable row -- left accent bar instead of a boxed
+         table cell, name in a real (18px) font instead of the old ~13px
+         pill row. */
+      .v8-helper-person-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 52px;
+        padding: 0 14px;
+        border: none;
+        border-left: 4px solid rgba(216, 185, 94, 0.7);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.5);
+        text-align: left;
+      }
+
+      .v8-helper-person-row.is-selected {
+        border-left-color: rgba(154, 23, 18, 0.85);
+        background: rgba(255, 255, 255, 0.85);
+        box-shadow: 0 0 0 1px rgba(154, 23, 18, 0.35);
+      }
+
+      .v8-helper-person-row:disabled {
+        opacity: 0.5;
+      }
+
+      /* Same rounded-stamp shape as the tiger-scroll card's own 正取/候補
+         mark (.v8-scroll-status-mark), reused here for the same reason as
+         .v8-helper-cta -- one consistent "themed stamp" language instead
+         of the old plain <em> text tag. */
+      .v8-helper-stamp {
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 28px;
+        border: 2px solid rgba(58, 42, 18, 0.55);
+        border-radius: 48% 52% 44% 56%;
+        color: rgba(58, 42, 18, 0.7);
+        font-size: 10px;
+        font-weight: 900;
+        transform: rotate(-6deg);
+      }
+
+      .v8-helper-stamp-waiting {
+        border-color: rgba(154, 23, 18, 0.7);
+        color: rgba(154, 23, 18, 0.82);
+      }
+
+      .v8-helper-person-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: #20150d;
       }
 
       /* V8ActiveRosterLists is rendered via V8HeroComposition's
