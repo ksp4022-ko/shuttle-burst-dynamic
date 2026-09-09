@@ -109,23 +109,11 @@ export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
 // the real Active page. 0 = no fade.
 export const v8ActiveBackgroundFadePercent = 45;
 
-// Computed (not guessed) 2026-09-09 so the stage's own clip boundary lands
-// exactly at the roster panel artwork's bottom edge, no blank gap and
-// nothing cut off. The roster panel (V8ActiveRosterLists) is positioned at
-// top:75% of THIS stage's own height, centered via translate(-50%,-50%),
-// with a fixed render width of 92%*scale(1.14) of the stage's width and a
-// fixed aspect ratio (1400x1043 source image) -- so its rendered height in
-// px is independent of stage height, but its Y position is not. Solving
-// panelBottomEdge(H) = stageHeight(H) for the stage height H (in the same
-// 390-wide design units as the width) gives:
-//   H = 390 * 0.92*scale*(naturalH/naturalW) / (2*(1 - y/100))
-//     = 390 * 0.92*1.14*(1043/1400) / (2*(1-0.75)) ~= 609.4
-// Verified against live DOM measurement at both the old 650 (panel bottom
-// 10px above the stage edge, i.e. this formula reproduces that near-exact
-// fit) and the intermediate 890 (panel bottom 71px above the stage edge,
-// matching the formula's prediction almost exactly). Re-run this
-// calculation (not guess a new number) if roster y/scale ever changes.
-export const v8ActiveStageAspectRatio = "390 / 610";
+// Set directly by the user (2026-09-09) after the computed 390/610 didn't
+// give the look they wanted -- back near the original 390/890, at 390/860.
+// Opening's own stage ratio is untouched (still 390/780 in
+// V8HeroComposition.tsx) -- this override applies to Active only.
+export const v8ActiveStageAspectRatio = "390 / 860";
 
 // Same dimming formula ActiveCanvas (the /v8/preview console) uses --
 // shared here so the real page and the console stay in sync instead of
