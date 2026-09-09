@@ -610,7 +610,14 @@ export function V8ActiveStyles() {
          fill starts right where this section begins instead of painting
          behind the hero canvas's rounded corners too. */
       .v8-active-content {
-        padding: 0 16px calc(env(safe-area-inset-bottom) + 32px);
+        /* Was calc(safe-area + 32px) -- with the identity prompt and
+           helper toggles both moved out of this block (see the
+           full-screen identity gate above), it usually renders empty, and
+           that flat +32px just left a blank gap below the hero canvas
+           with nothing in it. Down to safe-area-inset-bottom alone, which
+           still matters on the rare render where .v8-active-helper does
+           have content (helperMode signup/cancel). */
+        padding: 0 16px env(safe-area-inset-bottom);
         background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
       }
 
