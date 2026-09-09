@@ -140,7 +140,7 @@ export const v8ActiveTigerScrollOverrides: Partial<V8HeroControls> = {
   tigerRacketShow: false,
   tigerScrollShow: true,
   tigerScrollX: 77,
-  tigerScrollY: 38,
+  tigerScrollY: 42,
   tigerScrollScale: 1.74,
   tigerScrollRotation: 0,
 };
@@ -297,18 +297,18 @@ export const v8ActiveRosterFontOptions = [
 // with the artwork, this is purely a fine-tune nudge.
 export const v8ActiveRosterListsDefaults: V8ActiveRosterListsControls = {
   show: true,
-  x: 51,
-  y: 75,
-  scale: 1.14,
+  x: 50,
+  y: 82,
+  scale: 1.15,
   rotation: 0,
   fontSize: 14,
   lineHeight: 1.1,
   textColor: "#7a4a00",
   fontFamily: "",
   bold: false,
-  leave: { x: 12, y: 1 },
-  confirmed: { x: 11, y: -21 },
-  waiting: { x: 15, y: 4 },
+  leave: { x: 5, y: 0 },
+  confirmed: { x: 11, y: 2 },
+  waiting: { x: 3, y: 4 },
 };
 
 export const v8ActiveRosterListsRanges: Record<
