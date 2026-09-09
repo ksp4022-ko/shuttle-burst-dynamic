@@ -109,11 +109,10 @@ export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
 // the real Active page. 0 = no fade.
 export const v8ActiveBackgroundFadePercent = 45;
 
-// Set directly by the user (2026-09-09) after the computed 390/610 didn't
-// give the look they wanted -- back near the original 390/890, at 390/860.
+// Set directly by the user (2026-09-09), adjusted from 390/860 to 390/800.
 // Opening's own stage ratio is untouched (still 390/780 in
 // V8HeroComposition.tsx) -- this override applies to Active only.
-export const v8ActiveStageAspectRatio = "390 / 860";
+export const v8ActiveStageAspectRatio = "390 / 800";
 
 // Same dimming formula ActiveCanvas (the /v8/preview console) uses --
 // shared here so the real page and the console stay in sync instead of
