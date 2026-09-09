@@ -3,6 +3,7 @@ import type {
   V8ActiveInfoCardsControls,
   V8ActiveRosterListsControls,
   V8ActiveSunBadgesControls,
+  V8ActiveSunMessagesControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import type { V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
 
@@ -118,6 +119,31 @@ export type PreviewControls = {
   activeTigerScrollY: number;
   activeTigerScrollScale: number;
   activeTigerScrollRotation: number;
+  // Active-only: the three sun messages (date/name/note), independently
+  // show/x/y/scale/rotation/fontSize/bold-controlled -- replaces the old
+  // single shared title block (see v8ActiveSunMessagesDefaults in
+  // v8ActiveConfig.ts for why fontSize is a real px size now).
+  activeSunDateShow: boolean;
+  activeSunDateX: number;
+  activeSunDateY: number;
+  activeSunDateScale: number;
+  activeSunDateRotation: number;
+  activeSunDateFontSize: number;
+  activeSunDateBold: boolean;
+  activeSunNameShow: boolean;
+  activeSunNameX: number;
+  activeSunNameY: number;
+  activeSunNameScale: number;
+  activeSunNameRotation: number;
+  activeSunNameFontSize: number;
+  activeSunNameBold: boolean;
+  activeSunNoteShow: boolean;
+  activeSunNoteX: number;
+  activeSunNoteY: number;
+  activeSunNoteScale: number;
+  activeSunNoteRotation: number;
+  activeSunNoteFontSize: number;
+  activeSunNoteBold: boolean;
   // Active-only: the three status plaques (已報/尚缺/候補) + their shared
   // rope, left of the dragon below the sun -- each independently
   // show/size/position/rotation-controlled (see V8ActiveInfoCards).
@@ -219,6 +245,9 @@ export type PreviewTargetId =
   | "FRONT FOAM"
   | "GOLD / INK"
   | "ACTIVE SUN INFO"
+  | "ACTIVE SUN DATE"
+  | "ACTIVE SUN NAME"
+  | "ACTIVE SUN NOTE"
   | "ACTIVE TIGER SCROLL"
   | "ACTIVE INFO ROPE"
   | "ACTIVE INFO REGISTERED"
@@ -254,6 +283,9 @@ export const openingTargetOrder: PreviewTargetId[] = [
 
 export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE SUN INFO",
+  "ACTIVE SUN DATE",
+  "ACTIVE SUN NAME",
+  "ACTIVE SUN NOTE",
   "ACTIVE TIGER SCROLL",
   "ACTIVE INFO ROPE",
   "ACTIVE INFO REGISTERED",
@@ -421,6 +453,28 @@ export const previewDefaults: PreviewControls = {
   activeTigerScrollY: 42,
   activeTigerScrollScale: 1.74,
   activeTigerScrollRotation: 0,
+  // Matches v8ActiveSunMessagesDefaults in v8ActiveConfig.ts exactly.
+  activeSunDateShow: true,
+  activeSunDateX: 50,
+  activeSunDateY: 32,
+  activeSunDateScale: 1,
+  activeSunDateRotation: 0,
+  activeSunDateFontSize: 9,
+  activeSunDateBold: true,
+  activeSunNameShow: true,
+  activeSunNameX: 50,
+  activeSunNameY: 50,
+  activeSunNameScale: 1,
+  activeSunNameRotation: 0,
+  activeSunNameFontSize: 24,
+  activeSunNameBold: true,
+  activeSunNoteShow: true,
+  activeSunNoteX: 50,
+  activeSunNoteY: 68,
+  activeSunNoteScale: 1,
+  activeSunNoteRotation: 0,
+  activeSunNoteFontSize: 8,
+  activeSunNoteBold: false,
   activeInfoRopeShow: true,
   activeInfoRopeX: 30,
   activeInfoRopeY: 27,
@@ -497,6 +551,33 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "FRONT FOAM": ["frontFoamShow", "frontFoamX", "frontFoamY", "frontFoamScale", "frontFoamRotation", "frontFoamOpacity", "frontFoamBlur"],
   "GOLD / INK": ["goldInkShow", "goldInkX", "goldInkY", "goldInkScale", "goldInkRotation", "goldInkOpacity", "goldInkBlur"],
   "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex", "activeSunTextScale"],
+  "ACTIVE SUN DATE": [
+    "activeSunDateShow",
+    "activeSunDateX",
+    "activeSunDateY",
+    "activeSunDateScale",
+    "activeSunDateRotation",
+    "activeSunDateFontSize",
+    "activeSunDateBold",
+  ],
+  "ACTIVE SUN NAME": [
+    "activeSunNameShow",
+    "activeSunNameX",
+    "activeSunNameY",
+    "activeSunNameScale",
+    "activeSunNameRotation",
+    "activeSunNameFontSize",
+    "activeSunNameBold",
+  ],
+  "ACTIVE SUN NOTE": [
+    "activeSunNoteShow",
+    "activeSunNoteX",
+    "activeSunNoteY",
+    "activeSunNoteScale",
+    "activeSunNoteRotation",
+    "activeSunNoteFontSize",
+    "activeSunNoteBold",
+  ],
   "ACTIVE TIGER SCROLL": [
     "activeTigerScrollX",
     "activeTigerScrollY",
@@ -589,6 +670,9 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "MID WAVE": "midWaveShow",
   "FRONT FOAM": "frontFoamShow",
   "GOLD / INK": "goldInkShow",
+  "ACTIVE SUN DATE": "activeSunDateShow",
+  "ACTIVE SUN NAME": "activeSunNameShow",
+  "ACTIVE SUN NOTE": "activeSunNoteShow",
   "ACTIVE INFO ROPE": "activeInfoRopeShow",
   "ACTIVE INFO REGISTERED": "activeInfoRegisteredShow",
   "ACTIVE INFO NEEDED": "activeInfoNeededShow",
@@ -693,6 +777,21 @@ export const controlRanges = {
   activeTigerScrollY: { label: "Tiger+Scroll Y %", min: 0, max: 100 },
   activeTigerScrollScale: { label: "Tiger+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
   activeTigerScrollRotation: { label: "Tiger+Scroll Rotation", min: -45, max: 45 },
+  activeSunDateX: { label: "日期 X %", min: -50, max: 150 },
+  activeSunDateY: { label: "日期 Y %", min: -50, max: 150 },
+  activeSunDateScale: { label: "日期 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunDateRotation: { label: "日期 Rotation", min: -180, max: 180 },
+  activeSunDateFontSize: { label: "日期 Font Size", min: 4, max: 48 },
+  activeSunNameX: { label: "聚會名 X %", min: -50, max: 150 },
+  activeSunNameY: { label: "聚會名 Y %", min: -50, max: 150 },
+  activeSunNameScale: { label: "聚會名 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunNameRotation: { label: "聚會名 Rotation", min: -180, max: 180 },
+  activeSunNameFontSize: { label: "聚會名 Font Size", min: 4, max: 48 },
+  activeSunNoteX: { label: "備註 X %", min: -50, max: 150 },
+  activeSunNoteY: { label: "備註 Y %", min: -50, max: 150 },
+  activeSunNoteScale: { label: "備註 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunNoteRotation: { label: "備註 Rotation", min: -180, max: 180 },
+  activeSunNoteFontSize: { label: "備註 Font Size", min: 4, max: 48 },
   activeInfoRopeX: { label: "Info Rope X %", min: -20, max: 120 },
   activeInfoRopeY: { label: "Info Rope Y %", min: -20, max: 140 },
   activeInfoRopeScale: { label: "Info Rope Scale", min: 0.2, max: 3, step: 0.01 },
@@ -884,6 +983,33 @@ Scale: ${controls.activeSunScale.toFixed(2)}
 Z-Index: ${Math.round(controls.activeSunZIndex)}
 Text Scale: ${controls.activeSunTextScale.toFixed(2)}
 
+ACTIVE SUN DATE
+Show: ${controls.activeSunDateShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeSunDateX)}
+Y: ${Math.round(controls.activeSunDateY)}
+Scale: ${controls.activeSunDateScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeSunDateRotation)}
+Font Size: ${Math.round(controls.activeSunDateFontSize)}
+Bold: ${controls.activeSunDateBold ? "ON" : "OFF"}
+
+ACTIVE SUN NAME
+Show: ${controls.activeSunNameShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeSunNameX)}
+Y: ${Math.round(controls.activeSunNameY)}
+Scale: ${controls.activeSunNameScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeSunNameRotation)}
+Font Size: ${Math.round(controls.activeSunNameFontSize)}
+Bold: ${controls.activeSunNameBold ? "ON" : "OFF"}
+
+ACTIVE SUN NOTE
+Show: ${controls.activeSunNoteShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeSunNoteX)}
+Y: ${Math.round(controls.activeSunNoteY)}
+Scale: ${controls.activeSunNoteScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeSunNoteRotation)}
+Font Size: ${Math.round(controls.activeSunNoteFontSize)}
+Bold: ${controls.activeSunNoteBold ? "ON" : "OFF"}
+
 ACTIVE TIGER SCROLL
 X: ${Math.round(controls.activeTigerScrollX)}
 Y: ${Math.round(controls.activeTigerScrollY)}
@@ -1049,6 +1175,38 @@ export function buildV8ActiveHeroOverrides(controls: PreviewControls): Partial<V
     tigerScrollY: controls.activeTigerScrollY,
     tigerScrollScale: controls.activeTigerScrollScale,
     tigerScrollRotation: controls.activeTigerScrollRotation,
+  };
+}
+
+export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8ActiveSunMessagesControls {
+  return {
+    date: {
+      show: controls.activeSunDateShow,
+      x: controls.activeSunDateX,
+      y: controls.activeSunDateY,
+      scale: controls.activeSunDateScale,
+      rotation: controls.activeSunDateRotation,
+      fontSize: controls.activeSunDateFontSize,
+      bold: controls.activeSunDateBold,
+    },
+    name: {
+      show: controls.activeSunNameShow,
+      x: controls.activeSunNameX,
+      y: controls.activeSunNameY,
+      scale: controls.activeSunNameScale,
+      rotation: controls.activeSunNameRotation,
+      fontSize: controls.activeSunNameFontSize,
+      bold: controls.activeSunNameBold,
+    },
+    note: {
+      show: controls.activeSunNoteShow,
+      x: controls.activeSunNoteX,
+      y: controls.activeSunNoteY,
+      scale: controls.activeSunNoteScale,
+      rotation: controls.activeSunNoteRotation,
+      fontSize: controls.activeSunNoteFontSize,
+      bold: controls.activeSunNoteBold,
+    },
   };
 }
 

@@ -91,7 +91,65 @@ export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
   sunY: 1,
   sunScale: 0.68,
   sunZIndex: 30,
+  // Superseded 2026-09-09 by each sun message's own independent
+  // show/x/y/scale/rotation/fontSize/bold controls (see
+  // V8ActiveSunMessageControls below) -- this multiplier used to scale a
+  // single shared title block, which no longer exists now that date/name/
+  // note are three independently positioned elements. Left wired through
+  // (still settable, still reaches V8HeroComposition's sun container as
+  // the --sun-text-scale CSS var) rather than ripped out, since removing
+  // it means bumping the storage-key version and losing every other
+  // saved tuning value along with it -- just has no visual effect now.
   sunTextScale: 0.58,
+};
+
+// Each of the three sun messages (date/name/note) is independently
+// show/x/y/scale/rotation/fontSize/bold-controlled -- x/y are % of the
+// sun's own box like the scattered badges, centered via
+// translate(-50%,-50%) like the info cards (these are short text blocks
+// meant to read as centered, not badges anchored by a corner). fontSize
+// is a real px size (not a multiplier), since the old shared
+// --sun-text-scale wrapper this replaces is gone (see sunTextScale above).
+export type V8ActiveSunMessageControls = {
+  show: boolean;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  fontSize: number;
+  bold: boolean;
+};
+
+export type V8ActiveSunMessagesControls = {
+  date: V8ActiveSunMessageControls;
+  name: V8ActiveSunMessageControls;
+  note: V8ActiveSunMessageControls;
+};
+
+// Defaults reproduce the OLD shared-block layout's actual effective
+// on-screen size (measured live: eyebrowStyle's 15px / titleStyle's 42px,
+// both scaled by the old 0.58 --sun-text-scale multiplier -> ~9px/~24px)
+// so baking this in isn't a visual regression. note is a new element (see
+// eventNote on AlphaEvent) with no prior layout to match -- placed below
+// the name at a similar size to the date, not shown by default is NOT
+// needed since an empty/undefined eventNote already renders nothing.
+export const v8ActiveSunMessagesDefaults: V8ActiveSunMessagesControls = {
+  date: { show: true, x: 50, y: 32, scale: 1, rotation: 0, fontSize: 9, bold: true },
+  name: { show: true, x: 50, y: 50, scale: 1, rotation: 0, fontSize: 24, bold: true },
+  note: { show: true, x: 50, y: 68, scale: 1, rotation: 0, fontSize: 8, bold: false },
+};
+
+export const v8ActiveSunMessageRanges: Record<
+  keyof V8ActiveSunMessageControls,
+  { label: string; min: number; max: number; step?: number }
+> = {
+  show: { label: "Show", min: 0, max: 1 },
+  x: { label: "X %", min: -50, max: 150 },
+  y: { label: "Y %", min: -50, max: 150 },
+  scale: { label: "Scale", min: 0.2, max: 3, step: 0.01 },
+  rotation: { label: "Rotation", min: -180, max: 180 },
+  fontSize: { label: "Font Size", min: 4, max: 48 },
+  bold: { label: "Bold", min: 0, max: 1 },
 };
 
 // Layout overrides for V8HeroComposition's shared canvas -- applies to

@@ -376,6 +376,21 @@ export function V8TuningPanel({
             </button>
           </>
         ) : null}
+        {selectedTarget === "ACTIVE SUN DATE" ? (
+          <button type="button" onClick={() => update("activeSunDateBold", !controls.activeSunDateBold)} style={smallButtonStyle}>
+            {controls.activeSunDateBold ? "Bold ON" : "Bold OFF"}
+          </button>
+        ) : null}
+        {selectedTarget === "ACTIVE SUN NAME" ? (
+          <button type="button" onClick={() => update("activeSunNameBold", !controls.activeSunNameBold)} style={smallButtonStyle}>
+            {controls.activeSunNameBold ? "Bold ON" : "Bold OFF"}
+          </button>
+        ) : null}
+        {selectedTarget === "ACTIVE SUN NOTE" ? (
+          <button type="button" onClick={() => update("activeSunNoteBold", !controls.activeSunNoteBold)} style={smallButtonStyle}>
+            {controls.activeSunNoteBold ? "Bold ON" : "Bold OFF"}
+          </button>
+        ) : null}
       </div>
       <button type="button" onClick={() => setMoreOpen((current) => !current)} style={moreToggleStyle}>
         {moreOpen ? "收起更多" : "⋯ 更多"}

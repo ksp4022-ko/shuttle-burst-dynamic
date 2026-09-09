@@ -42,11 +42,26 @@ function InfoCardLayer({
   );
 }
 
-// The blank wood-grain area under each plaque's title (已報/尚缺/候補),
-// measured off plaque-registered-v1's own pixels (row-by-row contiguous-
-// cream-run scan, same technique used for the roster/tiger-scroll panel
-// insets) -- all three plaques share this same template layout.
-const COUNT_INSET = { top: "37%", bottom: "38%", left: "24%", right: "24%" } as const;
+// Re-measured 2026-09-09 (real pixel scan per plaque, density-filtered
+// since the blank area is a wood-grain TEXTURE, not a flat fill -- a
+// naive "widest contiguous run of matching pixels" approach fragments on
+// the grain lines, so this scans each row's full left-to-right span of
+// cream-ish pixels and keeps only rows dense enough to be the real blank
+// area, not stray texture noise). The three plaques were previously
+// assumed identical (one shared centered inset), but they're each
+// generated separately and their blank areas sit at different horizontal
+// centers -- registered ~47%, needed ~56%, waitlist ~45% of the image
+// width, not a uniform 50%. Using one centered inset for all three left
+// 已報/候補 close enough to pass but put 尚缺's count visibly off-center,
+// and combined with each plaque's own independent rotation (pivoting
+// around the WRONG center for a mismatched inset), read as the number
+// not following the plaque's tilt. Re-run the same scan if the artwork
+// changes rather than reusing these numbers.
+const COUNT_INSETS = {
+  registered: { top: "36%", bottom: "36%", left: "33%", right: "38%" },
+  needed: { top: "36%", bottom: "38%", left: "43%", right: "30%" },
+  waitlist: { top: "36%", bottom: "38%", left: "32%", right: "39%" },
+} as const;
 
 // Same wrapper/position handling as InfoCardLayer, plus the live count
 // rendered into the plaque's own blank area.
@@ -56,12 +71,14 @@ function InfoCardStatusLayer({
   baseWidth,
   count,
   fontSize,
+  countInset,
 }: {
   src: string;
   controls: V8ActiveInfoCardControls;
   baseWidth: number;
   count: number;
   fontSize: number;
+  countInset: (typeof COUNT_INSETS)[keyof typeof COUNT_INSETS];
 }) {
   if (!controls.show) return null;
   return (
@@ -92,7 +109,7 @@ function InfoCardStatusLayer({
             fontWeight: 800,
             color: "#7a2a12",
             fontSize: `${fontSize}px`,
-            ...COUNT_INSET,
+            ...countInset,
           } as CSSProperties
         }
       >
@@ -133,6 +150,7 @@ export function V8ActiveInfoCards({
         baseWidth={15}
         count={counts.registered}
         fontSize={controls.countFontSize}
+        countInset={COUNT_INSETS.registered}
       />
       <InfoCardStatusLayer
         src={assets.infoCardNeeded}
@@ -140,11 +158,13 @@ export function V8ActiveInfoCards({
         baseWidth={15}
         count={counts.needed}
         fontSize={controls.countFontSize}
+        countInset={COUNT_INSETS.needed}
       />
       <InfoCardStatusLayer
         src={assets.infoCardWaitlist}
         controls={controls.waitlist}
         baseWidth={15}
+        countInset={COUNT_INSETS.waitlist}
         count={counts.waiting}
         fontSize={controls.countFontSize}
       />

@@ -3,13 +3,14 @@ import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import type { AlphaSignup } from "@/lib/database-alpha";
-import { V8HeroComposition, eyebrowStyle, titleStyle } from "@/components/v8-hero/V8HeroComposition";
+import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
   activeTargetOrder,
   buildV8ActiveHeroOverrides,
   buildV8ActiveInfoCardsControls,
   buildV8ActiveRosterListsControls,
   buildV8ActiveSunBadgesControls,
+  buildV8ActiveSunMessagesControls,
   loadSavedControls,
   previewDefaults,
   saveControls,
@@ -21,8 +22,11 @@ import {
   buildV8ActiveAssets,
   v8ActiveStageAspectRatio,
   v8ActiveSunBadgesDefaults,
+  v8ActiveSunMessagesDefaults,
   type V8ActiveSunBadgeControls,
   type V8ActiveSunBadgesControls,
+  type V8ActiveSunMessageControls,
+  type V8ActiveSunMessagesControls,
 } from "./v8ActiveConfig";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
@@ -116,6 +120,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const infoCardsControls = buildV8ActiveInfoCardsControls(tuningControls);
   const rosterListsControls = buildV8ActiveRosterListsControls(tuningControls);
   const sunBadgeControls = buildV8ActiveSunBadgesControls(tuningControls);
+  const sunMessageControls = buildV8ActiveSunMessagesControls(tuningControls);
 
   // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
   // URLs handed to sunContent/infoCardsContent/rosterListsContent below,
@@ -163,11 +168,13 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             assets={assets}
             eventDate={selectedEvent.eventDate}
             eventName={selectedEvent.name}
+            eventNote={selectedEvent.eventNote}
             courtCount={selectedEvent.courtCount}
             hours={selectedEvent.hours}
             ballType={selectedEvent.ballType}
             tempFee={selectedEvent.tempFee}
             badgeControls={sunBadgeControls}
+            messageControls={sunMessageControls}
           />
         }
         scrollContent={
@@ -229,51 +236,63 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
         </div>
       )}
 
-      <div className="v8-active-content">
-        <div className="v8-active-helper">
-          {helperMode === "signup" ? (
-            <div className="v8-active-helper-row">
-              <input
-                value={helperName}
-                onChange={(event) => setHelperName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") void submitHelperSignup();
-                }}
-                placeholder="幫誰報名？"
-                disabled={busy}
-              />
-              <button type="button" disabled={!helperName.trim() || busy} onClick={() => void submitHelperSignup()}>
-                確認
-              </button>
-              <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
-                取消
-              </button>
-            </div>
-          ) : helperMode === "cancel" ? (
-            <div className="v8-active-season-list">
-              {tempCandidates.length ? (
-                tempCandidates.map((person) => (
-                  <button
-                    key={person.id}
-                    type="button"
-                    className="v8-active-season-item"
-                    disabled={busy}
-                    onClick={() => void cancelForSomeoneElse(person)}
-                  >
-                    <strong>{person.name}</strong>
-                    <em>{person.status === "waiting" ? "候補" : "臨打"}</em>
-                  </button>
-                ))
-              ) : (
-                <p className="sd-empty">目前沒有臨打報名可取消</p>
-              )}
-              <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
-                返回
-              </button>
-            </div>
-          ) : null}
+      {/* Same full-screen blur-gate treatment as the identity picker above
+          -- 幫人報名/幫人取消 used to render as an inline card in the flow
+          below the hero canvas, visually inconsistent with the identity
+          gate's floating toast. Reusing .v8-identity-gate/-card here keeps
+          every "the user must finish this one thing before anything else
+          is usable" interaction looking the same. z-index/stacking is
+          identical to the identity gate since the two are mutually
+          exclusive (helperMode only ever opens once identity is already
+          known, so they never need to layer on top of each other). */}
+      {helperMode ? (
+        <div className="v8-identity-gate">
+          <div className="v8-identity-gate-card">
+            {helperMode === "signup" ? (
+              <div className="v8-active-helper-row">
+                <input
+                  value={helperName}
+                  onChange={(event) => setHelperName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void submitHelperSignup();
+                  }}
+                  placeholder="幫誰報名？"
+                  disabled={busy}
+                  autoFocus
+                />
+                <button type="button" disabled={!helperName.trim() || busy} onClick={() => void submitHelperSignup()}>
+                  確認
+                </button>
+                <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
+                  取消
+                </button>
+              </div>
+            ) : (
+              <div className="v8-active-season-list">
+                {tempCandidates.length ? (
+                  tempCandidates.map((person) => (
+                    <button
+                      key={person.id}
+                      type="button"
+                      className="v8-active-season-item"
+                      disabled={busy}
+                      onClick={() => void cancelForSomeoneElse(person)}
+                    >
+                      <strong>{person.name}</strong>
+                      <em>{person.status === "waiting" ? "候補" : "臨打"}</em>
+                    </button>
+                  ))
+                ) : (
+                  <p className="sd-empty">目前沒有臨打報名可取消</p>
+                )}
+                <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
+                  返回
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Hidden tuning-panel trigger -- a small, mostly-invisible easter
           egg in the bottom-left corner (per the user's request) rather
@@ -337,11 +356,35 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   );
 }
 
-function V8SunInfoBadge({ src, label }: { src: string; label: string }) {
+// Re-measured 2026-09-09 (real pixel scan per badge image, right-of-label
+// region only) -- all three cloud badges share one template (baked-in
+// category label in a circle on the left, blank cream area on the right
+// for the dynamic value), but the em text overlay used to sit at inset:0
+// (centered over the WHOLE image, label included), which put text too
+// close to -- or under -- the tapering cloud border and the baked-in
+// label glyph ("爆框"/bursting out of frame). Each badge's blank area is
+// roughly the same relative shape but not identical, so each gets its own
+// inset instead of sharing one. Re-run the same scan if the artwork
+// changes rather than reusing these numbers.
+const BADGE_TEXT_INSETS = {
+  ballType: { top: "39%", bottom: "36%", left: "44%", right: "18%" },
+  tempFee: { top: "40%", bottom: "31%", left: "44%", right: "16%" },
+  courtCount: { top: "36%", bottom: "34%", left: "44%", right: "21%" },
+} as const;
+
+function V8SunInfoBadge({
+  src,
+  label,
+  textInset,
+}: {
+  src: string;
+  label: string;
+  textInset: (typeof BADGE_TEXT_INSETS)[keyof typeof BADGE_TEXT_INSETS];
+}) {
   return (
     <span className="v8-sun-info-badge">
       <img src={src} alt="" aria-hidden="true" draggable={false} />
-      <em>{label}</em>
+      <em style={textInset as CSSProperties}>{label}</em>
     </span>
   );
 }
@@ -357,10 +400,12 @@ function V8SunInfoBadgeScattered({
   src,
   label,
   controls,
+  textInset,
 }: {
   src: string;
   label: string;
   controls: V8ActiveSunBadgeControls;
+  textInset: (typeof BADGE_TEXT_INSETS)[keyof typeof BADGE_TEXT_INSETS];
 }) {
   if (!controls.show) return null;
   return (
@@ -375,7 +420,36 @@ function V8SunInfoBadgeScattered({
         } as CSSProperties
       }
     >
-      <V8SunInfoBadge src={src} label={label} />
+      <V8SunInfoBadge src={src} label={label} textInset={textInset} />
+    </div>
+  );
+}
+
+// One of the sun's three independent text messages (date/name/note) --
+// replaces the old single shared .v8-active-sun-title block. Same
+// centered-anchor convention as V8ActiveInfoCards (translate(-50%,-50%),
+// x/y is the text's own center, not a corner) since these are short
+// text blocks meant to read as centered, not badges anchored by an edge.
+// fontSize is a real px size (see v8ActiveSunMessagesDefaults for why).
+function V8SunMessage({ text, controls }: { text: string; controls: V8ActiveSunMessageControls }) {
+  if (!controls.show || !text) return null;
+  return (
+    <div
+      style={
+        {
+          position: "absolute",
+          left: `${controls.x}%`,
+          top: `${controls.y}%`,
+          transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
+          fontSize: controls.fontSize,
+          fontWeight: controls.bold ? 700 : 400,
+          whiteSpace: "nowrap",
+          textAlign: "center",
+          color: "#20150d",
+        } as CSSProperties
+      }
+    >
+      {text}
     </div>
   );
 }
@@ -389,31 +463,40 @@ function V8SunInfoBadgeScattered({
 // /v8/preview's mock ACTIVE canvas renders the identical markup instead of
 // a separate hand-rolled mock.
 //
-// Title renders centered INSIDE the sun circle. The three badges (球種/
-// 費用/場時) scatter individually around it, each independently show/x/y/
-// scale/rotation/fontSize-controlled (see v8ActiveSunBadgesDefaults) --
-// this used to be identity-gated (season got this scattered layout, casual
-// fell back to a plain compact row) since casual had no mockup of its own
-// yet. Per the user's redefined flow there is no longer a season/casual
-// distinction at all -- every identified user gets this same layout.
+// date/name/note render as three independent V8SunMessage elements (each
+// its own show/x/y/scale/rotation/fontSize/bold, see
+// v8ActiveSunMessagesDefaults) -- deliberately NOT clipped to the sun's own
+// circular bounds (nothing in this tree sets overflow:hidden on the sun
+// container), so nudging one past the edge is fine, per the user's
+// request. The three badges (球種/費用/場時) scatter individually around
+// it the same way, each independently show/x/y/scale/rotation/fontSize-
+// controlled (see v8ActiveSunBadgesDefaults) -- this used to be identity-
+// gated (season got this scattered layout, casual fell back to a plain
+// compact row) since casual had no mockup of its own yet. Per the user's
+// redefined flow there is no longer a season/casual distinction at all --
+// every identified user gets this same layout.
 export function V8ActiveSunContent({
   assets,
   eventDate,
   eventName,
+  eventNote,
   courtCount,
   hours,
   ballType,
   tempFee,
   badgeControls = v8ActiveSunBadgesDefaults,
+  messageControls = v8ActiveSunMessagesDefaults,
 }: {
   assets: { sunBadgeBallType: string; sunBadgeTempFee: string; sunBadgeCourtCount: string };
   eventDate: string;
   eventName: string;
+  eventNote?: string | null | undefined;
   courtCount?: number | null | undefined;
   hours?: number | null | undefined;
   ballType?: string | null | undefined;
   tempFee?: number | null | undefined;
   badgeControls?: V8ActiveSunBadgesControls;
+  messageControls?: V8ActiveSunMessagesControls;
 }) {
   // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label per the
   // user's exact spec (courtCount:2, hours:3 -> "2場/3hr") -- courtCount
@@ -422,23 +505,29 @@ export function V8ActiveSunContent({
 
   return (
     <>
-      <div className="v8-active-sun-title">
-        <p style={eyebrowStyle}>{shortDate(eventDate)}</p>
-        <h1 style={titleStyle}>{eventName}</h1>
-      </div>
+      <V8SunMessage text={shortDate(eventDate)} controls={messageControls.date} />
+      <V8SunMessage text={eventName} controls={messageControls.name} />
+      <V8SunMessage text={eventNote || ""} controls={messageControls.note} />
       {ballType ? (
-        <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={ballType} controls={badgeControls.ballType} />
+        <V8SunInfoBadgeScattered
+          src={assets.sunBadgeBallType}
+          label={ballType}
+          controls={badgeControls.ballType}
+          textInset={BADGE_TEXT_INSETS.ballType}
+        />
       ) : null}
       <V8SunInfoBadgeScattered
         src={assets.sunBadgeTempFee}
         label={`$${Number(tempFee || 0)}`}
         controls={badgeControls.tempFee}
+        textInset={BADGE_TEXT_INSETS.tempFee}
       />
       {courtTimeLabel ? (
         <V8SunInfoBadgeScattered
           src={assets.sunBadgeCourtCount}
           label={courtTimeLabel}
           controls={badgeControls.courtCount}
+          textInset={BADGE_TEXT_INSETS.courtCount}
         />
       ) : null}
     </>
@@ -602,47 +691,6 @@ export function V8ActiveStyles() {
         width: 100%;
         color: #20150d;
         touch-action: pan-y;
-      }
-
-      /* Everything below the hero canvas (identity card, helper toggles,
-         season list) keeps the cream background and the 16px side inset --
-         moved off .v8-active itself (see the comment there) so the cream
-         fill starts right where this section begins instead of painting
-         behind the hero canvas's rounded corners too. */
-      .v8-active-content {
-        /* Was calc(safe-area + 32px) -- with the identity prompt and
-           helper toggles both moved out of this block (see the
-           full-screen identity gate above), it usually renders empty, and
-           that flat +32px just left a blank gap below the hero canvas
-           with nothing in it. Down to safe-area-inset-bottom alone, which
-           still matters on the rare render where .v8-active-helper does
-           have content (helperMode signup/cancel). */
-        padding: 0 16px env(safe-area-inset-bottom);
-        background: linear-gradient(180deg, #f1e4ca 0%, #ede0c4 100%);
-      }
-
-      .v8-active-sun-title {
-        position: absolute;
-        inset: 8%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        overflow: visible;
-        transform: scale(var(--sun-text-scale, 1));
-        transform-origin: center;
-      }
-
-      .v8-active-sun-title p {
-        font-size: 11px;
-        margin: 0 0 4px;
-      }
-
-      .v8-active-sun-title h1 {
-        font-size: 15px;
-        margin: 0;
-        line-height: 1.15;
       }
 
       .v8-sun-info-scattered {
@@ -923,14 +971,10 @@ export function V8ActiveStyles() {
         color: rgba(32, 21, 13, 0.56);
       }
 
-      .v8-active-helper {
-        margin-bottom: 20px;
-        text-align: center;
-      }
-
       .v8-active-helper-row {
         display: flex;
         gap: 8px;
+        text-align: center;
       }
 
       .v8-active-helper-row input {
@@ -1012,7 +1056,7 @@ export function V8ActiveStyles() {
 
       .v8-roster-two-col {
         display: flex;
-        gap: 8px;
+        gap: 3px;
       }
 
       .v8-roster-two-col .v8-roster-column {

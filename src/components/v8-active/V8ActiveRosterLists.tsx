@@ -28,25 +28,33 @@ const PANEL_INSETS = {
   waiting: { top: "54%", bottom: "27%", left: "73%", right: "7%" },
 } as const;
 
-function RosterColumn({ people }: { people: V8ActiveRosterPerson[] }) {
+// numberOffset, when given, prefixes each name with its 1-based queue
+// position (numberOffset + index) -- used for 備取名單 so a waitlisted
+// person can tell their own place in line at a glance. Offset (not a
+// flat index) so a two-column split could still number continuously
+// across columns if this component were ever used that way, though
+// currently only the single-column waiting list uses it.
+function RosterColumn({ people, numberOffset }: { people: V8ActiveRosterPerson[]; numberOffset?: number | undefined }) {
   return (
     <ul className="v8-roster-column">
-      {people.map((person) => (
-        <li key={person.id}>{person.name}</li>
+      {people.map((person, index) => (
+        <li key={person.id}>{numberOffset !== undefined ? `${numberOffset + index}. ${person.name}` : person.name}</li>
       ))}
     </ul>
   );
 }
 
 // A single-column list, used for the two narrower side panels.
-function RosterPanel({ people, twoColumn }: { people: V8ActiveRosterPerson[]; twoColumn?: boolean }) {
+function RosterPanel({ people, twoColumn, numbered }: { people: V8ActiveRosterPerson[]; twoColumn?: boolean; numbered?: boolean }) {
   if (!people.length) {
-    return <p className="v8-roster-empty">目前沒有人員</p>;
+    // Was "目前沒有人員" -- simplified per the user's request, an empty
+    // list doesn't need a full sentence.
+    return <p className="v8-roster-empty">─</p>;
   }
   if (!twoColumn) {
     return (
       <div className="v8-roster-panel-scroll">
-        <RosterColumn people={people} />
+        <RosterColumn people={people} numberOffset={numbered ? 1 : undefined} />
       </div>
     );
   }
@@ -122,7 +130,7 @@ export function V8ActiveRosterLists({
         className="v8-roster-panel"
         style={{ ...PANEL_INSETS.waiting, transform: `translate(${controls.waiting.x}px, ${controls.waiting.y}px)` }}
       >
-        <RosterPanel people={waiting} />
+        <RosterPanel people={waiting} numbered />
       </div>
     </div>
   );

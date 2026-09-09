@@ -9,6 +9,7 @@ import {
   buildV8ActiveInfoCardsControls,
   buildV8ActiveRosterListsControls,
   buildV8ActiveSunBadgesControls,
+  buildV8ActiveSunMessagesControls,
   clawBaseline,
   decorBaseline,
   heroBaseline,
@@ -154,6 +155,7 @@ function ActiveCanvas({
   const infoCardsControls = buildV8ActiveInfoCardsControls(controls);
   const rosterListsControls = buildV8ActiveRosterListsControls(controls);
   const sunBadgeControls = buildV8ActiveSunBadgesControls(controls);
+  const sunMessageControls = buildV8ActiveSunMessagesControls(controls);
   const extraPreloadSrcs = [
     assets.sunInfoBadge,
     assets.sunBadgeBallType,
@@ -180,11 +182,13 @@ function ActiveCanvas({
             assets={assets}
             eventDate="2026-09-10"
             eventName="康軒(預覽資料)"
+            eventNote="備註預覽文字"
             courtCount={2}
             hours={3}
             ballType="MS 101"
             tempFee={245}
             badgeControls={sunBadgeControls}
+            messageControls={sunMessageControls}
           />
         }
         scrollContent={
