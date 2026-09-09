@@ -271,7 +271,12 @@ export const v8HeroActiveAssetFile = "scroll-identity-v1.webp";
 // otherwise. Replaces the earlier dragon-gripping-a-scroll composite
 // (dragon-scroll-fixed-v1.webp, still on disk unreferenced) as the uniform
 // personal-status display for every identified user.
-export const v8HeroTigerScrollAssetFile = "tiger-scroll-fixed-v1.webp";
+// v2 (2026-09-09): new higher-resolution source art (1122x1402), resized to
+// the same 752px display width as v1 and re-encoded as webp (see
+// tiger-scroll-fixed-v2-source.png for the untouched original). The blank
+// scroll panel's own position within the frame moved -- see the inset
+// comment on the tigerScrollShow block in V8HeroComposition.tsx.
+export const v8HeroTigerScrollAssetFile = "tiger-scroll-fixed-v2.webp";
 
 export const buildV8HeroAssets = (baseUrl: string) => {
   const displayAssetBase = `${baseUrl}v8-preview/display`;

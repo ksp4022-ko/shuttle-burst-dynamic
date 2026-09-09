@@ -494,18 +494,21 @@ export function V8HeroComposition({
                   draggable={false}
                   style={{ display: "block", width: "100%", height: "auto", pointerEvents: "none" }}
                 />
-                {/* Panel inset measured directly off tiger-scroll-fixed-v1's
-                    own pixels (row-by-row contiguous-cream-run scan) -- this
-                    composite's blank panel is narrower and lower than the
-                    standalone scroll's, since the tiger's body and the
-                    mountain backdrop take up most of the frame. */}
+                {/* Panel inset re-measured 2026-09-09 off tiger-scroll-fixed-v2's
+                    own pixels (contiguous-cream-run pixel scan, several rows/
+                    columns intersected for a safe rectangle that avoids the
+                    frame's gold corner ornaments dipping into a couple of
+                    scan columns) -- v2 is a different pose/composition than
+                    v1, so this panel sits in a different spot; re-run the
+                    same scan if the art changes again rather than reusing
+                    these numbers. */}
                 <div
                   style={{
                     position: "absolute",
-                    top: "42%",
-                    bottom: "23%",
-                    left: "27%",
-                    right: "48%",
+                    top: "44%",
+                    bottom: "29%",
+                    left: "30%",
+                    right: "49%",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
