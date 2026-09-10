@@ -240,7 +240,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             hours={selectedEvent.hours}
             ballType={selectedEvent.ballType}
             tempFee={selectedEvent.tempFee}
-            capacity={roster.summary.confirmedCount + roster.summary.remainCount}
+            capacity={selectedEvent.maxPeople}
             badgeControls={sunBadgeControls}
             capacityBadgeControls={capacityBadgeControls}
             messageControls={sunMessageControls}
@@ -745,8 +745,11 @@ export function V8ActiveSunContent({
   hours?: number | null | undefined;
   ballType?: string | null | undefined;
   tempFee?: number | null | undefined;
-  // 上限 (confirmedCount + remainCount) -- total headcount cap for this
-  // meetup, shown in its own badge next to the sun.
+  // 上限 -- this meetup's confirmed-roster headcount cap, shown in its own
+  // badge next to the sun. Pass AlphaEvent.maxPeople directly (the real
+  // database field) -- NOT confirmedCount + remainCount, which was this
+  // prop's original 2026-09-10 implementation until the user confirmed they
+  // wanted the authoritative DB value instead of a client-computed sum.
   capacity?: number | null | undefined;
   badgeControls?: V8ActiveSunBadgesControls;
   capacityBadgeControls: V8ActiveCapacityBadgeControls;
