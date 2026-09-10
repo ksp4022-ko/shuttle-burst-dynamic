@@ -835,28 +835,22 @@ function identityTagAsset(identity: CurrentIdentity, assets: V8IdentityAssets) {
 
 // Same mapping primaryActionLabel used for text -- now picks the matching
 // CTA plaque image instead (告假=本週請假, 歸陣=恢復出席, 退陣=取消報名).
+// 2026-09-10: 告假/歸陣/退陣 were originally three different-aspect-ratio
+// crops (告假 700x700 square, 歸陣 700x495, 退陣 700x525), which -- even
+// though the same center-point positioning kept them all correctly
+// centered -- rendered at visibly different sizes and read as one "sinking"
+// relative to the others. A first fix widened the narrower two via CSS to
+// match height, but that made them overflow past the scroll's own edge
+// (worse, not better) -- reverted. Same fix as the 已報/尚缺/候補 ema
+// plaques instead: the three source PNGs are unchanged, but all three
+// display .webp files are now letterboxed onto the SAME 1491x1254 canvas
+// (content centered, not stretched/scaled) before export, so they're
+// pixel-dimension-identical and need no per-asset sizing logic at all.
 function primaryActionAsset(identity: CurrentIdentity, assets: V8IdentityAssets) {
   if (identity.signupType === "fixed") {
     return identity.status === "leave" ? assets.ctaSeasonReturn : assets.ctaSeasonLeave;
   }
   return assets.ctaTempCancel;
-}
-
-// The three CTA plaques aren't the same aspect ratio (告假 is a 700x700
-// square, 歸陣 is a 700x495 landscape rectangle, 退陣 is 700x525) -- since
-// controls.cta positions/scales around a CENTER point, the same scale value
-// still centers all three correctly, but the landscape ones render visibly
-// SHORTER than the square one, reading as "sunk lower" even though their
-// center never moved (2026-09-10, user report + confirmed via live
-// measurement: both share the exact same center Y). Widening the narrower
-// ones by their own aspect ratio (so width scales but the resulting HEIGHT
-// stays constant across all three) fixes the visual mismatch without
-// touching the position logic at all.
-function primaryActionAspect(identity: CurrentIdentity) {
-  if (identity.signupType === "fixed") {
-    return identity.status === "leave" ? 700 / 495 : 1;
-  }
-  return 700 / 525;
 }
 
 type V8IdentityAssets = {
@@ -955,13 +949,7 @@ export function V8IdentityScrollContent({
         onClick={onPrimaryAction}
         aria-label={busy ? pendingLabel : primaryActionLabel(identity)}
       >
-        <img
-          src={primaryActionAsset(identity, assets)}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-          style={{ width: `${80 * primaryActionAspect(identity)}px` }}
-        />
+        <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </button>
       <button
         type="button"
