@@ -5,9 +5,11 @@ import {
   bagBaseBaseline,
   bagStrapBaseline,
   buildPreviewAssets,
+  buildV8ActiveCapacityBadgeControls,
   buildV8ActiveHeroOverrides,
   buildV8ActiveIdentityCardControls,
   buildV8ActiveInfoCardsControls,
+  buildV8ActiveRopeOrnamentsControls,
   buildV8ActiveRosterListsControls,
   buildV8ActiveSunBadgesControls,
   buildV8ActiveSunMessagesControls,
@@ -158,15 +160,21 @@ function ActiveCanvas({
   const sunBadgeControls = buildV8ActiveSunBadgesControls(controls);
   const sunMessageControls = buildV8ActiveSunMessagesControls(controls);
   const identityCardControls = buildV8ActiveIdentityCardControls(controls);
+  const capacityBadgeControls = buildV8ActiveCapacityBadgeControls(controls);
+  const ropeOrnamentControls = buildV8ActiveRopeOrnamentsControls(controls);
   const extraPreloadSrcs = [
     assets.sunInfoBadge,
     assets.sunBadgeBallType,
     assets.sunBadgeTempFee,
     assets.sunBadgeCourtCount,
+    assets.sunBadgeCapacity,
     assets.infoCardRegistered,
     assets.infoCardNeeded,
     assets.infoCardWaitlist,
     assets.infoRope,
+    assets.ropeOrnamentA,
+    assets.ropeOrnamentB,
+    assets.ropeOrnamentC,
     assets.rosterFrame,
   ];
 
@@ -189,7 +197,9 @@ function ActiveCanvas({
             hours={3}
             ballType="MS 101"
             tempFee={245}
+            capacity={22}
             badgeControls={sunBadgeControls}
+            capacityBadgeControls={capacityBadgeControls}
             messageControls={sunMessageControls}
           />
         }
@@ -210,6 +220,7 @@ function ActiveCanvas({
           <V8ActiveInfoCards
             assets={assets}
             controls={infoCardsControls}
+            ropeOrnamentControls={ropeOrnamentControls}
             counts={{ registered: 16, needed: 6, waiting: 0 }}
           />
         }

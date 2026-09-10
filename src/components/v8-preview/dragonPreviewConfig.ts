@@ -1,7 +1,9 @@
 import { v8ActiveBackgroundFadeOverrides } from "@/components/v8-active/v8ActiveConfig";
 import type {
+  V8ActiveCapacityBadgeControls,
   V8ActiveIdentityCardControls,
   V8ActiveInfoCardsControls,
+  V8ActiveRopeOrnamentsControls,
   V8ActiveRosterListsControls,
   V8ActiveSunBadgesControls,
   V8ActiveSunMessagesControls,
@@ -289,6 +291,42 @@ export type PreviewControls = {
   activeIdentityForgetLineHeight: number;
   activeIdentityForgetTextAlign: "left" | "center" | "right";
   activeIdentityForgetFontWeight: number;
+  // 上限 (capacity) sun badge -- a 4th badge added 2026-09-10, own type
+  // (see V8ActiveCapacityBadgeControls in v8ActiveConfig.ts for why it's
+  // not folded into the older ballType/tempFee/courtCount trio).
+  activeSunBadgeCapacityShow: boolean;
+  activeSunBadgeCapacityX: number;
+  activeSunBadgeCapacityY: number;
+  activeSunBadgeCapacityScale: number;
+  activeSunBadgeCapacityRotation: number;
+  activeSunBadgeCapacityOpacity: number;
+  activeSunBadgeCapacityZIndex: number;
+  activeSunBadgeCapacityFontSize: number;
+  activeSunBadgeCapacityTextOffsetX: number;
+  activeSunBadgeCapacityTextOffsetY: number;
+  // Three rope-hanging ornaments (注連繩裝飾), each independently shown --
+  // see V8ActiveRopeOrnamentControls in v8ActiveConfig.ts.
+  activeRopeOrnamentAShow: boolean;
+  activeRopeOrnamentAX: number;
+  activeRopeOrnamentAY: number;
+  activeRopeOrnamentAScale: number;
+  activeRopeOrnamentARotation: number;
+  activeRopeOrnamentAOpacity: number;
+  activeRopeOrnamentAZIndex: number;
+  activeRopeOrnamentBShow: boolean;
+  activeRopeOrnamentBX: number;
+  activeRopeOrnamentBY: number;
+  activeRopeOrnamentBScale: number;
+  activeRopeOrnamentBRotation: number;
+  activeRopeOrnamentBOpacity: number;
+  activeRopeOrnamentBZIndex: number;
+  activeRopeOrnamentCShow: boolean;
+  activeRopeOrnamentCX: number;
+  activeRopeOrnamentCY: number;
+  activeRopeOrnamentCScale: number;
+  activeRopeOrnamentCRotation: number;
+  activeRopeOrnamentCOpacity: number;
+  activeRopeOrnamentCZIndex: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -331,6 +369,10 @@ export type PreviewTargetId =
   | "ACTIVE SUN BADGE BALLTYPE"
   | "ACTIVE SUN BADGE TEMPFEE"
   | "ACTIVE SUN BADGE COURTCOUNT"
+  | "ACTIVE SUN BADGE CAPACITY"
+  | "ACTIVE ROPE ORNAMENT A"
+  | "ACTIVE ROPE ORNAMENT B"
+  | "ACTIVE ROPE ORNAMENT C"
   | "ACTIVE ROSTER LISTS";
 
 export type StepMode = "Fine" | "Normal" | "Large";
@@ -376,6 +418,10 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE SUN BADGE BALLTYPE",
   "ACTIVE SUN BADGE TEMPFEE",
   "ACTIVE SUN BADGE COURTCOUNT",
+  "ACTIVE SUN BADGE CAPACITY",
+  "ACTIVE ROPE ORNAMENT A",
+  "ACTIVE ROPE ORNAMENT B",
+  "ACTIVE ROPE ORNAMENT C",
   "ACTIVE ROSTER LISTS",
 ];
 
@@ -679,6 +725,46 @@ export const previewDefaults: PreviewControls = {
   activeIdentityForgetLineHeight: 1,
   activeIdentityForgetTextAlign: "center",
   activeIdentityForgetFontWeight: 400,
+  // Placed top area near the other badges, avoiding the $費用 badge
+  // (tempFee sits at x:101,y:60) and courtCount (x:-46,y:42) -- starting
+  // guess, adjust visually via the console (per-badge X/Y are top-left
+  // corner, same convention as the other three).
+  activeSunBadgeCapacityShow: true,
+  activeSunBadgeCapacityX: 60,
+  activeSunBadgeCapacityY: 8,
+  activeSunBadgeCapacityScale: 1.7,
+  activeSunBadgeCapacityRotation: 0,
+  activeSunBadgeCapacityOpacity: 100,
+  activeSunBadgeCapacityZIndex: 2,
+  activeSunBadgeCapacityFontSize: 13,
+  activeSunBadgeCapacityTextOffsetX: 0,
+  activeSunBadgeCapacityTextOffsetY: 0,
+  // Scattered along the rope's own default curve (rope sits at x:30,y:27,
+  // scale:2.49, rotation:9 -- see v8ActiveInfoCardsDefaults), z-index 19
+  // (just under the rope/plaques' 20) so they read as hanging ON the rope
+  // but below the ema plaques, per the user's request. Starting guess,
+  // adjust visually via the console.
+  activeRopeOrnamentAShow: true,
+  activeRopeOrnamentAX: 22,
+  activeRopeOrnamentAY: 20,
+  activeRopeOrnamentAScale: 1,
+  activeRopeOrnamentARotation: -8,
+  activeRopeOrnamentAOpacity: 100,
+  activeRopeOrnamentAZIndex: 19,
+  activeRopeOrnamentBShow: true,
+  activeRopeOrnamentBX: 30,
+  activeRopeOrnamentBY: 25,
+  activeRopeOrnamentBScale: 1,
+  activeRopeOrnamentBRotation: 5,
+  activeRopeOrnamentBOpacity: 100,
+  activeRopeOrnamentBZIndex: 19,
+  activeRopeOrnamentCShow: true,
+  activeRopeOrnamentCX: 38,
+  activeRopeOrnamentCY: 30,
+  activeRopeOrnamentCScale: 1,
+  activeRopeOrnamentCRotation: -3,
+  activeRopeOrnamentCOpacity: 100,
+  activeRopeOrnamentCZIndex: 19,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -862,6 +948,45 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunBadgeCourtCountTextOffsetX",
     "activeSunBadgeCourtCountTextOffsetY",
   ],
+  "ACTIVE SUN BADGE CAPACITY": [
+    "activeSunBadgeCapacityShow",
+    "activeSunBadgeCapacityX",
+    "activeSunBadgeCapacityY",
+    "activeSunBadgeCapacityScale",
+    "activeSunBadgeCapacityRotation",
+    "activeSunBadgeCapacityOpacity",
+    "activeSunBadgeCapacityZIndex",
+    "activeSunBadgeCapacityFontSize",
+    "activeSunBadgeCapacityTextOffsetX",
+    "activeSunBadgeCapacityTextOffsetY",
+  ],
+  "ACTIVE ROPE ORNAMENT A": [
+    "activeRopeOrnamentAShow",
+    "activeRopeOrnamentAX",
+    "activeRopeOrnamentAY",
+    "activeRopeOrnamentAScale",
+    "activeRopeOrnamentARotation",
+    "activeRopeOrnamentAOpacity",
+    "activeRopeOrnamentAZIndex",
+  ],
+  "ACTIVE ROPE ORNAMENT B": [
+    "activeRopeOrnamentBShow",
+    "activeRopeOrnamentBX",
+    "activeRopeOrnamentBY",
+    "activeRopeOrnamentBScale",
+    "activeRopeOrnamentBRotation",
+    "activeRopeOrnamentBOpacity",
+    "activeRopeOrnamentBZIndex",
+  ],
+  "ACTIVE ROPE ORNAMENT C": [
+    "activeRopeOrnamentCShow",
+    "activeRopeOrnamentCX",
+    "activeRopeOrnamentCY",
+    "activeRopeOrnamentCScale",
+    "activeRopeOrnamentCRotation",
+    "activeRopeOrnamentCOpacity",
+    "activeRopeOrnamentCZIndex",
+  ],
   "ACTIVE ROSTER LISTS": [
     "activeRosterListsShow",
     "activeRosterListsX",
@@ -915,6 +1040,10 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE SUN BADGE BALLTYPE": "activeSunBadgeBallTypeShow",
   "ACTIVE SUN BADGE TEMPFEE": "activeSunBadgeTempFeeShow",
   "ACTIVE SUN BADGE COURTCOUNT": "activeSunBadgeCourtCountShow",
+  "ACTIVE SUN BADGE CAPACITY": "activeSunBadgeCapacityShow",
+  "ACTIVE ROPE ORNAMENT A": "activeRopeOrnamentAShow",
+  "ACTIVE ROPE ORNAMENT B": "activeRopeOrnamentBShow",
+  "ACTIVE ROPE ORNAMENT C": "activeRopeOrnamentCShow",
   "ACTIVE ROSTER LISTS": "activeRosterListsShow",
 };
 
@@ -1117,6 +1246,33 @@ export const controlRanges = {
   activeSunBadgeCourtCountFontSize: { label: "場地數 Font Size", min: 6, max: 28 },
   activeSunBadgeCourtCountTextOffsetX: { label: "場地數 Text Offset X", min: -40, max: 40 },
   activeSunBadgeCourtCountTextOffsetY: { label: "場地數 Text Offset Y", min: -40, max: 40 },
+  activeSunBadgeCapacityX: { label: "上限 X %", min: -150, max: 150 },
+  activeSunBadgeCapacityY: { label: "上限 Y %", min: -150, max: 150 },
+  activeSunBadgeCapacityScale: { label: "上限 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunBadgeCapacityRotation: { label: "上限 Rotation", min: -180, max: 180 },
+  activeSunBadgeCapacityOpacity: { label: "上限 Opacity", min: 0, max: 100 },
+  activeSunBadgeCapacityZIndex: { label: "上限 Z-Index", min: 0, max: 40 },
+  activeSunBadgeCapacityFontSize: { label: "上限 Font Size", min: 6, max: 28 },
+  activeSunBadgeCapacityTextOffsetX: { label: "上限 Text Offset X", min: -40, max: 40 },
+  activeSunBadgeCapacityTextOffsetY: { label: "上限 Text Offset Y", min: -40, max: 40 },
+  activeRopeOrnamentAX: { label: "繩飾A X %", min: -20, max: 120 },
+  activeRopeOrnamentAY: { label: "繩飾A Y %", min: -20, max: 140 },
+  activeRopeOrnamentAScale: { label: "繩飾A Scale", min: 0.2, max: 3, step: 0.01 },
+  activeRopeOrnamentARotation: { label: "繩飾A Rotation", min: -180, max: 180 },
+  activeRopeOrnamentAOpacity: { label: "繩飾A Opacity", min: 0, max: 100 },
+  activeRopeOrnamentAZIndex: { label: "繩飾A Z-Index", min: 0, max: 40 },
+  activeRopeOrnamentBX: { label: "繩飾B X %", min: -20, max: 120 },
+  activeRopeOrnamentBY: { label: "繩飾B Y %", min: -20, max: 140 },
+  activeRopeOrnamentBScale: { label: "繩飾B Scale", min: 0.2, max: 3, step: 0.01 },
+  activeRopeOrnamentBRotation: { label: "繩飾B Rotation", min: -180, max: 180 },
+  activeRopeOrnamentBOpacity: { label: "繩飾B Opacity", min: 0, max: 100 },
+  activeRopeOrnamentBZIndex: { label: "繩飾B Z-Index", min: 0, max: 40 },
+  activeRopeOrnamentCX: { label: "繩飾C X %", min: -20, max: 120 },
+  activeRopeOrnamentCY: { label: "繩飾C Y %", min: -20, max: 140 },
+  activeRopeOrnamentCScale: { label: "繩飾C Scale", min: 0.2, max: 3, step: 0.01 },
+  activeRopeOrnamentCRotation: { label: "繩飾C Rotation", min: -180, max: 180 },
+  activeRopeOrnamentCOpacity: { label: "繩飾C Opacity", min: 0, max: 100 },
+  activeRopeOrnamentCZIndex: { label: "繩飾C Z-Index", min: 0, max: 40 },
   activeRosterListsX: { label: "Roster X %", min: -20, max: 120 },
   activeRosterListsY: { label: "Roster Y %", min: -150, max: 150 },
   activeRosterListsScale: { label: "Roster Scale", min: 0.3, max: 2, step: 0.01 },
@@ -1375,6 +1531,22 @@ Show: ${controls.activeIdentityShow ? "ON" : "OFF"}
 代報 (helper signup): X ${Math.round(controls.activeIdentityHelperSignupX)}, Y ${Math.round(controls.activeIdentityHelperSignupY)}, Scale ${controls.activeIdentityHelperSignupScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityHelperSignupRotation)}, Opacity ${Math.round(controls.activeIdentityHelperSignupOpacity)}, Z ${Math.round(controls.activeIdentityHelperSignupZIndex)}
 代退 (helper cancel): X ${Math.round(controls.activeIdentityHelperCancelX)}, Y ${Math.round(controls.activeIdentityHelperCancelY)}, Scale ${controls.activeIdentityHelperCancelScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityHelperCancelRotation)}, Opacity ${Math.round(controls.activeIdentityHelperCancelOpacity)}, Z ${Math.round(controls.activeIdentityHelperCancelZIndex)}
 不是我 (forget): X ${Math.round(controls.activeIdentityForgetX)}, Y ${Math.round(controls.activeIdentityForgetY)}, Scale ${controls.activeIdentityForgetScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityForgetRotation)}, Opacity ${Math.round(controls.activeIdentityForgetOpacity)}, Z ${Math.round(controls.activeIdentityForgetZIndex)}, Font ${Math.round(controls.activeIdentityForgetFontSize)}, Max Width ${Math.round(controls.activeIdentityForgetMaxWidth)}, Letter Spacing ${controls.activeIdentityForgetLetterSpacing.toFixed(1)}, Line Height ${controls.activeIdentityForgetLineHeight.toFixed(2)}, Align ${controls.activeIdentityForgetTextAlign}, Weight ${Math.round(controls.activeIdentityForgetFontWeight)}
+
+ACTIVE SUN BADGE CAPACITY (上限)
+Show: ${controls.activeSunBadgeCapacityShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeSunBadgeCapacityX)}
+Y: ${Math.round(controls.activeSunBadgeCapacityY)}
+Scale: ${controls.activeSunBadgeCapacityScale.toFixed(2)}
+Rotation: ${Math.round(controls.activeSunBadgeCapacityRotation)}
+Opacity: ${Math.round(controls.activeSunBadgeCapacityOpacity)}
+Z-Index: ${Math.round(controls.activeSunBadgeCapacityZIndex)}
+Font Size: ${Math.round(controls.activeSunBadgeCapacityFontSize)}
+Text Offset: ${Math.round(controls.activeSunBadgeCapacityTextOffsetX)}, ${Math.round(controls.activeSunBadgeCapacityTextOffsetY)}
+
+ACTIVE ROPE ORNAMENT A/B/C (繩飾)
+A: Show ${controls.activeRopeOrnamentAShow ? "ON" : "OFF"}, X ${Math.round(controls.activeRopeOrnamentAX)}, Y ${Math.round(controls.activeRopeOrnamentAY)}, Scale ${controls.activeRopeOrnamentAScale.toFixed(2)}, Rotation ${Math.round(controls.activeRopeOrnamentARotation)}, Opacity ${Math.round(controls.activeRopeOrnamentAOpacity)}, Z ${Math.round(controls.activeRopeOrnamentAZIndex)}
+B: Show ${controls.activeRopeOrnamentBShow ? "ON" : "OFF"}, X ${Math.round(controls.activeRopeOrnamentBX)}, Y ${Math.round(controls.activeRopeOrnamentBY)}, Scale ${controls.activeRopeOrnamentBScale.toFixed(2)}, Rotation ${Math.round(controls.activeRopeOrnamentBRotation)}, Opacity ${Math.round(controls.activeRopeOrnamentBOpacity)}, Z ${Math.round(controls.activeRopeOrnamentBZIndex)}
+C: Show ${controls.activeRopeOrnamentCShow ? "ON" : "OFF"}, X ${Math.round(controls.activeRopeOrnamentCX)}, Y ${Math.round(controls.activeRopeOrnamentCY)}, Scale ${controls.activeRopeOrnamentCScale.toFixed(2)}, Rotation ${Math.round(controls.activeRopeOrnamentCRotation)}, Opacity ${Math.round(controls.activeRopeOrnamentCOpacity)}, Z ${Math.round(controls.activeRopeOrnamentCZIndex)}
 
 ACTIVE ROSTER LISTS
 Show: ${controls.activeRosterListsShow ? "ON" : "OFF"}
@@ -1676,6 +1848,53 @@ export function buildV8ActiveIdentityCardControls(controls: PreviewControls): V8
       lineHeight: controls.activeIdentityForgetLineHeight,
       textAlign: controls.activeIdentityForgetTextAlign,
       fontWeight: controls.activeIdentityForgetFontWeight,
+    },
+  };
+}
+
+export function buildV8ActiveCapacityBadgeControls(controls: PreviewControls): V8ActiveCapacityBadgeControls {
+  return {
+    show: controls.activeSunBadgeCapacityShow,
+    x: controls.activeSunBadgeCapacityX,
+    y: controls.activeSunBadgeCapacityY,
+    scale: controls.activeSunBadgeCapacityScale,
+    rotation: controls.activeSunBadgeCapacityRotation,
+    opacity: controls.activeSunBadgeCapacityOpacity,
+    zIndex: controls.activeSunBadgeCapacityZIndex,
+    fontSize: controls.activeSunBadgeCapacityFontSize,
+    textOffsetX: controls.activeSunBadgeCapacityTextOffsetX,
+    textOffsetY: controls.activeSunBadgeCapacityTextOffsetY,
+  };
+}
+
+export function buildV8ActiveRopeOrnamentsControls(controls: PreviewControls): V8ActiveRopeOrnamentsControls {
+  return {
+    a: {
+      show: controls.activeRopeOrnamentAShow,
+      x: controls.activeRopeOrnamentAX,
+      y: controls.activeRopeOrnamentAY,
+      scale: controls.activeRopeOrnamentAScale,
+      rotation: controls.activeRopeOrnamentARotation,
+      opacity: controls.activeRopeOrnamentAOpacity,
+      zIndex: controls.activeRopeOrnamentAZIndex,
+    },
+    b: {
+      show: controls.activeRopeOrnamentBShow,
+      x: controls.activeRopeOrnamentBX,
+      y: controls.activeRopeOrnamentBY,
+      scale: controls.activeRopeOrnamentBScale,
+      rotation: controls.activeRopeOrnamentBRotation,
+      opacity: controls.activeRopeOrnamentBOpacity,
+      zIndex: controls.activeRopeOrnamentBZIndex,
+    },
+    c: {
+      show: controls.activeRopeOrnamentCShow,
+      x: controls.activeRopeOrnamentCX,
+      y: controls.activeRopeOrnamentCY,
+      scale: controls.activeRopeOrnamentCScale,
+      rotation: controls.activeRopeOrnamentCRotation,
+      opacity: controls.activeRopeOrnamentCOpacity,
+      zIndex: controls.activeRopeOrnamentCZIndex,
     },
   };
 }

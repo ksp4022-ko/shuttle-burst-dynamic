@@ -6,9 +6,11 @@ import type { AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
   activeTargetOrder,
+  buildV8ActiveCapacityBadgeControls,
   buildV8ActiveHeroOverrides,
   buildV8ActiveIdentityCardControls,
   buildV8ActiveInfoCardsControls,
+  buildV8ActiveRopeOrnamentsControls,
   buildV8ActiveRosterListsControls,
   buildV8ActiveSunBadgesControls,
   buildV8ActiveSunMessagesControls,
@@ -24,8 +26,10 @@ import {
   v8ActiveStageAspectRatio,
   v8ActiveSunBadgesDefaults,
   v8ActiveSunMessagesDefaults,
+  type V8ActiveCapacityBadgeControls,
   type V8ActiveIdentityCardControls,
   type V8ActiveIdentityVisualControls,
+  type V8ActiveRopeOrnamentsControls,
   type V8ActiveSunBadgeControls,
   type V8ActiveSunBadgesControls,
   type V8ActiveSunMessageControls,
@@ -173,6 +177,8 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const sunBadgeControls = buildV8ActiveSunBadgesControls(tuningControls);
   const sunMessageControls = buildV8ActiveSunMessagesControls(tuningControls);
   const identityCardControls = buildV8ActiveIdentityCardControls(tuningControls);
+  const capacityBadgeControls = buildV8ActiveCapacityBadgeControls(tuningControls);
+  const ropeOrnamentControls = buildV8ActiveRopeOrnamentsControls(tuningControls);
 
   // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
   // URLs handed to sunContent/infoCardsContent/rosterListsContent below,
@@ -183,10 +189,14 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     assets.sunBadgeBallType,
     assets.sunBadgeTempFee,
     assets.sunBadgeCourtCount,
+    assets.sunBadgeCapacity,
     assets.infoCardRegistered,
     assets.infoCardNeeded,
     assets.infoCardWaitlist,
     assets.infoRope,
+    assets.ropeOrnamentA,
+    assets.ropeOrnamentB,
+    assets.ropeOrnamentC,
     assets.rosterFrame,
   ];
 
@@ -225,7 +235,9 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             hours={selectedEvent.hours}
             ballType={selectedEvent.ballType}
             tempFee={selectedEvent.tempFee}
+            capacity={roster.summary.confirmedCount + roster.summary.remainCount}
             badgeControls={sunBadgeControls}
+            capacityBadgeControls={capacityBadgeControls}
             messageControls={sunMessageControls}
             onPreviousEvent={() => switchToAdjacentMeetup(-1)}
             onNextEvent={() => switchToAdjacentMeetup(1)}
@@ -253,6 +265,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
           <V8ActiveInfoCards
             assets={assets}
             controls={infoCardsControls}
+            ropeOrnamentControls={ropeOrnamentControls}
             counts={{
               registered: roster.summary.confirmedCount,
               needed: roster.summary.remainCount,
@@ -483,6 +496,11 @@ const BADGE_TEXT_INSETS = {
   ballType: { top: "39%", bottom: "36%", left: "44%", right: "18%" },
   tempFee: { top: "40%", bottom: "31%", left: "44%", right: "16%" },
   courtCount: { top: "36%", bottom: "34%", left: "44%", right: "21%" },
+  // Rough estimate (not yet pixel-scanned like the other three) -- the
+  // capacity badge's own "上限" label + moon icon sit top-left, blank area
+  // fills the right/lower two-thirds. Adjust via the console's Text Offset
+  // X/Y if the number sits too close to the label or the wave border.
+  capacity: { top: "40%", bottom: "20%", left: "40%", right: "10%" },
 } as const;
 
 function V8SunInfoBadge({
@@ -545,6 +563,45 @@ function V8SunInfoBadgeScattered({
         src={src}
         label={label}
         textInset={textInset}
+        textOffsetX={controls.textOffsetX}
+        textOffsetY={controls.textOffsetY}
+      />
+    </div>
+  );
+}
+
+// Same layout as V8SunInfoBadgeScattered, plus Opacity/Z-index (per the
+// baseline) since this badge was added after that trio and is kept fully
+// compliant rather than sharing their older, baseline-predating type (see
+// V8ActiveCapacityBadgeControls in v8ActiveConfig.ts).
+function V8CapacityBadge({
+  src,
+  label,
+  controls,
+}: {
+  src: string;
+  label: string;
+  controls: V8ActiveCapacityBadgeControls;
+}) {
+  if (!controls.show) return null;
+  return (
+    <div
+      className="v8-sun-info-scattered"
+      style={
+        {
+          left: `${controls.x}%`,
+          top: `${controls.y}%`,
+          fontSize: controls.fontSize,
+          opacity: controls.opacity / 100,
+          zIndex: controls.zIndex,
+          transform: `scale(${controls.scale}) rotate(${controls.rotation}deg)`,
+        } as CSSProperties
+      }
+    >
+      <V8SunInfoBadge
+        src={src}
+        label={label}
+        textInset={BADGE_TEXT_INSETS.capacity}
         textOffsetX={controls.textOffsetX}
         textOffsetY={controls.textOffsetY}
       />
@@ -660,12 +717,19 @@ export function V8ActiveSunContent({
   hours,
   ballType,
   tempFee,
+  capacity,
   badgeControls = v8ActiveSunBadgesDefaults,
+  capacityBadgeControls,
   messageControls = v8ActiveSunMessagesDefaults,
   onPreviousEvent,
   onNextEvent,
 }: {
-  assets: { sunBadgeBallType: string; sunBadgeTempFee: string; sunBadgeCourtCount: string };
+  assets: {
+    sunBadgeBallType: string;
+    sunBadgeTempFee: string;
+    sunBadgeCourtCount: string;
+    sunBadgeCapacity: string;
+  };
   eventDate: string;
   eventName: string;
   eventNote?: string | null | undefined;
@@ -673,7 +737,11 @@ export function V8ActiveSunContent({
   hours?: number | null | undefined;
   ballType?: string | null | undefined;
   tempFee?: number | null | undefined;
+  // 上限 (confirmedCount + remainCount) -- total headcount cap for this
+  // meetup, shown in its own badge next to the sun.
+  capacity?: number | null | undefined;
   badgeControls?: V8ActiveSunBadgesControls;
+  capacityBadgeControls: V8ActiveCapacityBadgeControls;
   messageControls?: V8ActiveSunMessagesControls;
   // Meetup switcher -- arrows at the sun's own left/right edge + swipe
   // anywhere on the sun. Optional so the /v8/preview mock canvas (which
@@ -716,6 +784,9 @@ export function V8ActiveSunContent({
           controls={badgeControls.courtCount}
           textInset={BADGE_TEXT_INSETS.courtCount}
         />
+      ) : null}
+      {typeof capacity === "number" ? (
+        <V8CapacityBadge src={assets.sunBadgeCapacity} label={String(capacity)} controls={capacityBadgeControls} />
       ) : null}
     </>
   );

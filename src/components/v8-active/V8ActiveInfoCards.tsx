@@ -1,11 +1,19 @@
 import type { CSSProperties } from "react";
-import type { V8ActiveInfoCardControls, V8ActiveInfoCardsControls } from "./v8ActiveConfig";
+import type {
+  V8ActiveInfoCardControls,
+  V8ActiveInfoCardsControls,
+  V8ActiveRopeOrnamentControls,
+  V8ActiveRopeOrnamentsControls,
+} from "./v8ActiveConfig";
 
 type Assets = {
   infoCardRegistered: string;
   infoCardNeeded: string;
   infoCardWaitlist: string;
   infoRope: string;
+  ropeOrnamentA: string;
+  ropeOrnamentB: string;
+  ropeOrnamentC: string;
 };
 
 // x/y/rotation/scale all follow the same %-of-hero-canvas convention as
@@ -36,6 +44,42 @@ function InfoCardLayer({
           width: `${baseWidth * controls.scale}%`,
           transform: `translate(-50%, -50%) rotate(${controls.rotation}deg)`,
           zIndex: 20,
+        } as CSSProperties
+      }
+    />
+  );
+}
+
+// Purely decorative rope ornament (no dynamic text) -- same %-of-canvas +
+// translate(-50%,-50%) positioning as InfoCardLayer, but also carries its
+// own Opacity/Z-index (per docs/V8_COMPONENT_CONTROL_BASELINE.md) since
+// each of the three is independently baseline-compliant, unlike
+// InfoCardLayer's plaques which predate the baseline.
+function RopeOrnamentLayer({
+  src,
+  controls,
+  baseWidth,
+}: {
+  src: string;
+  controls: V8ActiveRopeOrnamentControls;
+  baseWidth: number;
+}) {
+  if (!controls.show) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      style={
+        {
+          position: "absolute",
+          left: `${controls.x}%`,
+          top: `${controls.y}%`,
+          width: `${baseWidth * controls.scale}%`,
+          opacity: controls.opacity / 100,
+          transform: `translate(-50%, -50%) rotate(${controls.rotation}deg)`,
+          zIndex: controls.zIndex,
         } as CSSProperties
       }
     />
@@ -134,10 +178,12 @@ export function V8ActiveInfoCards({
   assets,
   controls,
   counts,
+  ropeOrnamentControls,
 }: {
   assets: Assets;
   controls: V8ActiveInfoCardsControls;
   counts: { registered: number; needed: number; waiting: number };
+  ropeOrnamentControls: V8ActiveRopeOrnamentsControls;
 }) {
   return (
     <>
@@ -146,6 +192,9 @@ export function V8ActiveInfoCards({
           baseWidth here is that pre-rotation width, i.e. the rope's visual
           LENGTH once rotated, not its rendered width. */}
       <InfoCardLayer src={assets.infoRope} controls={controls.rope} baseWidth={26} />
+      <RopeOrnamentLayer src={assets.ropeOrnamentA} controls={ropeOrnamentControls.a} baseWidth={6} />
+      <RopeOrnamentLayer src={assets.ropeOrnamentB} controls={ropeOrnamentControls.b} baseWidth={6} />
+      <RopeOrnamentLayer src={assets.ropeOrnamentC} controls={ropeOrnamentControls.c} baseWidth={6} />
       <InfoCardStatusLayer
         src={assets.infoCardRegistered}
         controls={controls.registered}

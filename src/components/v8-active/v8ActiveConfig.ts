@@ -88,6 +88,23 @@ export const v8ActiveCtaPlaqueFiles = {
   helperCancel: "cta-plaque-helper-leave-v1.webp",
 } as const;
 
+// 上限 (capacity) -- a 4th sun-side cloud badge, same template family as
+// ballType/tempFee/courtCount but added later (2026-09-10) so it's kept as
+// its own standalone control group (V8ActiveCapacityBadgeControls below)
+// rather than folded into the older three's shared type, which predates
+// the component baseline and doesn't have Opacity/Z-index.
+export const v8ActiveCapacityBadgeFile = "sun-info-badge-capacity-v1.webp";
+
+// Three rope-hanging ornaments (注連繩 decoration) threaded along the
+// red/blue rope, below the 已報/尚缺/候補 ema plaques -- purely decorative,
+// no dynamic text. Three distinct pieces of art (not one asset repeated)
+// per the user's own three separate uploads.
+export const v8ActiveRopeOrnamentFiles = {
+  a: "rope-ornament-a-v1.webp",
+  b: "rope-ornament-b-v1.webp",
+  c: "rope-ornament-c-v1.webp",
+} as const;
+
 export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
@@ -116,6 +133,10 @@ export function buildV8ActiveAssets(baseUrl: string) {
     ctaTempSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.tempSignup}`,
     ctaHelperSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperSignup}`,
     ctaHelperCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperCancel}`,
+    sunBadgeCapacity: `${activeBase}/${v8ActiveCapacityBadgeFile}`,
+    ropeOrnamentA: `${activeBase}/${v8ActiveRopeOrnamentFiles.a}`,
+    ropeOrnamentB: `${activeBase}/${v8ActiveRopeOrnamentFiles.b}`,
+    ropeOrnamentC: `${activeBase}/${v8ActiveRopeOrnamentFiles.c}`,
   };
 }
 
@@ -471,5 +492,49 @@ export type V8ActiveIdentityCardControls = {
   helperSignup: V8ActiveIdentityVisualControls;
   helperCancel: V8ActiveIdentityVisualControls;
   forget: V8ActiveIdentityTextControls;
+};
+
+// 上限 (capacity) sun badge -- a 4th badge alongside 球種/費用/場時, added
+// 2026-09-10. Full baseline set (X/Y/Scale/Rotation/Opacity/Z-index) plus
+// the same Font Size/Text Offset X/Y the other three already have for their
+// overlaid value text -- kept as its own type (not folded into the older
+// three's V8ActiveSunBadgeControls in dragonPreviewConfig.ts) since that
+// type predates the baseline and has no Opacity/Z-index of its own; adding
+// them there would be a retrofit of already-shipped components, which the
+// user decided against for existing V8 components.
+export type V8ActiveCapacityBadgeControls = {
+  show: boolean;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  zIndex: number;
+  fontSize: number;
+  textOffsetX: number;
+  textOffsetY: number;
+};
+
+// Three independent rope-hanging ornaments (注連繩 decoration), each fully
+// baseline-compliant (X/Y/Scale/Rotation/Opacity/Z-index + own Show --
+// matching the existing precedent of the three ema plaques each having
+// their own independent show, not one shared toggle for a "family" of
+// separate decorative pieces). x/y/rotation/scale follow the same
+// %-of-hero-canvas + translate(-50%,-50%) convention as the ema
+// plaques/rope (see V8ActiveInfoCards.tsx's InfoCardLayer).
+export type V8ActiveRopeOrnamentControls = {
+  show: boolean;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  zIndex: number;
+};
+
+export type V8ActiveRopeOrnamentsControls = {
+  a: V8ActiveRopeOrnamentControls;
+  b: V8ActiveRopeOrnamentControls;
+  c: V8ActiveRopeOrnamentControls;
 };
 
