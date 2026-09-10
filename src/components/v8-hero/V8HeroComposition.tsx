@@ -569,25 +569,16 @@ export function V8HeroComposition({
             <div style={heroStyle}>
               <div style={{ ...heroCopyStyle, left: heroBaseline.centerX, top: heroBaseline.top, width: controls.heroWidth, transform: `translate(calc(-50% + ${controls.heroX}px), ${controls.heroY}px) scale(${controls.heroScale})` }}>
                 {confirmed ? null : (
-                  <>
-                    <p style={eyebrowStyle}>龍虎交鋒・戰局未定</p>
-                    <h1 style={titleStyle}>SHUTTLE V8</h1>
-                    <div style={{ ...selectorStyle, transform: `translateY(${controls.heroEventY}px)` }}>
-                      <button type="button" onClick={onPreviousEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="上一場聚會">
-                        ‹
-                      </button>
-                      <button type="button" onClick={onConfirm} disabled={confirmDisabled} style={eventButtonStyle}>
-                        {eventLabel || "選擇聚會"}
-                      </button>
-                      <button type="button" onClick={onNextEvent} disabled={!hasMultipleEvents || confirmDisabled} style={selectorArrowStyle} aria-label="下一場聚會">
-                        ›
-                      </button>
-                    </div>
-                    {eventPositionLabel ? <small style={eventPositionStyle}>{eventPositionLabel}</small> : null}
-                    <button ref={confirmButtonRef ?? fallbackConfirmButtonRef} type="button" disabled={confirmDisabled} onClick={onConfirm} style={{ ...ctaStyle, transform: `translateY(${controls.heroCtaY}px)` }}>
-                      進入戰局
-                    </button>
-                  </>
+                  // 2026-09-11: eyebrow/title/event-selector/position-label
+                  // (previously rendered here, all visually inside the red
+                  // sun) are replaced by the new copied sun module -- see
+                  // V8OpeningSunContent, passed in via the sunContent prop
+                  // above. Only the CTA stays here, unchanged (out of scope
+                  // for that copy -- its position may need to be
+                  // coordinated with the new sun content later).
+                  <button ref={confirmButtonRef ?? fallbackConfirmButtonRef} type="button" disabled={confirmDisabled} onClick={onConfirm} style={{ ...ctaStyle, transform: `translateY(${controls.heroCtaY}px)` }}>
+                    進入戰局
+                  </button>
                 )}
               </div>
             </div>

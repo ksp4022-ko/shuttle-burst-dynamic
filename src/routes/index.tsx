@@ -14,6 +14,7 @@ import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepa
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
+import { V8OpeningSunContent, V8OpeningSunStyles } from "@/components/v8-hero/V8OpeningSunContent";
 import { V8ActivePage } from "@/components/v8-active/V8ActivePage";
 import {
   HomepageToast,
@@ -1137,17 +1138,31 @@ export function Index() {
         )}
 
         {v8HeroPickerStage ? (
-          <V8HeroComposition
-            eventLabel={selectedMeetupLabel}
-            eventPositionLabel={selectedMeetupPosition}
-            hasMultipleEvents={flow.events.length > 1}
-            confirmed={v8MeetupConfirmed}
-            confirmButtonRef={confirmMeetupButtonRef}
-            confirmDisabled={Boolean(flow.pendingAction) || !previewPickedEvent}
-            onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
-            onNextEvent={() => selectAdjacentV8Meetup(1)}
-            onConfirm={() => void confirmV8MeetupSelection()}
-          />
+          <>
+            <V8OpeningSunStyles />
+            <V8HeroComposition
+              eventLabel={selectedMeetupLabel}
+              eventPositionLabel={selectedMeetupPosition}
+              hasMultipleEvents={flow.events.length > 1}
+              confirmed={v8MeetupConfirmed}
+              confirmButtonRef={confirmMeetupButtonRef}
+              confirmDisabled={Boolean(flow.pendingAction) || !previewPickedEvent}
+              onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
+              onNextEvent={() => selectAdjacentV8Meetup(1)}
+              onConfirm={() => void confirmV8MeetupSelection()}
+              // Open 頁面自己的紅日內容(複製自 Active 的 V8ActiveSunContent，
+              // 獨立程式碼、不共用) -- 資料來源接目前預覽/游標選中的那場聚會
+              // (previewPickedEvent，輪播切換時即時更新)，非固定單一場次。
+              controlOverrides={{ sunZIndex: 11 }}
+              sunContent={
+                <V8OpeningSunContent
+                  event={previewPickedEvent}
+                  onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
+                  onNextEvent={() => selectAdjacentV8Meetup(1)}
+                />
+              }
+            />
+          </>
         ) : null}
 
         {preview && !isV8Route ? (
