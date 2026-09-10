@@ -764,25 +764,24 @@ type V8IdentityAssets = {
   ctaHelperCancel: string;
 };
 
-// Per docs/V8_COMPONENT_CONTROL_BASELINE.md -- turns one console-tunable
-// visual-control group into the transform/opacity/z-index style applied to
-// an element's own WRAPPER (not its CSS-sized <img>/text content), so the
-// baseline's X/Y/Scale/Rotation/Opacity/Z-index sit on top of the tiny
-// panel's existing (already content-fitted, see the 2026-09-10 fix comment
-// on v8ActiveConfig.ts's V8ActiveIdentityCardControls) flex layout instead
-// of replacing it. X/Y are px nudges, not canvas %.
-// Does NOT set `position` -- most of these elements are plain flex children
-// (position: static by default) where z-index needs a position value added,
-// but the status-mark corner badge already has its own position: absolute
-// from .v8-scroll-status-mark (see the CSS below) and setting position here
-// too would override that inline, breaking its top-left overlap placement.
-// Callers that need position:relative for z-index to take effect add it
-// themselves in their own style object (see the JSX below).
+// Per docs/V8_COMPONENT_CONTROL_BASELINE.md -- each identity element is
+// independently absolute-positioned at X/Y % of the WHOLE tiger-scroll box
+// (V8HeroComposition's scrollContent slot, now an unclipped inset:0 layer --
+// see the 2026-09-10 comment there), translate(-50%,-50%)-centered on that
+// point the same way sunBadge/infoCards already work elsewhere. This
+// replaced an earlier px-nudge-on-flex-layout version (2026-09-10) that
+// turned out too cramped once the user actually tried to move elements
+// freely (e.g. hanging the identity tag below the scroll) -- nudging on top
+// of a small clipped flex box couldn't reach past its own bounds no matter
+// how far a control was pushed, since the clipping wasn't itself tunable.
 function identityVisualStyle(c: V8ActiveIdentityVisualControls): CSSProperties {
   return {
+    position: "absolute",
+    left: `${c.x}%`,
+    top: `${c.y}%`,
     zIndex: c.zIndex,
     opacity: c.opacity / 100,
-    transform: `translate(${c.x}px, ${c.y}px) scale(${c.scale}) rotate(${c.rotation}deg)`,
+    transform: `translate(-50%, -50%) scale(${c.scale}) rotate(${c.rotation}deg)`,
   };
 }
 
@@ -824,11 +823,9 @@ export function V8IdentityScrollContent({
       <strong
         className="v8-scroll-identity-name"
         style={{
-          position: "relative",
           ...identityVisualStyle(controls.name),
           fontSize: nameSize,
           width: controls.name.maxWidth,
-          margin: "0 auto",
           letterSpacing: controls.name.letterSpacing,
           lineHeight: controls.name.lineHeight,
           textAlign: controls.name.textAlign,
@@ -838,50 +835,43 @@ export function V8IdentityScrollContent({
       >
         {identity.name}
       </strong>
-      <div
-        className="v8-scroll-identity-tag"
-        style={{ position: "relative", ...identityVisualStyle(controls.tag) }}
-        aria-label={roleLabel(identity)}
-      >
+      <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
         <img src={identityTagAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
       <button
         type="button"
         className="v8-scroll-cta v8-scroll-cta-img"
-        style={{ position: "relative", ...identityVisualStyle(controls.cta) }}
+        style={identityVisualStyle(controls.cta)}
         disabled={busy}
         onClick={onPrimaryAction}
         aria-label={busy ? pendingLabel : primaryActionLabel(identity)}
       >
         <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </button>
-      <div className="v8-scroll-secondary-actions" aria-label="代操作">
-        <button
-          type="button"
-          className="v8-scroll-helper-btn"
-          style={{ position: "relative", ...identityVisualStyle(controls.helperSignup) }}
-          disabled={busy}
-          onClick={onHelperSignup}
-          aria-label="幫人報名"
-        >
-          <img src={assets.ctaHelperSignup} alt="" aria-hidden="true" draggable={false} />
-        </button>
-        <button
-          type="button"
-          className="v8-scroll-helper-btn"
-          style={{ position: "relative", ...identityVisualStyle(controls.helperCancel) }}
-          disabled={busy}
-          onClick={onHelperCancel}
-          aria-label="幫人取消"
-        >
-          <img src={assets.ctaHelperCancel} alt="" aria-hidden="true" draggable={false} />
-        </button>
-      </div>
+      <button
+        type="button"
+        className="v8-scroll-helper-btn"
+        style={identityVisualStyle(controls.helperSignup)}
+        disabled={busy}
+        onClick={onHelperSignup}
+        aria-label="幫人報名"
+      >
+        <img src={assets.ctaHelperSignup} alt="" aria-hidden="true" draggable={false} />
+      </button>
+      <button
+        type="button"
+        className="v8-scroll-helper-btn"
+        style={identityVisualStyle(controls.helperCancel)}
+        disabled={busy}
+        onClick={onHelperCancel}
+        aria-label="幫人取消"
+      >
+        <img src={assets.ctaHelperCancel} alt="" aria-hidden="true" draggable={false} />
+      </button>
       <button
         type="button"
         className="v8-scroll-forget"
         style={{
-          position: "relative",
           ...identityVisualStyle(controls.forget),
           fontSize: controls.forget.fontSize,
           width: controls.forget.maxWidth,
@@ -1140,28 +1130,27 @@ export function V8ActiveStyles() {
         margin-bottom: 8px;
       }
 
+      /* Just a positioning root now -- every child below is independently
+         absolute-positioned at its own X/Y % of this box (see
+         identityVisualStyle), not flex-laid-out, so this only needs to span
+         the full (now unclipped, see V8HeroComposition's scrollContent
+         slot) tiger-scroll box. */
       .v8-scroll-identity {
         position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
         width: 100%;
         height: 100%;
-        min-width: 0;
         text-align: center;
         color: #3a2a12;
+        pointer-events: none;
       }
 
-      /* The tiger-scroll panel is a fixed, small box (~83x134px on a
-         typical phone -- see V8HeroComposition's tigerScroll inset), so
-         every child below is sized to that real budget, not guessed. */
+      .v8-scroll-identity > * {
+        pointer-events: auto;
+      }
+
       .v8-scroll-identity-name {
         display: block;
-        flex-shrink: 0;
-        width: 100%;
-        max-width: 100%;
+        margin: 0;
         line-height: 1.1;
         font-weight: 900;
         letter-spacing: 0;
@@ -1177,21 +1166,17 @@ export function V8ActiveStyles() {
          below) instead of the old second span. */
       .v8-scroll-identity-tag {
         display: flex;
-        flex-shrink: 0;
         align-items: center;
         justify-content: center;
       }
 
       .v8-scroll-identity-tag img {
         display: block;
-        height: 16px;
+        height: 26px;
         width: auto;
       }
 
       .v8-scroll-status-mark {
-        position: absolute;
-        left: -4px;
-        top: -4px;
         display: grid;
         place-items: center;
         pointer-events: none;
@@ -1199,12 +1184,11 @@ export function V8ActiveStyles() {
 
       .v8-scroll-status-mark img {
         display: block;
-        height: 18px;
+        height: 28px;
         width: auto;
       }
 
       .v8-scroll-cta {
-        flex-shrink: 0;
         border: none;
         background: none;
         padding: 0;
@@ -1212,23 +1196,14 @@ export function V8ActiveStyles() {
 
       .v8-scroll-cta-img img {
         display: block;
-        width: 50px;
+        width: 80px;
         height: auto;
       }
 
       .v8-scroll-cta:disabled,
-      .v8-scroll-secondary-actions button:disabled,
+      .v8-scroll-helper-btn:disabled,
       .v8-scroll-forget:disabled {
         opacity: 0.55;
-      }
-
-      .v8-scroll-secondary-actions {
-        display: flex;
-        flex-shrink: 0;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        width: 100%;
       }
 
       .v8-scroll-helper-btn {
@@ -1239,16 +1214,14 @@ export function V8ActiveStyles() {
 
       .v8-scroll-helper-btn img {
         display: block;
-        width: 30px;
+        width: 48px;
         height: auto;
       }
 
       .v8-scroll-forget {
-        flex-shrink: 0;
         border: none;
         background: none;
         color: rgba(58, 42, 18, 0.52);
-        font-size: 7px;
         line-height: 1;
         text-decoration: underline;
       }

@@ -489,26 +489,20 @@ export function V8HeroComposition({
                   draggable={false}
                   style={{ display: "block", width: "100%", height: "auto", pointerEvents: "none" }}
                 />
-                {/* Panel inset re-measured 2026-09-09 off tiger-scroll-fixed-v2's
-                    own pixels (contiguous-cream-run pixel scan, several rows/
-                    columns intersected for a safe rectangle that avoids the
-                    frame's gold corner ornaments dipping into a couple of
-                    scan columns) -- v2 is a different pose/composition than
-                    v1, so this panel sits in a different spot; re-run the
-                    same scan if the art changes again rather than reusing
-                    these numbers. */}
+                {/* Spans the WHOLE tiger-scroll box (not just the blank
+                    parchment area) with no clipping -- each identity element
+                    inside scrollContent positions itself with its own %
+                    x/y/scale/rotation/z-index (see V8IdentityScrollContent
+                    in V8ActivePage.tsx), so it can extend past the scroll's
+                    own edges (e.g. a tag hanging below it) instead of being
+                    confined to a small inset box. 2026-09-09's measured
+                    parchment inset (44/29/30/49%) is gone -- that was only
+                    ever a default starting position for the OLD nudge-based
+                    layout, not a real boundary; nothing here needs it now. */}
                 <div
                   style={{
                     position: "absolute",
-                    top: "44%",
-                    bottom: "29%",
-                    left: "30%",
-                    right: "49%",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
+                    inset: 0,
                     pointerEvents: "auto",
                   }}
                 >

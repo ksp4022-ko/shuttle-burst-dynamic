@@ -434,16 +434,16 @@ export const v8ActiveRosterPanelOffsetRange = { label: "Offset", min: -40, max: 
 // per the baseline's "no per-component Visible" rule -- not seven separate
 // switches.
 //
-// X/Y here are PX NUDGES layered on top of the element's own existing flex
-// layout (same convention as activeSunBadge*TextOffsetX/Y and
-// activeRosterLists*X/Y panel offsets), not a full canvas %-position -- the
-// panel this card renders inside is a small fixed box (~83x134px measured
-// live, see V8HeroComposition's tigerScroll inset), already tuned to fit its
-// own content exactly (2026-09-10 fix: a name that collapsed to 0px height
-// under flex-shrink). Rebuilding every element as an absolutely-positioned
-// layer would risk reintroducing that overflow/collapse bug for no real
-// benefit at this size; a transform nudge on top of the proven-safe flex
-// layout gives the same tunability without the risk.
+// X/Y are % of the WHOLE tiger-scroll box (same convention as
+// activeSunBadge*X/Y and activeInfo*X/Y -- translate(-50%,-50%)-centered on
+// that point), not px nudges. An earlier version (2026-09-10) nudged px on
+// top of the element's existing flex layout inside a small clipped inset
+// panel; the user hit that ceiling almost immediately (couldn't reach past
+// the panel's own bounds no matter how far a control was pushed -- e.g.
+// wanting the identity tag to hang below the scroll), so the panel's
+// clipping was removed (see V8HeroComposition's scrollContent slot) and
+// every element switched to this same free % + translate-centering
+// convention the other groups already use.
 export type V8ActiveIdentityVisualControls = {
   x: number;
   y: number;
