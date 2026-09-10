@@ -55,7 +55,7 @@ type HelperMode = "signup" | "cancel" | null;
 
 export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
-  const { identity, remember, forget } = useCurrentIdentity(roster, selectedEventId);
+  const { identity, remember, forget } = useCurrentIdentity(roster);
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
@@ -1051,7 +1051,12 @@ export function V8ActiveStyles() {
         line-height: 1;
         display: grid;
         place-items: center;
-        transform: translateY(-50%);
+        /* translateX(-50%) centers the arrow ON the -8%/108% edge point --
+           without it, "left" places the arrow's own LEFT edge there, so the
+           two arrows' CENTERS ended up asymmetric distances from the sun's
+           edge (prev's center sat inside the circle, next's sat well
+           outside it) by a full arrow-width's worth of offset. */
+        transform: translate(-50%, -50%);
         z-index: 5;
       }
 
