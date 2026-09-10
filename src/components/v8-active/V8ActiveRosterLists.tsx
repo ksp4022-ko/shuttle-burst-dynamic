@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { V8ActiveRosterListsControls } from "./v8ActiveConfig";
+import type { V8ActiveRosterListsControls, V8ActiveRosterV2Controls, V8ActiveRosterV2LayerControls } from "./v8ActiveConfig";
 
 export type V8ActiveRosterPerson = { id: string; name: string };
 
@@ -133,5 +133,59 @@ export function V8ActiveRosterLists({
         <RosterPanel people={waiting} numbered />
       </div>
     </div>
+  );
+}
+
+// 三名單v2 (roster panel v2 candidate) -- plain positionable image layers
+// only, same %-of-canvas + translate(-50%,-50%) convention as the rope
+// ornaments (see V8ActiveInfoCards.tsx's RopeOrnamentLayer). NOT wired to
+// the name-list text overlay yet (see the long comment on
+// v8ActiveRosterV2Files in v8ActiveConfig.ts for why) -- this is
+// deliberately just the "basic control parameters" the user asked for this
+// round, ahead of the dynamic-data wiring in a later round.
+function V8RosterV2Layer({
+  src,
+  controls,
+  baseWidth,
+}: {
+  src: string;
+  controls: V8ActiveRosterV2LayerControls;
+  baseWidth: number;
+}) {
+  if (!controls.show) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      style={
+        {
+          position: "absolute",
+          left: `${controls.x}%`,
+          top: `${controls.y}%`,
+          width: `${baseWidth * controls.scale}%`,
+          opacity: controls.opacity / 100,
+          transform: `translate(-50%, -50%) rotate(${controls.rotation}deg)`,
+          zIndex: controls.zIndex,
+        } as CSSProperties
+      }
+    />
+  );
+}
+
+export function V8RosterV2Layers({
+  assets,
+  controls,
+}: {
+  assets: { rosterV2A1: string; rosterV2B1: string; rosterV2B2: string };
+  controls: V8ActiveRosterV2Controls;
+}) {
+  return (
+    <>
+      <V8RosterV2Layer src={assets.rosterV2A1} controls={controls.a1} baseWidth={92} />
+      <V8RosterV2Layer src={assets.rosterV2B1} controls={controls.b1} baseWidth={30} />
+      <V8RosterV2Layer src={assets.rosterV2B2} controls={controls.b2} baseWidth={30} />
+    </>
   );
 }

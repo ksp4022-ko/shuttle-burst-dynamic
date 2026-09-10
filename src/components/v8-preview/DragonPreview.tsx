@@ -11,6 +11,7 @@ import {
   buildV8ActiveInfoCardsControls,
   buildV8ActiveRopeOrnamentsControls,
   buildV8ActiveRosterListsControls,
+  buildV8ActiveRosterV2Controls,
   buildV8ActiveSunBadgesControls,
   buildV8ActiveSunMessagesControls,
   clawBaseline,
@@ -29,7 +30,7 @@ import type { PreviewControls, PreviewMode, PreviewTargetId } from "./dragonPrev
 import { V8TuningPanel } from "./V8TuningPanel";
 import { V8ActiveStyles, V8ActiveSunContent, V8IdentityScrollContent } from "@/components/v8-active/V8ActivePage";
 import { V8ActiveInfoCards } from "@/components/v8-active/V8ActiveInfoCards";
-import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "@/components/v8-active/V8ActiveRosterLists";
+import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "@/components/v8-active/V8ActiveRosterLists";
 import { buildV8ActiveAssets, v8ActiveStageAspectRatio } from "@/components/v8-active/v8ActiveConfig";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
@@ -162,6 +163,7 @@ function ActiveCanvas({
   const identityCardControls = buildV8ActiveIdentityCardControls(controls);
   const capacityBadgeControls = buildV8ActiveCapacityBadgeControls(controls);
   const ropeOrnamentControls = buildV8ActiveRopeOrnamentsControls(controls);
+  const rosterV2Controls = buildV8ActiveRosterV2Controls(controls);
   const extraPreloadSrcs = [
     assets.sunInfoBadge,
     assets.sunBadgeBallType,
@@ -176,6 +178,9 @@ function ActiveCanvas({
     assets.ropeOrnamentB,
     assets.ropeOrnamentC,
     assets.rosterFrame,
+    assets.rosterV2A1,
+    assets.rosterV2B1,
+    assets.rosterV2B2,
   ];
 
   return (
@@ -225,13 +230,16 @@ function ActiveCanvas({
           />
         }
         rosterListsContent={
-          <V8ActiveRosterLists
-            frameSrc={assets.rosterFrame}
-            confirmed={mockRosterConfirmed}
-            leave={mockRosterLeave}
-            waiting={mockRosterWaiting}
-            controls={rosterListsControls}
-          />
+          <>
+            <V8ActiveRosterLists
+              frameSrc={assets.rosterFrame}
+              confirmed={mockRosterConfirmed}
+              leave={mockRosterLeave}
+              waiting={mockRosterWaiting}
+              controls={rosterListsControls}
+            />
+            <V8RosterV2Layers assets={assets} controls={rosterV2Controls} />
+          </>
         }
       />
     </div>

@@ -105,6 +105,26 @@ export const v8ActiveRopeOrnamentFiles = {
   c: "rope-ornament-c-v1.webp",
 } as const;
 
+// 三名單v2 (roster panel v2) -- a candidate REPLACEMENT for the roster
+// frame (dragon-triple-list-v1), added 2026-09-10 for side-by-side testing
+// before committing to a swap. A1 is the new panel frame itself; B1/B2 are
+// companion dragon ornaments the user places freely (bottom-left corner,
+// self-adjusted from there). Placed as plain positionable image layers only
+// -- NOT yet wired to the roster name-list text overlay (that needs its own
+// pixel-measured safe-area insets per panel, same as PANEL_INSETS in
+// V8ActiveRosterLists.tsx, which the user hasn't asked for yet -- "為後續
+//動態作測試" -- so this round is deliberately just the basic positioning
+// layer the user explicitly asked for ("需要有基本控制台參數").
+// NOTE: dragon-triple-list-v2-a1's source has an OPAQUE WHITE background
+// (RGB, no alpha), unlike every other roster/plaque asset in this library
+// (all RGBA/transparent) -- it will render as a white rectangle, not blend
+// into the page, until re-exported with a transparent background.
+export const v8ActiveRosterV2Files = {
+  a1: "dragon-triple-list-v2-a1-v1.webp",
+  b1: "dragon-triple-list-v2-b1-v1.webp",
+  b2: "dragon-triple-list-v2-b2-v1.webp",
+} as const;
+
 export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
@@ -137,6 +157,9 @@ export function buildV8ActiveAssets(baseUrl: string) {
     ropeOrnamentA: `${activeBase}/${v8ActiveRopeOrnamentFiles.a}`,
     ropeOrnamentB: `${activeBase}/${v8ActiveRopeOrnamentFiles.b}`,
     ropeOrnamentC: `${activeBase}/${v8ActiveRopeOrnamentFiles.c}`,
+    rosterV2A1: `${activeBase}/${v8ActiveRosterV2Files.a1}`,
+    rosterV2B1: `${activeBase}/${v8ActiveRosterV2Files.b1}`,
+    rosterV2B2: `${activeBase}/${v8ActiveRosterV2Files.b2}`,
   };
 }
 
@@ -536,5 +559,18 @@ export type V8ActiveRopeOrnamentsControls = {
   a: V8ActiveRopeOrnamentControls;
   b: V8ActiveRopeOrnamentControls;
   c: V8ActiveRopeOrnamentControls;
+};
+
+// 三名單v2 (roster panel v2 candidate) -- same shape as
+// V8ActiveRopeOrnamentControls (plain image layer: X/Y/Scale/Rotation/
+// Opacity/Z-index + own Show), reused under a new name for clarity at call
+// sites. Each of the 3 pieces (A1 panel + B1/B2 dragon ornaments) is
+// independent.
+export type V8ActiveRosterV2LayerControls = V8ActiveRopeOrnamentControls;
+
+export type V8ActiveRosterV2Controls = {
+  a1: V8ActiveRosterV2LayerControls;
+  b1: V8ActiveRosterV2LayerControls;
+  b2: V8ActiveRosterV2LayerControls;
 };
 

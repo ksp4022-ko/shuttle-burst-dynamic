@@ -12,6 +12,7 @@ import {
   buildV8ActiveInfoCardsControls,
   buildV8ActiveRopeOrnamentsControls,
   buildV8ActiveRosterListsControls,
+  buildV8ActiveRosterV2Controls,
   buildV8ActiveSunBadgesControls,
   buildV8ActiveSunMessagesControls,
   loadSavedControls,
@@ -36,7 +37,7 @@ import {
   type V8ActiveSunMessagesControls,
 } from "./v8ActiveConfig";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
-import { V8ActiveRosterLists, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
+import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { V8Toast } from "./V8Toast";
 
 function primaryActionLabel(identity: CurrentIdentity) {
@@ -179,6 +180,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const identityCardControls = buildV8ActiveIdentityCardControls(tuningControls);
   const capacityBadgeControls = buildV8ActiveCapacityBadgeControls(tuningControls);
   const ropeOrnamentControls = buildV8ActiveRopeOrnamentsControls(tuningControls);
+  const rosterV2Controls = buildV8ActiveRosterV2Controls(tuningControls);
 
   // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
   // URLs handed to sunContent/infoCardsContent/rosterListsContent below,
@@ -198,6 +200,9 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     assets.ropeOrnamentB,
     assets.ropeOrnamentC,
     assets.rosterFrame,
+    assets.rosterV2A1,
+    assets.rosterV2B1,
+    assets.rosterV2B2,
   ];
 
   const rosterConfirmed: V8ActiveRosterPerson[] = confirmed.map((person) => ({ id: person.id, name: person.name }));
@@ -274,13 +279,16 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
           />
         }
         rosterListsContent={
-          <V8ActiveRosterLists
-            frameSrc={assets.rosterFrame}
-            confirmed={rosterConfirmed}
-            leave={rosterLeave}
-            waiting={rosterWaiting}
-            controls={rosterListsControls}
-          />
+          <>
+            <V8ActiveRosterLists
+              frameSrc={assets.rosterFrame}
+              confirmed={rosterConfirmed}
+              leave={rosterLeave}
+              waiting={rosterWaiting}
+              controls={rosterListsControls}
+            />
+            <V8RosterV2Layers assets={assets} controls={rosterV2Controls} />
+          </>
         }
       />
 

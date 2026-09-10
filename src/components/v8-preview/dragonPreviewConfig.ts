@@ -5,6 +5,7 @@ import type {
   V8ActiveInfoCardsControls,
   V8ActiveRopeOrnamentsControls,
   V8ActiveRosterListsControls,
+  V8ActiveRosterV2Controls,
   V8ActiveSunBadgesControls,
   V8ActiveSunMessagesControls,
 } from "@/components/v8-active/v8ActiveConfig";
@@ -327,6 +328,29 @@ export type PreviewControls = {
   activeRopeOrnamentCRotation: number;
   activeRopeOrnamentCOpacity: number;
   activeRopeOrnamentCZIndex: number;
+  // 三名單v2 (roster panel v2 candidate) -- see V8ActiveRosterV2Controls in
+  // v8ActiveConfig.ts. Plain image layers, no text overlay yet.
+  activeRosterV2A1Show: boolean;
+  activeRosterV2A1X: number;
+  activeRosterV2A1Y: number;
+  activeRosterV2A1Scale: number;
+  activeRosterV2A1Rotation: number;
+  activeRosterV2A1Opacity: number;
+  activeRosterV2A1ZIndex: number;
+  activeRosterV2B1Show: boolean;
+  activeRosterV2B1X: number;
+  activeRosterV2B1Y: number;
+  activeRosterV2B1Scale: number;
+  activeRosterV2B1Rotation: number;
+  activeRosterV2B1Opacity: number;
+  activeRosterV2B1ZIndex: number;
+  activeRosterV2B2Show: boolean;
+  activeRosterV2B2X: number;
+  activeRosterV2B2Y: number;
+  activeRosterV2B2Scale: number;
+  activeRosterV2B2Rotation: number;
+  activeRosterV2B2Opacity: number;
+  activeRosterV2B2ZIndex: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -373,7 +397,10 @@ export type PreviewTargetId =
   | "ACTIVE ROPE ORNAMENT A"
   | "ACTIVE ROPE ORNAMENT B"
   | "ACTIVE ROPE ORNAMENT C"
-  | "ACTIVE ROSTER LISTS";
+  | "ACTIVE ROSTER LISTS"
+  | "ACTIVE ROSTER V2 A1"
+  | "ACTIVE ROSTER V2 B1"
+  | "ACTIVE ROSTER V2 B2";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -423,6 +450,9 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE ROPE ORNAMENT B",
   "ACTIVE ROPE ORNAMENT C",
   "ACTIVE ROSTER LISTS",
+  "ACTIVE ROSTER V2 A1",
+  "ACTIVE ROSTER V2 B1",
+  "ACTIVE ROSTER V2 B2",
 ];
 
 // Kept for anything still importing the old flat name -- identical to
@@ -765,6 +795,33 @@ export const previewDefaults: PreviewControls = {
   activeRopeOrnamentCRotation: -3,
   activeRopeOrnamentCOpacity: 100,
   activeRopeOrnamentCZIndex: 19,
+  // 三名單v2 -- default OFF (per the user's own framing: this is for
+  // side-by-side testing before fully replacing the current roster panel,
+  // not meant to appear live/doubled-up for real visitors by default).
+  // A1 placed at the SAME x/y/scale/rotation as the current roster panel
+  // (v8ActiveRosterListsDefaults) per the user's explicit request. B1/B2
+  // start bottom-left, per the user's own "我自行調整" (they'll fine-tune).
+  activeRosterV2A1Show: false,
+  activeRosterV2A1X: 50,
+  activeRosterV2A1Y: 82,
+  activeRosterV2A1Scale: 1.15,
+  activeRosterV2A1Rotation: 0,
+  activeRosterV2A1Opacity: 100,
+  activeRosterV2A1ZIndex: 20,
+  activeRosterV2B1Show: false,
+  activeRosterV2B1X: 10,
+  activeRosterV2B1Y: 88,
+  activeRosterV2B1Scale: 1,
+  activeRosterV2B1Rotation: 0,
+  activeRosterV2B1Opacity: 100,
+  activeRosterV2B1ZIndex: 21,
+  activeRosterV2B2Show: false,
+  activeRosterV2B2X: 16,
+  activeRosterV2B2Y: 94,
+  activeRosterV2B2Scale: 1,
+  activeRosterV2B2Rotation: 0,
+  activeRosterV2B2Opacity: 100,
+  activeRosterV2B2ZIndex: 21,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -987,6 +1044,33 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRopeOrnamentCOpacity",
     "activeRopeOrnamentCZIndex",
   ],
+  "ACTIVE ROSTER V2 A1": [
+    "activeRosterV2A1Show",
+    "activeRosterV2A1X",
+    "activeRosterV2A1Y",
+    "activeRosterV2A1Scale",
+    "activeRosterV2A1Rotation",
+    "activeRosterV2A1Opacity",
+    "activeRosterV2A1ZIndex",
+  ],
+  "ACTIVE ROSTER V2 B1": [
+    "activeRosterV2B1Show",
+    "activeRosterV2B1X",
+    "activeRosterV2B1Y",
+    "activeRosterV2B1Scale",
+    "activeRosterV2B1Rotation",
+    "activeRosterV2B1Opacity",
+    "activeRosterV2B1ZIndex",
+  ],
+  "ACTIVE ROSTER V2 B2": [
+    "activeRosterV2B2Show",
+    "activeRosterV2B2X",
+    "activeRosterV2B2Y",
+    "activeRosterV2B2Scale",
+    "activeRosterV2B2Rotation",
+    "activeRosterV2B2Opacity",
+    "activeRosterV2B2ZIndex",
+  ],
   "ACTIVE ROSTER LISTS": [
     "activeRosterListsShow",
     "activeRosterListsX",
@@ -1045,6 +1129,9 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE ROPE ORNAMENT B": "activeRopeOrnamentBShow",
   "ACTIVE ROPE ORNAMENT C": "activeRopeOrnamentCShow",
   "ACTIVE ROSTER LISTS": "activeRosterListsShow",
+  "ACTIVE ROSTER V2 A1": "activeRosterV2A1Show",
+  "ACTIVE ROSTER V2 B1": "activeRosterV2B1Show",
+  "ACTIVE ROSTER V2 B2": "activeRosterV2B2Show",
 };
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
@@ -1273,6 +1360,24 @@ export const controlRanges = {
   activeRopeOrnamentCRotation: { label: "繩飾C Rotation", min: -180, max: 180 },
   activeRopeOrnamentCOpacity: { label: "繩飾C Opacity", min: 0, max: 100 },
   activeRopeOrnamentCZIndex: { label: "繩飾C Z-Index", min: 0, max: 40 },
+  activeRosterV2A1X: { label: "三名單v2 A1 X %", min: -20, max: 120 },
+  activeRosterV2A1Y: { label: "三名單v2 A1 Y %", min: -20, max: 150 },
+  activeRosterV2A1Scale: { label: "三名單v2 A1 Scale", min: 0.3, max: 2, step: 0.01 },
+  activeRosterV2A1Rotation: { label: "三名單v2 A1 Rotation", min: -45, max: 45 },
+  activeRosterV2A1Opacity: { label: "三名單v2 A1 Opacity", min: 0, max: 100 },
+  activeRosterV2A1ZIndex: { label: "三名單v2 A1 Z-Index", min: 0, max: 40 },
+  activeRosterV2B1X: { label: "三名單v2 B1 X %", min: -20, max: 120 },
+  activeRosterV2B1Y: { label: "三名單v2 B1 Y %", min: -20, max: 150 },
+  activeRosterV2B1Scale: { label: "三名單v2 B1 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeRosterV2B1Rotation: { label: "三名單v2 B1 Rotation", min: -180, max: 180 },
+  activeRosterV2B1Opacity: { label: "三名單v2 B1 Opacity", min: 0, max: 100 },
+  activeRosterV2B1ZIndex: { label: "三名單v2 B1 Z-Index", min: 0, max: 40 },
+  activeRosterV2B2X: { label: "三名單v2 B2 X %", min: -20, max: 120 },
+  activeRosterV2B2Y: { label: "三名單v2 B2 Y %", min: -20, max: 150 },
+  activeRosterV2B2Scale: { label: "三名單v2 B2 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeRosterV2B2Rotation: { label: "三名單v2 B2 Rotation", min: -180, max: 180 },
+  activeRosterV2B2Opacity: { label: "三名單v2 B2 Opacity", min: 0, max: 100 },
+  activeRosterV2B2ZIndex: { label: "三名單v2 B2 Z-Index", min: 0, max: 40 },
   activeRosterListsX: { label: "Roster X %", min: -20, max: 120 },
   activeRosterListsY: { label: "Roster Y %", min: -150, max: 150 },
   activeRosterListsScale: { label: "Roster Scale", min: 0.3, max: 2, step: 0.01 },
@@ -1561,7 +1666,12 @@ Font Family: ${controls.activeRosterListsFontFamily || "(default)"}
 Bold: ${controls.activeRosterListsBold ? "ON" : "OFF"}
 季打請假 Offset: ${Math.round(controls.activeRosterListsLeaveX)}, ${Math.round(controls.activeRosterListsLeaveY)}
 正取名單 Offset: ${Math.round(controls.activeRosterListsConfirmedX)}, ${Math.round(controls.activeRosterListsConfirmedY)}
-備取名單 Offset: ${Math.round(controls.activeRosterListsWaitingX)}, ${Math.round(controls.activeRosterListsWaitingY)}`;
+備取名單 Offset: ${Math.round(controls.activeRosterListsWaitingX)}, ${Math.round(controls.activeRosterListsWaitingY)}
+
+ACTIVE ROSTER V2 (三名單v2)
+A1: Show ${controls.activeRosterV2A1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2A1X)}, Y ${Math.round(controls.activeRosterV2A1Y)}, Scale ${controls.activeRosterV2A1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2A1Rotation)}, Opacity ${Math.round(controls.activeRosterV2A1Opacity)}, Z ${Math.round(controls.activeRosterV2A1ZIndex)}
+B1: Show ${controls.activeRosterV2B1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B1X)}, Y ${Math.round(controls.activeRosterV2B1Y)}, Scale ${controls.activeRosterV2B1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B1Rotation)}, Opacity ${Math.round(controls.activeRosterV2B1Opacity)}, Z ${Math.round(controls.activeRosterV2B1ZIndex)}
+B2: Show ${controls.activeRosterV2B2Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B2X)}, Y ${Math.round(controls.activeRosterV2B2Y)}, Scale ${controls.activeRosterV2B2Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B2Rotation)}, Opacity ${Math.round(controls.activeRosterV2B2Opacity)}, Z ${Math.round(controls.activeRosterV2B2ZIndex)}`;
 
 // Mid-tuning autosave -- shared between the /v8/preview console
 // (DragonPreview.tsx) and the real Active page's own embedded tuning
@@ -1848,6 +1958,38 @@ export function buildV8ActiveIdentityCardControls(controls: PreviewControls): V8
       lineHeight: controls.activeIdentityForgetLineHeight,
       textAlign: controls.activeIdentityForgetTextAlign,
       fontWeight: controls.activeIdentityForgetFontWeight,
+    },
+  };
+}
+
+export function buildV8ActiveRosterV2Controls(controls: PreviewControls): V8ActiveRosterV2Controls {
+  return {
+    a1: {
+      show: controls.activeRosterV2A1Show,
+      x: controls.activeRosterV2A1X,
+      y: controls.activeRosterV2A1Y,
+      scale: controls.activeRosterV2A1Scale,
+      rotation: controls.activeRosterV2A1Rotation,
+      opacity: controls.activeRosterV2A1Opacity,
+      zIndex: controls.activeRosterV2A1ZIndex,
+    },
+    b1: {
+      show: controls.activeRosterV2B1Show,
+      x: controls.activeRosterV2B1X,
+      y: controls.activeRosterV2B1Y,
+      scale: controls.activeRosterV2B1Scale,
+      rotation: controls.activeRosterV2B1Rotation,
+      opacity: controls.activeRosterV2B1Opacity,
+      zIndex: controls.activeRosterV2B1ZIndex,
+    },
+    b2: {
+      show: controls.activeRosterV2B2Show,
+      x: controls.activeRosterV2B2X,
+      y: controls.activeRosterV2B2Y,
+      scale: controls.activeRosterV2B2Scale,
+      rotation: controls.activeRosterV2B2Rotation,
+      opacity: controls.activeRosterV2B2Opacity,
+      zIndex: controls.activeRosterV2B2ZIndex,
     },
   };
 }
