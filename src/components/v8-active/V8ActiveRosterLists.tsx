@@ -1,5 +1,10 @@
 import type { CSSProperties } from "react";
-import type { V8ActiveRosterListsControls, V8ActiveRosterV2Controls, V8ActiveRosterV2LayerControls } from "./v8ActiveConfig";
+import type {
+  V8ActiveRosterListsControls,
+  V8ActiveRosterV2A1Controls,
+  V8ActiveRosterV2Controls,
+  V8ActiveRosterV2LayerControls,
+} from "./v8ActiveConfig";
 
 export type V8ActiveRosterPerson = { id: string; name: string };
 
@@ -174,16 +179,84 @@ function V8RosterV2Layer({
   );
 }
 
+// A1 panel with the same three live name lists as the old roster panel,
+// reusing PANEL_INSETS (per the user's confirmation that v2_A1's artwork is
+// laid out almost identically to dragon-triple-list-v1) instead of
+// re-measuring a new safe area. Own typography/offset controls (not shared
+// with V8ActiveRosterListsControls) so this panel can be tuned
+// independently while it's still a side-by-side candidate.
+function V8RosterV2A1({
+  src,
+  confirmed,
+  leave,
+  waiting,
+  controls,
+}: {
+  src: string;
+  confirmed: V8ActiveRosterPerson[];
+  leave: V8ActiveRosterPerson[];
+  waiting: V8ActiveRosterPerson[];
+  controls: V8ActiveRosterV2A1Controls;
+}) {
+  if (!controls.show) return null;
+  return (
+    <div
+      style={
+        {
+          position: "absolute",
+          left: `${controls.x}%`,
+          top: `${controls.y}%`,
+          width: `${92 * controls.scale}%`,
+          opacity: controls.opacity / 100,
+          transform: `translate(-50%, -50%) rotate(${controls.rotation}deg)`,
+          zIndex: controls.zIndex,
+          fontSize: controls.fontSize,
+          lineHeight: controls.lineHeight,
+          color: controls.textColor,
+          ...(controls.fontFamily ? { fontFamily: controls.fontFamily } : {}),
+          fontWeight: controls.bold ? 700 : 400,
+        } as CSSProperties
+      }
+    >
+      <img src={src} alt="" aria-hidden="true" draggable={false} style={{ display: "block", width: "100%", height: "auto" }} />
+      <div
+        className="v8-roster-panel"
+        style={{ ...PANEL_INSETS.leave, transform: `translate(${controls.leave.x}px, ${controls.leave.y}px)` }}
+      >
+        <RosterPanel people={leave} />
+      </div>
+      <div
+        className="v8-roster-panel"
+        style={{ ...PANEL_INSETS.confirmed, transform: `translate(${controls.confirmed.x}px, ${controls.confirmed.y}px)` }}
+      >
+        <RosterPanel people={confirmed} twoColumn />
+      </div>
+      <div
+        className="v8-roster-panel"
+        style={{ ...PANEL_INSETS.waiting, transform: `translate(${controls.waiting.x}px, ${controls.waiting.y}px)` }}
+      >
+        <RosterPanel people={waiting} numbered />
+      </div>
+    </div>
+  );
+}
+
 export function V8RosterV2Layers({
   assets,
+  confirmed,
+  leave,
+  waiting,
   controls,
 }: {
   assets: { rosterV2A1: string; rosterV2B1: string; rosterV2B2: string };
+  confirmed: V8ActiveRosterPerson[];
+  leave: V8ActiveRosterPerson[];
+  waiting: V8ActiveRosterPerson[];
   controls: V8ActiveRosterV2Controls;
 }) {
   return (
     <>
-      <V8RosterV2Layer src={assets.rosterV2A1} controls={controls.a1} baseWidth={92} />
+      <V8RosterV2A1 src={assets.rosterV2A1} confirmed={confirmed} leave={leave} waiting={waiting} controls={controls.a1} />
       <V8RosterV2Layer src={assets.rosterV2B1} controls={controls.b1} baseWidth={30} />
       <V8RosterV2Layer src={assets.rosterV2B2} controls={controls.b2} baseWidth={30} />
     </>

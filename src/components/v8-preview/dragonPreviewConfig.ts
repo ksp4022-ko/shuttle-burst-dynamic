@@ -337,6 +337,21 @@ export type PreviewControls = {
   activeRosterV2A1Rotation: number;
   activeRosterV2A1Opacity: number;
   activeRosterV2A1ZIndex: number;
+  // Name-list typography + per-panel offsets (2026-09-10) -- reuses the
+  // OLD roster panel's PANEL_INSETS % positions (see V8ActiveRosterLists.tsx),
+  // own control set so this candidate panel can be tuned independently of
+  // the current live one during the side-by-side testing period.
+  activeRosterV2A1FontSize: number;
+  activeRosterV2A1LineHeight: number;
+  activeRosterV2A1TextColor: string;
+  activeRosterV2A1FontFamily: string;
+  activeRosterV2A1Bold: boolean;
+  activeRosterV2A1LeaveX: number;
+  activeRosterV2A1LeaveY: number;
+  activeRosterV2A1ConfirmedX: number;
+  activeRosterV2A1ConfirmedY: number;
+  activeRosterV2A1WaitingX: number;
+  activeRosterV2A1WaitingY: number;
   activeRosterV2B1Show: boolean;
   activeRosterV2B1X: number;
   activeRosterV2B1Y: number;
@@ -808,6 +823,20 @@ export const previewDefaults: PreviewControls = {
   activeRosterV2A1Rotation: 0,
   activeRosterV2A1Opacity: 100,
   activeRosterV2A1ZIndex: 20,
+  // Same defaults as the old roster panel (v8ActiveRosterListsDefaults) --
+  // reusing its PANEL_INSETS means the same offsets are a sensible starting
+  // point too.
+  activeRosterV2A1FontSize: 14,
+  activeRosterV2A1LineHeight: 1.1,
+  activeRosterV2A1TextColor: "#7a4a00",
+  activeRosterV2A1FontFamily: "",
+  activeRosterV2A1Bold: false,
+  activeRosterV2A1LeaveX: 5,
+  activeRosterV2A1LeaveY: 0,
+  activeRosterV2A1ConfirmedX: 11,
+  activeRosterV2A1ConfirmedY: 2,
+  activeRosterV2A1WaitingX: 3,
+  activeRosterV2A1WaitingY: 4,
   activeRosterV2B1Show: false,
   activeRosterV2B1X: 10,
   activeRosterV2B1Y: 88,
@@ -1052,6 +1081,17 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRosterV2A1Rotation",
     "activeRosterV2A1Opacity",
     "activeRosterV2A1ZIndex",
+    "activeRosterV2A1FontSize",
+    "activeRosterV2A1LineHeight",
+    "activeRosterV2A1TextColor",
+    "activeRosterV2A1FontFamily",
+    "activeRosterV2A1Bold",
+    "activeRosterV2A1LeaveX",
+    "activeRosterV2A1LeaveY",
+    "activeRosterV2A1ConfirmedX",
+    "activeRosterV2A1ConfirmedY",
+    "activeRosterV2A1WaitingX",
+    "activeRosterV2A1WaitingY",
   ],
   "ACTIVE ROSTER V2 B1": [
     "activeRosterV2B1Show",
@@ -1378,6 +1418,14 @@ export const controlRanges = {
   activeRosterV2B2Rotation: { label: "三名單v2 B2 Rotation", min: -180, max: 180 },
   activeRosterV2B2Opacity: { label: "三名單v2 B2 Opacity", min: 0, max: 100 },
   activeRosterV2B2ZIndex: { label: "三名單v2 B2 Z-Index", min: 0, max: 40 },
+  activeRosterV2A1FontSize: { label: "三名單v2 A1 Font Size", min: 8, max: 24 },
+  activeRosterV2A1LineHeight: { label: "三名單v2 A1 Line Height", min: 1, max: 2.4, step: 0.05 },
+  activeRosterV2A1LeaveX: { label: "三名單v2 A1 季打請假 X", min: -40, max: 40 },
+  activeRosterV2A1LeaveY: { label: "三名單v2 A1 季打請假 Y", min: -40, max: 40 },
+  activeRosterV2A1ConfirmedX: { label: "三名單v2 A1 正取名單 X", min: -40, max: 40 },
+  activeRosterV2A1ConfirmedY: { label: "三名單v2 A1 正取名單 Y", min: -40, max: 40 },
+  activeRosterV2A1WaitingX: { label: "三名單v2 A1 備取名單 X", min: -40, max: 40 },
+  activeRosterV2A1WaitingY: { label: "三名單v2 A1 備取名單 Y", min: -40, max: 40 },
   activeRosterListsX: { label: "Roster X %", min: -20, max: 120 },
   activeRosterListsY: { label: "Roster Y %", min: -150, max: 150 },
   activeRosterListsScale: { label: "Roster Scale", min: 0.3, max: 2, step: 0.01 },
@@ -1669,7 +1717,7 @@ Bold: ${controls.activeRosterListsBold ? "ON" : "OFF"}
 備取名單 Offset: ${Math.round(controls.activeRosterListsWaitingX)}, ${Math.round(controls.activeRosterListsWaitingY)}
 
 ACTIVE ROSTER V2 (三名單v2)
-A1: Show ${controls.activeRosterV2A1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2A1X)}, Y ${Math.round(controls.activeRosterV2A1Y)}, Scale ${controls.activeRosterV2A1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2A1Rotation)}, Opacity ${Math.round(controls.activeRosterV2A1Opacity)}, Z ${Math.round(controls.activeRosterV2A1ZIndex)}
+A1: Show ${controls.activeRosterV2A1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2A1X)}, Y ${Math.round(controls.activeRosterV2A1Y)}, Scale ${controls.activeRosterV2A1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2A1Rotation)}, Opacity ${Math.round(controls.activeRosterV2A1Opacity)}, Z ${Math.round(controls.activeRosterV2A1ZIndex)}, Font ${Math.round(controls.activeRosterV2A1FontSize)}, Line Height ${controls.activeRosterV2A1LineHeight.toFixed(2)}, Text Color ${controls.activeRosterV2A1TextColor}, Font Family ${controls.activeRosterV2A1FontFamily || "(default)"}, Bold ${controls.activeRosterV2A1Bold ? "ON" : "OFF"}, 季打請假 Offset ${Math.round(controls.activeRosterV2A1LeaveX)}/${Math.round(controls.activeRosterV2A1LeaveY)}, 正取名單 Offset ${Math.round(controls.activeRosterV2A1ConfirmedX)}/${Math.round(controls.activeRosterV2A1ConfirmedY)}, 備取名單 Offset ${Math.round(controls.activeRosterV2A1WaitingX)}/${Math.round(controls.activeRosterV2A1WaitingY)}
 B1: Show ${controls.activeRosterV2B1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B1X)}, Y ${Math.round(controls.activeRosterV2B1Y)}, Scale ${controls.activeRosterV2B1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B1Rotation)}, Opacity ${Math.round(controls.activeRosterV2B1Opacity)}, Z ${Math.round(controls.activeRosterV2B1ZIndex)}
 B2: Show ${controls.activeRosterV2B2Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B2X)}, Y ${Math.round(controls.activeRosterV2B2Y)}, Scale ${controls.activeRosterV2B2Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B2Rotation)}, Opacity ${Math.round(controls.activeRosterV2B2Opacity)}, Z ${Math.round(controls.activeRosterV2B2ZIndex)}`;
 
@@ -1972,6 +2020,14 @@ export function buildV8ActiveRosterV2Controls(controls: PreviewControls): V8Acti
       rotation: controls.activeRosterV2A1Rotation,
       opacity: controls.activeRosterV2A1Opacity,
       zIndex: controls.activeRosterV2A1ZIndex,
+      fontSize: controls.activeRosterV2A1FontSize,
+      lineHeight: controls.activeRosterV2A1LineHeight,
+      textColor: controls.activeRosterV2A1TextColor,
+      fontFamily: controls.activeRosterV2A1FontFamily,
+      bold: controls.activeRosterV2A1Bold,
+      leave: { x: controls.activeRosterV2A1LeaveX, y: controls.activeRosterV2A1LeaveY },
+      confirmed: { x: controls.activeRosterV2A1ConfirmedX, y: controls.activeRosterV2A1ConfirmedY },
+      waiting: { x: controls.activeRosterV2A1WaitingX, y: controls.activeRosterV2A1WaitingY },
     },
     b1: {
       show: controls.activeRosterV2B1Show,

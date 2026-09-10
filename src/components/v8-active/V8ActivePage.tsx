@@ -287,7 +287,13 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               waiting={rosterWaiting}
               controls={rosterListsControls}
             />
-            <V8RosterV2Layers assets={assets} controls={rosterV2Controls} />
+            <V8RosterV2Layers
+              assets={assets}
+              confirmed={rosterConfirmed}
+              leave={rosterLeave}
+              waiting={rosterWaiting}
+              controls={rosterV2Controls}
+            />
           </>
         }
       />
@@ -656,9 +662,11 @@ function V8SunMessage({ text, controls }: { text: string; controls: V8ActiveSunM
 const SWIPE_THRESHOLD_PX = 40;
 
 function V8SunMeetupSwitcher({
+  assets,
   onPreviousEvent,
   onNextEvent,
 }: {
+  assets: { sunSwitchArrowPrev: string; sunSwitchArrowNext: string };
   onPreviousEvent: () => void;
   onNextEvent: () => void;
 }) {
@@ -686,10 +694,10 @@ function V8SunMeetupSwitcher({
         aria-hidden="true"
       />
       <button type="button" className="v8-sun-switch-arrow v8-sun-switch-arrow-prev" onClick={onPreviousEvent} aria-label="上一場聚會">
-        ‹
+        <img src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
       </button>
       <button type="button" className="v8-sun-switch-arrow v8-sun-switch-arrow-next" onClick={onNextEvent} aria-label="下一場聚會">
-        ›
+        <img src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
       </button>
     </>
   );
@@ -737,6 +745,8 @@ export function V8ActiveSunContent({
     sunBadgeTempFee: string;
     sunBadgeCourtCount: string;
     sunBadgeCapacity: string;
+    sunSwitchArrowPrev: string;
+    sunSwitchArrowNext: string;
   };
   eventDate: string;
   eventName: string;
@@ -769,7 +779,7 @@ export function V8ActiveSunContent({
   return (
     <>
       {onPreviousEvent && onNextEvent ? (
-        <V8SunMeetupSwitcher onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
+        <V8SunMeetupSwitcher assets={assets} onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
       ) : null}
       <V8SunMessage text={shortDate(eventDate)} controls={messageControls.date} />
       <V8SunMessage text={eventName} controls={messageControls.name} />
@@ -1109,18 +1119,16 @@ export function V8ActiveStyles() {
         touch-action: pan-y;
       }
 
+      /* Image-based (2026-09-10, replaces the old CSS circle+glyph) --
+         border/background/padding are gone, the art itself carries the
+         cloud-plaque look. */
       .v8-sun-switch-arrow {
         position: absolute;
         top: 50%;
-        width: 30px;
-        height: 30px;
-        border: 2px solid rgba(32, 21, 13, 0.55);
-        border-radius: 50%;
-        background: rgba(245, 237, 219, 0.72);
-        color: #20150d;
-        font-size: 18px;
-        font-weight: 900;
-        line-height: 1;
+        width: 34px;
+        border: none;
+        background: none;
+        padding: 0;
         display: grid;
         place-items: center;
         /* translateX(-50%) centers the arrow ON the -8%/108% edge point --
@@ -1130,6 +1138,12 @@ export function V8ActiveStyles() {
            outside it) by a full arrow-width's worth of offset. */
         transform: translate(-50%, -50%);
         z-index: 5;
+      }
+
+      .v8-sun-switch-arrow img {
+        display: block;
+        width: 100%;
+        height: auto;
       }
 
       .v8-sun-switch-arrow-prev {

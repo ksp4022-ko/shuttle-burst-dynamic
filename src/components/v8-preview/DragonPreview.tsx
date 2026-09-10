@@ -238,7 +238,13 @@ function ActiveCanvas({
               waiting={mockRosterWaiting}
               controls={rosterListsControls}
             />
-            <V8RosterV2Layers assets={assets} controls={rosterV2Controls} />
+            <V8RosterV2Layers
+              assets={assets}
+              confirmed={mockRosterConfirmed}
+              leave={mockRosterLeave}
+              waiting={mockRosterWaiting}
+              controls={rosterV2Controls}
+            />
           </>
         }
       />

@@ -376,6 +376,36 @@ export function V8TuningPanel({
             </button>
           </>
         ) : null}
+        {selectedTarget === "ACTIVE ROSTER V2 A1" ? (
+          <>
+            <label style={inlineSelectLabelStyle}>
+              TEXT COLOR
+              <input
+                type="color"
+                value={controls.activeRosterV2A1TextColor}
+                onChange={(event) => update("activeRosterV2A1TextColor", event.currentTarget.value)}
+                style={compactSelectStyle}
+              />
+            </label>
+            <label style={inlineSelectLabelStyle}>
+              FONT
+              <select
+                value={controls.activeRosterV2A1FontFamily}
+                onChange={(event) => update("activeRosterV2A1FontFamily", event.currentTarget.value)}
+                style={compactSelectStyle}
+              >
+                {v8ActiveRosterFontOptions.map((option) => (
+                  <option key={option.label} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" onClick={() => update("activeRosterV2A1Bold", !controls.activeRosterV2A1Bold)} style={smallButtonStyle}>
+              {controls.activeRosterV2A1Bold ? "Bold ON" : "Bold OFF"}
+            </button>
+          </>
+        ) : null}
         {selectedTarget === "ACTIVE SUN DATE" ? (
           <button type="button" onClick={() => update("activeSunDateBold", !controls.activeSunDateBold)} style={smallButtonStyle}>
             {controls.activeSunDateBold ? "Bold ON" : "Bold OFF"}

@@ -125,6 +125,13 @@ export const v8ActiveRosterV2Files = {
   b2: "dragon-triple-list-v2-b2-v1.webp",
 } as const;
 
+// Meetup switch arrows (‹/›) -- replaces the old CSS-drawn circle+glyph
+// (see V8SunMeetupSwitcher in V8ActivePage.tsx), per the user's request.
+export const v8ActiveSunSwitchArrowFiles = {
+  prev: "sun-switch-arrow-prev-v1.webp",
+  next: "sun-switch-arrow-next-v1.webp",
+} as const;
+
 export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
@@ -160,6 +167,8 @@ export function buildV8ActiveAssets(baseUrl: string) {
     rosterV2A1: `${activeBase}/${v8ActiveRosterV2Files.a1}`,
     rosterV2B1: `${activeBase}/${v8ActiveRosterV2Files.b1}`,
     rosterV2B2: `${activeBase}/${v8ActiveRosterV2Files.b2}`,
+    sunSwitchArrowPrev: `${activeBase}/${v8ActiveSunSwitchArrowFiles.prev}`,
+    sunSwitchArrowNext: `${activeBase}/${v8ActiveSunSwitchArrowFiles.next}`,
   };
 }
 
@@ -568,8 +577,26 @@ export type V8ActiveRopeOrnamentsControls = {
 // independent.
 export type V8ActiveRosterV2LayerControls = V8ActiveRopeOrnamentControls;
 
+// A1 additionally carries the name-list typography + per-panel offsets
+// (2026-09-10) -- reuses the SAME PANEL_INSETS % positions as the old
+// roster panel (V8ActiveRosterLists.tsx) since the user confirmed v2_A1's
+// artwork is laid out almost identically, rather than re-measuring a new
+// safe area from scratch. A separate control set from
+// V8ActiveRosterListsControls (not shared) so the old and new panel can be
+// tuned independently during the side-by-side testing period.
+export type V8ActiveRosterV2A1Controls = V8ActiveRosterV2LayerControls & {
+  fontSize: number;
+  lineHeight: number;
+  textColor: string;
+  fontFamily: string;
+  bold: boolean;
+  leave: V8ActiveRosterPanelOffset;
+  confirmed: V8ActiveRosterPanelOffset;
+  waiting: V8ActiveRosterPanelOffset;
+};
+
 export type V8ActiveRosterV2Controls = {
-  a1: V8ActiveRosterV2LayerControls;
+  a1: V8ActiveRosterV2A1Controls;
   b1: V8ActiveRosterV2LayerControls;
   b2: V8ActiveRosterV2LayerControls;
 };

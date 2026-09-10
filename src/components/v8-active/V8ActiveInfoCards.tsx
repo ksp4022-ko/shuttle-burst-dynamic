@@ -185,6 +185,13 @@ export function V8ActiveInfoCards({
   counts: { registered: number; needed: number; waiting: number };
   ropeOrnamentControls: V8ActiveRopeOrnamentsControls;
 }) {
+  // 尚缺/候補 are mutually exclusive in practice (there's room OR there's a
+  // waitlist, never both) -- 2026-09-10, per the user's request, so only one
+  // ever renders instead of always showing both. The console's own "顯示
+  // ON/OFF" toggle stays a master override on top of this: ON applies the
+  // automatic rule below, OFF force-hides regardless of counts.
+  const showNeeded = controls.needed.show && counts.needed > 0;
+  const showWaitlist = controls.waitlist.show && counts.needed === 0 && counts.waiting > 0;
   return (
     <>
       {/* infoRope's source art is a wide horizontal curve (see
@@ -209,7 +216,7 @@ export function V8ActiveInfoCards({
           whatever else it overlaps. */}
       <InfoCardStatusLayer
         src={assets.infoCardNeeded}
-        controls={controls.needed}
+        controls={{ ...controls.needed, show: showNeeded }}
         baseWidth={15}
         count={counts.needed}
         fontSize={controls.countFontSize}
@@ -222,7 +229,7 @@ export function V8ActiveInfoCards({
           being covered by it. */}
       <InfoCardStatusLayer
         src={assets.infoCardWaitlist}
-        controls={controls.waitlist}
+        controls={{ ...controls.waitlist, show: showWaitlist }}
         baseWidth={15}
         countInset={COUNT_INSETS.waitlist}
         count={counts.waiting}
