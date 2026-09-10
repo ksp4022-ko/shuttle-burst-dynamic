@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
@@ -7,6 +7,7 @@ import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
   activeTargetOrder,
   buildV8ActiveCapacityBadgeControls,
+  buildV8ActiveEmaTextsControls,
   buildV8ActiveHeroOverrides,
   buildV8ActiveIdentityCardControls,
   buildV8ActiveInfoCardsControls,
@@ -15,6 +16,7 @@ import {
   buildV8ActiveRosterV2Controls,
   buildV8ActiveSunBadgesControls,
   buildV8ActiveSunMessagesControls,
+  buildV8ActiveSwitchArrowsControls,
   loadSavedControls,
   previewDefaults,
   saveControls,
@@ -28,13 +30,17 @@ import {
   v8ActiveSunBadgesDefaults,
   v8ActiveSunMessagesDefaults,
   type V8ActiveCapacityBadgeControls,
+  type V8ActiveEmaTextsControls,
   type V8ActiveIdentityCardControls,
+  type V8ActiveIdentityNameControls,
   type V8ActiveIdentityVisualControls,
   type V8ActiveRopeOrnamentsControls,
   type V8ActiveSunBadgeControls,
   type V8ActiveSunBadgesControls,
   type V8ActiveSunMessageControls,
   type V8ActiveSunMessagesControls,
+  type V8ActiveSwitchArrowLayerControls,
+  type V8ActiveSwitchArrowsControls,
 } from "./v8ActiveConfig";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
@@ -181,29 +187,34 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const capacityBadgeControls = buildV8ActiveCapacityBadgeControls(tuningControls);
   const ropeOrnamentControls = buildV8ActiveRopeOrnamentsControls(tuningControls);
   const rosterV2Controls = buildV8ActiveRosterV2Controls(tuningControls);
+  const switchArrowControls = buildV8ActiveSwitchArrowsControls(tuningControls);
+  const emaTextsControls = buildV8ActiveEmaTextsControls(tuningControls);
 
   // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
   // URLs handed to sunContent/infoCardsContent/rosterListsContent below,
   // added to the canvas's own asset-preload gate so they can't pop in or
-  // render collapsed while loading.
+  // render collapsed while loading. 2026-09-11: only include an asset here
+  // when its own control is actually show:true -- the 三名單v2 candidate
+  // panel/ornaments default OFF (~646KB combined) and were being preloaded
+  // (and blocking the reveal) even while completely invisible.
   const extraPreloadSrcs = [
     assets.sunInfoBadge,
-    assets.sunBadgeBallType,
-    assets.sunBadgeTempFee,
-    assets.sunBadgeCourtCount,
-    assets.sunBadgeCapacity,
-    assets.infoCardRegistered,
-    assets.infoCardNeeded,
-    assets.infoCardWaitlist,
-    assets.infoRope,
-    assets.ropeOrnamentA,
-    assets.ropeOrnamentB,
-    assets.ropeOrnamentC,
-    assets.rosterFrame,
-    assets.rosterV2A1,
-    assets.rosterV2B1,
-    assets.rosterV2B2,
-  ];
+    sunBadgeControls.ballType.show ? assets.sunBadgeBallType : null,
+    sunBadgeControls.tempFee.show ? assets.sunBadgeTempFee : null,
+    sunBadgeControls.courtCount.show ? assets.sunBadgeCourtCount : null,
+    capacityBadgeControls.show ? assets.sunBadgeCapacity : null,
+    infoCardsControls.registered.show ? assets.infoCardRegistered : null,
+    infoCardsControls.needed.show ? assets.infoCardNeeded : null,
+    infoCardsControls.waitlist.show ? assets.infoCardWaitlist : null,
+    infoCardsControls.rope.show ? assets.infoRope : null,
+    ropeOrnamentControls.a.show ? assets.ropeOrnamentA : null,
+    ropeOrnamentControls.b.show ? assets.ropeOrnamentB : null,
+    ropeOrnamentControls.c.show ? assets.ropeOrnamentC : null,
+    rosterListsControls.show ? assets.rosterFrame : null,
+    rosterV2Controls.a1.show ? assets.rosterV2A1 : null,
+    rosterV2Controls.b1.show ? assets.rosterV2B1 : null,
+    rosterV2Controls.b2.show ? assets.rosterV2B2 : null,
+  ].filter((src): src is string => Boolean(src));
 
   const rosterConfirmed: V8ActiveRosterPerson[] = confirmed.map((person) => ({ id: person.id, name: person.name }));
   const rosterLeave: V8ActiveRosterPerson[] = (roster.fixedLeave || []).map((person) => ({
@@ -244,6 +255,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             badgeControls={sunBadgeControls}
             capacityBadgeControls={capacityBadgeControls}
             messageControls={sunMessageControls}
+            switchArrowControls={switchArrowControls}
             onPreviousEvent={() => switchToAdjacentMeetup(-1)}
             onNextEvent={() => switchToAdjacentMeetup(1)}
           />
@@ -271,6 +283,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
             assets={assets}
             controls={infoCardsControls}
             ropeOrnamentControls={ropeOrnamentControls}
+            textControls={emaTextsControls}
             counts={{
               registered: roster.summary.confirmedCount,
               needed: roster.summary.remainCount,
@@ -661,12 +674,29 @@ function V8SunMessage({ text, controls }: { text: string; controls: V8ActiveSunM
 // from a separate effect once that state change propagates.
 const SWIPE_THRESHOLD_PX = 40;
 
+// Per docs/V8_COMPONENT_CONTROL_BASELINE.md -- X/Y % of the sun's own box,
+// translate(-50%,-50%)-centered on that point, same convention as
+// V8SunMessage/V8SunInfoBadgeScattered's centered variant. Added
+// 2026-09-11 (previously two fixed CSS positions, -8%/108%, no controls).
+function switchArrowStyle(c: V8ActiveSwitchArrowLayerControls): CSSProperties {
+  return {
+    position: "absolute",
+    left: `${c.x}%`,
+    top: `${c.y}%`,
+    opacity: c.opacity / 100,
+    zIndex: c.zIndex,
+    transform: `translate(-50%, -50%) scale(${c.scale}) rotate(${c.rotation}deg)`,
+  };
+}
+
 function V8SunMeetupSwitcher({
   assets,
+  controls,
   onPreviousEvent,
   onNextEvent,
 }: {
   assets: { sunSwitchArrowPrev: string; sunSwitchArrowNext: string };
+  controls: V8ActiveSwitchArrowsControls;
   onPreviousEvent: () => void;
   onNextEvent: () => void;
 }) {
@@ -693,12 +723,28 @@ function V8SunMeetupSwitcher({
         onTouchEnd={handleTouchEnd}
         aria-hidden="true"
       />
-      <button type="button" className="v8-sun-switch-arrow v8-sun-switch-arrow-prev" onClick={onPreviousEvent} aria-label="上一場聚會">
-        <img src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
-      </button>
-      <button type="button" className="v8-sun-switch-arrow v8-sun-switch-arrow-next" onClick={onNextEvent} aria-label="下一場聚會">
-        <img src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
-      </button>
+      {controls.show ? (
+        <>
+          <button
+            type="button"
+            className="v8-sun-switch-arrow"
+            style={switchArrowStyle(controls.prev)}
+            onClick={onPreviousEvent}
+            aria-label="上一場聚會"
+          >
+            <img src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+          </button>
+          <button
+            type="button"
+            className="v8-sun-switch-arrow"
+            style={switchArrowStyle(controls.next)}
+            onClick={onNextEvent}
+            aria-label="下一場聚會"
+          >
+            <img src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+          </button>
+        </>
+      ) : null}
     </>
   );
 }
@@ -737,6 +783,7 @@ export function V8ActiveSunContent({
   badgeControls = v8ActiveSunBadgesDefaults,
   capacityBadgeControls,
   messageControls = v8ActiveSunMessagesDefaults,
+  switchArrowControls,
   onPreviousEvent,
   onNextEvent,
 }: {
@@ -764,6 +811,7 @@ export function V8ActiveSunContent({
   badgeControls?: V8ActiveSunBadgesControls;
   capacityBadgeControls: V8ActiveCapacityBadgeControls;
   messageControls?: V8ActiveSunMessagesControls;
+  switchArrowControls: V8ActiveSwitchArrowsControls;
   // Meetup switcher -- arrows at the sun's own left/right edge + swipe
   // anywhere on the sun. Optional so the /v8/preview mock canvas (which
   // has no real event list to switch between) can simply omit them and
@@ -779,7 +827,12 @@ export function V8ActiveSunContent({
   return (
     <>
       {onPreviousEvent && onNextEvent ? (
-        <V8SunMeetupSwitcher assets={assets} onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
+        <V8SunMeetupSwitcher
+          assets={assets}
+          controls={switchArrowControls}
+          onPreviousEvent={onPreviousEvent}
+          onNextEvent={onNextEvent}
+        />
       ) : null}
       <V8SunMessage text={shortDate(eventDate)} controls={messageControls.date} />
       <V8SunMessage text={eventName} controls={messageControls.name} />
@@ -888,6 +941,72 @@ function identityVisualStyle(c: V8ActiveIdentityVisualControls): CSSProperties {
   };
 }
 
+// Name renders at a large fixed reference font-size (never user-tunable
+// directly), measures its own natural (unscaled) box via scrollWidth/
+// scrollHeight (NOT getBoundingClientRect, which would already include the
+// CSS transform scale being computed here), then scales down uniformly so
+// it fits inside controls.boxWidth x boxHeight without overflowing either
+// dimension -- short names end up with blank margin on one axis rather
+// than being stretched to fill it exactly, per the user's explicit
+// request (2026-09-11, replacing the old manual Font Size/Max Width/
+// Letter Spacing/Line Height/Text Align/Font Weight set, which was hard to
+// tune well across names of very different lengths). useLayoutEffect (not
+// useEffect) so the fit is computed and applied before the browser paints
+// -- otherwise the very first frame would flash the unscaled 100px text.
+const NAME_FIT_REFERENCE_FONT_SIZE = 100;
+
+function V8IdentityFitName({ text, controls }: { text: string; controls: V8ActiveIdentityNameControls }) {
+  const measureRef = useRef<HTMLElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const el = measureRef.current;
+    if (!el) return;
+    const naturalWidth = el.scrollWidth;
+    const naturalHeight = el.scrollHeight;
+    if (!naturalWidth || !naturalHeight) return;
+    const nextScale = Math.min(controls.boxWidth / naturalWidth, controls.boxHeight / naturalHeight);
+    setFitScale(Number.isFinite(nextScale) && nextScale > 0 ? nextScale : 1);
+  }, [text, controls.boxWidth, controls.boxHeight]);
+
+  return (
+    <div
+      style={
+        {
+          position: "absolute",
+          left: `${controls.x}%`,
+          top: `${controls.y}%`,
+          width: controls.boxWidth,
+          height: controls.boxHeight,
+          zIndex: controls.zIndex,
+          opacity: controls.opacity / 100,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          transform: `translate(-50%, -50%) rotate(${controls.rotation}deg)`,
+        } as CSSProperties
+      }
+    >
+      <strong
+        ref={measureRef}
+        className="v8-scroll-identity-name"
+        title={text}
+        style={{
+          display: "block",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          fontWeight: 900,
+          fontSize: NAME_FIT_REFERENCE_FONT_SIZE,
+          transform: `scale(${fitScale})`,
+        }}
+      >
+        {text}
+      </strong>
+    </div>
+  );
+}
+
 export function V8IdentityScrollContent({
   identity,
   assets,
@@ -911,11 +1030,6 @@ export function V8IdentityScrollContent({
 }) {
   if (!controls.show) return null;
 
-  const nameLength = Array.from(identity.name).length;
-  // Auto-fit/shrink for long names (per baseline's Max Width note) -- the
-  // console's Font Size control sets the CEILING, short names still grow up
-  // to it, long names still shrink below it, never an ellipsis truncation.
-  const nameSize = Math.max(9, Math.min(controls.name.fontSize, Math.floor(60 / Math.max(nameLength, 5))));
   const status = meetupStatusLabel(identity);
 
   return (
@@ -923,21 +1037,7 @@ export function V8IdentityScrollContent({
       <div className="v8-scroll-status-mark" style={identityVisualStyle(controls.statusMark)} aria-label={`本次狀態：${status}`}>
         <img src={statusStampAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
-      <strong
-        className="v8-scroll-identity-name"
-        style={{
-          ...identityVisualStyle(controls.name),
-          fontSize: nameSize,
-          width: controls.name.maxWidth,
-          letterSpacing: controls.name.letterSpacing,
-          lineHeight: controls.name.lineHeight,
-          textAlign: controls.name.textAlign,
-          fontWeight: controls.name.fontWeight,
-        }}
-        title={identity.name}
-      >
-        {identity.name}
-      </strong>
+      <V8IdentityFitName text={identity.name} controls={controls.name} />
       <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
         <img src={identityTagAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
@@ -1130,39 +1230,24 @@ export function V8ActiveStyles() {
         touch-action: pan-y;
       }
 
-      /* Image-based (2026-09-10, replaces the old CSS circle+glyph) --
-         border/background/padding are gone, the art itself carries the
-         cloud-plaque look. */
+      /* Image-based (2026-09-10, replaces the old CSS circle+glyph).
+         Position/scale/rotation/opacity/z-index are all inline now (see
+         switchArrowStyle, 2026-09-11 -- full baseline console controls,
+         replacing the earlier fixed -8%/108% CSS positions) -- this only
+         sets the button's own reset + the image's base width. */
       .v8-sun-switch-arrow {
-        position: absolute;
-        top: 50%;
         width: 34px;
         border: none;
         background: none;
         padding: 0;
         display: grid;
         place-items: center;
-        /* translateX(-50%) centers the arrow ON the -8%/108% edge point --
-           without it, "left" places the arrow's own LEFT edge there, so the
-           two arrows' CENTERS ended up asymmetric distances from the sun's
-           edge (prev's center sat inside the circle, next's sat well
-           outside it) by a full arrow-width's worth of offset. */
-        transform: translate(-50%, -50%);
-        z-index: 5;
       }
 
       .v8-sun-switch-arrow img {
         display: block;
         width: 100%;
         height: auto;
-      }
-
-      .v8-sun-switch-arrow-prev {
-        left: -8%;
-      }
-
-      .v8-sun-switch-arrow-next {
-        left: 108%;
       }
 
       .v8-sun-info-badge {
@@ -1255,15 +1340,12 @@ export function V8ActiveStyles() {
         pointer-events: auto;
       }
 
+      /* 2026-09-11: sizing (font-size/line-height/font-weight/whitespace)
+         moved to V8IdentityFitName's own inline style, which measures the
+         text at a fixed reference size and scales it to fit its box -- no
+         longer relies on this class for those, just the color. */
       .v8-scroll-identity-name {
-        display: block;
-        margin: 0;
-        line-height: 1.1;
-        font-weight: 900;
-        letter-spacing: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        color: inherit;
       }
 
       /* Identity tag (季打/臨打) -- replaces the old .v8-scroll-meta pair

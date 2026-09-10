@@ -115,7 +115,16 @@ const preloadHeroImages = (sources: string[]) => Promise.all([...new Set(sources
 // still show immediately, and any that are genuinely still in flight just
 // keep loading in the background and pop in as their <img> tags resolve
 // instead of holding up every other layer.
-const ASSET_PRELOAD_TIMEOUT_MS = 4000;
+//
+// 2026-09-11: raised from 4000 -- confirmed via the user's own real-device
+// reports (4G, several plaque/scroll images still visibly blank right
+// after the reveal) that 4s wasn't enough real-world margin for this many
+// images to finish over a real mobile connection, so the timeout was firing
+// and revealing the canvas mid-load more often than intended. Paired with
+// trimming what actually gets preloaded (see requiredAssetEntries below and
+// the extraPreloadSrcs filtering at each call site) rather than relying on
+// a longer timeout alone.
+const ASSET_PRELOAD_TIMEOUT_MS = 9000;
 const preloadHeroImagesWithTimeout = (sources: string[]) =>
   Promise.race([
     preloadHeroImages(sources),
@@ -300,20 +309,51 @@ export function V8HeroComposition({
   const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
   const fallbackConfirmButtonRef = useRef<HTMLButtonElement | null>(null);
 
+  // 2026-09-11: `assets` (buildV8HeroAssets) always returns the FULL set of
+  // Opening-only rig pieces (dragon body/claws/bag, tiger body/racket, the
+  // old scroll) regardless of whether this render actually shows them --
+  // on Active, every one of those is hidden (see
+  // v8ActiveTigerScrollOverrides) but their ~567KB was still sitting in the
+  // preload gate blocking the reveal for images nobody was ever going to
+  // see. Filter down to only the layers THIS render's own controls turn on
+  // before handing them to the gate.
+  const requiredAssets = (
+    [
+      ["body", controls.dragonShow],
+      ["rearClaw", controls.rearClawShow],
+      ["claw", controls.clawShow],
+      ["bagBase", controls.bagBaseShow],
+      ["bagStrap", controls.bagStrapShow],
+      ["tigerBody", controls.tigerShow],
+      ["tigerRacket", controls.tigerRacketShow],
+      ["cloud", controls.cloudShow],
+      ["mountain", controls.mountainShow],
+      ["backWave", controls.backWaveShow],
+      ["midWave", controls.midWaveShow],
+      ["frontFoam", controls.frontFoamShow],
+      ["goldInk", controls.goldInkShow],
+      ["scroll", controls.scrollShow],
+      ["tigerScroll", controls.tigerScrollShow],
+    ] satisfies Array<[keyof typeof assets, boolean]>
+  )
+    .filter(([, shown]) => shown)
+    .map(([key]) => assets[key]);
+
   useEffect(() => {
     let cancelled = false;
     setAssetsReady(false);
-    preloadHeroImagesWithTimeout([...Object.values(assets), ...(extraPreloadSrcs || [])]).then(() => {
+    preloadHeroImagesWithTimeout([...requiredAssets, ...(extraPreloadSrcs || [])]).then(() => {
       if (!cancelled) setAssetsReady(true);
     });
     return () => {
       cancelled = true;
     };
-    // extraPreloadSrcs is a fresh array every render (built inline at call
-    // sites) -- depending on it directly would re-trigger this effect (and
-    // the fade-out-then-in flicker) on every render. Its actual values are
-    // static asset URLs from buildV8ActiveAssets, which never change after
-    // mount, so it's safe to read once here without listing it as a dep.
+    // requiredAssets/extraPreloadSrcs are fresh arrays every render (built
+    // inline from `controls`/at call sites) -- depending on them directly
+    // would re-trigger this effect (and the fade-out-then-in flicker) on
+    // every render. The underlying show-flags and asset URLs are static per
+    // page mode (Active vs Opening always pass the same overrides), so it's
+    // safe to read them once here without listing as deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assets]);
 

@@ -6,6 +6,7 @@ import {
   bagStrapBaseline,
   buildPreviewAssets,
   buildV8ActiveCapacityBadgeControls,
+  buildV8ActiveEmaTextsControls,
   buildV8ActiveHeroOverrides,
   buildV8ActiveIdentityCardControls,
   buildV8ActiveInfoCardsControls,
@@ -14,6 +15,7 @@ import {
   buildV8ActiveRosterV2Controls,
   buildV8ActiveSunBadgesControls,
   buildV8ActiveSunMessagesControls,
+  buildV8ActiveSwitchArrowsControls,
   clawBaseline,
   decorBaseline,
   heroBaseline,
@@ -164,24 +166,28 @@ function ActiveCanvas({
   const capacityBadgeControls = buildV8ActiveCapacityBadgeControls(controls);
   const ropeOrnamentControls = buildV8ActiveRopeOrnamentsControls(controls);
   const rosterV2Controls = buildV8ActiveRosterV2Controls(controls);
+  const emaTextsControls = buildV8ActiveEmaTextsControls(controls);
+  const switchArrowControls = buildV8ActiveSwitchArrowsControls(controls);
+  // 2026-09-11: only preload an asset here when its own control is
+  // show:true -- see the matching comment in V8ActivePage.tsx.
   const extraPreloadSrcs = [
     assets.sunInfoBadge,
-    assets.sunBadgeBallType,
-    assets.sunBadgeTempFee,
-    assets.sunBadgeCourtCount,
-    assets.sunBadgeCapacity,
-    assets.infoCardRegistered,
-    assets.infoCardNeeded,
-    assets.infoCardWaitlist,
-    assets.infoRope,
-    assets.ropeOrnamentA,
-    assets.ropeOrnamentB,
-    assets.ropeOrnamentC,
-    assets.rosterFrame,
-    assets.rosterV2A1,
-    assets.rosterV2B1,
-    assets.rosterV2B2,
-  ];
+    sunBadgeControls.ballType.show ? assets.sunBadgeBallType : null,
+    sunBadgeControls.tempFee.show ? assets.sunBadgeTempFee : null,
+    sunBadgeControls.courtCount.show ? assets.sunBadgeCourtCount : null,
+    capacityBadgeControls.show ? assets.sunBadgeCapacity : null,
+    infoCardsControls.registered.show ? assets.infoCardRegistered : null,
+    infoCardsControls.needed.show ? assets.infoCardNeeded : null,
+    infoCardsControls.waitlist.show ? assets.infoCardWaitlist : null,
+    infoCardsControls.rope.show ? assets.infoRope : null,
+    ropeOrnamentControls.a.show ? assets.ropeOrnamentA : null,
+    ropeOrnamentControls.b.show ? assets.ropeOrnamentB : null,
+    ropeOrnamentControls.c.show ? assets.ropeOrnamentC : null,
+    rosterListsControls.show ? assets.rosterFrame : null,
+    rosterV2Controls.a1.show ? assets.rosterV2A1 : null,
+    rosterV2Controls.b1.show ? assets.rosterV2B1 : null,
+    rosterV2Controls.b2.show ? assets.rosterV2B2 : null,
+  ].filter((src): src is string => Boolean(src));
 
   return (
     <div className="v8-active" style={{ position: "relative", width: "100%" } as CSSProperties}>
@@ -206,6 +212,7 @@ function ActiveCanvas({
             badgeControls={sunBadgeControls}
             capacityBadgeControls={capacityBadgeControls}
             messageControls={sunMessageControls}
+            switchArrowControls={switchArrowControls}
           />
         }
         scrollContent={
@@ -227,6 +234,7 @@ function ActiveCanvas({
             controls={infoCardsControls}
             ropeOrnamentControls={ropeOrnamentControls}
             counts={{ registered: 16, needed: 6, waiting: 0 }}
+            textControls={emaTextsControls}
           />
         }
         rosterListsContent={

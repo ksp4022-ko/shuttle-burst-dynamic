@@ -305,12 +305,6 @@ export type V8ActiveInfoCardsControls = {
   registered: V8ActiveInfoCardControls;
   needed: V8ActiveInfoCardControls;
   waitlist: V8ActiveInfoCardControls;
-  // Shared across all three plaques' number overlay (registered/needed/
-  // waitlist) -- kept simple per the user's request (just size, no
-  // separate per-plaque color/position: the number is already centered in
-  // the plaque's blank area and rotates with it automatically since it's
-  // a child of the same rotated wrapper).
-  countFontSize: number;
 };
 
 // Rough/schematic starting placement -- left of the dragon (which sits
@@ -325,7 +319,6 @@ export const v8ActiveInfoCardsDefaults: V8ActiveInfoCardsControls = {
   registered: { show: true, x: 9, y: 33, scale: 1.97, rotation: 7 },
   needed: { show: true, x: 19, y: 36, scale: 1.88, rotation: 6 },
   waitlist: { show: true, x: 34, y: 37, scale: 1.83, rotation: -2 },
-  countFontSize: 20,
 };
 
 export const v8ActiveInfoCardsRanges: Record<
@@ -515,10 +508,30 @@ export type V8ActiveIdentityTextControls = V8ActiveIdentityVisualControls & {
   fontWeight: number;
 };
 
+// Name uses a "fit box" instead of manual typography (2026-09-11, per the
+// user's explicit request -- the old Font Size/Max Width/Letter Spacing/
+// Line Height/Text Align/Font Weight set was hard to tune well for names of
+// very different lengths). No Scale either -- the box's own width/height
+// ARE the sizing control now: the name renders at whatever font-size makes
+// it fit inside boxWidth x boxHeight without overflowing either dimension
+// (uniform scale, so short names don't stretch to fill a tall/wide box,
+// they just end up with blank margin -- the user explicitly said NOT to
+// distort/stretch to fill exactly). X/Y/Rotation/Opacity/Z-index unchanged
+// from the baseline set every other identity element already has.
+export type V8ActiveIdentityNameControls = {
+  x: number;
+  y: number;
+  rotation: number;
+  opacity: number;
+  zIndex: number;
+  boxWidth: number;
+  boxHeight: number;
+};
+
 export type V8ActiveIdentityCardControls = {
   show: boolean;
   statusMark: V8ActiveIdentityVisualControls;
-  name: V8ActiveIdentityTextControls;
+  name: V8ActiveIdentityNameControls;
   tag: V8ActiveIdentityVisualControls;
   cta: V8ActiveIdentityVisualControls;
   helperSignup: V8ActiveIdentityVisualControls;
@@ -599,5 +612,54 @@ export type V8ActiveRosterV2Controls = {
   a1: V8ActiveRosterV2A1Controls;
   b1: V8ActiveRosterV2LayerControls;
   b2: V8ActiveRosterV2LayerControls;
+};
+
+// Meetup switch arrows (‹/›), added 2026-09-11 -- previously two fixed CSS
+// positions (-8%/108% of the sun's own box), no console controls at all.
+// X/Y are % of the sun's own box (same convention as V8SunMessage/
+// V8SunInfoBadgeScattered's centered ones), translate(-50%,-50%)-centered
+// on that point. One shared Show (per the baseline's "no per-component
+// Visible" rule -- these are a pair, not independent decorative pieces
+// like the rope ornaments), each arrow independently
+// X/Y/Scale/Rotation/Opacity/Z-index otherwise.
+export type V8ActiveSwitchArrowLayerControls = {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  zIndex: number;
+};
+
+export type V8ActiveSwitchArrowsControls = {
+  show: boolean;
+  prev: V8ActiveSwitchArrowLayerControls;
+  next: V8ActiveSwitchArrowLayerControls;
+};
+
+// Ema (已報/尚缺/候補) count text, added 2026-09-11 -- previously one
+// countFontSize shared across all three plaques and nothing else tunable.
+// Per the user's explicit confirmation, does NOT get its own
+// Scale/Rotation/Opacity/Z-index -- the count text is nested inside (and
+// rotates/scales with) its own plaque's wrapper already (see
+// InfoCardStatusLayer in V8ActiveInfoCards.tsx), so a separate
+// scale/rotation here would desync the number from the plaque's own tilt.
+// X/Y is a px nudge on top of each plaque's own measured COUNT_INSETS safe
+// area (same convention as the sun badges' textOffsetX/Y).
+export type V8ActiveEmaTextControls = {
+  x: number;
+  y: number;
+  fontSize: number;
+  maxWidth: number;
+  letterSpacing: number;
+  lineHeight: number;
+  textAlign: "left" | "center" | "right";
+  fontWeight: number;
+};
+
+export type V8ActiveEmaTextsControls = {
+  registered: V8ActiveEmaTextControls;
+  needed: V8ActiveEmaTextControls;
+  waitlist: V8ActiveEmaTextControls;
 };
 

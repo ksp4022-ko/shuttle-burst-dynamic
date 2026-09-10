@@ -1,6 +1,7 @@
 import { v8ActiveBackgroundFadeOverrides } from "@/components/v8-active/v8ActiveConfig";
 import type {
   V8ActiveCapacityBadgeControls,
+  V8ActiveEmaTextsControls,
   V8ActiveIdentityCardControls,
   V8ActiveInfoCardsControls,
   V8ActiveRopeOrnamentsControls,
@@ -8,6 +9,7 @@ import type {
   V8ActiveRosterV2Controls,
   V8ActiveSunBadgesControls,
   V8ActiveSunMessagesControls,
+  V8ActiveSwitchArrowsControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import type { V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
 
@@ -170,9 +172,36 @@ export type PreviewControls = {
   activeInfoWaitlistY: number;
   activeInfoWaitlistScale: number;
   activeInfoWaitlistRotation: number;
-  // Shared across all three plaques' number overlay -- see
-  // v8ActiveInfoCardsControls.countFontSize in v8ActiveConfig.ts.
-  activeInfoCountFontSize: number;
+  // Ema (已報/尚缺/候補) count text, added 2026-09-11 -- replaces the old
+  // single countFontSize shared across all three; each plaque's number now
+  // has its own full baseline text set. See V8ActiveEmaTextControls in
+  // v8ActiveConfig.ts for why there's no Scale/Rotation/Opacity/Z-index
+  // here (the text is nested inside, and rotates/scales with, its own
+  // plaque's wrapper already).
+  activeInfoRegisteredTextX: number;
+  activeInfoRegisteredTextY: number;
+  activeInfoRegisteredTextFontSize: number;
+  activeInfoRegisteredTextMaxWidth: number;
+  activeInfoRegisteredTextLetterSpacing: number;
+  activeInfoRegisteredTextLineHeight: number;
+  activeInfoRegisteredTextAlign: "left" | "center" | "right";
+  activeInfoRegisteredTextFontWeight: number;
+  activeInfoNeededTextX: number;
+  activeInfoNeededTextY: number;
+  activeInfoNeededTextFontSize: number;
+  activeInfoNeededTextMaxWidth: number;
+  activeInfoNeededTextLetterSpacing: number;
+  activeInfoNeededTextLineHeight: number;
+  activeInfoNeededTextAlign: "left" | "center" | "right";
+  activeInfoNeededTextFontWeight: number;
+  activeInfoWaitlistTextX: number;
+  activeInfoWaitlistTextY: number;
+  activeInfoWaitlistTextFontSize: number;
+  activeInfoWaitlistTextMaxWidth: number;
+  activeInfoWaitlistTextLetterSpacing: number;
+  activeInfoWaitlistTextLineHeight: number;
+  activeInfoWaitlistTextAlign: "left" | "center" | "right";
+  activeInfoWaitlistTextFontWeight: number;
   // Active-only: one master dial that dims just the backdrop scenery layers
   // (mountain/back wave/mid wave/front foam/gold-ink) so they read quieter
   // behind the sun/dragon/scroll/info cards/rope while positioning those --
@@ -246,16 +275,15 @@ export type PreviewControls = {
   activeIdentityStatusMarkZIndex: number;
   activeIdentityNameX: number;
   activeIdentityNameY: number;
-  activeIdentityNameScale: number;
   activeIdentityNameRotation: number;
   activeIdentityNameOpacity: number;
   activeIdentityNameZIndex: number;
-  activeIdentityNameFontSize: number;
-  activeIdentityNameMaxWidth: number;
-  activeIdentityNameLetterSpacing: number;
-  activeIdentityNameLineHeight: number;
-  activeIdentityNameTextAlign: "left" | "center" | "right";
-  activeIdentityNameFontWeight: number;
+  // 2026-09-11: replaces Scale/Font Size/Max Width/Letter Spacing/Line
+  // Height/Text Align/Font Weight -- the name now auto-fits within a box
+  // (see V8IdentityFitName in V8ActivePage.tsx) instead of manual
+  // typography, per the user's explicit request.
+  activeIdentityNameBoxWidth: number;
+  activeIdentityNameBoxHeight: number;
   activeIdentityTagX: number;
   activeIdentityTagY: number;
   activeIdentityTagScale: number;
@@ -366,6 +394,22 @@ export type PreviewControls = {
   activeRosterV2B2Rotation: number;
   activeRosterV2B2Opacity: number;
   activeRosterV2B2ZIndex: number;
+  // Sun-embedded meetup-switch arrows (<>), added 2026-09-11 -- one shared
+  // Show toggle + each arrow (prev/next) independently gets the full
+  // baseline control set, per docs/V8_COMPONENT_CONTROL_BASELINE.md.
+  activeSwitchArrowShow: boolean;
+  activeSwitchArrowPrevX: number;
+  activeSwitchArrowPrevY: number;
+  activeSwitchArrowPrevScale: number;
+  activeSwitchArrowPrevRotation: number;
+  activeSwitchArrowPrevOpacity: number;
+  activeSwitchArrowPrevZIndex: number;
+  activeSwitchArrowNextX: number;
+  activeSwitchArrowNextY: number;
+  activeSwitchArrowNextScale: number;
+  activeSwitchArrowNextRotation: number;
+  activeSwitchArrowNextOpacity: number;
+  activeSwitchArrowNextZIndex: number;
 };
 
 export type PreviewBooleanControlKey = {
@@ -415,7 +459,9 @@ export type PreviewTargetId =
   | "ACTIVE ROSTER LISTS"
   | "ACTIVE ROSTER V2 A1"
   | "ACTIVE ROSTER V2 B1"
-  | "ACTIVE ROSTER V2 B2";
+  | "ACTIVE ROSTER V2 B2"
+  | "ACTIVE SWITCH ARROW PREV"
+  | "ACTIVE SWITCH ARROW NEXT";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -468,6 +514,8 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE ROSTER V2 A1",
   "ACTIVE ROSTER V2 B1",
   "ACTIVE ROSTER V2 B2",
+  "ACTIVE SWITCH ARROW PREV",
+  "ACTIVE SWITCH ARROW NEXT",
 ];
 
 // Kept for anything still importing the old flat name -- identical to
@@ -666,7 +714,34 @@ export const previewDefaults: PreviewControls = {
   activeInfoWaitlistY: 40,
   activeInfoWaitlistScale: 2.29,
   activeInfoWaitlistRotation: 0,
-  activeInfoCountFontSize: 20,
+  // Ema count text (2026-09-11) -- FontSize 20/MaxWidth 60/Align center/
+  // Weight 800 match the old shared defaults (the span's previous hardcoded
+  // fontWeight:800 and the old single countFontSize:20) so switching to
+  // per-plaque controls isn't a default visual regression.
+  activeInfoRegisteredTextX: 0,
+  activeInfoRegisteredTextY: 0,
+  activeInfoRegisteredTextFontSize: 20,
+  activeInfoRegisteredTextMaxWidth: 60,
+  activeInfoRegisteredTextLetterSpacing: 0,
+  activeInfoRegisteredTextLineHeight: 1,
+  activeInfoRegisteredTextAlign: "center",
+  activeInfoRegisteredTextFontWeight: 800,
+  activeInfoNeededTextX: 0,
+  activeInfoNeededTextY: 0,
+  activeInfoNeededTextFontSize: 20,
+  activeInfoNeededTextMaxWidth: 60,
+  activeInfoNeededTextLetterSpacing: 0,
+  activeInfoNeededTextLineHeight: 1,
+  activeInfoNeededTextAlign: "center",
+  activeInfoNeededTextFontWeight: 800,
+  activeInfoWaitlistTextX: 0,
+  activeInfoWaitlistTextY: 0,
+  activeInfoWaitlistTextFontSize: 20,
+  activeInfoWaitlistTextMaxWidth: 60,
+  activeInfoWaitlistTextLetterSpacing: 0,
+  activeInfoWaitlistTextLineHeight: 1,
+  activeInfoWaitlistTextAlign: "center",
+  activeInfoWaitlistTextFontWeight: 800,
   activeBackgroundFade: 45,
   // Matches v8ActiveSunBadgesDefaults in v8ActiveConfig.ts exactly.
   activeSunBadgeBallTypeShow: true,
@@ -724,16 +799,15 @@ export const previewDefaults: PreviewControls = {
   activeIdentityStatusMarkZIndex: 2,
   activeIdentityNameX: 42,
   activeIdentityNameY: 47,
-  activeIdentityNameScale: 2.95,
   activeIdentityNameRotation: 0,
   activeIdentityNameOpacity: 100,
   activeIdentityNameZIndex: 40,
-  activeIdentityNameFontSize: 12,
-  activeIdentityNameMaxWidth: 42,
-  activeIdentityNameLetterSpacing: -0.1,
-  activeIdentityNameLineHeight: 2.4,
-  activeIdentityNameTextAlign: "center",
-  activeIdentityNameFontWeight: 900,
+  // Auto-fit box (2026-09-11) -- replaces the old manual typography fields.
+  // Sized to roughly match the old default's rendered footprint (scale
+  // 2.95 on a ~42px-wide/short-line block) so switching isn't a default
+  // visual regression; tune further via the console.
+  activeIdentityNameBoxWidth: 120,
+  activeIdentityNameBoxHeight: 70,
   activeIdentityTagX: 41,
   activeIdentityTagY: 93,
   activeIdentityTagScale: 4,
@@ -851,6 +925,22 @@ export const previewDefaults: PreviewControls = {
   activeRosterV2B2Rotation: 0,
   activeRosterV2B2Opacity: 100,
   activeRosterV2B2ZIndex: 21,
+  // Sun-embedded meetup-switch arrows (2026-09-11) -- positioned inside the
+  // red sun circle per the user's request, prev on the left / next on the
+  // right, sharing one Show toggle.
+  activeSwitchArrowShow: true,
+  activeSwitchArrowPrevX: 15,
+  activeSwitchArrowPrevY: 50,
+  activeSwitchArrowPrevScale: 1,
+  activeSwitchArrowPrevRotation: 0,
+  activeSwitchArrowPrevOpacity: 100,
+  activeSwitchArrowPrevZIndex: 5,
+  activeSwitchArrowNextX: 85,
+  activeSwitchArrowNextY: 50,
+  activeSwitchArrowNextScale: 1,
+  activeSwitchArrowNextRotation: 0,
+  activeSwitchArrowNextOpacity: 100,
+  activeSwitchArrowNextZIndex: 5,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -916,16 +1006,11 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeIdentityShow",
     "activeIdentityNameX",
     "activeIdentityNameY",
-    "activeIdentityNameScale",
     "activeIdentityNameRotation",
     "activeIdentityNameOpacity",
     "activeIdentityNameZIndex",
-    "activeIdentityNameFontSize",
-    "activeIdentityNameMaxWidth",
-    "activeIdentityNameLetterSpacing",
-    "activeIdentityNameLineHeight",
-    "activeIdentityNameTextAlign",
-    "activeIdentityNameFontWeight",
+    "activeIdentityNameBoxWidth",
+    "activeIdentityNameBoxHeight",
   ],
   "ACTIVE IDENTITY TAG": [
     "activeIdentityShow",
@@ -985,9 +1070,14 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeInfoRegisteredY",
     "activeInfoRegisteredScale",
     "activeInfoRegisteredRotation",
-    // Shared across all three plaques (not just 已報) -- lives here since
-    // this is the first of the three tabs.
-    "activeInfoCountFontSize",
+    "activeInfoRegisteredTextX",
+    "activeInfoRegisteredTextY",
+    "activeInfoRegisteredTextFontSize",
+    "activeInfoRegisteredTextMaxWidth",
+    "activeInfoRegisteredTextLetterSpacing",
+    "activeInfoRegisteredTextLineHeight",
+    "activeInfoRegisteredTextAlign",
+    "activeInfoRegisteredTextFontWeight",
   ],
   "ACTIVE INFO NEEDED": [
     "activeInfoNeededShow",
@@ -995,6 +1085,14 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeInfoNeededY",
     "activeInfoNeededScale",
     "activeInfoNeededRotation",
+    "activeInfoNeededTextX",
+    "activeInfoNeededTextY",
+    "activeInfoNeededTextFontSize",
+    "activeInfoNeededTextMaxWidth",
+    "activeInfoNeededTextLetterSpacing",
+    "activeInfoNeededTextLineHeight",
+    "activeInfoNeededTextAlign",
+    "activeInfoNeededTextFontWeight",
   ],
   "ACTIVE INFO WAITLIST": [
     "activeInfoWaitlistShow",
@@ -1002,6 +1100,14 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeInfoWaitlistY",
     "activeInfoWaitlistScale",
     "activeInfoWaitlistRotation",
+    "activeInfoWaitlistTextX",
+    "activeInfoWaitlistTextY",
+    "activeInfoWaitlistTextFontSize",
+    "activeInfoWaitlistTextMaxWidth",
+    "activeInfoWaitlistTextLetterSpacing",
+    "activeInfoWaitlistTextLineHeight",
+    "activeInfoWaitlistTextAlign",
+    "activeInfoWaitlistTextFontWeight",
   ],
   "ACTIVE BACKGROUND FADE": ["activeBackgroundFade"],
   "ACTIVE SUN BADGE BALLTYPE": [
@@ -1129,6 +1235,24 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRosterListsWaitingX",
     "activeRosterListsWaitingY",
   ],
+  "ACTIVE SWITCH ARROW PREV": [
+    "activeSwitchArrowShow",
+    "activeSwitchArrowPrevX",
+    "activeSwitchArrowPrevY",
+    "activeSwitchArrowPrevScale",
+    "activeSwitchArrowPrevRotation",
+    "activeSwitchArrowPrevOpacity",
+    "activeSwitchArrowPrevZIndex",
+  ],
+  "ACTIVE SWITCH ARROW NEXT": [
+    "activeSwitchArrowShow",
+    "activeSwitchArrowNextX",
+    "activeSwitchArrowNextY",
+    "activeSwitchArrowNextScale",
+    "activeSwitchArrowNextRotation",
+    "activeSwitchArrowNextOpacity",
+    "activeSwitchArrowNextZIndex",
+  ],
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
@@ -1172,6 +1296,8 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE ROSTER V2 A1": "activeRosterV2A1Show",
   "ACTIVE ROSTER V2 B1": "activeRosterV2B1Show",
   "ACTIVE ROSTER V2 B2": "activeRosterV2B2Show",
+  "ACTIVE SWITCH ARROW PREV": "activeSwitchArrowShow",
+  "ACTIVE SWITCH ARROW NEXT": "activeSwitchArrowShow",
 };
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
@@ -1290,15 +1416,11 @@ export const controlRanges = {
   activeIdentityStatusMarkZIndex: { label: "印章 Z-Index", min: 0, max: 40 },
   activeIdentityNameX: { label: "姓名 X %", min: -30, max: 130 },
   activeIdentityNameY: { label: "姓名 Y %", min: -30, max: 160 },
-  activeIdentityNameScale: { label: "姓名 Scale", min: 0.3, max: 4, step: 0.01 },
   activeIdentityNameRotation: { label: "姓名 Rotation", min: -180, max: 180 },
   activeIdentityNameOpacity: { label: "姓名 Opacity", min: 0, max: 100 },
   activeIdentityNameZIndex: { label: "姓名 Z-Index", min: 0, max: 40 },
-  activeIdentityNameFontSize: { label: "姓名 Font Size", min: 6, max: 36 },
-  activeIdentityNameMaxWidth: { label: "姓名 Max Width", min: 30, max: 260 },
-  activeIdentityNameLetterSpacing: { label: "姓名 Letter Spacing", min: -2, max: 4, step: 0.1 },
-  activeIdentityNameLineHeight: { label: "姓名 Line Height", min: 0.8, max: 2.4, step: 0.05 },
-  activeIdentityNameFontWeight: { label: "姓名 Font Weight", min: 400, max: 900, step: 100 },
+  activeIdentityNameBoxWidth: { label: "姓名 Box Width", min: 30, max: 260 },
+  activeIdentityNameBoxHeight: { label: "姓名 Box Height", min: 20, max: 200 },
   activeIdentityTagX: { label: "身份吊牌 X %", min: -30, max: 130 },
   activeIdentityTagY: { label: "身份吊牌 Y %", min: -30, max: 160 },
   activeIdentityTagScale: { label: "身份吊牌 Scale", min: 0.3, max: 4, step: 0.01 },
@@ -1342,15 +1464,35 @@ export const controlRanges = {
   activeInfoRegisteredY: { label: "已報 Y %", min: -20, max: 140 },
   activeInfoRegisteredScale: { label: "已報 Scale", min: 0.2, max: 3, step: 0.01 },
   activeInfoRegisteredRotation: { label: "已報 Rotation", min: -180, max: 180 },
-  activeInfoCountFontSize: { label: "繪馬數字 Font Size", min: 10, max: 40 },
+  activeInfoRegisteredTextX: { label: "已報數字 X", min: -40, max: 40 },
+  activeInfoRegisteredTextY: { label: "已報數字 Y", min: -40, max: 40 },
+  activeInfoRegisteredTextFontSize: { label: "已報數字 Font Size", min: 10, max: 40 },
+  activeInfoRegisteredTextMaxWidth: { label: "已報數字 Max Width", min: 20, max: 120 },
+  activeInfoRegisteredTextLetterSpacing: { label: "已報數字 Letter Spacing", min: -2, max: 4, step: 0.1 },
+  activeInfoRegisteredTextLineHeight: { label: "已報數字 Line Height", min: 0.8, max: 2, step: 0.05 },
+  activeInfoRegisteredTextFontWeight: { label: "已報數字 Font Weight", min: 400, max: 900, step: 100 },
   activeInfoNeededX: { label: "尚缺 X %", min: -20, max: 120 },
   activeInfoNeededY: { label: "尚缺 Y %", min: -20, max: 140 },
   activeInfoNeededScale: { label: "尚缺 Scale", min: 0.2, max: 3, step: 0.01 },
   activeInfoNeededRotation: { label: "尚缺 Rotation", min: -180, max: 180 },
+  activeInfoNeededTextX: { label: "尚缺數字 X", min: -40, max: 40 },
+  activeInfoNeededTextY: { label: "尚缺數字 Y", min: -40, max: 40 },
+  activeInfoNeededTextFontSize: { label: "尚缺數字 Font Size", min: 10, max: 40 },
+  activeInfoNeededTextMaxWidth: { label: "尚缺數字 Max Width", min: 20, max: 120 },
+  activeInfoNeededTextLetterSpacing: { label: "尚缺數字 Letter Spacing", min: -2, max: 4, step: 0.1 },
+  activeInfoNeededTextLineHeight: { label: "尚缺數字 Line Height", min: 0.8, max: 2, step: 0.05 },
+  activeInfoNeededTextFontWeight: { label: "尚缺數字 Font Weight", min: 400, max: 900, step: 100 },
   activeInfoWaitlistX: { label: "候補 X %", min: -20, max: 120 },
   activeInfoWaitlistY: { label: "候補 Y %", min: -20, max: 140 },
   activeInfoWaitlistScale: { label: "候補 Scale", min: 0.2, max: 3, step: 0.01 },
   activeInfoWaitlistRotation: { label: "候補 Rotation", min: -180, max: 180 },
+  activeInfoWaitlistTextX: { label: "候補數字 X", min: -40, max: 40 },
+  activeInfoWaitlistTextY: { label: "候補數字 Y", min: -40, max: 40 },
+  activeInfoWaitlistTextFontSize: { label: "候補數字 Font Size", min: 10, max: 40 },
+  activeInfoWaitlistTextMaxWidth: { label: "候補數字 Max Width", min: 20, max: 120 },
+  activeInfoWaitlistTextLetterSpacing: { label: "候補數字 Letter Spacing", min: -2, max: 4, step: 0.1 },
+  activeInfoWaitlistTextLineHeight: { label: "候補數字 Line Height", min: 0.8, max: 2, step: 0.05 },
+  activeInfoWaitlistTextFontWeight: { label: "候補數字 Font Weight", min: 400, max: 900, step: 100 },
   activeBackgroundFade: { label: "Background Fade %", min: 0, max: 100 },
   activeSunBadgeBallTypeX: { label: "球種 X %", min: -150, max: 150 },
   activeSunBadgeBallTypeY: { label: "球種 Y %", min: -150, max: 150 },
@@ -1438,6 +1580,18 @@ export const controlRanges = {
   activeRosterListsConfirmedY: { label: "正取名單 Y", min: -40, max: 40 },
   activeRosterListsWaitingX: { label: "備取名單 X", min: -40, max: 40 },
   activeRosterListsWaitingY: { label: "備取名單 Y", min: -40, max: 40 },
+  activeSwitchArrowPrevX: { label: "切換箭頭(前) X %", min: -30, max: 130 },
+  activeSwitchArrowPrevY: { label: "切換箭頭(前) Y %", min: -30, max: 130 },
+  activeSwitchArrowPrevScale: { label: "切換箭頭(前) Scale", min: 0.3, max: 3, step: 0.01 },
+  activeSwitchArrowPrevRotation: { label: "切換箭頭(前) Rotation", min: -180, max: 180 },
+  activeSwitchArrowPrevOpacity: { label: "切換箭頭(前) Opacity", min: 0, max: 100 },
+  activeSwitchArrowPrevZIndex: { label: "切換箭頭(前) Z-Index", min: 0, max: 40 },
+  activeSwitchArrowNextX: { label: "切換箭頭(後) X %", min: -30, max: 130 },
+  activeSwitchArrowNextY: { label: "切換箭頭(後) Y %", min: -30, max: 130 },
+  activeSwitchArrowNextScale: { label: "切換箭頭(後) Scale", min: 0.3, max: 3, step: 0.01 },
+  activeSwitchArrowNextRotation: { label: "切換箭頭(後) Rotation", min: -180, max: 180 },
+  activeSwitchArrowNextOpacity: { label: "切換箭頭(後) Opacity", min: 0, max: 100 },
+  activeSwitchArrowNextZIndex: { label: "切換箭頭(後) Z-Index", min: 0, max: 40 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -1629,7 +1783,7 @@ X: ${Math.round(controls.activeInfoRegisteredX)}
 Y: ${Math.round(controls.activeInfoRegisteredY)}
 Scale: ${controls.activeInfoRegisteredScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeInfoRegisteredRotation)}
-Count Font Size (all 3 plaques): ${Math.round(controls.activeInfoCountFontSize)}
+數字: X ${Math.round(controls.activeInfoRegisteredTextX)}, Y ${Math.round(controls.activeInfoRegisteredTextY)}, Font ${Math.round(controls.activeInfoRegisteredTextFontSize)}, Max Width ${Math.round(controls.activeInfoRegisteredTextMaxWidth)}, Letter Spacing ${controls.activeInfoRegisteredTextLetterSpacing.toFixed(1)}, Line Height ${controls.activeInfoRegisteredTextLineHeight.toFixed(2)}, Align ${controls.activeInfoRegisteredTextAlign}, Weight ${Math.round(controls.activeInfoRegisteredTextFontWeight)}
 
 ACTIVE INFO NEEDED (尚缺)
 Show: ${controls.activeInfoNeededShow ? "ON" : "OFF"}
@@ -1637,6 +1791,7 @@ X: ${Math.round(controls.activeInfoNeededX)}
 Y: ${Math.round(controls.activeInfoNeededY)}
 Scale: ${controls.activeInfoNeededScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeInfoNeededRotation)}
+數字: X ${Math.round(controls.activeInfoNeededTextX)}, Y ${Math.round(controls.activeInfoNeededTextY)}, Font ${Math.round(controls.activeInfoNeededTextFontSize)}, Max Width ${Math.round(controls.activeInfoNeededTextMaxWidth)}, Letter Spacing ${controls.activeInfoNeededTextLetterSpacing.toFixed(1)}, Line Height ${controls.activeInfoNeededTextLineHeight.toFixed(2)}, Align ${controls.activeInfoNeededTextAlign}, Weight ${Math.round(controls.activeInfoNeededTextFontWeight)}
 
 ACTIVE INFO WAITLIST (候補)
 Show: ${controls.activeInfoWaitlistShow ? "ON" : "OFF"}
@@ -1644,6 +1799,7 @@ X: ${Math.round(controls.activeInfoWaitlistX)}
 Y: ${Math.round(controls.activeInfoWaitlistY)}
 Scale: ${controls.activeInfoWaitlistScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeInfoWaitlistRotation)}
+數字: X ${Math.round(controls.activeInfoWaitlistTextX)}, Y ${Math.round(controls.activeInfoWaitlistTextY)}, Font ${Math.round(controls.activeInfoWaitlistTextFontSize)}, Max Width ${Math.round(controls.activeInfoWaitlistTextMaxWidth)}, Letter Spacing ${controls.activeInfoWaitlistTextLetterSpacing.toFixed(1)}, Line Height ${controls.activeInfoWaitlistTextLineHeight.toFixed(2)}, Align ${controls.activeInfoWaitlistTextAlign}, Weight ${Math.round(controls.activeInfoWaitlistTextFontWeight)}
 
 ACTIVE BACKGROUND FADE
 Fade %: ${Math.round(controls.activeBackgroundFade)}
@@ -1678,7 +1834,7 @@ Text Offset: ${Math.round(controls.activeSunBadgeCourtCountTextOffsetX)}, ${Math
 ACTIVE IDENTITY CARD (個人資訊區)
 Show: ${controls.activeIdentityShow ? "ON" : "OFF"}
 印章 (status mark): X ${Math.round(controls.activeIdentityStatusMarkX)}, Y ${Math.round(controls.activeIdentityStatusMarkY)}, Scale ${controls.activeIdentityStatusMarkScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityStatusMarkRotation)}, Opacity ${Math.round(controls.activeIdentityStatusMarkOpacity)}, Z ${Math.round(controls.activeIdentityStatusMarkZIndex)}
-姓名 (name): X ${Math.round(controls.activeIdentityNameX)}, Y ${Math.round(controls.activeIdentityNameY)}, Scale ${controls.activeIdentityNameScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityNameRotation)}, Opacity ${Math.round(controls.activeIdentityNameOpacity)}, Z ${Math.round(controls.activeIdentityNameZIndex)}, Font ${Math.round(controls.activeIdentityNameFontSize)}, Max Width ${Math.round(controls.activeIdentityNameMaxWidth)}, Letter Spacing ${controls.activeIdentityNameLetterSpacing.toFixed(1)}, Line Height ${controls.activeIdentityNameLineHeight.toFixed(2)}, Align ${controls.activeIdentityNameTextAlign}, Weight ${Math.round(controls.activeIdentityNameFontWeight)}
+姓名 (name): X ${Math.round(controls.activeIdentityNameX)}, Y ${Math.round(controls.activeIdentityNameY)}, Rotation ${Math.round(controls.activeIdentityNameRotation)}, Opacity ${Math.round(controls.activeIdentityNameOpacity)}, Z ${Math.round(controls.activeIdentityNameZIndex)}, Box Width ${Math.round(controls.activeIdentityNameBoxWidth)}, Box Height ${Math.round(controls.activeIdentityNameBoxHeight)}
 身份吊牌 (tag): X ${Math.round(controls.activeIdentityTagX)}, Y ${Math.round(controls.activeIdentityTagY)}, Scale ${controls.activeIdentityTagScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityTagRotation)}, Opacity ${Math.round(controls.activeIdentityTagOpacity)}, Z ${Math.round(controls.activeIdentityTagZIndex)}
 主要按鈕 (cta): X ${Math.round(controls.activeIdentityCtaX)}, Y ${Math.round(controls.activeIdentityCtaY)}, Scale ${controls.activeIdentityCtaScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityCtaRotation)}, Opacity ${Math.round(controls.activeIdentityCtaOpacity)}, Z ${Math.round(controls.activeIdentityCtaZIndex)}
 代報 (helper signup): X ${Math.round(controls.activeIdentityHelperSignupX)}, Y ${Math.round(controls.activeIdentityHelperSignupY)}, Scale ${controls.activeIdentityHelperSignupScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityHelperSignupRotation)}, Opacity ${Math.round(controls.activeIdentityHelperSignupOpacity)}, Z ${Math.round(controls.activeIdentityHelperSignupZIndex)}
@@ -1719,7 +1875,12 @@ Bold: ${controls.activeRosterListsBold ? "ON" : "OFF"}
 ACTIVE ROSTER V2 (三名單v2)
 A1: Show ${controls.activeRosterV2A1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2A1X)}, Y ${Math.round(controls.activeRosterV2A1Y)}, Scale ${controls.activeRosterV2A1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2A1Rotation)}, Opacity ${Math.round(controls.activeRosterV2A1Opacity)}, Z ${Math.round(controls.activeRosterV2A1ZIndex)}, Font ${Math.round(controls.activeRosterV2A1FontSize)}, Line Height ${controls.activeRosterV2A1LineHeight.toFixed(2)}, Text Color ${controls.activeRosterV2A1TextColor}, Font Family ${controls.activeRosterV2A1FontFamily || "(default)"}, Bold ${controls.activeRosterV2A1Bold ? "ON" : "OFF"}, 季打請假 Offset ${Math.round(controls.activeRosterV2A1LeaveX)}/${Math.round(controls.activeRosterV2A1LeaveY)}, 正取名單 Offset ${Math.round(controls.activeRosterV2A1ConfirmedX)}/${Math.round(controls.activeRosterV2A1ConfirmedY)}, 備取名單 Offset ${Math.round(controls.activeRosterV2A1WaitingX)}/${Math.round(controls.activeRosterV2A1WaitingY)}
 B1: Show ${controls.activeRosterV2B1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B1X)}, Y ${Math.round(controls.activeRosterV2B1Y)}, Scale ${controls.activeRosterV2B1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B1Rotation)}, Opacity ${Math.round(controls.activeRosterV2B1Opacity)}, Z ${Math.round(controls.activeRosterV2B1ZIndex)}
-B2: Show ${controls.activeRosterV2B2Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B2X)}, Y ${Math.round(controls.activeRosterV2B2Y)}, Scale ${controls.activeRosterV2B2Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B2Rotation)}, Opacity ${Math.round(controls.activeRosterV2B2Opacity)}, Z ${Math.round(controls.activeRosterV2B2ZIndex)}`;
+B2: Show ${controls.activeRosterV2B2Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B2X)}, Y ${Math.round(controls.activeRosterV2B2Y)}, Scale ${controls.activeRosterV2B2Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B2Rotation)}, Opacity ${Math.round(controls.activeRosterV2B2Opacity)}, Z ${Math.round(controls.activeRosterV2B2ZIndex)}
+
+ACTIVE SWITCH ARROW (切換聚會 <>)
+Show: ${controls.activeSwitchArrowShow ? "ON" : "OFF"}
+Prev: X ${Math.round(controls.activeSwitchArrowPrevX)}, Y ${Math.round(controls.activeSwitchArrowPrevY)}, Scale ${controls.activeSwitchArrowPrevScale.toFixed(2)}, Rotation ${Math.round(controls.activeSwitchArrowPrevRotation)}, Opacity ${Math.round(controls.activeSwitchArrowPrevOpacity)}, Z ${Math.round(controls.activeSwitchArrowPrevZIndex)}
+Next: X ${Math.round(controls.activeSwitchArrowNextX)}, Y ${Math.round(controls.activeSwitchArrowNextY)}, Scale ${controls.activeSwitchArrowNextScale.toFixed(2)}, Rotation ${Math.round(controls.activeSwitchArrowNextRotation)}, Opacity ${Math.round(controls.activeSwitchArrowNextOpacity)}, Z ${Math.round(controls.activeSwitchArrowNextZIndex)}`;
 
 // Mid-tuning autosave -- shared between the /v8/preview console
 // (DragonPreview.tsx) and the real Active page's own embedded tuning
@@ -1879,7 +2040,63 @@ export function buildV8ActiveInfoCardsControls(controls: PreviewControls): V8Act
       scale: controls.activeInfoWaitlistScale,
       rotation: controls.activeInfoWaitlistRotation,
     },
-    countFontSize: controls.activeInfoCountFontSize,
+  };
+}
+
+export function buildV8ActiveEmaTextsControls(controls: PreviewControls): V8ActiveEmaTextsControls {
+  return {
+    registered: {
+      x: controls.activeInfoRegisteredTextX,
+      y: controls.activeInfoRegisteredTextY,
+      fontSize: controls.activeInfoRegisteredTextFontSize,
+      maxWidth: controls.activeInfoRegisteredTextMaxWidth,
+      letterSpacing: controls.activeInfoRegisteredTextLetterSpacing,
+      lineHeight: controls.activeInfoRegisteredTextLineHeight,
+      textAlign: controls.activeInfoRegisteredTextAlign,
+      fontWeight: controls.activeInfoRegisteredTextFontWeight,
+    },
+    needed: {
+      x: controls.activeInfoNeededTextX,
+      y: controls.activeInfoNeededTextY,
+      fontSize: controls.activeInfoNeededTextFontSize,
+      maxWidth: controls.activeInfoNeededTextMaxWidth,
+      letterSpacing: controls.activeInfoNeededTextLetterSpacing,
+      lineHeight: controls.activeInfoNeededTextLineHeight,
+      textAlign: controls.activeInfoNeededTextAlign,
+      fontWeight: controls.activeInfoNeededTextFontWeight,
+    },
+    waitlist: {
+      x: controls.activeInfoWaitlistTextX,
+      y: controls.activeInfoWaitlistTextY,
+      fontSize: controls.activeInfoWaitlistTextFontSize,
+      maxWidth: controls.activeInfoWaitlistTextMaxWidth,
+      letterSpacing: controls.activeInfoWaitlistTextLetterSpacing,
+      lineHeight: controls.activeInfoWaitlistTextLineHeight,
+      textAlign: controls.activeInfoWaitlistTextAlign,
+      fontWeight: controls.activeInfoWaitlistTextFontWeight,
+    },
+  };
+}
+
+export function buildV8ActiveSwitchArrowsControls(controls: PreviewControls): V8ActiveSwitchArrowsControls {
+  return {
+    show: controls.activeSwitchArrowShow,
+    prev: {
+      x: controls.activeSwitchArrowPrevX,
+      y: controls.activeSwitchArrowPrevY,
+      scale: controls.activeSwitchArrowPrevScale,
+      rotation: controls.activeSwitchArrowPrevRotation,
+      opacity: controls.activeSwitchArrowPrevOpacity,
+      zIndex: controls.activeSwitchArrowPrevZIndex,
+    },
+    next: {
+      x: controls.activeSwitchArrowNextX,
+      y: controls.activeSwitchArrowNextY,
+      scale: controls.activeSwitchArrowNextScale,
+      rotation: controls.activeSwitchArrowNextRotation,
+      opacity: controls.activeSwitchArrowNextOpacity,
+      zIndex: controls.activeSwitchArrowNextZIndex,
+    },
   };
 }
 
@@ -1950,16 +2167,11 @@ export function buildV8ActiveIdentityCardControls(controls: PreviewControls): V8
     name: {
       x: controls.activeIdentityNameX,
       y: controls.activeIdentityNameY,
-      scale: controls.activeIdentityNameScale,
       rotation: controls.activeIdentityNameRotation,
       opacity: controls.activeIdentityNameOpacity,
       zIndex: controls.activeIdentityNameZIndex,
-      fontSize: controls.activeIdentityNameFontSize,
-      maxWidth: controls.activeIdentityNameMaxWidth,
-      letterSpacing: controls.activeIdentityNameLetterSpacing,
-      lineHeight: controls.activeIdentityNameLineHeight,
-      textAlign: controls.activeIdentityNameTextAlign,
-      fontWeight: controls.activeIdentityNameFontWeight,
+      boxWidth: controls.activeIdentityNameBoxWidth,
+      boxHeight: controls.activeIdentityNameBoxHeight,
     },
     tag: {
       x: controls.activeIdentityTagX,

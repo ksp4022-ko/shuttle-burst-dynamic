@@ -421,12 +421,40 @@ export function V8TuningPanel({
             {controls.activeSunNoteBold ? "Bold ON" : "Bold OFF"}
           </button>
         ) : null}
-        {selectedTarget === "ACTIVE IDENTITY NAME" ? (
+        {selectedTarget === "ACTIVE INFO REGISTERED" ? (
           <label style={inlineSelectLabelStyle}>
             ALIGN
             <select
-              value={controls.activeIdentityNameTextAlign}
-              onChange={(event) => update("activeIdentityNameTextAlign", event.currentTarget.value as PreviewControls["activeIdentityNameTextAlign"])}
+              value={controls.activeInfoRegisteredTextAlign}
+              onChange={(event) => update("activeInfoRegisteredTextAlign", event.currentTarget.value as PreviewControls["activeInfoRegisteredTextAlign"])}
+              style={compactSelectStyle}
+            >
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </label>
+        ) : null}
+        {selectedTarget === "ACTIVE INFO NEEDED" ? (
+          <label style={inlineSelectLabelStyle}>
+            ALIGN
+            <select
+              value={controls.activeInfoNeededTextAlign}
+              onChange={(event) => update("activeInfoNeededTextAlign", event.currentTarget.value as PreviewControls["activeInfoNeededTextAlign"])}
+              style={compactSelectStyle}
+            >
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </label>
+        ) : null}
+        {selectedTarget === "ACTIVE INFO WAITLIST" ? (
+          <label style={inlineSelectLabelStyle}>
+            ALIGN
+            <select
+              value={controls.activeInfoWaitlistTextAlign}
+              onChange={(event) => update("activeInfoWaitlistTextAlign", event.currentTarget.value as PreviewControls["activeInfoWaitlistTextAlign"])}
               style={compactSelectStyle}
             >
               <option value="left">Left</option>

@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 import type {
+  V8ActiveEmaTextControls,
+  V8ActiveEmaTextsControls,
   V8ActiveInfoCardControls,
   V8ActiveInfoCardsControls,
   V8ActiveRopeOrnamentControls,
@@ -108,13 +110,20 @@ const COUNT_INSETS = {
 } as const;
 
 // Same wrapper/position handling as InfoCardLayer, plus the live count
-// rendered into the plaque's own blank area.
+// rendered into the plaque's own blank area. The count text's own controls
+// (2026-09-11, per docs/V8_COMPONENT_CONTROL_BASELINE.md) are nested inside
+// the SAME wrapper as the <img>, which carries the plaque's rotate() --
+// deliberately NOT given their own independent scale/rotation (confirmed
+// with the user) so the number always stays in sync with its plaque's tilt
+// instead of drifting out of alignment. X/Y is a px nudge layered on top of
+// countInset's own measured safe-area default (same convention as the sun
+// badges' textOffsetX/Y).
 function InfoCardStatusLayer({
   src,
   controls,
   baseWidth,
   count,
-  fontSize,
+  textControls,
   countInset,
   zIndex = 20,
 }: {
@@ -122,7 +131,7 @@ function InfoCardStatusLayer({
   controls: V8ActiveInfoCardControls;
   baseWidth: number;
   count: number;
-  fontSize: number;
+  textControls: V8ActiveEmaTextControls;
   countInset: (typeof COUNT_INSETS)[keyof typeof COUNT_INSETS];
   zIndex?: number;
 }) {
@@ -152,10 +161,15 @@ function InfoCardStatusLayer({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontWeight: 800,
             color: "#7a2a12",
-            fontSize: `${fontSize}px`,
             ...countInset,
+            transform: `translate(${textControls.x}px, ${textControls.y}px)`,
+            fontSize: textControls.fontSize,
+            maxWidth: textControls.maxWidth,
+            letterSpacing: textControls.letterSpacing,
+            lineHeight: textControls.lineHeight,
+            textAlign: textControls.textAlign,
+            fontWeight: textControls.fontWeight,
           } as CSSProperties
         }
       >
@@ -179,11 +193,13 @@ export function V8ActiveInfoCards({
   controls,
   counts,
   ropeOrnamentControls,
+  textControls,
 }: {
   assets: Assets;
   controls: V8ActiveInfoCardsControls;
   counts: { registered: number; needed: number; waiting: number };
   ropeOrnamentControls: V8ActiveRopeOrnamentsControls;
+  textControls: V8ActiveEmaTextsControls;
 }) {
   // 尚缺/候補 are mutually exclusive in practice (there's room OR there's a
   // waitlist, never both) -- 2026-09-10, per the user's request, so only one
@@ -207,7 +223,7 @@ export function V8ActiveInfoCards({
         controls={controls.registered}
         baseWidth={15}
         count={counts.registered}
-        fontSize={controls.countFontSize}
+        textControls={textControls.registered}
         countInset={COUNT_INSETS.registered}
       />
       {/* z-index 37 -- the frontmost layer on the page (2026-09-10, per the
@@ -219,7 +235,7 @@ export function V8ActiveInfoCards({
         controls={{ ...controls.needed, show: showNeeded }}
         baseWidth={15}
         count={counts.needed}
-        fontSize={controls.countFontSize}
+        textControls={textControls.needed}
         countInset={COUNT_INSETS.needed}
         zIndex={37}
       />
@@ -233,7 +249,7 @@ export function V8ActiveInfoCards({
         baseWidth={15}
         countInset={COUNT_INSETS.waitlist}
         count={counts.waiting}
-        fontSize={controls.countFontSize}
+        textControls={textControls.waitlist}
         zIndex={36}
       />
     </>
