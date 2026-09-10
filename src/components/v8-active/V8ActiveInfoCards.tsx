@@ -203,6 +203,10 @@ export function V8ActiveInfoCards({
         fontSize={controls.countFontSize}
         countInset={COUNT_INSETS.registered}
       />
+      {/* z-index 37 -- the frontmost layer on the page (2026-09-10, per the
+          user's request), above both 候補's 36 and the tiger-scroll panel's
+          35 in V8HeroComposition.tsx, so 尚缺 always sits on top of
+          whatever else it overlaps. */}
       <InfoCardStatusLayer
         src={assets.infoCardNeeded}
         controls={controls.needed}
@@ -210,6 +214,7 @@ export function V8ActiveInfoCards({
         count={counts.needed}
         fontSize={controls.countFontSize}
         countInset={COUNT_INSETS.needed}
+        zIndex={37}
       />
       {/* z-index 36 (not the default 20) -- moved in front of the tiger-
           scroll panel (z-index 35 in V8HeroComposition.tsx) per the user's
