@@ -797,7 +797,7 @@ export function V8ActiveSunContent({
         />
       ) : null}
       {typeof capacity === "number" ? (
-        <V8CapacityBadge src={assets.sunBadgeCapacity} label={String(capacity)} controls={capacityBadgeControls} />
+        <V8CapacityBadge src={assets.sunBadgeCapacity} label={`${capacity}人`} controls={capacityBadgeControls} />
       ) : null}
     </>
   );
