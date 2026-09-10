@@ -134,7 +134,10 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
 
   const memberCandidates = useMemo(() => {
     if (memberPickerMode === "season-leave") {
-      return roster?.fixedConfirmed || [];
+      return sortSignupsByOrder([
+        ...(roster?.fixedConfirmed || []),
+        ...(roster?.fixedWaiting || []),
+      ]);
     }
     if (memberPickerMode === "season-restore") return roster?.fixedLeave || [];
     if (memberPickerMode === "casual-cancel") {
