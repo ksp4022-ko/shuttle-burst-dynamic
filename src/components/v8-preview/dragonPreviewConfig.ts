@@ -1919,11 +1919,31 @@ Next: X ${Math.round(controls.activeSwitchArrowNextX)}, Y ${Math.round(controls.
 // comment above on why this class of change needs a version bump.
 export const PREVIEW_CONTROLS_STORAGE_KEY = "v8-preview-controls-v3";
 
+// Fields whose COORDINATE-SYSTEM MEANING changed but didn't warrant a full
+// -vN storage bump (that would discard every OTHER field the user has
+// tuned, not just these). 2026-09-11: activeIdentityStatusMark* moved from
+// its own designated spot lower on the scroll to sitting ON TOP of the name
+// (X/Y now match activeIdentityName*, Z-index raised above it) -- a saved
+// device's old X/Y/Z for just this one field would otherwise keep silently
+// applying the stale "own spot" position forever, which is exactly what
+// happened (reported as "the stamp still isn't on the name" after the fix
+// already shipped). Dropping just these keys from any saved blob forces
+// them back to the fresh default while leaving every other saved field
+// (sun position, badges, etc.) untouched.
+const STALE_SAVED_CONTROL_KEYS: (keyof PreviewControls)[] = [
+  "activeIdentityStatusMarkX",
+  "activeIdentityStatusMarkY",
+  "activeIdentityStatusMarkZIndex",
+];
+
 export function loadSavedControls(): PreviewControls {
   try {
     const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
     if (!raw) return previewDefaults;
     const saved = JSON.parse(raw) as Partial<PreviewControls>;
+    for (const key of STALE_SAVED_CONTROL_KEYS) {
+      delete saved[key];
+    }
     return { ...previewDefaults, ...saved };
   } catch {
     return previewDefaults;

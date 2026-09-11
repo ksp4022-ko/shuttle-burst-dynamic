@@ -66,7 +66,7 @@ type HelperMode = "signup" | "cancel" | null;
 
 export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
-  const { identity, remember, forget } = useCurrentIdentity(roster);
+  const { identity, remember, rememberName, forget } = useCurrentIdentity(roster);
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
@@ -110,8 +110,11 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.pendingSwitchEventId]);
 
+  // 2026-09-11: was missing fixedWaiting (季打候補) -- a season member
+  // currently on the waitlist couldn't find themselves in this "who are
+  // you" list at all, with no error, just an empty-looking absence.
   const seasonCandidates = useMemo<AlphaSignup[]>(
-    () => [...(roster?.fixedConfirmed || []), ...(roster?.fixedLeave || [])],
+    () => [...(roster?.fixedConfirmed || []), ...(roster?.fixedWaiting || []), ...(roster?.fixedLeave || [])],
     [roster],
   );
 
@@ -145,9 +148,15 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   };
 
   const submitTigerSignup = async () => {
-    const result = await flow.submitSignup(tigerName);
+    const submittedName = tigerName;
+    const result = await flow.submitSignup(submittedName);
     if (result.ok && result.signupId) {
-      remember(result.signupId);
+      // rememberName (not remember(result.signupId)) -- `roster` here is
+      // still the pre-signup snapshot, so looking the new id up in it would
+      // silently fail (see the comment on rememberName in
+      // use-current-identity.ts). The name just submitted is already known,
+      // no roster lookup needed.
+      rememberName(submittedName);
       setTigerName("");
     }
   };

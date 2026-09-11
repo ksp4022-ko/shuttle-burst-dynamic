@@ -89,6 +89,25 @@ export function useCurrentIdentity(roster: AlphaRoster | null) {
     [roster],
   );
 
+  // 2026-09-11: for the "I just signed MYSELF up" flow specifically --
+  // remember(signupId) looks the id up in `roster`, but that's a snapshot
+  // from BEFORE this brand-new signup was created, so the lookup always
+  // missed (found === null, silently returned) and the identity never got
+  // set, even though the signup itself succeeded (the success toast came
+  // from a separate, unrelated code path). The caller already knows the
+  // exact name that was just submitted, so skip the roster round-trip
+  // entirely instead of waiting on a refetch that may not have landed yet.
+  const rememberName = useCallback((name: string) => {
+    if (!name) return;
+    setName(name);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ name } satisfies StoredIdentity));
+    } catch {
+      // Storage may be unavailable (private mode, quota); identity just
+      // won't persist across reloads for this visitor.
+    }
+  }, []);
+
   const forget = useCallback(() => {
     setName("");
     try {
@@ -98,5 +117,5 @@ export function useCurrentIdentity(roster: AlphaRoster | null) {
     }
   }, []);
 
-  return { identity: findIdentityByName(roster, name), remember, forget };
+  return { identity: findIdentityByName(roster, name), remember, rememberName, forget };
 }
