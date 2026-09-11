@@ -342,7 +342,15 @@ export const v8ActiveInfoCardsCountFontSizeRange = { label: "Count Font Size", m
 // rotation apply via transform on the badge's wrapper (image + text
 // together); fontSize is independent of scale so the text can be tuned
 // without also resizing the badge artwork.
-export type V8ActiveSunBadgeControls = {
+export type V8ActiveSunBadgeShadowControls = {
+  shadowX: number;
+  shadowY: number;
+  shadowScale: number;
+  shadowOpacity: number;
+  shadowBlur: number;
+};
+
+export type V8ActiveSunBadgeControls = V8ActiveSunBadgeShadowControls & {
   show: boolean;
   x: number;
   y: number;
@@ -368,9 +376,9 @@ export type V8ActiveSunBadgesControls = {
 // exactly (fontSize:11 matches .v8-sun-info-scattered's old fixed 11px) --
 // this refactor only makes them tunable, not a visual change by default.
 export const v8ActiveSunBadgesDefaults: V8ActiveSunBadgesControls = {
-  ballType: { show: true, x: -5, y: 91, scale: 2.04, rotation: 0, fontSize: 11, textOffsetX: 0, textOffsetY: 0 },
-  tempFee: { show: true, x: 101, y: 60, scale: 1.72, rotation: -1, fontSize: 15, textOffsetX: 0, textOffsetY: 0 },
-  courtCount: { show: true, x: -46, y: 42, scale: 1.95, rotation: 0, fontSize: 11, textOffsetX: 0, textOffsetY: 0 },
+  ballType: { show: true, x: -5, y: 91, scale: 2.04, rotation: 0, fontSize: 11, textOffsetX: 0, textOffsetY: 0, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
+  tempFee: { show: true, x: 101, y: 60, scale: 1.72, rotation: -1, fontSize: 15, textOffsetX: 0, textOffsetY: 0, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
+  courtCount: { show: true, x: -46, y: 42, scale: 1.95, rotation: 0, fontSize: 11, textOffsetX: 0, textOffsetY: 0, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
 };
 
 export const v8ActiveSunBadgesRanges: Record<
@@ -385,6 +393,11 @@ export const v8ActiveSunBadgesRanges: Record<
   fontSize: { label: "Font Size", min: 6, max: 28 },
   textOffsetX: { label: "Text Offset X", min: -40, max: 40 },
   textOffsetY: { label: "Text Offset Y", min: -40, max: 40 },
+  shadowX: { label: "Shadow X", min: -40, max: 40 },
+  shadowY: { label: "Shadow Y", min: -40, max: 40 },
+  shadowScale: { label: "Shadow Scale", min: 0.2, max: 3, step: 0.01 },
+  shadowOpacity: { label: "Shadow Opacity", min: 0, max: 100 },
+  shadowBlur: { label: "Shadow Blur", min: 0, max: 20 },
 };
 
 // The three-panel roster frame -- one panel wrapper, positioned/sized/
@@ -547,7 +560,7 @@ export type V8ActiveIdentityCardControls = {
 // type predates the baseline and has no Opacity/Z-index of its own; adding
 // them there would be a retrofit of already-shipped components, which the
 // user decided against for existing V8 components.
-export type V8ActiveCapacityBadgeControls = {
+export type V8ActiveCapacityBadgeControls = V8ActiveSunBadgeShadowControls & {
   show: boolean;
   x: number;
   y: number;

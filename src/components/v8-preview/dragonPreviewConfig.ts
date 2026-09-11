@@ -219,6 +219,11 @@ export type PreviewControls = {
   activeSunBadgeBallTypeFontSize: number;
   activeSunBadgeBallTypeTextOffsetX: number;
   activeSunBadgeBallTypeTextOffsetY: number;
+  activeSunBadgeBallTypeShadowX: number;
+  activeSunBadgeBallTypeShadowY: number;
+  activeSunBadgeBallTypeShadowScale: number;
+  activeSunBadgeBallTypeShadowOpacity: number;
+  activeSunBadgeBallTypeShadowBlur: number;
   activeSunBadgeTempFeeShow: boolean;
   activeSunBadgeTempFeeX: number;
   activeSunBadgeTempFeeY: number;
@@ -227,6 +232,11 @@ export type PreviewControls = {
   activeSunBadgeTempFeeFontSize: number;
   activeSunBadgeTempFeeTextOffsetX: number;
   activeSunBadgeTempFeeTextOffsetY: number;
+  activeSunBadgeTempFeeShadowX: number;
+  activeSunBadgeTempFeeShadowY: number;
+  activeSunBadgeTempFeeShadowScale: number;
+  activeSunBadgeTempFeeShadowOpacity: number;
+  activeSunBadgeTempFeeShadowBlur: number;
   activeSunBadgeCourtCountShow: boolean;
   activeSunBadgeCourtCountX: number;
   activeSunBadgeCourtCountY: number;
@@ -235,6 +245,11 @@ export type PreviewControls = {
   activeSunBadgeCourtCountFontSize: number;
   activeSunBadgeCourtCountTextOffsetX: number;
   activeSunBadgeCourtCountTextOffsetY: number;
+  activeSunBadgeCourtCountShadowX: number;
+  activeSunBadgeCourtCountShadowY: number;
+  activeSunBadgeCourtCountShadowScale: number;
+  activeSunBadgeCourtCountShadowOpacity: number;
+  activeSunBadgeCourtCountShadowBlur: number;
   // The three-panel roster frame (季打請假/正取名單/備取名單) -- one panel
   // wrapper, positioned/sized/rotated as a whole; name-list typography is
   // shared across all three panels (see V8ActiveRosterLists).
@@ -333,6 +348,11 @@ export type PreviewControls = {
   activeSunBadgeCapacityFontSize: number;
   activeSunBadgeCapacityTextOffsetX: number;
   activeSunBadgeCapacityTextOffsetY: number;
+  activeSunBadgeCapacityShadowX: number;
+  activeSunBadgeCapacityShadowY: number;
+  activeSunBadgeCapacityShadowScale: number;
+  activeSunBadgeCapacityShadowOpacity: number;
+  activeSunBadgeCapacityShadowBlur: number;
   // Three rope-hanging ornaments (注連繩裝飾), each independently shown --
   // see V8ActiveRopeOrnamentControls in v8ActiveConfig.ts.
   activeRopeOrnamentAShow: boolean;
@@ -752,6 +772,11 @@ export const previewDefaults: PreviewControls = {
   activeSunBadgeBallTypeFontSize: 8,
   activeSunBadgeBallTypeTextOffsetX: -8,
   activeSunBadgeBallTypeTextOffsetY: 2,
+  activeSunBadgeBallTypeShadowX: 0,
+  activeSunBadgeBallTypeShadowY: 12,
+  activeSunBadgeBallTypeShadowScale: 1,
+  activeSunBadgeBallTypeShadowOpacity: 35,
+  activeSunBadgeBallTypeShadowBlur: 6,
   activeSunBadgeTempFeeShow: true,
   activeSunBadgeTempFeeX: 96,
   activeSunBadgeTempFeeY: 74,
@@ -760,6 +785,11 @@ export const previewDefaults: PreviewControls = {
   activeSunBadgeTempFeeFontSize: 11,
   activeSunBadgeTempFeeTextOffsetX: -12,
   activeSunBadgeTempFeeTextOffsetY: 2,
+  activeSunBadgeTempFeeShadowX: 0,
+  activeSunBadgeTempFeeShadowY: 12,
+  activeSunBadgeTempFeeShadowScale: 1,
+  activeSunBadgeTempFeeShadowOpacity: 35,
+  activeSunBadgeTempFeeShadowBlur: 6,
   activeSunBadgeCourtCountShow: true,
   activeSunBadgeCourtCountX: -46,
   activeSunBadgeCourtCountY: 60,
@@ -768,6 +798,11 @@ export const previewDefaults: PreviewControls = {
   activeSunBadgeCourtCountFontSize: 9,
   activeSunBadgeCourtCountTextOffsetX: -6,
   activeSunBadgeCourtCountTextOffsetY: 2,
+  activeSunBadgeCourtCountShadowX: 0,
+  activeSunBadgeCourtCountShadowY: 12,
+  activeSunBadgeCourtCountShadowScale: 1,
+  activeSunBadgeCourtCountShadowOpacity: 35,
+  activeSunBadgeCourtCountShadowBlur: 6,
   activeRosterListsShow: false,
   activeRosterListsX: 50,
   activeRosterListsY: 82,
@@ -862,6 +897,11 @@ export const previewDefaults: PreviewControls = {
   activeSunBadgeCapacityFontSize: 6,
   activeSunBadgeCapacityTextOffsetX: -8,
   activeSunBadgeCapacityTextOffsetY: -2,
+  activeSunBadgeCapacityShadowX: 0,
+  activeSunBadgeCapacityShadowY: 12,
+  activeSunBadgeCapacityShadowScale: 1,
+  activeSunBadgeCapacityShadowOpacity: 35,
+  activeSunBadgeCapacityShadowBlur: 6,
   // Scattered along the rope's own default curve (rope sits at x:30,y:27,
   // scale:2.49, rotation:9 -- see v8ActiveInfoCardsDefaults), z-index 19
   // (just under the rope/plaques' 20) so they read as hanging ON the rope
@@ -1123,6 +1163,11 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunBadgeBallTypeFontSize",
     "activeSunBadgeBallTypeTextOffsetX",
     "activeSunBadgeBallTypeTextOffsetY",
+    "activeSunBadgeBallTypeShadowX",
+    "activeSunBadgeBallTypeShadowY",
+    "activeSunBadgeBallTypeShadowScale",
+    "activeSunBadgeBallTypeShadowOpacity",
+    "activeSunBadgeBallTypeShadowBlur",
   ],
   "ACTIVE SUN BADGE TEMPFEE": [
     "activeSunBadgeTempFeeShow",
@@ -1133,6 +1178,11 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunBadgeTempFeeFontSize",
     "activeSunBadgeTempFeeTextOffsetX",
     "activeSunBadgeTempFeeTextOffsetY",
+    "activeSunBadgeTempFeeShadowX",
+    "activeSunBadgeTempFeeShadowY",
+    "activeSunBadgeTempFeeShadowScale",
+    "activeSunBadgeTempFeeShadowOpacity",
+    "activeSunBadgeTempFeeShadowBlur",
   ],
   "ACTIVE SUN BADGE COURTCOUNT": [
     "activeSunBadgeCourtCountShow",
@@ -1143,6 +1193,11 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunBadgeCourtCountFontSize",
     "activeSunBadgeCourtCountTextOffsetX",
     "activeSunBadgeCourtCountTextOffsetY",
+    "activeSunBadgeCourtCountShadowX",
+    "activeSunBadgeCourtCountShadowY",
+    "activeSunBadgeCourtCountShadowScale",
+    "activeSunBadgeCourtCountShadowOpacity",
+    "activeSunBadgeCourtCountShadowBlur",
   ],
   "ACTIVE SUN BADGE CAPACITY": [
     "activeSunBadgeCapacityShow",
@@ -1155,6 +1210,11 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunBadgeCapacityFontSize",
     "activeSunBadgeCapacityTextOffsetX",
     "activeSunBadgeCapacityTextOffsetY",
+    "activeSunBadgeCapacityShadowX",
+    "activeSunBadgeCapacityShadowY",
+    "activeSunBadgeCapacityShadowScale",
+    "activeSunBadgeCapacityShadowOpacity",
+    "activeSunBadgeCapacityShadowBlur",
   ],
   "ACTIVE ROPE ORNAMENT A": [
     "activeRopeOrnamentAShow",
@@ -1505,6 +1565,11 @@ export const controlRanges = {
   activeSunBadgeBallTypeFontSize: { label: "球種 Font Size", min: 6, max: 28 },
   activeSunBadgeBallTypeTextOffsetX: { label: "球種 Text Offset X", min: -40, max: 40 },
   activeSunBadgeBallTypeTextOffsetY: { label: "球種 Text Offset Y", min: -40, max: 40 },
+  activeSunBadgeBallTypeShadowX: { label: "球種 Shadow X", min: -40, max: 40 },
+  activeSunBadgeBallTypeShadowY: { label: "球種 Shadow Y", min: -40, max: 40 },
+  activeSunBadgeBallTypeShadowScale: { label: "球種 Shadow Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunBadgeBallTypeShadowOpacity: { label: "球種 Shadow Opacity", min: 0, max: 100 },
+  activeSunBadgeBallTypeShadowBlur: { label: "球種 Shadow Blur", min: 0, max: 20 },
   activeSunBadgeTempFeeX: { label: "費用 X %", min: -150, max: 150 },
   activeSunBadgeTempFeeY: { label: "費用 Y %", min: -150, max: 150 },
   activeSunBadgeTempFeeScale: { label: "費用 Scale", min: 0.2, max: 3, step: 0.01 },
@@ -1512,6 +1577,11 @@ export const controlRanges = {
   activeSunBadgeTempFeeFontSize: { label: "費用 Font Size", min: 6, max: 28 },
   activeSunBadgeTempFeeTextOffsetX: { label: "費用 Text Offset X", min: -40, max: 40 },
   activeSunBadgeTempFeeTextOffsetY: { label: "費用 Text Offset Y", min: -40, max: 40 },
+  activeSunBadgeTempFeeShadowX: { label: "費用 Shadow X", min: -40, max: 40 },
+  activeSunBadgeTempFeeShadowY: { label: "費用 Shadow Y", min: -40, max: 40 },
+  activeSunBadgeTempFeeShadowScale: { label: "費用 Shadow Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunBadgeTempFeeShadowOpacity: { label: "費用 Shadow Opacity", min: 0, max: 100 },
+  activeSunBadgeTempFeeShadowBlur: { label: "費用 Shadow Blur", min: 0, max: 20 },
   activeSunBadgeCourtCountX: { label: "場地數 X %", min: -150, max: 150 },
   activeSunBadgeCourtCountY: { label: "場地數 Y %", min: -150, max: 150 },
   activeSunBadgeCourtCountScale: { label: "場地數 Scale", min: 0.2, max: 3, step: 0.01 },
@@ -1519,6 +1589,11 @@ export const controlRanges = {
   activeSunBadgeCourtCountFontSize: { label: "場地數 Font Size", min: 6, max: 28 },
   activeSunBadgeCourtCountTextOffsetX: { label: "場地數 Text Offset X", min: -40, max: 40 },
   activeSunBadgeCourtCountTextOffsetY: { label: "場地數 Text Offset Y", min: -40, max: 40 },
+  activeSunBadgeCourtCountShadowX: { label: "場地數 Shadow X", min: -40, max: 40 },
+  activeSunBadgeCourtCountShadowY: { label: "場地數 Shadow Y", min: -40, max: 40 },
+  activeSunBadgeCourtCountShadowScale: { label: "場地數 Shadow Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunBadgeCourtCountShadowOpacity: { label: "場地數 Shadow Opacity", min: 0, max: 100 },
+  activeSunBadgeCourtCountShadowBlur: { label: "場地數 Shadow Blur", min: 0, max: 20 },
   activeSunBadgeCapacityX: { label: "上限 X %", min: -150, max: 150 },
   activeSunBadgeCapacityY: { label: "上限 Y %", min: -150, max: 150 },
   activeSunBadgeCapacityScale: { label: "上限 Scale", min: 0.2, max: 3, step: 0.01 },
@@ -1528,6 +1603,11 @@ export const controlRanges = {
   activeSunBadgeCapacityFontSize: { label: "上限 Font Size", min: 6, max: 28 },
   activeSunBadgeCapacityTextOffsetX: { label: "上限 Text Offset X", min: -40, max: 40 },
   activeSunBadgeCapacityTextOffsetY: { label: "上限 Text Offset Y", min: -40, max: 40 },
+  activeSunBadgeCapacityShadowX: { label: "上限 Shadow X", min: -40, max: 40 },
+  activeSunBadgeCapacityShadowY: { label: "上限 Shadow Y", min: -40, max: 40 },
+  activeSunBadgeCapacityShadowScale: { label: "上限 Shadow Scale", min: 0.2, max: 3, step: 0.01 },
+  activeSunBadgeCapacityShadowOpacity: { label: "上限 Shadow Opacity", min: 0, max: 100 },
+  activeSunBadgeCapacityShadowBlur: { label: "上限 Shadow Blur", min: 0, max: 20 },
   activeRopeOrnamentAX: { label: "繩飾A X %", min: -20, max: 120 },
   activeRopeOrnamentAY: { label: "繩飾A Y %", min: -20, max: 140 },
   activeRopeOrnamentAScale: { label: "繩飾A Scale", min: 0.2, max: 3, step: 0.01 },
@@ -1816,6 +1896,7 @@ Scale: ${controls.activeSunBadgeBallTypeScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeSunBadgeBallTypeRotation)}
 Font Size: ${Math.round(controls.activeSunBadgeBallTypeFontSize)}
 Text Offset: ${Math.round(controls.activeSunBadgeBallTypeTextOffsetX)}, ${Math.round(controls.activeSunBadgeBallTypeTextOffsetY)}
+Shadow: X ${Math.round(controls.activeSunBadgeBallTypeShadowX)}, Y ${Math.round(controls.activeSunBadgeBallTypeShadowY)}, Scale ${controls.activeSunBadgeBallTypeShadowScale.toFixed(2)}, Opacity ${Math.round(controls.activeSunBadgeBallTypeShadowOpacity)}, Blur ${Math.round(controls.activeSunBadgeBallTypeShadowBlur)}
 
 ACTIVE SUN BADGE TEMPFEE (費用)
 Show: ${controls.activeSunBadgeTempFeeShow ? "ON" : "OFF"}
@@ -1825,6 +1906,7 @@ Scale: ${controls.activeSunBadgeTempFeeScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeSunBadgeTempFeeRotation)}
 Font Size: ${Math.round(controls.activeSunBadgeTempFeeFontSize)}
 Text Offset: ${Math.round(controls.activeSunBadgeTempFeeTextOffsetX)}, ${Math.round(controls.activeSunBadgeTempFeeTextOffsetY)}
+Shadow: X ${Math.round(controls.activeSunBadgeTempFeeShadowX)}, Y ${Math.round(controls.activeSunBadgeTempFeeShadowY)}, Scale ${controls.activeSunBadgeTempFeeShadowScale.toFixed(2)}, Opacity ${Math.round(controls.activeSunBadgeTempFeeShadowOpacity)}, Blur ${Math.round(controls.activeSunBadgeTempFeeShadowBlur)}
 
 ACTIVE SUN BADGE COURTCOUNT (場地數)
 Show: ${controls.activeSunBadgeCourtCountShow ? "ON" : "OFF"}
@@ -1834,6 +1916,7 @@ Scale: ${controls.activeSunBadgeCourtCountScale.toFixed(2)}
 Rotation: ${Math.round(controls.activeSunBadgeCourtCountRotation)}
 Font Size: ${Math.round(controls.activeSunBadgeCourtCountFontSize)}
 Text Offset: ${Math.round(controls.activeSunBadgeCourtCountTextOffsetX)}, ${Math.round(controls.activeSunBadgeCourtCountTextOffsetY)}
+Shadow: X ${Math.round(controls.activeSunBadgeCourtCountShadowX)}, Y ${Math.round(controls.activeSunBadgeCourtCountShadowY)}, Scale ${controls.activeSunBadgeCourtCountShadowScale.toFixed(2)}, Opacity ${Math.round(controls.activeSunBadgeCourtCountShadowOpacity)}, Blur ${Math.round(controls.activeSunBadgeCourtCountShadowBlur)}
 
 ACTIVE IDENTITY CARD (個人資訊區)
 Show: ${controls.activeIdentityShow ? "ON" : "OFF"}
@@ -1855,6 +1938,7 @@ Opacity: ${Math.round(controls.activeSunBadgeCapacityOpacity)}
 Z-Index: ${Math.round(controls.activeSunBadgeCapacityZIndex)}
 Font Size: ${Math.round(controls.activeSunBadgeCapacityFontSize)}
 Text Offset: ${Math.round(controls.activeSunBadgeCapacityTextOffsetX)}, ${Math.round(controls.activeSunBadgeCapacityTextOffsetY)}
+Shadow: X ${Math.round(controls.activeSunBadgeCapacityShadowX)}, Y ${Math.round(controls.activeSunBadgeCapacityShadowY)}, Scale ${controls.activeSunBadgeCapacityShadowScale.toFixed(2)}, Opacity ${Math.round(controls.activeSunBadgeCapacityShadowOpacity)}, Blur ${Math.round(controls.activeSunBadgeCapacityShadowBlur)}
 
 ACTIVE ROPE ORNAMENT A/B/C (繩飾)
 A: Show ${controls.activeRopeOrnamentAShow ? "ON" : "OFF"}, X ${Math.round(controls.activeRopeOrnamentAX)}, Y ${Math.round(controls.activeRopeOrnamentAY)}, Scale ${controls.activeRopeOrnamentAScale.toFixed(2)}, Rotation ${Math.round(controls.activeRopeOrnamentARotation)}, Opacity ${Math.round(controls.activeRopeOrnamentAOpacity)}, Z ${Math.round(controls.activeRopeOrnamentAZIndex)}
@@ -2135,6 +2219,11 @@ export function buildV8ActiveSunBadgesControls(controls: PreviewControls): V8Act
       fontSize: controls.activeSunBadgeBallTypeFontSize,
       textOffsetX: controls.activeSunBadgeBallTypeTextOffsetX,
       textOffsetY: controls.activeSunBadgeBallTypeTextOffsetY,
+      shadowX: controls.activeSunBadgeBallTypeShadowX,
+      shadowY: controls.activeSunBadgeBallTypeShadowY,
+      shadowScale: controls.activeSunBadgeBallTypeShadowScale,
+      shadowOpacity: controls.activeSunBadgeBallTypeShadowOpacity,
+      shadowBlur: controls.activeSunBadgeBallTypeShadowBlur,
     },
     tempFee: {
       show: controls.activeSunBadgeTempFeeShow,
@@ -2145,6 +2234,11 @@ export function buildV8ActiveSunBadgesControls(controls: PreviewControls): V8Act
       fontSize: controls.activeSunBadgeTempFeeFontSize,
       textOffsetX: controls.activeSunBadgeTempFeeTextOffsetX,
       textOffsetY: controls.activeSunBadgeTempFeeTextOffsetY,
+      shadowX: controls.activeSunBadgeTempFeeShadowX,
+      shadowY: controls.activeSunBadgeTempFeeShadowY,
+      shadowScale: controls.activeSunBadgeTempFeeShadowScale,
+      shadowOpacity: controls.activeSunBadgeTempFeeShadowOpacity,
+      shadowBlur: controls.activeSunBadgeTempFeeShadowBlur,
     },
     courtCount: {
       show: controls.activeSunBadgeCourtCountShow,
@@ -2155,6 +2249,11 @@ export function buildV8ActiveSunBadgesControls(controls: PreviewControls): V8Act
       fontSize: controls.activeSunBadgeCourtCountFontSize,
       textOffsetX: controls.activeSunBadgeCourtCountTextOffsetX,
       textOffsetY: controls.activeSunBadgeCourtCountTextOffsetY,
+      shadowX: controls.activeSunBadgeCourtCountShadowX,
+      shadowY: controls.activeSunBadgeCourtCountShadowY,
+      shadowScale: controls.activeSunBadgeCourtCountShadowScale,
+      shadowOpacity: controls.activeSunBadgeCourtCountShadowOpacity,
+      shadowBlur: controls.activeSunBadgeCourtCountShadowBlur,
     },
   };
 }
@@ -2298,6 +2397,11 @@ export function buildV8ActiveCapacityBadgeControls(controls: PreviewControls): V
     fontSize: controls.activeSunBadgeCapacityFontSize,
     textOffsetX: controls.activeSunBadgeCapacityTextOffsetX,
     textOffsetY: controls.activeSunBadgeCapacityTextOffsetY,
+    shadowX: controls.activeSunBadgeCapacityShadowX,
+    shadowY: controls.activeSunBadgeCapacityShadowY,
+    shadowScale: controls.activeSunBadgeCapacityShadowScale,
+    shadowOpacity: controls.activeSunBadgeCapacityShadowOpacity,
+    shadowBlur: controls.activeSunBadgeCapacityShadowBlur,
   };
 }
 
