@@ -38,17 +38,31 @@ const BADGE_TEXT_INSETS = {
 
 // Hardcoded starting values, copied from previewDefaults in
 // dragonPreviewConfig.ts (activeSunDate*/activeSunName*/activeSunNote*).
-const DATE_MESSAGE = { x: 50, y: 26, scale: 3, rotation: 0, fontSize: 9, bold: true };
-const NAME_MESSAGE = { x: 50, y: 53, scale: 1.82, rotation: 0, fontSize: 24, bold: true };
-const NOTE_MESSAGE = { x: 49, y: 78, scale: 1.32, rotation: 1, fontSize: 10, bold: false };
+// 2026-09-11: scale values multiplied by ~0.68 (Active's own sun is 0.68x
+// the size of Open's) -- those numbers were tuned for Active's smaller sun,
+// and reused as-is here made text/badges render disproportionately large
+// and spill past Open's (bigger) circle. Only the `scale` multiplier is
+// adjusted; fontSize/x/y/rotation are untouched.
+const SUN_SCALE_RATIO = 0.68;
+const DATE_MESSAGE = { x: 50, y: 26, scale: 3 * SUN_SCALE_RATIO, rotation: 0, fontSize: 9, bold: true };
+const NAME_MESSAGE = { x: 50, y: 53, scale: 1.82 * SUN_SCALE_RATIO, rotation: 0, fontSize: 24, bold: true };
+const NOTE_MESSAGE = { x: 49, y: 78, scale: 1.32 * SUN_SCALE_RATIO, rotation: 1, fontSize: 10, bold: false };
 
-// Copied from previewDefaults' activeSunBadge*/activeSwitchArrow* values.
-const BALL_TYPE_BADGE = { x: -5, y: 91, scale: 2.04, rotation: 0, fontSize: 8, textOffsetX: -8, textOffsetY: 2 };
-const TEMP_FEE_BADGE = { x: 102, y: 60, scale: 1.72, rotation: -1, fontSize: 11, textOffsetX: -12, textOffsetY: 2 };
-const COURT_COUNT_BADGE = { x: -49, y: 55, scale: 1.96, rotation: 0, fontSize: 9, textOffsetX: -6, textOffsetY: 2 };
-const CAPACITY_BADGE = { x: 95, y: 13, scale: 2.8, rotation: 0, opacity: 100, zIndex: 2, fontSize: 6, textOffsetX: -10, textOffsetY: -2 };
+// Copied from previewDefaults' activeSunBadge*/activeSwitchArrow* values,
+// same 0.68 scale-ratio adjustment as the messages above.
+const BALL_TYPE_BADGE = { x: -5, y: 91, scale: 2.04 * SUN_SCALE_RATIO, rotation: 0, fontSize: 8, textOffsetX: -8, textOffsetY: 2 };
+const TEMP_FEE_BADGE = { x: 102, y: 60, scale: 1.72 * SUN_SCALE_RATIO, rotation: -1, fontSize: 11, textOffsetX: -12, textOffsetY: 2 };
+const COURT_COUNT_BADGE = { x: -49, y: 55, scale: 1.96 * SUN_SCALE_RATIO, rotation: 0, fontSize: 9, textOffsetX: -6, textOffsetY: 2 };
+const CAPACITY_BADGE = { x: 95, y: 13, scale: 2.8 * SUN_SCALE_RATIO, rotation: 0, opacity: 100, zIndex: 2, fontSize: 6, textOffsetX: -10, textOffsetY: -2 };
 const SWITCH_ARROW_PREV = { x: 15, y: 50, scale: 1, rotation: 0, opacity: 100, zIndex: 5 };
 const SWITCH_ARROW_NEXT = { x: 85, y: 50, scale: 1, rotation: 0, opacity: 100, zIndex: 5 };
+
+// 2026-09-11: hidden for now per the user's request ("先隱藏，我看看效果") --
+// the four cloud badges (球種/費用/場地/上限) render disproportionately large
+// on Open's bigger sun even after the scale-ratio fix above, so they're
+// switched off here to look at the plain sun + date/name/note first. Flip
+// back to true to re-enable; nothing else needs to change.
+const SHOW_INFO_BADGES = false;
 
 type SunMessageConfig = { x: number; y: number; scale: number; rotation: number; fontSize: number; bold: boolean };
 type SunBadgeConfig = { x: number; y: number; scale: number; rotation: number; fontSize: number; textOffsetX: number; textOffsetY: number };
@@ -247,19 +261,21 @@ export function V8OpeningSunContent({
       <V8SunMessage text={shortDate(event.eventDate)} config={DATE_MESSAGE} />
       <V8SunMessage text={event.name} config={NAME_MESSAGE} />
       <V8SunMessage text={event.eventNote || ""} config={NOTE_MESSAGE} />
-      {event.ballType ? (
+      {SHOW_INFO_BADGES && event.ballType ? (
         <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={event.ballType} config={BALL_TYPE_BADGE} textInset={BADGE_TEXT_INSETS.ballType} />
       ) : null}
-      <V8SunInfoBadgeScattered
-        src={assets.sunBadgeTempFee}
-        label={`$${Number(event.tempFee || 0)}`}
-        config={TEMP_FEE_BADGE}
-        textInset={BADGE_TEXT_INSETS.tempFee}
-      />
-      {courtTimeLabel ? (
+      {SHOW_INFO_BADGES ? (
+        <V8SunInfoBadgeScattered
+          src={assets.sunBadgeTempFee}
+          label={`$${Number(event.tempFee || 0)}`}
+          config={TEMP_FEE_BADGE}
+          textInset={BADGE_TEXT_INSETS.tempFee}
+        />
+      ) : null}
+      {SHOW_INFO_BADGES && courtTimeLabel ? (
         <V8SunInfoBadgeScattered src={assets.sunBadgeCourtCount} label={courtTimeLabel} config={COURT_COUNT_BADGE} textInset={BADGE_TEXT_INSETS.courtCount} />
       ) : null}
-      {typeof event.maxPeople === "number" ? <V8CapacityBadge src={assets.sunBadgeCapacity} label={`${event.maxPeople}人`} /> : null}
+      {SHOW_INFO_BADGES && typeof event.maxPeople === "number" ? <V8CapacityBadge src={assets.sunBadgeCapacity} label={`${event.maxPeople}人`} /> : null}
     </>
   );
 }

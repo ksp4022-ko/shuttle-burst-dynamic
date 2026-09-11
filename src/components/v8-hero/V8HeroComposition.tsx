@@ -567,20 +567,38 @@ export function V8HeroComposition({
             ) : null}
             <DecorLayer src={assets.midWave} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={10} driftClassName="v8-wave-drift-mid" />
             <div style={heroStyle}>
-              <div style={{ ...heroCopyStyle, left: heroBaseline.centerX, top: heroBaseline.top, width: controls.heroWidth, transform: `translate(calc(-50% + ${controls.heroX}px), ${controls.heroY}px) scale(${controls.heroScale})` }}>
-                {confirmed ? null : (
-                  // 2026-09-11: eyebrow/title/event-selector/position-label
-                  // (previously rendered here, all visually inside the red
-                  // sun) are replaced by the new copied sun module -- see
-                  // V8OpeningSunContent, passed in via the sunContent prop
-                  // above. Only the CTA stays here, unchanged (out of scope
-                  // for that copy -- its position may need to be
-                  // coordinated with the new sun content later).
-                  <button ref={confirmButtonRef ?? fallbackConfirmButtonRef} type="button" disabled={confirmDisabled} onClick={onConfirm} style={{ ...ctaStyle, transform: `translateY(${controls.heroCtaY}px)` }}>
-                    進入戰局
-                  </button>
-                )}
-              </div>
+              {confirmed ? null : (
+                // 2026-09-11: eyebrow/title/event-selector/position-label
+                // (previously rendered here, all visually inside the red
+                // sun) are replaced by the new copied sun module -- see
+                // V8OpeningSunContent, passed in via the sunContent prop
+                // above. CTA moved out of the old centered heroCopyStyle box
+                // to the sun's own bottom-right corner (per the user's
+                // request -- appearance/size unchanged, position only) so it
+                // no longer sits on top of the sun's date/name/note text.
+                // heroStyle itself is now pointerEvents:"none" (a plain
+                // full-stage positioning wrapper, previously blocked clicks
+                // to anything underneath it -- see the switch-arrow fix
+                // below), so this button explicitly re-enables
+                // pointerEvents:"auto" on itself to stay clickable.
+                <button
+                  ref={confirmButtonRef ?? fallbackConfirmButtonRef}
+                  type="button"
+                  disabled={confirmDisabled}
+                  onClick={onConfirm}
+                  style={{
+                    ...ctaStyle,
+                    position: "absolute",
+                    left: "70%",
+                    top: "80%",
+                    margin: 0,
+                    transform: `translate(-50%, -50%) translateY(${controls.heroCtaY}px)`,
+                    pointerEvents: "auto",
+                  }}
+                >
+                  進入戰局
+                </button>
+              )}
             </div>
             {controls.tigerShow && controls.tigerRacketShow ? (
               <div
@@ -751,6 +769,13 @@ const heroStyle: CSSProperties = {
   position: "absolute",
   zIndex: 11,
   inset: 0,
+  // 2026-09-11: this is a plain full-stage positioning wrapper (its only
+  // content, the Opening CTA, is a small button within it) -- without this,
+  // its own transparent inset:0 box sat above anything with a lower/tied
+  // z-index (e.g. the Open page's sun content at z:11) and silently
+  // swallowed clicks/touches across the WHOLE stage, not just where the CTA
+  // visually is. The CTA re-enables pointerEvents:"auto" on itself.
+  pointerEvents: "none",
 };
 
 const heroCopyStyle: CSSProperties = {
