@@ -45,6 +45,7 @@ import {
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { V8Toast } from "./V8Toast";
+import { v8CtaGlowOutlines, type V8CtaGlowOutlineKey } from "./v8CtaGlowOutlines";
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
@@ -915,6 +916,92 @@ function primaryActionAsset(identity: CurrentIdentity, assets: V8IdentityAssets)
   return assets.ctaTempCancel;
 }
 
+// Same mapping as primaryActionAsset, but returning the matching
+// v8CtaGlowOutlines key instead of the image URL -- kept as a separate
+// function (not derived from the asset URL string) so the two can't drift
+// silently out of sync if either mapping is ever edited alone.
+function primaryActionOutlineKey(identity: CurrentIdentity): V8CtaGlowOutlineKey {
+  if (identity.signupType === "fixed") {
+    return identity.status === "leave" ? "seasonReturn" : "seasonLeave";
+  }
+  return "tempCancel";
+}
+
+// 2026-09-11: finalized "laser-engraved" reminder glow, per the user's exact
+// spec -- a bright point of light runs once around the plaque's own real
+// outline (see v8CtaGlowOutlines.ts for how that outline was extracted),
+// then goes still, repeating every 5s. Two stacked <path> layers share the
+// SAME outline `d` and the SAME dash pattern/animation, only differing in
+// stroke color/width/filter: a wide, blurred warm-gold "halo" underneath,
+// and a narrow, sharp white "core" on top -- both animate perfectly in sync
+// since they're driven by the exact same Web Animations API keyframes.
+// Deliberately reserved for the identity card's ONE primary action CTA
+// (this component) and the identity prompt's temp-signup CTA -- NOT the
+// secondary 代報/代退/不是我 buttons, per the user's explicit scope.
+//
+// Driven by element.animate() (JS), NOT a CSS @keyframes + custom property
+// -- tried that first (stroke-dashoffset: calc(-1 * var(--length)) with the
+// property registered via @property, typed <number> for interpolation) and
+// confirmed it does NOT animate smoothly: even minimally isolated, sampling
+// mid-segment returned the END keyframe's value already, i.e. a discrete
+// jump instead of a travelling dash, in this engine. element.animate() with
+// literal numeric keyframe values (computed from the real measured path
+// length) interpolates correctly -- verified the same way before switching.
+const CTA_GLOW_SEGMENT_FRACTION = 0.16;
+const CTA_GLOW_CYCLE_MS = 5000;
+const CTA_GLOW_RUN_FRACTION = 0.3; // run finishes by 30% of the cycle (~1.5s)
+
+function V8CtaGlowOutline({ outlineKey }: { outlineKey: V8CtaGlowOutlineKey }) {
+  const measureRef = useRef<SVGPathElement>(null);
+  const outerRef = useRef<SVGPathElement>(null);
+  const innerRef = useRef<SVGPathElement>(null);
+  const [pathLength, setPathLength] = useState(0);
+  const outline = v8CtaGlowOutlines[outlineKey];
+
+  useLayoutEffect(() => {
+    const el = measureRef.current;
+    if (!el) return;
+    setPathLength(el.getTotalLength());
+  }, [outlineKey]);
+
+  useEffect(() => {
+    if (!pathLength) return;
+    const targets = [outerRef.current, innerRef.current].filter((el): el is SVGPathElement => el !== null);
+    if (!targets.length) return;
+    const keyframes: Keyframe[] = [
+      { strokeDashoffset: 0, opacity: 1, offset: 0 },
+      { strokeDashoffset: -pathLength, opacity: 1, offset: CTA_GLOW_RUN_FRACTION },
+      { strokeDashoffset: -pathLength, opacity: 0, offset: Math.min(CTA_GLOW_RUN_FRACTION + 0.0001, 1) },
+      { strokeDashoffset: -pathLength, opacity: 0, offset: 1 },
+    ];
+    const animations = targets.map((el) => el.animate(keyframes, { duration: CTA_GLOW_CYCLE_MS, iterations: Infinity, easing: "linear" }));
+    return () => animations.forEach((anim) => anim.cancel());
+  }, [pathLength]);
+
+  const segment = pathLength * CTA_GLOW_SEGMENT_FRACTION;
+  const gap = pathLength - segment;
+  const dasharray = `${segment} ${gap}`;
+
+  return (
+    <svg
+      viewBox={`0 0 ${outline.viewBoxWidth} ${outline.viewBoxHeight}`}
+      aria-hidden="true"
+      className="v8-cta-glow-svg"
+    >
+      {/* Invisible, always-present -- exists purely so measureRef has
+          something to call getTotalLength() on before the visible layers
+          (which need that length for their dash pattern) can render. */}
+      <path ref={measureRef} d={outline.d} fill="none" stroke="none" />
+      {pathLength > 0 ? (
+        <>
+          <path ref={outerRef} d={outline.d} fill="none" className="v8-cta-glow-outer" style={{ strokeDasharray: dasharray }} />
+          <path ref={innerRef} d={outline.d} fill="none" className="v8-cta-glow-inner" style={{ strokeDasharray: dasharray }} />
+        </>
+      ) : null}
+    </svg>
+  );
+}
+
 type V8IdentityAssets = {
   statusStampConfirmed: string;
   statusStampWaiting: string;
@@ -1137,6 +1224,7 @@ export function V8IdentityScrollContent({
         aria-label={busy ? pendingLabel : primaryActionLabel(identity)}
       >
         <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
+        <V8CtaGlowOutline outlineKey={primaryActionOutlineKey(identity)} />
       </button>
       <button
         type="button"
@@ -1246,6 +1334,7 @@ function V8IdentityPrompt({
               aria-label="我要報名"
             >
               <img src={ctaTempSignupSrc} alt="" aria-hidden="true" draggable={false} />
+              <V8CtaGlowOutline outlineKey="tempSignup" />
             </button>
           </div>
         </div>
@@ -1465,9 +1554,44 @@ export function V8ActiveStyles() {
       }
 
       .v8-scroll-cta {
+        position: relative;
         border: none;
         background: none;
         padding: 0;
+      }
+
+      /* Laser-engraved glow-run reminder (V8CtaGlowOutline) -- sized to
+         exactly cover its button, viewBox matches the plaque's own outline
+         coordinate space so the traced path lines up with the artwork
+         beneath it regardless of the button's actual on-screen size. The
+         actual run-once-every-5s dash animation is driven by
+         element.animate() in JS (see V8CtaGlowOutline) rather than a CSS
+         @keyframes -- a calc(-1 * var(--length)) keyframe (with --length
+         registered via @property, typed <number>, specifically so it COULD
+         interpolate) was tried first and confirmed to animate as a discrete
+         jump instead of a smooth travel in this engine; only these static
+         stroke/filter rules remain here. */
+      .v8-cta-glow-svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        pointer-events: none;
+      }
+
+      .v8-cta-glow-outer {
+        stroke: #ffe9a3;
+        stroke-width: 14;
+        stroke-linecap: round;
+        filter: blur(3px) drop-shadow(0 0 6px #ffe9a3) drop-shadow(0 0 14px #ffcf6b) drop-shadow(0 0 24px #ffb84d);
+      }
+
+      .v8-cta-glow-inner {
+        stroke: #ffffff;
+        stroke-width: 5;
+        stroke-linecap: round;
+        filter: drop-shadow(0 0 3px #ffffff) drop-shadow(0 0 8px #ffffff) drop-shadow(0 0 14px #fff6d9);
       }
 
       .v8-scroll-cta-img img {
@@ -1564,6 +1688,7 @@ export function V8ActiveStyles() {
          ".v8-active-prompt-tiger button" rule above, which still matches
          this element too (still a <button> inside that container). */
       .v8-active-prompt-tiger .v8-active-prompt-tiger-cta {
+        position: relative;
         height: 44px;
         padding: 0;
         border: none;
