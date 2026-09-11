@@ -557,7 +557,7 @@ function V8SunInfoBadge({
 }) {
   return (
     <span className="v8-sun-info-badge">
-      {shadowControls ? <span className="v8-sun-info-badge-shadow" style={sunBadgeShadowStyle(shadowControls)} /> : null}
+      {shadowControls ? <img className="v8-sun-info-badge-shadow" src={src} alt="" aria-hidden="true" draggable={false} style={sunBadgeShadowStyle(shadowControls)} /> : null}
       <img src={src} alt="" aria-hidden="true" draggable={false} />
       {/* textOffsetX/Y (px) is a free nudge on top of textInset's safe-area
           default -- not clamped to it, per the user's request. */}
@@ -654,15 +654,14 @@ function V8CapacityBadge({
 function sunBadgeShadowStyle(controls: V8ActiveSunBadgeShadowControls): CSSProperties {
   return {
     position: "absolute",
-    left: "50%",
-    top: "78%",
-    width: "78%",
-    height: "24%",
-    borderRadius: 999,
-    background: "rgba(32, 21, 13, 0.55)",
-    filter: `blur(${controls.shadowBlur}px)`,
+    left: 0,
+    top: 0,
+    height: 28,
+    width: "auto",
+    filter: `brightness(0) blur(${controls.shadowBlur}px)`,
     opacity: controls.shadowOpacity / 100,
-    transform: `translate(-50%, -50%) translate(${controls.shadowX}px, ${controls.shadowY}px) scale(${controls.shadowScale})`,
+    transform: `translate(${controls.shadowX}px, ${controls.shadowY}px) scale(${controls.shadowScale})`,
+    transformOrigin: "center bottom",
     pointerEvents: "none",
     zIndex: 0,
   };
