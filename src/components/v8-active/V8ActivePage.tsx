@@ -982,20 +982,30 @@ const NAME_SHADOW_LAYERS = [
 ] as const;
 
 function V8IdentityFitName({ text, controls }: { text: string; controls: V8ActiveIdentityNameControls }) {
-  const textRef = useRef<SVGTextElement>(null);
+  // 2026-09-11 (2nd revision): measuring via SVG getBBox() (the previous
+  // approach) came back "失敗" -- the name rendered as completely blank on
+  // a real phone (iOS Safari, per the reported screenshot), while every
+  // other element on the same page painted fine. WebKit's getBBox() is
+  // known to throw (not just return a zero rect, unlike Chromium/Firefox)
+  // when called on an SVG text node it considers not yet "in the rendering
+  // tree" -- an uncaught throw here inside useLayoutEffect would abort this
+  // component's render without visibly breaking anything else around it,
+  // matching exactly what was reported. Reverted measurement to the plain
+  // HTML scrollWidth/scrollHeight technique (proven reliable cross-browser
+  // in the very first version of this component, before any of the
+  // stroke/paint-order work) via a hidden measurement span -- SVG is now
+  // used ONLY for the actual fill/stroke/paint-order painting, not for any
+  // measurement API, so there's no getBBox() call left to fail.
+  const measureRef = useRef<HTMLSpanElement>(null);
   const [fitScale, setFitScale] = useState(1);
 
   useLayoutEffect(() => {
-    const el = textRef.current;
+    const el = measureRef.current;
     if (!el) return;
-    // getBBox() is fill-geometry only (unaffected by the CSS transform
-    // below, same "measure at the fixed 100px reference" idea the old
-    // scrollWidth/scrollHeight approach used) -- boxWidth/boxHeight are the
-    // user-resizable helper box (see V8ActiveIdentityNameControls), so this
-    // re-fits automatically whenever the name OR the box size changes.
-    const bbox = el.getBBox();
-    if (!bbox.width || !bbox.height) return;
-    const nextScale = Math.min(controls.boxWidth / bbox.width, controls.boxHeight / bbox.height);
+    const naturalWidth = el.scrollWidth;
+    const naturalHeight = el.scrollHeight;
+    if (!naturalWidth || !naturalHeight) return;
+    const nextScale = Math.min(controls.boxWidth / naturalWidth, controls.boxHeight / naturalHeight);
     setFitScale(Number.isFinite(nextScale) && nextScale > 0 ? nextScale : 1);
   }, [text, controls.boxWidth, controls.boxHeight]);
 
@@ -1015,10 +1025,27 @@ function V8IdentityFitName({ text, controls }: { text: string; controls: V8Activ
         } as CSSProperties
       }
     >
+      {/* Hidden, off-paint measurement element -- same font metrics as the
+          visible SVG text below, but plain HTML so scrollWidth/scrollHeight
+          works reliably everywhere (see the component comment above). */}
+      <span
+        ref={measureRef}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          visibility: "hidden",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          fontWeight: 900,
+          fontSize: NAME_FIT_REFERENCE_FONT_SIZE,
+          pointerEvents: "none",
+        }}
+      >
+        {text}
+      </span>
       <svg width={controls.boxWidth} height={controls.boxHeight} style={{ display: "block", overflow: "visible" }}>
         <title>{text}</title>
         <text
-          ref={textRef}
           x="50%"
           y="50%"
           textAnchor="middle"
@@ -1035,8 +1062,15 @@ function V8IdentityFitName({ text, controls }: { text: string; controls: V8Activ
           paintOrder="stroke fill"
           style={
             {
-              transformBox: "fill-box",
-              transformOrigin: "center",
+              // Pixel transform-origin (not "center" + transformBox:
+              // fill-box) -- fill-box support on SVG text is recent enough
+              // (Safari 16.4+) that relying on it risked scaling from the
+              // wrong pivot on older devices, pushing the shrunk text
+              // outside this box's overflow:hidden clip and making it look
+              // blank. text is anchored at x="50%" y="50%" of the SVG's own
+              // (unscaled, no viewBox) pixel box, so that same literal
+              // pixel point is always the correct pivot everywhere.
+              transformOrigin: `${controls.boxWidth / 2}px ${controls.boxHeight / 2}px`,
               transform: `scale(${fitScale})`,
               filter: NAME_SHADOW_LAYERS.map(
                 (layer) => `drop-shadow(${layer.x / fitScale}px ${layer.y / fitScale}px ${layer.blur / fitScale}px ${layer.color})`,

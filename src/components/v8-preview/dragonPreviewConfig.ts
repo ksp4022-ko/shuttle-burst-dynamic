@@ -791,12 +791,16 @@ export const previewDefaults: PreviewControls = {
   // sizes per the user's request ("起始值要放大幾乎是目前最大值") -- see the
   // new .v8-scroll-* img/font-size values in V8ActivePage.tsx.
   activeIdentityShow: true,
-  activeIdentityStatusMarkX: 41,
-  activeIdentityStatusMarkY: 75,
+  // 2026-09-11: moved onto the name (per the user's request, "狀態章要在
+  // 人名上") -- same X/Y as activeIdentityName* below so the stamp centers
+  // on the name text, z-index raised above the name's (40) so it reads as
+  // stamped ON TOP of the name, not hidden behind it.
+  activeIdentityStatusMarkX: 42,
+  activeIdentityStatusMarkY: 47,
   activeIdentityStatusMarkScale: 1.95,
   activeIdentityStatusMarkRotation: 0,
   activeIdentityStatusMarkOpacity: 100,
-  activeIdentityStatusMarkZIndex: 2,
+  activeIdentityStatusMarkZIndex: 41,
   activeIdentityNameX: 42,
   activeIdentityNameY: 47,
   activeIdentityNameRotation: 0,
