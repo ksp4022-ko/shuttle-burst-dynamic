@@ -660,7 +660,17 @@ function sunBadgeShadowStyle(controls: V8ActiveSunBadgeShadowControls): CSSPrope
     width: "78%",
     height: "24%",
     borderRadius: 999,
-    background: "rgba(32, 21, 13, 0.55)",
+    // 2026-09-12: was rgba(32,21,13,0.55) -- baking a 55% alpha into the
+    // color itself put a hard ceiling on how dark this could ever get,
+    // since the Shadow Opacity slider below only multiplies ON TOP of
+    // that (100% opacity slider = 100% of 0.55 = still just 0.55), and
+    // blur dilutes the visible peak further on top of that -- combined,
+    // the shadow was nearly imperceptible even at max slider settings,
+    // no matter how the position/scale/blur were tuned. Opaque base color
+    // here makes `opacity` (driven by controls.shadowOpacity) the ONE
+    // mechanism controlling final visible strength, giving that slider
+    // its full intended 0-100% range instead of being silently capped.
+    background: "rgba(32, 21, 13, 1)",
     filter: `blur(${controls.shadowBlur}px)`,
     opacity: controls.shadowOpacity / 100,
     transform: `translate(-50%, -50%) translate(${controls.shadowX}px, ${controls.shadowY}px) scale(${controls.shadowScale})`,
