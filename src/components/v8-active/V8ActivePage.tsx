@@ -955,6 +955,23 @@ function identityVisualStyle(c: V8ActiveIdentityVisualControls): CSSProperties {
 // -- otherwise the very first frame would flash the unscaled 100px text.
 const NAME_FIT_REFERENCE_FONT_SIZE = 100;
 
+// 2026-09-11: finalized name treatment (per the user's exact spec) -- deep
+// blue fill, gold stroke, two-layer drop-shadow for a carved/embossed look
+// that reads clearly against the busy scroll art and separates it visually
+// from the surrounding UI text (正取/告假/代報/代退). Plain CSS on HTML
+// text (-webkit-text-stroke + filter: drop-shadow), not SVG -- broadly
+// supported (Chrome/Safari/Edge/Firefox 49+) and -webkit-text-stroke
+// already paints the stroke BEHIND the glyph fill by default, same effect
+// as paint-order:stroke fill would give in SVG, so the stroke never eats
+// into the letterforms.
+const NAME_FILL_COLOR = "#16324f";
+const NAME_STROKE_COLOR = "#d4af37";
+const NAME_STROKE_WIDTH_PX = 2.5;
+const NAME_SHADOW_LAYERS = [
+  { x: 0, y: 3, blur: 2, color: "rgba(0,0,0,0.4)" },
+  { x: 0, y: 9, blur: 10, color: "rgba(0,0,0,0.18)" },
+] as const;
+
 function V8IdentityFitName({ text, controls }: { text: string; controls: V8ActiveIdentityNameControls }) {
   const measureRef = useRef<HTMLElement>(null);
   const [fitScale, setFitScale] = useState(1);
@@ -999,7 +1016,19 @@ function V8IdentityFitName({ text, controls }: { text: string; controls: V8Activ
           fontWeight: 900,
           fontSize: NAME_FIT_REFERENCE_FONT_SIZE,
           transform: `scale(${fitScale})`,
-        }}
+          color: NAME_FILL_COLOR,
+          // Stroke width and shadow offsets/blur are specified here in this
+          // element's own PRE-transform space (the 100px reference size),
+          // which the transform:scale(fitScale) above then shrinks along
+          // with the text -- dividing by fitScale up front cancels that out
+          // so the FINAL on-screen result always matches the exact px
+          // values in the spec (2.5px stroke etc.), regardless of how much
+          // any given name had to shrink to fit its box.
+          WebkitTextStroke: `${NAME_STROKE_WIDTH_PX / fitScale}px ${NAME_STROKE_COLOR}`,
+          filter: NAME_SHADOW_LAYERS.map(
+            (layer) => `drop-shadow(${layer.x / fitScale}px ${layer.y / fitScale}px ${layer.blur / fitScale}px ${layer.color})`,
+          ).join(" "),
+        } as CSSProperties}
       >
         {text}
       </strong>
