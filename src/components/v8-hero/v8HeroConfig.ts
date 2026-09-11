@@ -234,9 +234,9 @@ export const v8HeroDefaults: V8HeroControls = {
   tigerScrollY: 31,
   tigerScrollScale: 1.22,
   tigerScrollRotation: 0,
-  sunX: 23,
-  sunY: 29,
-  sunScale: 1,
+  sunX: 11,
+  sunY: 3,
+  sunScale: 1.08,
   sunZIndex: 4,
 };
 
