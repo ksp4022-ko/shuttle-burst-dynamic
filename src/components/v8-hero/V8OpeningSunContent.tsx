@@ -38,15 +38,13 @@ const BADGE_TEXT_INSETS = {
 
 // Hardcoded starting values, copied from previewDefaults in
 // dragonPreviewConfig.ts (activeSunDate*/activeSunName*/activeSunNote*).
-// 2026-09-11: scale values multiplied by ~0.68 (Active's own sun is 0.68x
-// the size of Open's) -- those numbers were tuned for Active's smaller sun,
-// and reused as-is here made text/badges render disproportionately large
-// and spill past Open's (bigger) circle. Only the `scale` multiplier is
-// adjusted; fontSize/x/y/rotation are untouched.
+// 2026-09-11: info badge scales still use the Active/Open ratio below, but
+// the opening sun's primary meetup copy is intentionally larger and higher
+// in the circle to match the supplied mobile reference.
 const SUN_SCALE_RATIO = 0.68;
-const DATE_MESSAGE = { x: 50, y: 26, scale: 3 * SUN_SCALE_RATIO, rotation: 0, fontSize: 9, bold: true };
-const NAME_MESSAGE = { x: 50, y: 53, scale: 1.82 * SUN_SCALE_RATIO, rotation: 0, fontSize: 24, bold: true };
-const NOTE_MESSAGE = { x: 49, y: 78, scale: 1.32 * SUN_SCALE_RATIO, rotation: 1, fontSize: 10, bold: false };
+const DATE_MESSAGE = { x: 50, y: 28, scale: 3, rotation: 0, fontSize: 15, bold: true };
+const NAME_MESSAGE = { x: 50, y: 50, scale: 1.82, rotation: 0, fontSize: 32, bold: true };
+const NOTE_MESSAGE = { x: 50, y: 67, scale: 1.32, rotation: 0, fontSize: 18, bold: true };
 
 // Copied from previewDefaults' activeSunBadge*/activeSwitchArrow* values,
 // same 0.68 scale-ratio adjustment as the messages above.
@@ -54,8 +52,8 @@ const BALL_TYPE_BADGE = { x: -5, y: 91, scale: 2.04 * SUN_SCALE_RATIO, rotation:
 const TEMP_FEE_BADGE = { x: 102, y: 60, scale: 1.72 * SUN_SCALE_RATIO, rotation: -1, fontSize: 11, textOffsetX: -12, textOffsetY: 2 };
 const COURT_COUNT_BADGE = { x: -49, y: 55, scale: 1.96 * SUN_SCALE_RATIO, rotation: 0, fontSize: 9, textOffsetX: -6, textOffsetY: 2 };
 const CAPACITY_BADGE = { x: 95, y: 13, scale: 2.8 * SUN_SCALE_RATIO, rotation: 0, opacity: 100, zIndex: 2, fontSize: 6, textOffsetX: -10, textOffsetY: -2 };
-const SWITCH_ARROW_PREV = { x: 15, y: 50, scale: 1, rotation: 0, opacity: 100, zIndex: 5 };
-const SWITCH_ARROW_NEXT = { x: 85, y: 50, scale: 1, rotation: 0, opacity: 100, zIndex: 5 };
+const SWITCH_ARROW_PREV = { x: 0, y: 50, scale: 1.25, rotation: 0, opacity: 100, zIndex: 5 };
+const SWITCH_ARROW_NEXT = { x: 100, y: 50, scale: 1.25, rotation: 0, opacity: 100, zIndex: 5 };
 
 // 2026-09-11: hidden for now per the user's request ("先隱藏，我看看效果") --
 // the four cloud badges (球種/費用/場地/上限) render disproportionately large
