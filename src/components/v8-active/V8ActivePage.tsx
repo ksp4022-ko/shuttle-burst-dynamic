@@ -36,6 +36,7 @@ import {
   type V8ActiveIdentityVisualControls,
   type V8ActiveRopeOrnamentsControls,
   type V8ActiveSunBadgeControls,
+  type V8ActiveSunBadgeShadowControls,
   type V8ActiveSunBadgesControls,
   type V8ActiveSunMessageControls,
   type V8ActiveSunMessagesControls,
@@ -543,17 +544,20 @@ function V8SunInfoBadge({
   src,
   label,
   textInset,
+  shadowControls,
   textOffsetX = 0,
   textOffsetY = 0,
 }: {
   src: string;
   label: string;
   textInset: (typeof BADGE_TEXT_INSETS)[keyof typeof BADGE_TEXT_INSETS];
+  shadowControls?: V8ActiveSunBadgeShadowControls;
   textOffsetX?: number;
   textOffsetY?: number;
 }) {
   return (
     <span className="v8-sun-info-badge">
+      {shadowControls ? <span className="v8-sun-info-badge-shadow" style={sunBadgeShadowStyle(shadowControls)} /> : null}
       <img src={src} alt="" aria-hidden="true" draggable={false} />
       {/* textOffsetX/Y (px) is a free nudge on top of textInset's safe-area
           default -- not clamped to it, per the user's request. */}
@@ -599,6 +603,7 @@ function V8SunInfoBadgeScattered({
         src={src}
         label={label}
         textInset={textInset}
+        shadowControls={controls}
         textOffsetX={controls.textOffsetX}
         textOffsetY={controls.textOffsetY}
       />
@@ -638,11 +643,29 @@ function V8CapacityBadge({
         src={src}
         label={label}
         textInset={BADGE_TEXT_INSETS.capacity}
+        shadowControls={controls}
         textOffsetX={controls.textOffsetX}
         textOffsetY={controls.textOffsetY}
       />
     </div>
   );
+}
+
+function sunBadgeShadowStyle(controls: V8ActiveSunBadgeShadowControls): CSSProperties {
+  return {
+    position: "absolute",
+    left: "50%",
+    top: "78%",
+    width: "78%",
+    height: "24%",
+    borderRadius: 999,
+    background: "rgba(32, 21, 13, 0.55)",
+    filter: `blur(${controls.shadowBlur}px)`,
+    opacity: controls.shadowOpacity / 100,
+    transform: `translate(-50%, -50%) translate(${controls.shadowX}px, ${controls.shadowY}px) scale(${controls.shadowScale})`,
+    pointerEvents: "none",
+    zIndex: 0,
+  };
 }
 
 // One of the sun's three independent text messages (date/name/note) --
@@ -1342,12 +1365,15 @@ export function V8ActiveStyles() {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        isolation: isolate;
       }
 
       .v8-sun-info-badge img {
         display: block;
         height: 28px;
         width: auto;
+        position: relative;
+        z-index: 1;
       }
 
       .v8-sun-info-badge em {
@@ -1363,6 +1389,7 @@ export function V8ActiveStyles() {
         /* Matches the ema plaques' number color (#7a2a12) per the user's
            request to keep both sets of overlay text visually consistent. */
         color: #7a2a12;
+        z-index: 2;
       }
 
       /* Full-screen identity gate -- fixed over the whole viewport (not
