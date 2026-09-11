@@ -958,12 +958,21 @@ const NAME_FIT_REFERENCE_FONT_SIZE = 100;
 // 2026-09-11: finalized name treatment (per the user's exact spec) -- deep
 // blue fill, gold stroke, two-layer drop-shadow for a carved/embossed look
 // that reads clearly against the busy scroll art and separates it visually
-// from the surrounding UI text (正取/告假/代報/代退). Plain CSS on HTML
-// text (-webkit-text-stroke + filter: drop-shadow), not SVG -- broadly
-// supported (Chrome/Safari/Edge/Firefox 49+) and -webkit-text-stroke
-// already paints the stroke BEHIND the glyph fill by default, same effect
-// as paint-order:stroke fill would give in SVG, so the stroke never eats
-// into the letterforms.
+// from the surrounding UI text (正取/告假/代報/代退).
+//
+// 2026-09-11 (revised): the first pass used plain CSS on HTML text
+// (-webkit-text-stroke + filter:drop-shadow) -- confirmed broken two ways
+// once tested with real names: (1) the gold stroke visually SWALLOWED the
+// blue fill instead of sitting behind it (worst on dense/bold CJK glyphs
+// like 蘇軾, where -webkit-text-stroke's width ends up comparable to the
+// glyph's own stroke thickness at the 100px reference size, with no
+// paint-order control to force fill on top), and (2) combining
+// -webkit-text-stroke + filter + transform:scale on the same element
+// produced visible ghosting/double-painted glyphs in Chromium. Switched to
+// real SVG <text> with explicit paintOrder="stroke fill" (paint the stroke
+// first, then the fill draws cleanly on top wherever they overlap) --
+// this is the standard, reliable way to get "solid fill, thin outer rim"
+// text and doesn't exhibit either bug.
 const NAME_FILL_COLOR = "#16324f";
 const NAME_STROKE_COLOR = "#d4af37";
 const NAME_STROKE_WIDTH_PX = 2.5;
@@ -973,16 +982,20 @@ const NAME_SHADOW_LAYERS = [
 ] as const;
 
 function V8IdentityFitName({ text, controls }: { text: string; controls: V8ActiveIdentityNameControls }) {
-  const measureRef = useRef<HTMLElement>(null);
+  const textRef = useRef<SVGTextElement>(null);
   const [fitScale, setFitScale] = useState(1);
 
   useLayoutEffect(() => {
-    const el = measureRef.current;
+    const el = textRef.current;
     if (!el) return;
-    const naturalWidth = el.scrollWidth;
-    const naturalHeight = el.scrollHeight;
-    if (!naturalWidth || !naturalHeight) return;
-    const nextScale = Math.min(controls.boxWidth / naturalWidth, controls.boxHeight / naturalHeight);
+    // getBBox() is fill-geometry only (unaffected by the CSS transform
+    // below, same "measure at the fixed 100px reference" idea the old
+    // scrollWidth/scrollHeight approach used) -- boxWidth/boxHeight are the
+    // user-resizable helper box (see V8ActiveIdentityNameControls), so this
+    // re-fits automatically whenever the name OR the box size changes.
+    const bbox = el.getBBox();
+    if (!bbox.width || !bbox.height) return;
+    const nextScale = Math.min(controls.boxWidth / bbox.width, controls.boxHeight / bbox.height);
     setFitScale(Number.isFinite(nextScale) && nextScale > 0 ? nextScale : 1);
   }, [text, controls.boxWidth, controls.boxHeight]);
 
@@ -997,41 +1010,43 @@ function V8IdentityFitName({ text, controls }: { text: string; controls: V8Activ
           height: controls.boxHeight,
           zIndex: controls.zIndex,
           opacity: controls.opacity / 100,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
           overflow: "hidden",
           transform: `translate(-50%, -50%) rotate(${controls.rotation}deg)`,
         } as CSSProperties
       }
     >
-      <strong
-        ref={measureRef}
-        className="v8-scroll-identity-name"
-        title={text}
-        style={{
-          display: "block",
-          whiteSpace: "nowrap",
-          lineHeight: 1,
-          fontWeight: 900,
-          fontSize: NAME_FIT_REFERENCE_FONT_SIZE,
-          transform: `scale(${fitScale})`,
-          color: NAME_FILL_COLOR,
-          // Stroke width and shadow offsets/blur are specified here in this
-          // element's own PRE-transform space (the 100px reference size),
-          // which the transform:scale(fitScale) above then shrinks along
-          // with the text -- dividing by fitScale up front cancels that out
-          // so the FINAL on-screen result always matches the exact px
-          // values in the spec (2.5px stroke etc.), regardless of how much
-          // any given name had to shrink to fit its box.
-          WebkitTextStroke: `${NAME_STROKE_WIDTH_PX / fitScale}px ${NAME_STROKE_COLOR}`,
-          filter: NAME_SHADOW_LAYERS.map(
-            (layer) => `drop-shadow(${layer.x / fitScale}px ${layer.y / fitScale}px ${layer.blur / fitScale}px ${layer.color})`,
-          ).join(" "),
-        } as CSSProperties}
-      >
-        {text}
-      </strong>
+      <svg width={controls.boxWidth} height={controls.boxHeight} style={{ display: "block", overflow: "visible" }}>
+        <title>{text}</title>
+        <text
+          ref={textRef}
+          x="50%"
+          y="50%"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={NAME_FIT_REFERENCE_FONT_SIZE}
+          fontWeight={900}
+          fill={NAME_FILL_COLOR}
+          stroke={NAME_STROKE_COLOR}
+          // Same "divide by fitScale, cancel out after the scale-down
+          // transform" math as before -- this part of the old approach was
+          // fine; only the paint technique (-webkit-text-stroke) was the
+          // problem, not the scaling math.
+          strokeWidth={NAME_STROKE_WIDTH_PX / fitScale}
+          paintOrder="stroke fill"
+          style={
+            {
+              transformBox: "fill-box",
+              transformOrigin: "center",
+              transform: `scale(${fitScale})`,
+              filter: NAME_SHADOW_LAYERS.map(
+                (layer) => `drop-shadow(${layer.x / fitScale}px ${layer.y / fitScale}px ${layer.blur / fitScale}px ${layer.color})`,
+              ).join(" "),
+            } as CSSProperties
+          }
+        >
+          {text}
+        </text>
+      </svg>
     </div>
   );
 }
