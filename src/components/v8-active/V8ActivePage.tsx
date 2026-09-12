@@ -1,10 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
-import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption, type V8ProfileIdentityType } from "@/lib/v8-line-auth";
-import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
+import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
@@ -71,12 +70,6 @@ type HelperMode = "signup" | "cancel" | null;
 
 export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
-  const { identity, remember, rememberName, forget } = useCurrentIdentity(roster);
-  // Phase F1 (LINE Login) -- purely additive next to the device-memory
-  // identity above. Not wired into signup/cancel or the season/temp choice
-  // yet (that's F2/F3); this just proves login + token storage + /auth/me
-  // work end to end, surfaced as a small status line + entry button on the
-  // existing identity prompt below.
   const {
     identity: lineIdentity,
     loading: lineAuthLoading,
@@ -85,7 +78,18 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     updateIdentity: updateLineIdentity,
     refreshIdentity: refreshLineIdentity,
   } = useV8LineAuth();
-  const [tigerName, setTigerName] = useState("");
+  const {
+    identity,
+    forget,
+    cancellableTempSignups,
+    cancellableLoading,
+    refreshCancellableTempSignups,
+  } = useCurrentIdentity({
+    roster,
+    lineIdentity,
+    lineAuthToken,
+    eventId: selectedEventId,
+  });
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
   // Two-step cancel (select, then a separate confirm button) -- the old
@@ -128,32 +132,28 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.pendingSwitchEventId]);
 
-  // 2026-09-11: was missing fixedWaiting (季打候補) -- a season member
-  // currently on the waitlist couldn't find themselves in this "who are
-  // you" list at all, with no error, just an empty-looking absence.
-  const seasonCandidates = useMemo<AlphaSignup[]>(
-    () => [...(roster?.fixedConfirmed || []), ...(roster?.fixedWaiting || []), ...(roster?.fixedLeave || [])],
-    [roster],
-  );
-
-  const tempCandidates = useMemo<AlphaSignup[]>(
-    () => [...(roster?.tempConfirmed || []), ...(roster?.tempWaiting || [])],
-    [roster],
-  );
+  const tempCandidates = cancellableTempSignups;
   // Kept separate (not just filtered from tempCandidates by status) so the
   // 幫人取消 screen can render them as two clearly labelled groups instead
   // of one flat, undifferentiated list mixing confirmed and waitlisted
   // people together.
-  const tempConfirmedCandidates = roster?.tempConfirmed || [];
-  const tempWaitingCandidates = roster?.tempWaiting || [];
+  const tempConfirmedCandidates = tempCandidates.filter((person) => person.status === "confirmed");
+  const tempWaitingCandidates = tempCandidates.filter((person) => person.status === "waiting");
 
   if (!selectedEvent || !roster) return null;
 
   const busy = Boolean(pendingAction);
 
   const runAction = async (action: "fixed-leave" | "fixed-return" | "cancel-temp") => {
-    if (!identity) return;
-    await flow.runIdentityAction(action, { id: identity.signupId, name: identity.name });
+    if (!identity || !lineAuthToken) return;
+    const ok = await flow.runIdentityAction(action, { id: identity.signupId, name: identity.name }, lineAuthToken);
+    if (ok) await refreshCancellableTempSignups();
+  };
+
+  const resetLineIdentity = () => {
+    forget();
+    clearV8LineAuthStorage();
+    window.location.reload();
   };
 
   const switchToAdjacentMeetup = (direction: -1 | 1) => {
@@ -166,24 +166,19 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   };
 
   const submitTigerSignup = async () => {
-    const submittedName = tigerName;
-    const result = await flow.submitSignup(submittedName);
-    if (result.ok && result.signupId) {
-      // rememberName (not remember(result.signupId)) -- `roster` here is
-      // still the pre-signup snapshot, so looking the new id up in it would
-      // silently fail (see the comment on rememberName in
-      // use-current-identity.ts). The name just submitted is already known,
-      // no roster lookup needed.
-      rememberName(submittedName);
-      setTigerName("");
-    }
+    if (!lineAuthToken || !lineIdentity?.profileComplete || lineIdentity.identityType !== "temp") return;
+    const submittedName = lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName;
+    const result = await flow.submitSignup(submittedName, lineAuthToken);
+    if (result.ok) await refreshCancellableTempSignups();
   };
 
   const submitHelperSignup = async () => {
-    const result = await flow.submitSignup(helperName);
+    if (!lineAuthToken) return;
+    const result = await flow.submitSignup(helperName, lineAuthToken);
     if (result.ok) {
       setHelperName("");
       setHelperMode(null);
+      await refreshCancellableTempSignups();
     }
   };
 
@@ -196,9 +191,13 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   // against it right now would just be security theater. Recorded here so
   // the field is designed before it's needed, not bolted on later.
   const cancelForSomeoneElse = async (person: AlphaSignup) => {
-    const ok = await flow.runIdentityAction("cancel-temp", { id: person.id, name: person.name });
+    if (!lineAuthToken) return;
+    const ok = await flow.runIdentityAction("cancel-temp", { id: person.id, name: person.name }, lineAuthToken);
     setSelectedCancelPerson(null);
-    if (ok) setHelperMode(null);
+    if (ok) {
+      setHelperMode(null);
+      await refreshCancellableTempSignups();
+    }
   };
 
   // Built from the SAME shared functions the /v8/preview console uses (see
@@ -296,7 +295,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               busy={busy}
               pendingLabel={pendingAction?.label}
               onPrimaryAction={handlePrimaryAction}
-              onForget={forget}
+              onForget={resetLineIdentity}
               onHelperSignup={() => setHelperMode("signup")}
               onHelperCancel={() => {
                 setSelectedCancelPerson(null);
@@ -338,26 +337,18 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
         }
       />
 
-      {/* Full-screen identity gate -- until an identity is picked, this
+      {/* Full-screen identity gate -- until the LINE identity maps to this
+          event (or a temp player signs up), this
           floats (position:fixed, backdrop-filter:blur) on top of the
           already-rendering canvas, deliberately obscuring the sun/badges/
-          roster underneath rather than just blocking clicks, so the visitor
-          sees only this card and must pick an identity first. "不是我"
-          (forget) sets identity back to null, which re-renders this same
-          gate -- no special-casing needed. Confirmed with the user: same
-          treatment for both the first-visit and the "不是我" case, layered
-          over the canvas rather than deferring/changing its render timing. */}
+          roster underneath rather than just blocking clicks. */}
       {identity ? null : (
         <div className="v8-identity-gate">
           <div className="v8-identity-gate-card">
             <V8IdentityPrompt
-              seasonCandidates={seasonCandidates}
-              tigerName={tigerName}
-              onTigerNameChange={setTigerName}
-              onPickSeason={(signupId) => remember(signupId)}
               onSubmitTiger={() => void submitTigerSignup()}
               busy={busy}
-              ctaTempSignupSrc={assets.ctaTempSignup}
+              identityLoading={cancellableLoading}
               lineIdentity={lineIdentity}
               lineAuthToken={lineAuthToken}
               lineAuthLoading={lineAuthLoading}
@@ -1323,13 +1314,9 @@ export function V8IdentityScrollContent({
 }
 
 function V8IdentityPrompt({
-  seasonCandidates,
-  tigerName,
-  onTigerNameChange,
-  onPickSeason,
   onSubmitTiger,
   busy,
-  ctaTempSignupSrc,
+  identityLoading,
   lineIdentity,
   lineAuthToken,
   lineAuthLoading,
@@ -1337,17 +1324,9 @@ function V8IdentityPrompt({
   onLineIdentityConfirmed,
   onRefreshLineIdentity,
 }: {
-  seasonCandidates: AlphaSignup[];
-  tigerName: string;
-  onTigerNameChange: (value: string) => void;
-  onPickSeason: (signupId: string) => void;
   onSubmitTiger: () => void;
   busy: boolean;
-  ctaTempSignupSrc: string;
-  // Phase F1 (LINE Login) -- purely a status line + entry button here.
-  // Deliberately NOT wired into onPickSeason/onSubmitTiger above; claiming
-  // an existing member / confirming a display name against this LINE
-  // identity is Phase F2, not this round.
+  identityLoading: boolean;
   lineIdentity: V8LineIdentity | null;
   lineAuthToken: string | null;
   lineAuthLoading: boolean;
@@ -1355,7 +1334,6 @@ function V8IdentityPrompt({
   onLineIdentityConfirmed: (identity: V8LineIdentity) => void;
   onRefreshLineIdentity: () => Promise<V8LineIdentity | null>;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [profileMode, setProfileMode] = useState<V8ProfileIdentityType | null>(null);
   const [claimOptions, setClaimOptions] = useState<V8ClaimOption[]>([]);
   const [claimLoading, setClaimLoading] = useState(false);
@@ -1366,6 +1344,7 @@ function V8IdentityPrompt({
   const [profileSubmitting, setProfileSubmitting] = useState(false);
   const siteId = configuredSiteId();
   const needsLineProfile = Boolean(lineIdentity && lineIdentity.profileComplete === false);
+  const confirmedLineName = lineIdentity?.confirmedName || lineIdentity?.displayName || lineIdentity?.lineDisplayName || "";
 
   useEffect(() => {
     if (!needsLineProfile) {
@@ -1451,7 +1430,9 @@ function V8IdentityPrompt({
 
   return (
     <section className="v8-active-identity v8-active-identity-prompt" aria-label="選擇身份">
-      <p className="v8-active-prompt-title">{needsLineProfile ? "確認你的身份" : "你是季打還是臨打？"}</p>
+      <p className="v8-active-prompt-title">
+        {needsLineProfile ? "確認你的身份" : lineIdentity?.profileComplete ? "準備進入卷軸" : "使用 LINE 登入"}
+      </p>
 
       <div className="v8-line-auth-status" aria-live="polite">
         {lineAuthLoading ? (
@@ -1465,7 +1446,9 @@ function V8IdentityPrompt({
         )}
       </div>
 
-      {needsLineProfile ? (
+      {!lineIdentity ? (
+        <p className="v8-line-profile-copy">請先用 LINE 登入，完成身份確認後才能報名或操作名單。</p>
+      ) : needsLineProfile ? (
         <div className="v8-line-profile-flow">
           {!lineAuthToken ? (
             <>
@@ -1561,54 +1544,29 @@ function V8IdentityPrompt({
           )}
           {profileError ? <p className="v8-line-profile-error">{profileError}</p> : null}
         </div>
-      ) : pickerOpen ? (
-        <div className="v8-active-season-list">
-          {seasonCandidates.length ? (
-            seasonCandidates.map((person) => (
-              <button
-                key={person.id}
-                type="button"
-                className="v8-active-season-item"
-                onClick={() => onPickSeason(person.id)}
-              >
-                <strong>{person.name}</strong>
-                <em>{personRole(person)}</em>
-              </button>
-            ))
-          ) : (
-            <p className="sd-empty">目前沒有季打名單</p>
-          )}
-          <button type="button" className="v8-active-helper-cancel" onClick={() => setPickerOpen(false)}>
-            返回
+      ) : !lineAuthToken ? (
+        <>
+          <p className="v8-line-profile-copy">登入狀態已過期，請重新用 LINE 登入。</p>
+          <button type="button" className="v8-line-auth-login-btn" onClick={onStartLineLogin}>
+            重新用 LINE 登入
           </button>
-        </div>
+        </>
+      ) : identityLoading ? (
+        <p className="v8-line-profile-copy">正在確認你的報名狀態...</p>
+      ) : lineIdentity.identityType === "temp" ? (
+        <>
+          <p className="v8-line-profile-copy">將以「{confirmedLineName}」報名這場聚會。</p>
+          <button
+            type="button"
+            className="v8-line-profile-submit"
+            disabled={!confirmedLineName.trim() || busy}
+            onClick={onSubmitTiger}
+          >
+            {busy ? "報名中" : "報名"}
+          </button>
+        </>
       ) : (
-        <div className="v8-active-prompt-row">
-          <button type="button" className="v8-active-prompt-season" onClick={() => setPickerOpen(true)}>
-            我是季打會員
-          </button>
-          <div className="v8-active-prompt-tiger">
-            <input
-              value={tigerName}
-              onChange={(event) => onTigerNameChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") onSubmitTiger();
-              }}
-              placeholder="輸入姓名"
-              disabled={busy}
-            />
-            <button
-              type="button"
-              className="v8-active-prompt-tiger-cta"
-              disabled={!tigerName.trim() || busy}
-              onClick={onSubmitTiger}
-              aria-label="我要報名"
-            >
-              <img src={ctaTempSignupSrc} alt="" aria-hidden="true" draggable={false} />
-              <V8CtaGlowOutline outlineKey="tempSignup" />
-            </button>
-          </div>
-        </div>
+        <p className="v8-line-profile-copy">已確認季打身份，正在比對本場名單。</p>
       )}
     </section>
   );
