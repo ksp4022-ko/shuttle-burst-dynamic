@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import type { AlphaRoster, AlphaSignup } from "@/lib/database-alpha";
+import { V8_REMEMBERED_IDENTITY_STORAGE_KEY } from "@/lib/v8-line-auth-storage";
 
 export type CurrentIdentity = {
   signupId: string;
@@ -11,7 +12,7 @@ export type CurrentIdentity = {
 // v2: remembers by NAME instead of a per-event signupId (see readStoredName
 // below for why) -- a different key so an old {eventId,signupId} entry is
 // simply ignored rather than misread as this new shape.
-const STORAGE_KEY = "shuttle-v8-remembered-identity-v2";
+const STORAGE_KEY = V8_REMEMBERED_IDENTITY_STORAGE_KEY;
 
 type StoredIdentity = { name?: string };
 
