@@ -300,13 +300,13 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   ]);
 
   const submitSignup = useCallback(
-    async (name: string): Promise<{ ok: boolean; signupId?: string }> => {
+    async (name: string, token?: string): Promise<{ ok: boolean; signupId?: string }> => {
       const trimmed = name.trim();
       if (!trimmed || !selectedEventId || pendingAction) return { ok: false };
       setPendingAction({ type: "signup", label: "報名中" });
       setNotice("");
       try {
-        const result = await createAlphaTempSignup(selectedEventId, trimmed);
+        const result = await createAlphaTempSignup(selectedEventId, trimmed, token);
         await loadRoster(selectedEventId, { silent: true });
         setLastChangedId(trimmed);
         setNotice(`${trimmed} 已完成報名`);
@@ -327,7 +327,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   // pick-from-list step first. Does not touch confirmMemberAction or its
   // MemberSheet-driven callers.
   const runIdentityAction = useCallback(
-    async (action: "fixed-leave" | "fixed-return" | "cancel-temp", signup: { id: string; name: string }) => {
+    async (action: "fixed-leave" | "fixed-return" | "cancel-temp", signup: { id: string; name: string }, token?: string) => {
       if (!selectedEventId || pendingAction) return false;
       const labels: Record<typeof action, string> = {
         "fixed-leave": "請假中",
@@ -336,9 +336,9 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
       };
       setPendingAction({ type: action, label: labels[action] });
       try {
-        if (action === "fixed-leave") await fixedAlphaLeave(selectedEventId, signup.id);
-        if (action === "fixed-return") await fixedAlphaReturn(selectedEventId, signup.id);
-        if (action === "cancel-temp") await cancelAlphaTempSignup(selectedEventId, signup.id);
+        if (action === "fixed-leave") await fixedAlphaLeave(selectedEventId, signup.id, token);
+        if (action === "fixed-return") await fixedAlphaReturn(selectedEventId, signup.id, token);
+        if (action === "cancel-temp") await cancelAlphaTempSignup(selectedEventId, signup.id, token);
 
         await loadRoster(selectedEventId, { silent: true });
         setLastChangedId(signup.id);
@@ -370,7 +370,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     setSelectedMemberId("");
   }, []);
 
-  const confirmMemberAction = useCallback(async () => {
+  const confirmMemberAction = useCallback(async (token?: string) => {
     if (!memberPickerMode || !selectedMemberId || !selectedEventId || pendingAction) return;
     const person = memberCandidates.find((item) => item.id === selectedMemberId);
     if (!person) return;
@@ -392,10 +392,10 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     });
 
     try {
-      if (memberPickerMode === "season-leave") await fixedAlphaLeave(selectedEventId, person.id);
-      if (memberPickerMode === "season-restore") await fixedAlphaReturn(selectedEventId, person.id);
+      if (memberPickerMode === "season-leave") await fixedAlphaLeave(selectedEventId, person.id, token);
+      if (memberPickerMode === "season-restore") await fixedAlphaReturn(selectedEventId, person.id, token);
       if (memberPickerMode === "casual-cancel")
-        await cancelAlphaTempSignup(selectedEventId, person.id);
+        await cancelAlphaTempSignup(selectedEventId, person.id, token);
 
       await loadRoster(selectedEventId, { silent: true });
       setLastChangedId(person.id);

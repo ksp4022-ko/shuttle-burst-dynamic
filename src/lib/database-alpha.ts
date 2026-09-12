@@ -33,6 +33,14 @@ export type AlphaSignup = {
   leaveActive?: number | boolean;
 };
 
+export type AlphaCancellableTempSignup = AlphaSignup & {
+  canCancel: boolean;
+  createdByMe: boolean;
+  createdByLineIdentityId?: string | null;
+  createdByDisplayName?: string | null;
+  legacyNoOwner?: boolean;
+};
+
 export type AlphaRoster = {
   event: AlphaEvent;
   fixedConfirmed: AlphaSignup[];
@@ -151,6 +159,11 @@ function apiUrl(path: string, query?: Record<string, string | number | undefined
   return url.toString();
 }
 
+function authHeaders(token?: string): HeadersInit {
+  const trimmed = token?.trim();
+  return trimmed ? { authorization: `Bearer ${trimmed}` } : {};
+}
+
 export async function alphaFetch<T>(
   path: string,
   init?: RequestInit,
@@ -200,12 +213,13 @@ export function getAlphaRoster(eventId: string) {
   return alphaFetch<AlphaRoster>(`/events/${encodeURIComponent(eventId)}/roster`);
 }
 
-export function createAlphaTempSignup(eventId: string, name: string) {
+export function createAlphaTempSignup(eventId: string, name: string, token?: string) {
   const siteId = configuredSiteId();
   return alphaFetch<{ signupId: string; status: string; position: number }>(
     `/events/${encodeURIComponent(eventId)}/temp-signups`,
     {
       method: "POST",
+      headers: authHeaders(token),
       body: JSON.stringify({
         siteId,
         name,
@@ -214,12 +228,13 @@ export function createAlphaTempSignup(eventId: string, name: string) {
   );
 }
 
-export function cancelAlphaTempSignup(eventId: string, signupId: string) {
+export function cancelAlphaTempSignup(eventId: string, signupId: string, token?: string) {
   const siteId = configuredSiteId();
   return alphaFetch<{ cancelledSignupId: string }>(
     `/events/${encodeURIComponent(eventId)}/temp-signups/${encodeURIComponent(signupId)}/cancel`,
     {
       method: "POST",
+      headers: authHeaders(token),
       body: JSON.stringify({
         siteId,
         reason: "homepage_v3_cancel",
@@ -228,24 +243,39 @@ export function cancelAlphaTempSignup(eventId: string, signupId: string) {
   );
 }
 
-export function fixedAlphaLeave(eventId: string, signupId: string) {
+export function fixedAlphaLeave(eventId: string, signupId: string, token?: string) {
   const siteId = configuredSiteId();
   return alphaFetch<{ signupId: string; status: string }>(
     `/events/${encodeURIComponent(eventId)}/fixed-signups/${encodeURIComponent(signupId)}/leave`,
     {
       method: "POST",
+      headers: authHeaders(token),
       body: JSON.stringify({ siteId }),
     },
   );
 }
 
-export function fixedAlphaReturn(eventId: string, signupId: string) {
+export function fixedAlphaReturn(eventId: string, signupId: string, token?: string) {
   const siteId = configuredSiteId();
   return alphaFetch<{ signupId: string; status: string }>(
     `/events/${encodeURIComponent(eventId)}/fixed-signups/${encodeURIComponent(signupId)}/return`,
     {
       method: "POST",
+      headers: authHeaders(token),
       body: JSON.stringify({ siteId }),
+    },
+  );
+}
+
+export function fetchV8CancellableTempSignups(token: string, eventId: string) {
+  return alphaFetch<{
+    eventId: string;
+    isAdmin: boolean;
+    items: AlphaCancellableTempSignup[];
+  }>(
+    `/events/${encodeURIComponent(eventId)}/temp-signups/cancellable`,
+    {
+      headers: authHeaders(token),
     },
   );
 }
