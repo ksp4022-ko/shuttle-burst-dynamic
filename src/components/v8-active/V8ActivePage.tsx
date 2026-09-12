@@ -3,8 +3,9 @@ import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
+import type { V8ClaimOption, V8LineProfileInput } from "@/lib/v8-line-auth";
 import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
-import type { AlphaSignup } from "@/lib/database-alpha";
+import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
   activeTargetOrder,
@@ -71,12 +72,13 @@ type HelperMode = "signup" | "cancel" | null;
 export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
   const { identity, remember, rememberName, forget } = useCurrentIdentity(roster);
-  // Phase F1 (LINE Login) -- purely additive next to the device-memory
-  // identity above. Not wired into signup/cancel or the season/temp choice
-  // yet (that's F2/F3); this just proves login + token storage + /auth/me
-  // work end to end, surfaced as a small status line + entry button on the
-  // existing identity prompt below.
-  const { identity: lineIdentity, loading: lineAuthLoading, startLogin: startLineLogin } = useV8LineAuth();
+  const {
+    identity: lineIdentity,
+    loading: lineAuthLoading,
+    startLogin: startLineLogin,
+    loadClaimOptions,
+    confirmProfile,
+  } = useV8LineAuth();
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
@@ -138,6 +140,23 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   // people together.
   const tempConfirmedCandidates = roster?.tempConfirmed || [];
   const tempWaitingCandidates = roster?.tempWaiting || [];
+  const siteId = configuredSiteId();
+  const lineProfileComplete = Boolean(lineIdentity?.profileComplete);
+  const showLineGate = lineAuthLoading || !lineIdentity || !lineProfileComplete;
+
+  useEffect(() => {
+    if (!lineIdentity?.profileComplete || identity) return;
+    if (lineIdentity.identityType === "fixed" && lineIdentity.claimedMemberId) {
+      const claimed = seasonCandidates.find((person) => person.memberId === lineIdentity.claimedMemberId);
+      if (claimed) remember(claimed.id);
+      return;
+    }
+    if (lineIdentity.identityType === "temp") {
+      const displayName = lineIdentity.confirmedName || lineIdentity.displayName;
+      const activeTemp = tempCandidates.find((person) => person.name === displayName);
+      if (activeTemp) rememberName(displayName);
+    }
+  }, [identity, lineIdentity, remember, rememberName, seasonCandidates, tempCandidates]);
 
   if (!selectedEvent || !roster) return null;
 
@@ -191,6 +210,20 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
     const ok = await flow.runIdentityAction("cancel-temp", { id: person.id, name: person.name });
     setSelectedCancelPerson(null);
     if (ok) setHelperMode(null);
+  };
+
+  const submitLineProfile = async (input: V8LineProfileInput) => {
+    const nextIdentity = await confirmProfile(input);
+    flow.setNotice("LINE 身份已確認");
+    if (nextIdentity.identityType === "fixed" && nextIdentity.claimedMemberId) {
+      const claimed = seasonCandidates.find((person) => person.memberId === nextIdentity.claimedMemberId);
+      if (claimed) remember(claimed.id);
+    }
+    if (nextIdentity.identityType === "temp") {
+      const displayName = nextIdentity.confirmedName || nextIdentity.displayName;
+      const activeTemp = tempCandidates.find((person) => person.name === displayName);
+      if (activeTemp) rememberName(displayName);
+    }
   };
 
   // Built from the SAME shared functions the /v8/preview console uses (see
@@ -339,7 +372,25 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
           gate -- no special-casing needed. Confirmed with the user: same
           treatment for both the first-visit and the "不是我" case, layered
           over the canvas rather than deferring/changing its render timing. */}
-      {identity ? null : (
+      {showLineGate ? (
+        <div className="v8-identity-gate">
+          <div className="v8-identity-gate-card">
+            {lineAuthLoading ? (
+              <V8LineAuthGate message="LINE 登入狀態確認中..." />
+            ) : !lineIdentity ? (
+              <V8LineAuthGate message="請先用 LINE 登入" actionLabel="用 LINE 登入" onAction={startLineLogin} />
+            ) : (
+              <V8LineProfilePrompt
+                siteId={siteId}
+                lineIdentity={lineIdentity}
+                loadClaimOptions={loadClaimOptions}
+                onConfirm={submitLineProfile}
+                busy={busy}
+              />
+            )}
+          </div>
+        </div>
+      ) : lineProfileComplete || identity ? null : (
         <div className="v8-identity-gate">
           <div className="v8-identity-gate-card">
             <V8IdentityPrompt
@@ -1409,6 +1460,164 @@ function V8IdentityPrompt({
   );
 }
 
+function V8LineAuthGate({
+  message,
+  actionLabel,
+  onAction,
+}: {
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <section className="v8-active-identity v8-line-profile" aria-label="LINE 登入">
+      <p className="v8-active-prompt-title">{message}</p>
+      {actionLabel && onAction ? (
+        <button type="button" className="v8-line-profile-primary" onClick={onAction}>
+          {actionLabel}
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
+function V8LineProfilePrompt({
+  siteId,
+  lineIdentity,
+  loadClaimOptions,
+  onConfirm,
+  busy,
+}: {
+  siteId: string;
+  lineIdentity: V8LineIdentity;
+  loadClaimOptions: (siteId: string) => Promise<V8ClaimOption[]>;
+  onConfirm: (input: V8LineProfileInput) => Promise<void>;
+  busy: boolean;
+}) {
+  const [identityType, setIdentityType] = useState<"fixed" | "temp" | null>(
+    lineIdentity.identityType === "fixed" || lineIdentity.identityType === "temp" ? lineIdentity.identityType : null,
+  );
+  const [claimOptions, setClaimOptions] = useState<V8ClaimOption[]>([]);
+  const [selectedMemberId, setSelectedMemberId] = useState(lineIdentity.claimedMemberId || "");
+  const [displayName, setDisplayName] = useState(lineIdentity.confirmedName || lineIdentity.displayName || "");
+  const [loadingClaims, setLoadingClaims] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (identityType !== "fixed") return;
+    let cancelled = false;
+    setLoadingClaims(true);
+    setError("");
+    loadClaimOptions(siteId)
+      .then((members) => {
+        if (cancelled) return;
+        setClaimOptions(members);
+      })
+      .catch((reason) => {
+        if (cancelled) return;
+        setError(reason instanceof Error ? reason.message : "季打名單讀取失敗。");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingClaims(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [identityType, loadClaimOptions, siteId]);
+
+  const chooseFixed = (member: V8ClaimOption) => {
+    setSelectedMemberId(member.memberId);
+    setDisplayName(member.name);
+  };
+
+  const save = async () => {
+    if (!identityType || !displayName.trim() || saving || busy) return;
+    if (identityType === "fixed" && !selectedMemberId) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onConfirm({
+        siteId,
+        identityType,
+        memberId: identityType === "fixed" ? selectedMemberId : undefined,
+        displayName: displayName.trim(),
+      });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "LINE 身份確認失敗。");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveDisabled = !identityType || !displayName.trim() || saving || busy || (identityType === "fixed" && !selectedMemberId);
+
+  return (
+    <section className="v8-active-identity v8-line-profile" aria-label="LINE 身份確認">
+      <p className="v8-active-prompt-title">確認你的 LINE 身份</p>
+      <p className="v8-line-profile-caption">LINE 已登入：{lineIdentity.lineDisplayName || lineIdentity.displayName}</p>
+
+      <div className="v8-line-profile-choice">
+        <button
+          type="button"
+          className={identityType === "fixed" ? "is-selected" : ""}
+          onClick={() => {
+            setIdentityType("fixed");
+            setSelectedMemberId(lineIdentity.claimedMemberId || "");
+          }}
+        >
+          我是季打
+        </button>
+        <button
+          type="button"
+          className={identityType === "temp" ? "is-selected" : ""}
+          onClick={() => {
+            setIdentityType("temp");
+            setSelectedMemberId("");
+            setDisplayName(lineIdentity.confirmedName || lineIdentity.displayName || "");
+          }}
+        >
+          我是臨打
+        </button>
+      </div>
+
+      {identityType === "fixed" ? (
+        <div className="v8-line-claim-list">
+          {loadingClaims ? (
+            <p className="v8-line-profile-caption">季打名單讀取中...</p>
+          ) : claimOptions.length ? (
+            claimOptions.map((member) => (
+              <button
+                key={member.memberId}
+                type="button"
+                className={selectedMemberId === member.memberId ? "is-selected" : ""}
+                onClick={() => chooseFixed(member)}
+              >
+                {member.name}
+              </button>
+            ))
+          ) : (
+            <p className="v8-line-profile-caption">目前沒有可認領的季打名單</p>
+          )}
+        </div>
+      ) : null}
+
+      {identityType ? (
+        <label className="v8-line-profile-name">
+          <span>顯示名稱</span>
+          <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} disabled={saving || busy} />
+        </label>
+      ) : null}
+
+      {error ? <p className="v8-line-profile-error">{error}</p> : null}
+
+      <button type="button" className="v8-line-profile-primary" disabled={saveDisabled} onClick={() => void save()}>
+        {saving ? "確認中..." : "確認身份"}
+      </button>
+    </section>
+  );
+}
+
 function shortDate(value: string) {
   const [, month = "", day = ""] = String(value || "").split("-");
   const monthNumber = Number(month);
@@ -1727,6 +1936,91 @@ export function V8ActiveStyles() {
         color: #fff;
         font-size: 13px;
         font-weight: 800;
+      }
+
+      .v8-line-profile {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+      }
+
+      .v8-line-profile-caption {
+        margin: -2px 0 2px;
+        color: rgba(32, 21, 13, 0.68);
+        font-size: 13px;
+        line-height: 1.35;
+        font-weight: 700;
+      }
+
+      .v8-line-profile-choice {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .v8-line-profile-choice button,
+      .v8-line-claim-list button,
+      .v8-line-profile-primary {
+        min-height: 40px;
+        border: 1px solid rgba(32, 21, 13, 0.18);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.78);
+        color: #20150d;
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .v8-line-profile-choice button.is-selected,
+      .v8-line-claim-list button.is-selected {
+        border-color: #06c755;
+        background: rgba(6, 199, 85, 0.14);
+      }
+
+      .v8-line-claim-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        max-height: min(240px, 38vh);
+        overflow: auto;
+        padding: 2px;
+      }
+
+      .v8-line-profile-name {
+        display: grid;
+        gap: 6px;
+        text-align: left;
+        font-size: 12px;
+        color: rgba(32, 21, 13, 0.68);
+        font-weight: 900;
+      }
+
+      .v8-line-profile-name input {
+        min-height: 42px;
+        border: 1px solid rgba(32, 21, 13, 0.18);
+        border-radius: 12px;
+        padding: 0 12px;
+        background: rgba(255, 255, 255, 0.86);
+        color: #20150d;
+        font-size: 16px;
+        font-weight: 850;
+      }
+
+      .v8-line-profile-error {
+        margin: 0;
+        color: #a12b1f;
+        font-size: 13px;
+        line-height: 1.35;
+        font-weight: 800;
+      }
+
+      .v8-line-profile-primary {
+        background: #06c755;
+        border-color: #06c755;
+        color: #fff;
+      }
+
+      .v8-line-profile-primary:disabled {
+        opacity: 0.52;
       }
 
       .v8-active-prompt-row {

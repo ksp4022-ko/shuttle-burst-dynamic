@@ -12,6 +12,20 @@ export type V8LineSession = {
   identity: V8LineIdentity;
 };
 
+export type V8ClaimOption = {
+  memberId: string;
+  name: string;
+  groupId?: string;
+  orderNo?: number;
+};
+
+export type V8LineProfileInput = {
+  siteId: string;
+  identityType: "fixed" | "temp";
+  memberId?: string;
+  displayName: string;
+};
+
 // Full-page redirect, not a fetch -- LINE itself needs to render the
 // consent screen, so this URL is meant for `window.location.href =`, not
 // an XHR/fetch call.
@@ -52,4 +66,23 @@ export async function fetchV8AuthMe(token: string): Promise<V8LineIdentity | nul
     }
     throw error;
   }
+}
+
+export async function listV8ClaimOptions(siteId: string, token: string): Promise<V8ClaimOption[]> {
+  const result = await alphaFetch<{ members: V8ClaimOption[] }>(
+    `/sites/${encodeURIComponent(siteId)}/claim-options`,
+    {
+      headers: { authorization: `Bearer ${token}` },
+    },
+  );
+  return result.members || [];
+}
+
+export async function updateV8LineProfile(token: string, input: V8LineProfileInput): Promise<V8LineIdentity> {
+  const result = await alphaFetch<{ identity: V8LineIdentity }>("/auth/profile", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    body: JSON.stringify(input),
+  });
+  return result.identity;
 }
