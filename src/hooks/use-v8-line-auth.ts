@@ -55,6 +55,7 @@ export function useV8LineAuth() {
       const url = new URL(window.location.href);
       const authCode = url.searchParams.get("auth");
       const authError = url.searchParams.get("auth_error");
+      const authErrorDetail = url.searchParams.get("auth_error_detail");
 
       if (authCode) {
         if (!cancelled) {
@@ -107,13 +108,14 @@ export function useV8LineAuth() {
         }
       } else if (authError) {
         url.searchParams.delete("auth_error");
+        url.searchParams.delete("auth_error_detail");
         url.searchParams.delete("requestId");
         window.history.replaceState(null, "", url.toString());
         if (!cancelled) {
           setDiagnostic({
             status: "auth-error",
             message: "LINE 沒有完成授權。",
-            detail: authError,
+            detail: authErrorDetail || authError,
           });
         }
       }
