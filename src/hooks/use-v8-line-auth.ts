@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { exchangeV8LineAuthCode, fetchV8AuthMe, getV8LineLoginStartUrl } from "@/lib/v8-line-auth";
+import {
+  exchangeV8LineAuthCode,
+  fetchV8AuthMe,
+  getV8LineLoginStartUrl,
+  listV8ClaimOptions,
+  updateV8LineProfile,
+  type V8ClaimOption,
+  type V8LineProfileInput,
+} from "@/lib/v8-line-auth";
 import {
   clearV8LineSessionOnly,
   loadV8LineIdentity,
@@ -10,17 +18,21 @@ import {
 } from "@/lib/v8-line-auth-storage";
 
 /**
- * Phase F1 -- LINE Login storage + entry point only. Deliberately does NOT
+ * Phase F1/F2 -- LINE Login storage + identity confirmation. Deliberately does NOT
  * touch the existing device-memory identity (useCurrentIdentity) or the
- * signup/cancel flow; this hook's `identity` is a separate, additive piece
- * of state that later phases (F2 profile confirmation, F3 signup/cancel)
- * will wire into the rest of the page.
+ * signup/cancel flow; F3 will wire the bearer token into those operations.
  */
-export function useV8LineAuth() {
-  const [identity, setIdentity] = useState<V8LineIdentity | null>(() => loadV8LineIdentity());
-  const [loading, setLoading] = useState(true);
+export function useV8LineAuth({ enabled = true }: { enabled?: boolean } = {}) {
+  const [identity, setIdentity] = useState<V8LineIdentity | null>(() => (enabled ? loadV8LineIdentity() : null));
+  const [loading, setLoading] = useState(enabled);
 
   useEffect(() => {
+    if (!enabled) {
+      setIdentity(null);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function init() {
@@ -90,11 +102,27 @@ export function useV8LineAuth() {
     // are both one-shot operations for this page load, not something that
     // should re-run on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled]);
 
   const startLogin = () => {
+    if (!enabled) return;
     window.location.href = getV8LineLoginStartUrl();
   };
 
-  return { identity, loading, startLogin };
+  const loadClaimOptions = async (siteId: string): Promise<V8ClaimOption[]> => {
+    const token = loadV8LineToken();
+    if (!token) throw new Error("LINE 登入已失效，請重新登入。");
+    return listV8ClaimOptions(siteId, token);
+  };
+
+  const confirmProfile = async (input: V8LineProfileInput) => {
+    const token = loadV8LineToken();
+    if (!token) throw new Error("LINE 登入已失效，請重新登入。");
+    const nextIdentity = await updateV8LineProfile(token, input);
+    saveV8LineIdentity(nextIdentity);
+    setIdentity(nextIdentity);
+    return nextIdentity;
+  };
+
+  return { identity, loading, startLogin, loadClaimOptions, confirmProfile };
 }

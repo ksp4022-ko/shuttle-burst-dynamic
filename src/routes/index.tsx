@@ -23,6 +23,7 @@ import {
   type ToastOrigin,
 } from "@/components/homepage/HomepageToast";
 import { useHomepageFlow, type MotionMode } from "@/hooks/use-homepage-flow";
+import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import type { AlphaEvent } from "@/lib/database-alpha";
 
 export const Route = createFileRoute("/")({
@@ -43,6 +44,7 @@ const RACKET_FILE = "shuttle-racket-pearl.png";
 const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
 const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
 const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
+const V8_JOIN_AFTER_LINE_LOGIN_KEY = "shuttle-v8-join-after-line-login-v1";
 
 type HandoffTiming = {
   preHold: number;
@@ -301,6 +303,7 @@ export function Index() {
     realFadeMs: materializeWindowMs,
     skipIntro: isV8Route,
   });
+  const v8LineAuth = useV8LineAuth({ enabled: isV8Route });
   const racketSrc = `${import.meta.env.BASE_URL}${RACKET_FILE}`;
   const active = flow.phase === "active";
   const rotating = flow.phase === "rotating-to-active";
@@ -420,6 +423,21 @@ export function Index() {
     }
   }, [countdownTuning.resetOnMeetupChange]);
 
+  const enterConfirmedV8Meetup = useCallback(
+    (targetId: string) => {
+      if (!targetId) return;
+      markPreviewInteraction();
+      setCountdownRemaining(null);
+      setV8MeetupConfirmed(true);
+      if (targetId === flow.selectedEventId) {
+        flow.setPendingSwitchEventId("");
+        return;
+      }
+      flow.setPendingSwitchEventId(targetId);
+    },
+    [flow.selectedEventId, flow.setPendingSwitchEventId, markPreviewInteraction],
+  );
+
   const enterPreviewSelection = useCallback(() => {
     if (flow.pendingAction) return;
     const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
@@ -434,12 +452,9 @@ export function Index() {
     // and the legacy .sd-roster view shows through instead once the
     // countdown reaches zero before the user manually taps 進入戰局.
     if (isV8Route) {
-      setV8MeetupConfirmed(true);
-      if (targetId === flow.selectedEventId) {
-        flow.setPendingSwitchEventId("");
-        return;
-      }
-      void flow.switchMeetup();
+      // V8 requires an explicit tap on the on-canvas "進入戰局" button to
+      // start LINE auth. Legacy auto-countdown/tutorial paths must not
+      // bypass that requirement.
       return;
     }
     if (targetId === flow.selectedEventId) {
@@ -448,14 +463,7 @@ export function Index() {
       return;
     }
     void flow.switchMeetup();
-  }, [
-    flow.enterActive,
-    flow.pendingAction,
-    flow.selectedEventId,
-    flow.setPendingSwitchEventId,
-    flow.switchMeetup,
-    isV8Route,
-  ]);
+  }, [flow.enterActive, flow.pendingAction, flow.selectedEventId, flow.setPendingSwitchEventId, flow.switchMeetup, isV8Route]);
 
   const selectAdjacentV8Meetup = useCallback(
     (direction: -1 | 1) => {
@@ -485,21 +493,52 @@ export function Index() {
     if (flow.pendingAction) return;
     const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
     if (!targetId) return;
-    markPreviewInteraction();
-    setCountdownRemaining(null);
-    setV8MeetupConfirmed(true);
-    if (targetId === flow.selectedEventId) {
-      flow.setPendingSwitchEventId("");
+
+    if (v8LineAuth.loading) return;
+    if (!v8LineAuth.identity) {
+      try {
+        window.sessionStorage.setItem(V8_JOIN_AFTER_LINE_LOGIN_KEY, targetId);
+      } catch {
+        // If sessionStorage is unavailable, login still works; the user will
+        // just need to tap "進入戰局" again after returning from LINE.
+      }
+      v8LineAuth.startLogin();
       return;
     }
-    await flow.switchMeetup();
+
+    enterConfirmedV8Meetup(targetId);
   }, [
+    enterConfirmedV8Meetup,
     flow.pendingAction,
     flow.pendingSwitchEventId,
     flow.selectedEventId,
-    flow.setPendingSwitchEventId,
-    flow.switchMeetup,
-    markPreviewInteraction,
+    v8LineAuth,
+  ]);
+
+  useEffect(() => {
+    if (!isV8Route || v8LineAuth.loading || !v8LineAuth.identity || v8MeetupConfirmed) return;
+    let pendingTargetId = "";
+    try {
+      pendingTargetId = window.sessionStorage.getItem(V8_JOIN_AFTER_LINE_LOGIN_KEY) || "";
+    } catch {
+      return;
+    }
+    if (!pendingTargetId || !flow.events.length) return;
+    try {
+      window.sessionStorage.removeItem(V8_JOIN_AFTER_LINE_LOGIN_KEY);
+    } catch {
+      // Best-effort cleanup only.
+    }
+    const targetExists = flow.events.some((event) => event.id === pendingTargetId);
+    enterConfirmedV8Meetup(targetExists ? pendingTargetId : flow.selectedEventId);
+  }, [
+    enterConfirmedV8Meetup,
+    flow.events,
+    flow.selectedEventId,
+    isV8Route,
+    v8LineAuth.identity,
+    v8LineAuth.loading,
+    v8MeetupConfirmed,
   ]);
 
   useEffect(() => {
@@ -1146,7 +1185,7 @@ export function Index() {
               hasMultipleEvents={flow.events.length > 1}
               confirmed={v8MeetupConfirmed}
               confirmButtonRef={confirmMeetupButtonRef}
-              confirmDisabled={Boolean(flow.pendingAction) || !previewPickedEvent}
+              confirmDisabled={Boolean(flow.pendingAction) || !previewPickedEvent || v8LineAuth.loading}
               onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
               onNextEvent={() => selectAdjacentV8Meetup(1)}
               onConfirm={() => void confirmV8MeetupSelection()}
