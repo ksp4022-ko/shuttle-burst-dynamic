@@ -1437,7 +1437,7 @@ function V8IdentityPrompt({
       const identity = await confirmV8LineProfile(lineAuthToken, {
         siteId,
         identityType: profileMode,
-        memberId: profileMode === "fixed" ? selectedClaim?.memberId : undefined,
+        ...(profileMode === "fixed" && selectedClaim ? { memberId: selectedClaim.memberId } : {}),
         displayName,
       });
       onLineIdentityConfirmed(identity);
