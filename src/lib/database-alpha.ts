@@ -31,13 +31,16 @@ export type AlphaSignup = {
   leaveAt?: string;
   returnAt?: string;
   leaveActive?: number | boolean;
+  participantLineIdentityId?: string | null;
 };
 
 export type AlphaCancellableTempSignup = AlphaSignup & {
   canCancel: boolean;
   createdByMe: boolean;
+  participantIsMe?: boolean;
   createdByLineIdentityId?: string | null;
   createdByDisplayName?: string | null;
+  participantLineIdentityId?: string | null;
   legacyNoOwner?: boolean;
 };
 
@@ -213,7 +216,7 @@ export function getAlphaRoster(eventId: string) {
   return alphaFetch<AlphaRoster>(`/events/${encodeURIComponent(eventId)}/roster`);
 }
 
-export function createAlphaTempSignup(eventId: string, name: string, token?: string) {
+export function createAlphaTempSignup(eventId: string, name: string, token?: string, options: { selfSignup?: boolean } = {}) {
   const siteId = configuredSiteId();
   return alphaFetch<{ signupId: string; status: string; position: number }>(
     `/events/${encodeURIComponent(eventId)}/temp-signups`,
@@ -223,6 +226,7 @@ export function createAlphaTempSignup(eventId: string, name: string, token?: str
       body: JSON.stringify({
         siteId,
         name,
+        ...(options.selfSignup ? { selfSignup: true } : {}),
       }),
     },
   );

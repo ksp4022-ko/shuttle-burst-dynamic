@@ -114,7 +114,7 @@ export function useCurrentIdentity({
       return findFixedIdentity(roster, lineIdentity.claimedMemberId);
     }
     if (lineIdentity.identityType === "temp") {
-      return toTempIdentity(cancellableTempSignups.find((signup) => signup.createdByMe)) || toUnregisteredTempIdentity(lineIdentity);
+      return toTempIdentity(cancellableTempSignups.find((signup) => signup.participantIsMe)) || toUnregisteredTempIdentity(lineIdentity);
     }
     return null;
   }, [cancellableTempSignups, lineIdentity, profileComplete, roster]);
