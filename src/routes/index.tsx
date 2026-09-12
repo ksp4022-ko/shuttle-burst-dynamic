@@ -43,6 +43,65 @@ const RACKET_FILE = "shuttle-racket-pearl.png";
 const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
 const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
 const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
+const V8_LINE_LOGIN_RETURN_STORAGE_KEY = "shuttle-v8-line-login-return-v1";
+
+function isV8BrowserPath(pathname: string) {
+  return pathname.split("/").filter(Boolean).includes("v8");
+}
+
+function hasV8LineAuthCallback() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.has("auth") || params.has("auth_error");
+}
+
+function rememberV8LineLoginReturn() {
+  if (typeof window === "undefined") return;
+  try {
+    const url = new URL(window.location.href);
+    if (!isV8BrowserPath(url.pathname)) return;
+    url.searchParams.delete("auth");
+    url.searchParams.delete("auth_error");
+    url.searchParams.delete("requestId");
+    window.sessionStorage.setItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY, url.toString());
+  } catch {
+    // Session storage can be unavailable in private/locked browser contexts.
+  }
+}
+
+function readV8LineLoginReturn() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY);
+    if (!raw) return null;
+    const url = new URL(raw, window.location.origin);
+    if (url.origin !== window.location.origin || !isV8BrowserPath(url.pathname)) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function clearV8LineLoginReturn() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY);
+  } catch {
+    // Ignore unavailable storage; the URL auth code is still the source of truth.
+  }
+}
+
+function copyV8LineAuthCallbackParams(target: URL) {
+  const currentParams = new URLSearchParams(window.location.search);
+  for (const key of ["auth", "auth_error", "requestId"]) {
+    const value = currentParams.get(key);
+    if (value === null) {
+      target.searchParams.delete(key);
+    } else {
+      target.searchParams.set(key, value);
+    }
+  }
+}
 
 type HandoffTiming = {
   preHold: number;
@@ -316,6 +375,21 @@ export function Index() {
   // full-viewport gap above the Active page's content.
   const v8HeroPickerStage = v8HeroStage && !v8MeetupConfirmed;
   const legacyActiveStage = (active || rotating) && !v8HeroStage;
+
+  useEffect(() => {
+    if (!hasV8LineAuthCallback()) return;
+
+    if (isV8Route) {
+      setV8MeetupConfirmed(true);
+      clearV8LineLoginReturn();
+      return;
+    }
+
+    const returnUrl = readV8LineLoginReturn();
+    if (!returnUrl) return;
+    copyV8LineAuthCallbackParams(returnUrl);
+    window.location.replace(returnUrl.toString());
+  }, [isV8Route]);
 
   useLayoutEffect(() => {
     const alignMaterializedRacket = () => {
@@ -1315,7 +1389,9 @@ export function Index() {
         />
       )}
 
-      {isV8Route && v8MeetupConfirmed ? <V8ActivePage flow={flow} /> : null}
+      {isV8Route && v8MeetupConfirmed ? (
+        <V8ActivePage flow={flow} onBeforeLineLogin={rememberV8LineLoginReturn} />
+      ) : null}
 
       {!isV8Route && (
         <HomepageToast
