@@ -14,6 +14,7 @@ import {
   type StepMode,
 } from "./dragonPreviewConfig";
 import { v8ActiveRosterFontOptions } from "@/components/v8-active/v8ActiveConfig";
+import { clearV8LineAuthStorage } from "@/lib/v8-line-auth-storage";
 
 type DockPosition = "top" | "bottom";
 type HudOpacityMode = "normal" | "ghost";
@@ -107,8 +108,10 @@ export function V8TuningPanel({
   const [hudOpacity, setHudOpacity] = useState<HudOpacityMode>("normal");
   const [stepMode, setStepMode] = useState<StepMode>("Normal");
   const [moreOpen, setMoreOpen] = useState(false);
+  const [lineAuthResetStatus, setLineAuthResetStatus] = useState<"idle" | "cleared">("idle");
   const panelRef = useRef<HTMLElement | null>(null);
   const copyFeedbackTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const lineAuthResetTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const dragRef = useRef<{ pointerId: number | null; offsetY: number } | null>(null);
 
   const update = <Key extends keyof PreviewControls>(key: Key, value: PreviewControls[Key]) => {
@@ -153,6 +156,15 @@ export function V8TuningPanel({
     setCopyStatus("copied");
     if (copyFeedbackTimer.current) window.clearTimeout(copyFeedbackTimer.current);
     copyFeedbackTimer.current = window.setTimeout(() => setCopyStatus("idle"), 1700);
+  };
+
+  const clearLineAuthForTesting = () => {
+    clearV8LineAuthStorage();
+    setLineAuthResetStatus("cleared");
+    if (lineAuthResetTimer.current) window.clearTimeout(lineAuthResetTimer.current);
+    lineAuthResetTimer.current = window.setTimeout(() => {
+      window.location.reload();
+    }, 350);
   };
 
   const clampPanelTop = (nextTop: number) => {
@@ -212,6 +224,7 @@ export function V8TuningPanel({
   useEffect(() => {
     return () => {
       if (copyFeedbackTimer.current) window.clearTimeout(copyFeedbackTimer.current);
+      if (lineAuthResetTimer.current) window.clearTimeout(lineAuthResetTimer.current);
     };
   }, []);
 
@@ -522,6 +535,9 @@ export function V8TuningPanel({
             >
               Reset All
             </button>
+            <button type="button" onClick={clearLineAuthForTesting} style={resetButtonStyle}>
+              {lineAuthResetStatus === "cleared" ? "LINE 已清除" : "忘記 LINE"}
+            </button>
           </div>
         </>
       ) : null}
@@ -755,7 +771,7 @@ const moreToggleStyle: CSSProperties = {
 
 const resetBarStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
   gap: 7,
   padding: "7px 8px 8px",
   borderTop: "1px solid rgba(247, 239, 224, 0.1)",
