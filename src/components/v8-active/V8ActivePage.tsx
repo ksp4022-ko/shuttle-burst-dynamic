@@ -68,7 +68,13 @@ function meetupStatusLabel(identity: CurrentIdentity) {
 
 type HelperMode = "signup" | "cancel" | null;
 
-export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
+export function V8ActivePage({
+  flow,
+  onBeforeLineLogin,
+}: {
+  flow: HomepageFlow;
+  onBeforeLineLogin?: () => void;
+}) {
   const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
   const {
     identity: lineIdentity,
@@ -352,6 +358,7 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               lineIdentity={lineIdentity}
               lineAuthToken={lineAuthToken}
               lineAuthLoading={lineAuthLoading}
+              {...(onBeforeLineLogin ? { onBeforeLineLogin } : {})}
               onStartLineLogin={startLineLogin}
               onLineIdentityConfirmed={updateLineIdentity}
               onRefreshLineIdentity={refreshLineIdentity}
@@ -1320,6 +1327,7 @@ function V8IdentityPrompt({
   lineIdentity,
   lineAuthToken,
   lineAuthLoading,
+  onBeforeLineLogin,
   onStartLineLogin,
   onLineIdentityConfirmed,
   onRefreshLineIdentity,
@@ -1330,6 +1338,7 @@ function V8IdentityPrompt({
   lineIdentity: V8LineIdentity | null;
   lineAuthToken: string | null;
   lineAuthLoading: boolean;
+  onBeforeLineLogin?: () => void;
   onStartLineLogin: () => void;
   onLineIdentityConfirmed: (identity: V8LineIdentity) => void;
   onRefreshLineIdentity: () => Promise<V8LineIdentity | null>;
@@ -1345,6 +1354,11 @@ function V8IdentityPrompt({
   const siteId = configuredSiteId();
   const needsLineProfile = Boolean(lineIdentity && lineIdentity.profileComplete === false);
   const confirmedLineName = lineIdentity?.confirmedName || lineIdentity?.displayName || lineIdentity?.lineDisplayName || "";
+
+  const startLineLogin = () => {
+    onBeforeLineLogin?.();
+    onStartLineLogin();
+  };
 
   useEffect(() => {
     if (!needsLineProfile) {
@@ -1440,7 +1454,7 @@ function V8IdentityPrompt({
         ) : lineIdentity ? (
           <span>LINE 已登入：{lineIdentity.displayName}</span>
         ) : (
-          <button type="button" className="v8-line-auth-login-btn" onClick={onStartLineLogin}>
+          <button type="button" className="v8-line-auth-login-btn" onClick={startLineLogin}>
             用 LINE 登入
           </button>
         )}
@@ -1453,7 +1467,7 @@ function V8IdentityPrompt({
           {!lineAuthToken ? (
             <>
               <p className="v8-line-profile-copy">登入狀態已過期，請重新用 LINE 登入。</p>
-              <button type="button" className="v8-line-auth-login-btn" onClick={onStartLineLogin}>
+              <button type="button" className="v8-line-auth-login-btn" onClick={startLineLogin}>
                 重新用 LINE 登入
               </button>
             </>
@@ -1547,7 +1561,7 @@ function V8IdentityPrompt({
       ) : !lineAuthToken ? (
         <>
           <p className="v8-line-profile-copy">登入狀態已過期，請重新用 LINE 登入。</p>
-          <button type="button" className="v8-line-auth-login-btn" onClick={onStartLineLogin}>
+          <button type="button" className="v8-line-auth-login-btn" onClick={startLineLogin}>
             重新用 LINE 登入
           </button>
         </>
