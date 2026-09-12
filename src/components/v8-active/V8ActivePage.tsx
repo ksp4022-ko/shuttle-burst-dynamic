@@ -2,8 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth, type V8LineAuthDiagnostic } from "@/hooks/use-v8-line-auth";
-import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption, type V8ProfileIdentityType } from "@/lib/v8-line-auth";
-import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-storage";
+import { confirmV8LineProfile, fetchV8ClaimOptions, resetV8LineProfile, type V8ClaimOption, type V8ProfileIdentityType } from "@/lib/v8-line-auth";
+import { type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
@@ -54,7 +54,7 @@ function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
     return identity.status === "leave" ? "恢復出席" : "本週請假";
   }
-  return "取消報名";
+  return identity.status === "unregistered" ? "報名" : "取消報名";
 }
 
 function roleLabel(identity: CurrentIdentity) {
@@ -63,6 +63,7 @@ function roleLabel(identity: CurrentIdentity) {
 
 function meetupStatusLabel(identity: CurrentIdentity) {
   if (identity.status === "leave") return "請假";
+  if (identity.status === "unregistered") return "未報名";
   return identity.status === "waiting" ? "候補" : "正取";
 }
 
@@ -87,7 +88,6 @@ export function V8ActivePage({
   } = useV8LineAuth();
   const {
     identity,
-    forget,
     cancellableTempSignups,
     cancellableLoading,
     refreshCancellableTempSignups,
@@ -99,6 +99,7 @@ export function V8ActivePage({
   });
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
+  const [identityResetting, setIdentityResetting] = useState(false);
   // Two-step cancel (select, then a separate confirm button) -- the old
   // single-tap-to-cancel design had no undo/confirm step at all, so a
   // mis-tap directly cancelled someone's signup with no chance to back
@@ -149,7 +150,7 @@ export function V8ActivePage({
 
   if (!selectedEvent || !roster) return null;
 
-  const busy = Boolean(pendingAction);
+  const busy = Boolean(pendingAction) || identityResetting;
 
   const runAction = async (action: "fixed-leave" | "fixed-return" | "cancel-temp") => {
     if (!identity || !lineAuthToken) return;
@@ -157,10 +158,19 @@ export function V8ActivePage({
     if (ok) await refreshCancellableTempSignups();
   };
 
-  const resetLineIdentity = () => {
-    forget();
-    clearV8LineAuthStorage();
-    window.location.reload();
+  const resetLineIdentity = async () => {
+    if (!lineAuthToken || identityResetting) return;
+    setIdentityResetting(true);
+    try {
+      const result = await resetV8LineProfile(lineAuthToken);
+      updateLineIdentity(result.identity);
+      setHelperMode(null);
+      setSelectedCancelPerson(null);
+      await refreshLineIdentity();
+      await refreshCancellableTempSignups();
+    } finally {
+      setIdentityResetting(false);
+    }
   };
 
   const switchToAdjacentMeetup = (direction: -1 | 1) => {
@@ -260,6 +270,8 @@ export function V8ActivePage({
     if (!identity) return;
     if (identity.signupType === "fixed") {
       void runAction(identity.status === "leave" ? "fixed-return" : "fixed-leave");
+    } else if (identity.status === "unregistered") {
+      void submitTigerSignup();
     } else {
       void runAction("cancel-temp");
     }
@@ -302,7 +314,7 @@ export function V8ActivePage({
               busy={busy}
               pendingLabel={pendingAction?.label}
               onPrimaryAction={handlePrimaryAction}
-              onForget={resetLineIdentity}
+              onForget={() => void resetLineIdentity()}
               onHelperSignup={() => setHelperMode("signup")}
               onHelperCancel={() => {
                 setSelectedCancelPerson(null);
@@ -968,7 +980,7 @@ function primaryActionAsset(identity: CurrentIdentity, assets: V8IdentityAssets)
   if (identity.signupType === "fixed") {
     return identity.status === "leave" ? assets.ctaSeasonReturn : assets.ctaSeasonLeave;
   }
-  return assets.ctaTempCancel;
+  return identity.status === "unregistered" ? assets.ctaTempSignup : assets.ctaTempCancel;
 }
 
 // Same mapping as primaryActionAsset, but returning the matching
@@ -979,7 +991,7 @@ function primaryActionOutlineKey(identity: CurrentIdentity): V8CtaGlowOutlineKey
   if (identity.signupType === "fixed") {
     return identity.status === "leave" ? "seasonReturn" : "seasonLeave";
   }
-  return "tempCancel";
+  return identity.status === "unregistered" ? "tempSignup" : "tempCancel";
 }
 
 // 2026-09-11: finalized "laser-engraved" reminder glow, per the user's exact
@@ -1263,8 +1275,12 @@ export function V8IdentityScrollContent({
 
   return (
     <div className="v8-scroll-identity">
-      <div className="v8-scroll-status-mark" style={identityVisualStyle(controls.statusMark)} aria-label={`本次狀態：${status}`}>
-        <img src={statusStampAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
+      <div
+        className={"v8-scroll-status-mark" + (identity.status === "unregistered" ? " is-unregistered" : "")}
+        style={identityVisualStyle(controls.statusMark)}
+        aria-label={`本次狀態：${status}`}
+      >
+        {identity.status === "unregistered" ? <span>{status}</span> : <img src={statusStampAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />}
       </div>
       <V8IdentityFitName text={identity.name} controls={controls.name} />
       <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
@@ -1806,6 +1822,20 @@ export function V8ActiveStyles() {
         display: block;
         height: 28px;
         width: auto;
+      }
+
+      .v8-scroll-status-mark.is-unregistered span {
+        display: inline-grid;
+        place-items: center;
+        min-width: 46px;
+        min-height: 28px;
+        border: 2px solid rgba(134, 38, 31, .78);
+        border-radius: 999px;
+        color: rgba(134, 38, 31, .92);
+        font-size: 13px;
+        font-weight: 900;
+        line-height: 1;
+        transform: rotate(-9deg);
       }
 
       .v8-scroll-cta {
