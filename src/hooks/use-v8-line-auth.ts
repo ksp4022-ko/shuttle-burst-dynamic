@@ -10,14 +10,14 @@ import {
 } from "@/lib/v8-line-auth-storage";
 
 /**
- * Phase F1 -- LINE Login storage + entry point only. Deliberately does NOT
- * touch the existing device-memory identity (useCurrentIdentity) or the
- * signup/cancel flow; this hook's `identity` is a separate, additive piece
- * of state that later phases (F2 profile confirmation, F3 signup/cancel)
- * will wire into the rest of the page.
+ * LINE Login storage + identity refresh. Deliberately does NOT touch the
+ * existing device-memory identity (useCurrentIdentity) or signup/cancel
+ * flow; Phase F2 only updates this separate LINE identity after profile
+ * confirmation.
  */
 export function useV8LineAuth() {
   const [identity, setIdentity] = useState<V8LineIdentity | null>(() => loadV8LineIdentity());
+  const [token, setToken] = useState<string | null>(() => loadV8LineToken());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,6 +40,7 @@ export function useV8LineAuth() {
           if (cancelled) return;
           saveV8LineToken(session.token, session.expiresAt);
           saveV8LineIdentity(session.identity);
+          setToken(session.token);
           setIdentity(session.identity);
           setLoading(false);
           return;
@@ -54,6 +55,7 @@ export function useV8LineAuth() {
       const token = loadV8LineToken();
       if (!token) {
         if (!cancelled) {
+          setToken(null);
           setIdentity(null);
           setLoading(false);
         }
@@ -61,6 +63,7 @@ export function useV8LineAuth() {
       }
 
       try {
+        if (!cancelled) setToken(token);
         const freshIdentity = await fetchV8AuthMe(token);
         if (cancelled) return;
         if (freshIdentity) {
@@ -71,6 +74,7 @@ export function useV8LineAuth() {
           // expired token) -- sign out of just the LINE session, not the
           // separate old device-memory stub.
           clearV8LineSessionOnly();
+          setToken(null);
           setIdentity(null);
         }
       } catch {
@@ -96,5 +100,24 @@ export function useV8LineAuth() {
     window.location.href = getV8LineLoginStartUrl();
   };
 
-  return { identity, loading, startLogin };
+  const updateIdentity = (nextIdentity: V8LineIdentity) => {
+    saveV8LineIdentity(nextIdentity);
+    setIdentity(nextIdentity);
+  };
+
+  const refreshIdentity = async () => {
+    const currentToken = token || loadV8LineToken();
+    if (!currentToken) return null;
+    const freshIdentity = await fetchV8AuthMe(currentToken);
+    if (freshIdentity) {
+      updateIdentity(freshIdentity);
+    } else {
+      clearV8LineSessionOnly();
+      setToken(null);
+      setIdentity(null);
+    }
+    return freshIdentity;
+  };
+
+  return { identity, loading, token, startLogin, updateIdentity, refreshIdentity };
 }

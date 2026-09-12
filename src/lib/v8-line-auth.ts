@@ -1,16 +1,24 @@
 import { alphaFetch, configuredApiBase } from "./database-alpha";
 import type { V8LineIdentity } from "./v8-line-auth-storage";
 
-// Phase F1 only talks to the 3 already-deployed auth endpoints
-// (badminton-signup Worker, PR #1/#2) -- start/callback/session/me. Profile
-// confirmation (/auth/profile), claim-options, and the filtered cancel list
-// are Phase F2/F3 and deliberately not touched here.
+// LINE auth/profile endpoints on the badminton-signup Worker. F2 adds
+// profile confirmation and fixed-member claim options; signup/cancel flows
+// remain separate for later phases.
 
 export type V8LineSession = {
   token: string;
   expiresAt: string;
   identity: V8LineIdentity;
 };
+
+export type V8ClaimOption = {
+  memberId: string;
+  name: string;
+  groupId: string;
+  orderNo: number;
+};
+
+export type V8ProfileIdentityType = "fixed" | "temp";
 
 // Full-page redirect, not a fetch -- LINE itself needs to render the
 // consent screen, so this URL is meant for `window.location.href =`, not
@@ -52,4 +60,31 @@ export async function fetchV8AuthMe(token: string): Promise<V8LineIdentity | nul
     }
     throw error;
   }
+}
+
+export async function fetchV8ClaimOptions(token: string, siteId: string): Promise<V8ClaimOption[]> {
+  const result = await alphaFetch<{ siteId: string; members: V8ClaimOption[] }>(
+    `/sites/${encodeURIComponent(siteId)}/claim-options`,
+    {
+      headers: { authorization: `Bearer ${token}` },
+    },
+  );
+  return result.members || [];
+}
+
+export async function confirmV8LineProfile(
+  token: string,
+  input: {
+    siteId: string;
+    identityType: V8ProfileIdentityType;
+    memberId?: string;
+    displayName: string;
+  },
+): Promise<V8LineIdentity> {
+  const result = await alphaFetch<{ identity: V8LineIdentity }>("/auth/profile", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    body: JSON.stringify(input),
+  });
+  return result.identity;
 }
