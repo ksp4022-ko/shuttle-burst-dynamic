@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
+import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
+import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import type { AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
@@ -69,6 +71,12 @@ type HelperMode = "signup" | "cancel" | null;
 export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
   const { identity, remember, rememberName, forget } = useCurrentIdentity(roster);
+  // Phase F1 (LINE Login) -- purely additive next to the device-memory
+  // identity above. Not wired into signup/cancel or the season/temp choice
+  // yet (that's F2/F3); this just proves login + token storage + /auth/me
+  // work end to end, surfaced as a small status line + entry button on the
+  // existing identity prompt below.
+  const { identity: lineIdentity, loading: lineAuthLoading, startLogin: startLineLogin } = useV8LineAuth();
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
@@ -342,6 +350,9 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               onSubmitTiger={() => void submitTigerSignup()}
               busy={busy}
               ctaTempSignupSrc={assets.ctaTempSignup}
+              lineIdentity={lineIdentity}
+              lineAuthLoading={lineAuthLoading}
+              onStartLineLogin={startLineLogin}
             />
           </div>
         </div>
@@ -1308,6 +1319,9 @@ function V8IdentityPrompt({
   onSubmitTiger,
   busy,
   ctaTempSignupSrc,
+  lineIdentity,
+  lineAuthLoading,
+  onStartLineLogin,
 }: {
   seasonCandidates: AlphaSignup[];
   tigerName: string;
@@ -1316,12 +1330,31 @@ function V8IdentityPrompt({
   onSubmitTiger: () => void;
   busy: boolean;
   ctaTempSignupSrc: string;
+  // Phase F1 (LINE Login) -- purely a status line + entry button here.
+  // Deliberately NOT wired into onPickSeason/onSubmitTiger above; claiming
+  // an existing member / confirming a display name against this LINE
+  // identity is Phase F2, not this round.
+  lineIdentity: V8LineIdentity | null;
+  lineAuthLoading: boolean;
+  onStartLineLogin: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
     <section className="v8-active-identity v8-active-identity-prompt" aria-label="選擇身份">
       <p className="v8-active-prompt-title">你是季打還是臨打？</p>
+
+      <div className="v8-line-auth-status" aria-live="polite">
+        {lineAuthLoading ? (
+          <span>LINE 登入狀態確認中...</span>
+        ) : lineIdentity ? (
+          <span>LINE 已登入：{lineIdentity.displayName}</span>
+        ) : (
+          <button type="button" className="v8-line-auth-login-btn" onClick={onStartLineLogin}>
+            用 LINE 登入
+          </button>
+        )}
+      </div>
 
       {pickerOpen ? (
         <div className="v8-active-season-list">
@@ -1672,6 +1705,27 @@ export function V8ActiveStyles() {
         margin: 0 0 12px;
         text-align: center;
         font-size: 15px;
+        font-weight: 800;
+      }
+
+      /* Phase F1 (LINE Login) -- a status line/entry button above the
+         existing season/temp choice, not replacing it yet. */
+      .v8-line-auth-status {
+        display: flex;
+        justify-content: center;
+        margin: 0 0 12px;
+        font-size: 12px;
+        color: rgba(32, 21, 13, 0.75);
+      }
+
+      .v8-line-auth-login-btn {
+        height: 36px;
+        padding: 0 16px;
+        border: 2px solid #06c755;
+        border-radius: 999px;
+        background: #06c755;
+        color: #fff;
+        font-size: 13px;
         font-weight: 800;
       }
 

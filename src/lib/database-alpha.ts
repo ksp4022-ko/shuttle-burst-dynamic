@@ -80,7 +80,7 @@ function configuredFrontendVersion() {
   return segments.includes("v8") ? "v8" : "v7";
 }
 
-function configuredApiBase() {
+export function configuredApiBase() {
   const fromEnv = import.meta.env["VITE_DATABASE_ALPHA_API_BASE"];
   if (typeof fromEnv === "string" && fromEnv.trim()) return fromEnv.trim();
 
@@ -151,7 +151,7 @@ function apiUrl(path: string, query?: Record<string, string | number | undefined
   return url.toString();
 }
 
-async function alphaFetch<T>(
+export async function alphaFetch<T>(
   path: string,
   init?: RequestInit,
   query?: Record<string, string | number | undefined>,
@@ -166,7 +166,18 @@ async function alphaFetch<T>(
   const json = (await response.json().catch(() => ({}))) as AlphaResponse<T>;
 
   if (!response.ok || json.ok === false) {
-    throw new Error(json.error?.message || `database-alpha request failed (${response.status})`);
+    const error = new Error(json.error?.message || `database-alpha request failed (${response.status})`) as Error & {
+      status?: number;
+      code?: string;
+    };
+    // Attached (not just embedded in the message) so callers that need to
+    // branch on the HTTP status/error code -- e.g. treating a 401 from
+    // /auth/me differently from a network/server error -- don't have to
+    // pattern-match the human-readable message text, which is whatever the
+    // server's json.error.message happens to say.
+    error.status = response.status;
+    if (json.error?.code) error.code = json.error.code;
+    throw error;
   }
 
   return json.data as T;
