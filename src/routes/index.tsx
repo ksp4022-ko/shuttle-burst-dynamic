@@ -63,16 +63,16 @@ function rememberV8LineLoginReturn() {
     url.searchParams.delete("auth");
     url.searchParams.delete("auth_error");
     url.searchParams.delete("requestId");
-    window.sessionStorage.setItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY, url.toString());
+    window.localStorage.setItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY, url.toString());
   } catch {
-    // Session storage can be unavailable in private/locked browser contexts.
+    // Local storage can be unavailable in private/locked browser contexts.
   }
 }
 
 function readV8LineLoginReturn() {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.sessionStorage.getItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY);
+    const raw = window.localStorage.getItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY);
     if (!raw) return null;
     const url = new URL(raw, window.location.origin);
     if (url.origin !== window.location.origin || !isV8BrowserPath(url.pathname)) return null;
@@ -85,7 +85,7 @@ function readV8LineLoginReturn() {
 function clearV8LineLoginReturn() {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.removeItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY);
+    window.localStorage.removeItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY);
   } catch {
     // Ignore unavailable storage; the URL auth code is still the source of truth.
   }
