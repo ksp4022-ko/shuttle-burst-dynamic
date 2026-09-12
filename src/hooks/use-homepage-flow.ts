@@ -300,13 +300,13 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   ]);
 
   const submitSignup = useCallback(
-    async (name: string, token?: string): Promise<{ ok: boolean; signupId?: string }> => {
+    async (name: string, token?: string, options: { selfSignup?: boolean } = {}): Promise<{ ok: boolean; signupId?: string }> => {
       const trimmed = name.trim();
       if (!trimmed || !selectedEventId || pendingAction) return { ok: false };
       setPendingAction({ type: "signup", label: "報名中" });
       setNotice("");
       try {
-        const result = await createAlphaTempSignup(selectedEventId, trimmed, token);
+        const result = await createAlphaTempSignup(selectedEventId, trimmed, token, options);
         await loadRoster(selectedEventId, { silent: true });
         setLastChangedId(trimmed);
         setNotice(`${trimmed} 已完成報名`);

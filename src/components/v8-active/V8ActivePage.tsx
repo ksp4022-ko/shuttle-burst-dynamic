@@ -185,7 +185,7 @@ export function V8ActivePage({
   const submitTigerSignup = async () => {
     if (!lineAuthToken || !lineIdentity?.profileComplete || lineIdentity.identityType !== "temp") return;
     const submittedName = lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName;
-    const result = await flow.submitSignup(submittedName, lineAuthToken);
+    const result = await flow.submitSignup(submittedName, lineAuthToken, { selfSignup: true });
     if (result.ok) await refreshCancellableTempSignups();
   };
 
@@ -372,6 +372,7 @@ export function V8ActivePage({
               lineAuthToken={lineAuthToken}
               lineAuthLoading={lineAuthLoading}
               lineAuthDiagnostic={lineAuthDiagnostic}
+              selectedEventId={selectedEventId}
               {...(onBeforeLineLogin ? { onBeforeLineLogin } : {})}
               onStartLineLogin={startLineLogin}
               onLineIdentityConfirmed={updateLineIdentity}
@@ -1346,6 +1347,7 @@ function V8IdentityPrompt({
   lineAuthToken,
   lineAuthLoading,
   lineAuthDiagnostic,
+  selectedEventId,
   onBeforeLineLogin,
   onStartLineLogin,
   onLineIdentityConfirmed,
@@ -1358,6 +1360,7 @@ function V8IdentityPrompt({
   lineAuthToken: string | null;
   lineAuthLoading: boolean;
   lineAuthDiagnostic: V8LineAuthDiagnostic;
+  selectedEventId: string;
   onBeforeLineLogin?: () => void;
   onStartLineLogin: () => void;
   onLineIdentityConfirmed: (identity: V8LineIdentity) => void;
@@ -1398,7 +1401,7 @@ function V8IdentityPrompt({
     if (!needsLineProfile || profileMode !== "fixed" || !lineAuthToken || claimLoaded || claimLoading) return;
     setClaimLoading(true);
     setProfileError("");
-    fetchV8ClaimOptions(lineAuthToken, siteId)
+    fetchV8ClaimOptions(lineAuthToken, siteId, selectedEventId)
       .then((members) => {
         if (cancelled) return;
         setClaimOptions(members);
@@ -1414,12 +1417,14 @@ function V8IdentityPrompt({
     return () => {
       cancelled = true;
     };
-  }, [claimLoaded, claimLoading, lineAuthToken, needsLineProfile, profileMode, siteId]);
+  }, [claimLoaded, claimLoading, lineAuthToken, needsLineProfile, profileMode, selectedEventId, siteId]);
 
   const chooseProfileMode = (mode: V8ProfileIdentityType) => {
     setProfileMode(mode);
     setProfileError("");
     setSelectedClaim(null);
+    setClaimLoaded(false);
+    setClaimOptions([]);
     if (mode === "temp") {
       setProfileName(lineIdentity?.lineDisplayName || lineIdentity?.displayName || "");
     } else {
@@ -1454,7 +1459,7 @@ function V8IdentityPrompt({
         displayName,
       });
       onLineIdentityConfirmed(identity);
-      void onRefreshLineIdentity();
+      await onRefreshLineIdentity();
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : "身份確認失敗，請再試一次");
     } finally {
@@ -1527,7 +1532,7 @@ function V8IdentityPrompt({
                     </button>
                   ))
                 ) : (
-                  <p className="sd-empty">目前沒有可認領的季打名單</p>
+                  <p className="sd-empty">目前沒有讀到本季有效季打名單，請確認這場聚會已綁定賽季名單。</p>
                 )}
               </div>
               <label className="v8-line-profile-name">
