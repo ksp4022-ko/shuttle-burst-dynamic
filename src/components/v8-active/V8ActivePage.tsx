@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
-import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
+import { useV8LineAuth, type V8LineAuthDiagnostic } from "@/hooks/use-v8-line-auth";
 import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption, type V8ProfileIdentityType } from "@/lib/v8-line-auth";
 import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
@@ -80,6 +80,7 @@ export function V8ActivePage({
     identity: lineIdentity,
     loading: lineAuthLoading,
     token: lineAuthToken,
+    diagnostic: lineAuthDiagnostic,
     startLogin: startLineLogin,
     updateIdentity: updateLineIdentity,
     refreshIdentity: refreshLineIdentity,
@@ -358,6 +359,7 @@ export function V8ActivePage({
               lineIdentity={lineIdentity}
               lineAuthToken={lineAuthToken}
               lineAuthLoading={lineAuthLoading}
+              lineAuthDiagnostic={lineAuthDiagnostic}
               {...(onBeforeLineLogin ? { onBeforeLineLogin } : {})}
               onStartLineLogin={startLineLogin}
               onLineIdentityConfirmed={updateLineIdentity}
@@ -1327,6 +1329,7 @@ function V8IdentityPrompt({
   lineIdentity,
   lineAuthToken,
   lineAuthLoading,
+  lineAuthDiagnostic,
   onBeforeLineLogin,
   onStartLineLogin,
   onLineIdentityConfirmed,
@@ -1338,6 +1341,7 @@ function V8IdentityPrompt({
   lineIdentity: V8LineIdentity | null;
   lineAuthToken: string | null;
   lineAuthLoading: boolean;
+  lineAuthDiagnostic: V8LineAuthDiagnostic;
   onBeforeLineLogin?: () => void;
   onStartLineLogin: () => void;
   onLineIdentityConfirmed: (identity: V8LineIdentity) => void;
@@ -1459,6 +1463,10 @@ function V8IdentityPrompt({
           </button>
         )}
       </div>
+      <p className="v8-line-auth-diagnostic">
+        診斷：{lineAuthDiagnostic.message}
+        {lineAuthDiagnostic.detail ? <small>{lineAuthDiagnostic.detail}</small> : null}
+      </p>
 
       {!lineIdentity ? (
         <p className="v8-line-profile-copy">請先用 LINE 登入，完成身份確認後才能報名或操作名單。</p>
@@ -1904,6 +1912,24 @@ export function V8ActiveStyles() {
         color: #fff;
         font-size: 13px;
         font-weight: 800;
+      }
+
+      .v8-line-auth-diagnostic {
+        margin: -4px 0 10px;
+        color: rgba(32, 21, 13, 0.58);
+        font-size: 11px;
+        line-height: 1.35;
+        font-weight: 650;
+        text-align: center;
+      }
+
+      .v8-line-auth-diagnostic small {
+        display: block;
+        margin-top: 3px;
+        overflow-wrap: anywhere;
+        color: rgba(122, 45, 34, 0.82);
+        font-size: 10px;
+        line-height: 1.35;
       }
 
       .v8-line-profile-flow {
