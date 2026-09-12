@@ -14,7 +14,8 @@ import {
   type StepMode,
 } from "./dragonPreviewConfig";
 import { v8ActiveRosterFontOptions } from "@/components/v8-active/v8ActiveConfig";
-import { clearV8LineAuthStorage } from "@/lib/v8-line-auth-storage";
+import { resetV8LineProfile } from "@/lib/v8-line-auth";
+import { clearV8LineAuthStorage, loadV8LineToken } from "@/lib/v8-line-auth-storage";
 
 type DockPosition = "top" | "bottom";
 type HudOpacityMode = "normal" | "ghost";
@@ -158,7 +159,16 @@ export function V8TuningPanel({
     copyFeedbackTimer.current = window.setTimeout(() => setCopyStatus("idle"), 1700);
   };
 
-  const clearLineAuthForTesting = () => {
+  const clearLineAuthForTesting = async () => {
+    const token = loadV8LineToken();
+    if (token) {
+      try {
+        await resetV8LineProfile(token, { revokeSessions: true });
+      } catch {
+        // Still clear browser storage so the testing control can recover
+        // from an expired local token.
+      }
+    }
     clearV8LineAuthStorage();
     setLineAuthResetStatus("cleared");
     if (lineAuthResetTimer.current) window.clearTimeout(lineAuthResetTimer.current);
@@ -535,8 +545,8 @@ export function V8TuningPanel({
             >
               Reset All
             </button>
-            <button type="button" onClick={clearLineAuthForTesting} style={resetButtonStyle}>
-              {lineAuthResetStatus === "cleared" ? "LINE 已清除" : "忘記 LINE"}
+            <button type="button" onClick={() => void clearLineAuthForTesting()} style={resetButtonStyle}>
+              {lineAuthResetStatus === "cleared" ? "LINE 已重置" : "重置 LINE 測試"}
             </button>
           </div>
         </>

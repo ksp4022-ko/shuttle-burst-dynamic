@@ -11,7 +11,7 @@ export type CurrentIdentity = {
   signupId: string;
   name: string;
   signupType: "fixed" | "temp";
-  status: "confirmed" | "waiting" | "leave";
+  status: "confirmed" | "waiting" | "leave" | "unregistered";
 };
 
 type UseCurrentIdentityInput = {
@@ -43,6 +43,15 @@ function toTempIdentity(signup: AlphaCancellableTempSignup | undefined): Current
     name: signup.name,
     signupType: "temp",
     status: signup.status,
+  };
+}
+
+function toUnregisteredTempIdentity(lineIdentity: V8LineIdentity): CurrentIdentity {
+  return {
+    signupId: "",
+    name: lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName,
+    signupType: "temp",
+    status: "unregistered",
   };
 }
 
@@ -105,7 +114,7 @@ export function useCurrentIdentity({
       return findFixedIdentity(roster, lineIdentity.claimedMemberId);
     }
     if (lineIdentity.identityType === "temp") {
-      return toTempIdentity(cancellableTempSignups.find((signup) => signup.createdByMe));
+      return toTempIdentity(cancellableTempSignups.find((signup) => signup.createdByMe)) || toUnregisteredTempIdentity(lineIdentity);
     }
     return null;
   }, [cancellableTempSignups, lineIdentity, profileComplete, roster]);

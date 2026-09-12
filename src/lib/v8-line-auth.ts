@@ -91,3 +91,14 @@ export async function confirmV8LineProfile(
   });
   return result.identity;
 }
+
+export async function resetV8LineProfile(
+  token: string,
+  input: { revokeSessions?: boolean } = {},
+): Promise<{ identity: V8LineIdentity; sessionRevoked: boolean }> {
+  return alphaFetch<{ identity: V8LineIdentity; sessionRevoked: boolean }>("/auth/profile/reset", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    body: JSON.stringify(input),
+  });
+}
