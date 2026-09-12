@@ -3,8 +3,9 @@ import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { personRole } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
+import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption, type V8ProfileIdentityType } from "@/lib/v8-line-auth";
 import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
-import type { AlphaSignup } from "@/lib/database-alpha";
+import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
   activeTargetOrder,
@@ -76,7 +77,14 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
   // yet (that's F2/F3); this just proves login + token storage + /auth/me
   // work end to end, surfaced as a small status line + entry button on the
   // existing identity prompt below.
-  const { identity: lineIdentity, loading: lineAuthLoading, startLogin: startLineLogin } = useV8LineAuth();
+  const {
+    identity: lineIdentity,
+    loading: lineAuthLoading,
+    token: lineAuthToken,
+    startLogin: startLineLogin,
+    updateIdentity: updateLineIdentity,
+    refreshIdentity: refreshLineIdentity,
+  } = useV8LineAuth();
   const [tigerName, setTigerName] = useState("");
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
@@ -351,8 +359,11 @@ export function V8ActivePage({ flow }: { flow: HomepageFlow }) {
               busy={busy}
               ctaTempSignupSrc={assets.ctaTempSignup}
               lineIdentity={lineIdentity}
+              lineAuthToken={lineAuthToken}
               lineAuthLoading={lineAuthLoading}
               onStartLineLogin={startLineLogin}
+              onLineIdentityConfirmed={updateLineIdentity}
+              onRefreshLineIdentity={refreshLineIdentity}
             />
           </div>
         </div>
@@ -1320,8 +1331,11 @@ function V8IdentityPrompt({
   busy,
   ctaTempSignupSrc,
   lineIdentity,
+  lineAuthToken,
   lineAuthLoading,
   onStartLineLogin,
+  onLineIdentityConfirmed,
+  onRefreshLineIdentity,
 }: {
   seasonCandidates: AlphaSignup[];
   tigerName: string;
@@ -1335,14 +1349,109 @@ function V8IdentityPrompt({
   // an existing member / confirming a display name against this LINE
   // identity is Phase F2, not this round.
   lineIdentity: V8LineIdentity | null;
+  lineAuthToken: string | null;
   lineAuthLoading: boolean;
   onStartLineLogin: () => void;
+  onLineIdentityConfirmed: (identity: V8LineIdentity) => void;
+  onRefreshLineIdentity: () => Promise<V8LineIdentity | null>;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [profileMode, setProfileMode] = useState<V8ProfileIdentityType | null>(null);
+  const [claimOptions, setClaimOptions] = useState<V8ClaimOption[]>([]);
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimLoaded, setClaimLoaded] = useState(false);
+  const [selectedClaim, setSelectedClaim] = useState<V8ClaimOption | null>(null);
+  const [profileName, setProfileName] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [profileSubmitting, setProfileSubmitting] = useState(false);
+  const siteId = configuredSiteId();
+  const needsLineProfile = Boolean(lineIdentity && lineIdentity.profileComplete === false);
+
+  useEffect(() => {
+    if (!needsLineProfile) {
+      setProfileMode(null);
+      setSelectedClaim(null);
+      setProfileName("");
+      setProfileError("");
+      return;
+    }
+    if (!profileMode) {
+      setProfileName(lineIdentity?.lineDisplayName || lineIdentity?.displayName || "");
+    }
+  }, [lineIdentity, needsLineProfile, profileMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!needsLineProfile || profileMode !== "fixed" || !lineAuthToken || claimLoaded || claimLoading) return;
+    setClaimLoading(true);
+    setProfileError("");
+    fetchV8ClaimOptions(lineAuthToken, siteId)
+      .then((members) => {
+        if (cancelled) return;
+        setClaimOptions(members);
+        setClaimLoaded(true);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setProfileError(error instanceof Error ? error.message : "季打名單讀取失敗");
+      })
+      .finally(() => {
+        if (!cancelled) setClaimLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [claimLoaded, claimLoading, lineAuthToken, needsLineProfile, profileMode, siteId]);
+
+  const chooseProfileMode = (mode: V8ProfileIdentityType) => {
+    setProfileMode(mode);
+    setProfileError("");
+    setSelectedClaim(null);
+    if (mode === "temp") {
+      setProfileName(lineIdentity?.lineDisplayName || lineIdentity?.displayName || "");
+    } else {
+      setProfileName("");
+    }
+  };
+
+  const chooseClaim = (member: V8ClaimOption) => {
+    setSelectedClaim(member);
+    setProfileName(member.name || "");
+    setProfileError("");
+  };
+
+  const submitLineProfile = async () => {
+    if (!lineIdentity || !lineAuthToken || !profileMode) return;
+    const displayName = profileName.trim();
+    if (!displayName) {
+      setProfileError("請確認顯示名稱");
+      return;
+    }
+    if (profileMode === "fixed" && !selectedClaim) {
+      setProfileError("請先選擇季打名單");
+      return;
+    }
+    setProfileSubmitting(true);
+    setProfileError("");
+    try {
+      const identity = await confirmV8LineProfile(lineAuthToken, {
+        siteId,
+        identityType: profileMode,
+        memberId: profileMode === "fixed" ? selectedClaim?.memberId : undefined,
+        displayName,
+      });
+      onLineIdentityConfirmed(identity);
+      void onRefreshLineIdentity();
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : "身份確認失敗，請再試一次");
+    } finally {
+      setProfileSubmitting(false);
+    }
+  };
 
   return (
     <section className="v8-active-identity v8-active-identity-prompt" aria-label="選擇身份">
-      <p className="v8-active-prompt-title">你是季打還是臨打？</p>
+      <p className="v8-active-prompt-title">{needsLineProfile ? "確認你的身份" : "你是季打還是臨打？"}</p>
 
       <div className="v8-line-auth-status" aria-live="polite">
         {lineAuthLoading ? (
@@ -1356,7 +1465,103 @@ function V8IdentityPrompt({
         )}
       </div>
 
-      {pickerOpen ? (
+      {needsLineProfile ? (
+        <div className="v8-line-profile-flow">
+          {!lineAuthToken ? (
+            <>
+              <p className="v8-line-profile-copy">登入狀態已過期，請重新用 LINE 登入。</p>
+              <button type="button" className="v8-line-auth-login-btn" onClick={onStartLineLogin}>
+                重新用 LINE 登入
+              </button>
+            </>
+          ) : !profileMode ? (
+            <>
+              <p className="v8-line-profile-copy">先選擇你要綁定的身份，之後會用這個名字顯示在卷軸上。</p>
+              <div className="v8-line-profile-mode-row">
+                <button type="button" className="v8-line-profile-mode" onClick={() => chooseProfileMode("fixed")}>
+                  我是季打
+                </button>
+                <button type="button" className="v8-line-profile-mode" onClick={() => chooseProfileMode("temp")}>
+                  我是臨打
+                </button>
+              </div>
+            </>
+          ) : profileMode === "fixed" ? (
+            <>
+              <p className="v8-line-profile-copy">選擇你在季打名單中的名字，再確認卷軸顯示名稱。</p>
+              <div className="v8-line-claim-list" aria-label="季打候選名單">
+                {claimLoading ? (
+                  <p className="sd-empty">讀取季打名單中...</p>
+                ) : claimOptions.length ? (
+                  claimOptions.map((member) => (
+                    <button
+                      key={member.memberId}
+                      type="button"
+                      className={"v8-line-claim-item" + (selectedClaim?.memberId === member.memberId ? " is-selected" : "")}
+                      disabled={profileSubmitting}
+                      onClick={() => chooseClaim(member)}
+                    >
+                      <strong>{member.name}</strong>
+                      <em>#{member.orderNo || "-"}</em>
+                    </button>
+                  ))
+                ) : (
+                  <p className="sd-empty">目前沒有可認領的季打名單</p>
+                )}
+              </div>
+              <label className="v8-line-profile-name">
+                卷軸顯示名稱
+                <input
+                  value={profileName}
+                  onChange={(event) => setProfileName(event.target.value)}
+                  disabled={!selectedClaim || profileSubmitting}
+                  maxLength={24}
+                />
+              </label>
+              <button
+                type="button"
+                className="v8-line-profile-submit"
+                disabled={!selectedClaim || !profileName.trim() || profileSubmitting}
+                onClick={() => void submitLineProfile()}
+              >
+                {profileSubmitting ? "確認中" : "確認季打身份"}
+              </button>
+              <button type="button" className="v8-active-helper-cancel" onClick={() => chooseProfileMode("temp")}>
+                我不是季打，改用臨打
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="v8-line-profile-copy">確認卷軸上要顯示的臨打名稱。</p>
+              <label className="v8-line-profile-name">
+                卷軸顯示名稱
+                <input
+                  value={profileName}
+                  onChange={(event) => setProfileName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void submitLineProfile();
+                  }}
+                  disabled={profileSubmitting}
+                  maxLength={24}
+                  autoFocus
+                />
+              </label>
+              <button
+                type="button"
+                className="v8-line-profile-submit"
+                disabled={!profileName.trim() || profileSubmitting}
+                onClick={() => void submitLineProfile()}
+              >
+                {profileSubmitting ? "確認中" : "確認臨打名稱"}
+              </button>
+              <button type="button" className="v8-active-helper-cancel" onClick={() => chooseProfileMode("fixed")}>
+                我是季打會員
+              </button>
+            </>
+          )}
+          {profileError ? <p className="v8-line-profile-error">{profileError}</p> : null}
+        </div>
+      ) : pickerOpen ? (
         <div className="v8-active-season-list">
           {seasonCandidates.length ? (
             seasonCandidates.map((person) => (
@@ -1727,6 +1932,131 @@ export function V8ActiveStyles() {
         color: #fff;
         font-size: 13px;
         font-weight: 800;
+      }
+
+      .v8-line-profile-flow {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .v8-line-profile-copy {
+        margin: 0;
+        color: rgba(32, 21, 13, 0.72);
+        font-size: 13px;
+        line-height: 1.45;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .v8-line-profile-mode-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .v8-line-profile-mode,
+      .v8-line-profile-submit {
+        min-height: 44px;
+        border: 2px solid #20150d;
+        border-radius: 14px;
+        background: rgba(245, 237, 219, 0.9);
+        color: #20150d;
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .v8-line-profile-submit {
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .v8-line-profile-submit:disabled,
+      .v8-line-profile-mode:disabled {
+        opacity: 0.55;
+      }
+
+      .v8-line-claim-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        max-height: min(38vh, 260px);
+        overflow-y: auto;
+        padding-right: 2px;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .v8-line-claim-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+        min-height: 44px;
+        padding: 8px 12px;
+        border: 1px solid rgba(32, 21, 13, 0.16);
+        border-left: 4px solid rgba(216, 185, 94, 0.7);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.6);
+        color: #20150d;
+        text-align: left;
+      }
+
+      .v8-line-claim-item.is-selected {
+        border-color: rgba(154, 23, 18, 0.38);
+        border-left-color: rgba(154, 23, 18, 0.85);
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 0 1px rgba(154, 23, 18, 0.16);
+      }
+
+      .v8-line-claim-item strong {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 16px;
+      }
+
+      .v8-line-claim-item em {
+        flex: 0 0 auto;
+        font-style: normal;
+        color: rgba(32, 21, 13, 0.52);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .v8-line-profile-name {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        color: rgba(32, 21, 13, 0.66);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .v8-line-profile-name input {
+        width: 100%;
+        height: 44px;
+        padding: 0 12px;
+        border: 1px solid rgba(32, 21, 13, 0.24);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.74);
+        color: #20150d;
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .v8-line-profile-name input:disabled {
+        opacity: 0.58;
+      }
+
+      .v8-line-profile-error {
+        margin: 0;
+        color: rgba(154, 23, 18, 0.9);
+        font-size: 12px;
+        line-height: 1.35;
+        font-weight: 800;
+        text-align: center;
       }
 
       .v8-active-prompt-row {
