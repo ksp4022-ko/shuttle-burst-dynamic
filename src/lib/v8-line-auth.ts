@@ -23,8 +23,11 @@ export type V8ProfileIdentityType = "fixed" | "temp";
 // Full-page redirect, not a fetch -- LINE itself needs to render the
 // consent screen, so this URL is meant for `window.location.href =`, not
 // an XHR/fetch call.
-export function getV8LineLoginStartUrl(): string {
-  return `${configuredApiBase()}/auth/line/start`;
+export function getV8LineLoginStartUrl(returnTo?: string): string {
+  const url = new URL(`${configuredApiBase()}/auth/line/start`);
+  const cleanReturnTo = returnTo?.trim();
+  if (cleanReturnTo) url.searchParams.set("returnTo", cleanReturnTo);
+  return url.toString();
 }
 
 // POST /auth/session with the one-time `auth` code from the callback

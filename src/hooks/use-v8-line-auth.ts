@@ -97,7 +97,7 @@ export function useV8LineAuth() {
   }, []);
 
   const startLogin = () => {
-    window.location.href = getV8LineLoginStartUrl();
+    window.location.href = getV8LineLoginStartUrl(window.location.href);
   };
 
   const updateIdentity = (nextIdentity: V8LineIdentity) => {
