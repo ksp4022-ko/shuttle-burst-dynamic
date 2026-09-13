@@ -3,6 +3,7 @@ import type { V8IntroConfig } from "./v8IntroConfig";
 
 type V8IntroVideoProps = {
   config: V8IntroConfig;
+  onBlockingChange?: (blocking: boolean) => void;
 };
 
 function storageKeyFor(config: V8IntroConfig) {
@@ -21,7 +22,7 @@ function canUseSessionStorage() {
   }
 }
 
-export function V8IntroVideo({ config }: V8IntroVideoProps) {
+export function V8IntroVideo({ config, onBlockingChange }: V8IntroVideoProps) {
   const storageKey = useMemo(() => storageKeyFor(config), [config]);
   const [shouldRender, setShouldRender] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -52,15 +53,21 @@ export function V8IntroVideo({ config }: V8IntroVideoProps) {
     }
     removeTimerRef.current = window.setTimeout(() => {
       setShouldRender(false);
+      onBlockingChange?.(false);
     }, config.fadeDurationMs);
-  }, [config.fadeDurationMs, markPlayed]);
+  }, [config.fadeDurationMs, markPlayed, onBlockingChange]);
 
   useEffect(() => {
-    if (!config.enabled || typeof window === "undefined") return;
-    storageAvailableRef.current = canUseSessionStorage();
-    if (storageAvailableRef.current && window.sessionStorage.getItem(storageKey) === "1") {
+    if (!config.enabled || typeof window === "undefined") {
+      onBlockingChange?.(false);
       return;
     }
+    storageAvailableRef.current = canUseSessionStorage();
+    if (storageAvailableRef.current && window.sessionStorage.getItem(storageKey) === "1") {
+      onBlockingChange?.(false);
+      return;
+    }
+    onBlockingChange?.(true);
     setShouldRender(true);
     skipTimerRef.current = window.setTimeout(() => {
       setSkipVisible(true);
@@ -68,8 +75,9 @@ export function V8IntroVideo({ config }: V8IntroVideoProps) {
     return () => {
       if (skipTimerRef.current !== null) window.clearTimeout(skipTimerRef.current);
       if (removeTimerRef.current !== null) window.clearTimeout(removeTimerRef.current);
+      onBlockingChange?.(false);
     };
-  }, [config.enabled, config.skipDelayMs, markPlayed, storageKey]);
+  }, [config.enabled, config.skipDelayMs, onBlockingChange, storageKey]);
 
   if (!shouldRender) return null;
 
@@ -95,11 +103,11 @@ export function V8IntroVideo({ config }: V8IntroVideoProps) {
           }
         }}
         onPlay={markPlayed}
-        onEnded={finish}
+        onEnded={() => finish()}
         onError={() => finish({ markAsPlayed: false })}
       />
       {skipVisible ? (
-        <button type="button" className="v8-intro-skip" onClick={finish}>
+        <button type="button" className="v8-intro-skip" onClick={() => finish()}>
           略過
         </button>
       ) : null}

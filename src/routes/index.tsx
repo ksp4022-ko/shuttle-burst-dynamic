@@ -350,6 +350,7 @@ export function Index() {
   const [countdownKey, setCountdownKey] = useState(0);
   const [rosterVisible, setRosterVisible] = useState(false);
   const [v8MeetupConfirmed, setV8MeetupConfirmed] = useState(false);
+  const [v8IntroBlocking, setV8IntroBlocking] = useState(isV8KangxuanRoute);
   const replayTimersRef = useRef<number[]>([]);
   const tutorialTimersRef = useRef<number[]>([]);
   const tutorialStartIntervalRef = useRef<number | null>(null);
@@ -394,6 +395,10 @@ export function Index() {
     copyV8LineAuthCallbackParams(returnUrl);
     window.location.replace(returnUrl.toString());
   }, [isV8Route]);
+
+  useLayoutEffect(() => {
+    setV8IntroBlocking(isV8KangxuanRoute);
+  }, [isV8KangxuanRoute]);
 
   useLayoutEffect(() => {
     const alignMaterializedRacket = () => {
@@ -850,7 +855,7 @@ export function Index() {
     tutorialTuning.step2TextTiming,
   ]);
   useEffect(() => {
-    if (!preview || !flow.events.length || tutorialOpen || flow.pendingAction) {
+    if (!preview || !flow.events.length || tutorialOpen || flow.pendingAction || v8IntroBlocking) {
       setCountdownRemaining(null);
       return;
     }
@@ -881,6 +886,7 @@ export function Index() {
     flow.pendingAction,
     preview,
     tutorialOpen,
+    v8IntroBlocking,
   ]);
 
   const clearReplayTimers = useCallback(() => {
@@ -1437,7 +1443,7 @@ export function Index() {
       {isV8KangxuanRoute ? (
         <>
           <V8IntroVideoStyles />
-          <V8IntroVideo config={v8KangxuanIntroConfig} />
+          <V8IntroVideo config={v8KangxuanIntroConfig} onBlockingChange={setV8IntroBlocking} />
         </>
       ) : null}
     </main>
