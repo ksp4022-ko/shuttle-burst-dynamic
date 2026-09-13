@@ -121,7 +121,7 @@ function V8ToastStyles() {
         left: 28px;
         right: 28px;
         top: 24px;
-        bottom: 0;
+        bottom: -24px;
         border: 1px solid rgba(216, 185, 94, 0.72);
         border-radius: 22px 22px 18px 18px;
         background:
