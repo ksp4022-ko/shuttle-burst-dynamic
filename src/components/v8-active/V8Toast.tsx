@@ -120,8 +120,8 @@ function V8ToastStyles() {
         z-index: 2;
         left: 28px;
         right: 28px;
-        top: 4px;
-        bottom: 20px;
+        top: 24px;
+        bottom: 0;
         border: 1px solid rgba(216, 185, 94, 0.72);
         border-radius: 22px 22px 18px 18px;
         background:
@@ -156,12 +156,13 @@ function V8ToastStyles() {
 
       .v8-toast-content {
         position: relative;
-        z-index: 4;
+        z-index: 6;
         display: flex;
         align-items: center;
         justify-content: center;
         min-height: 82px;
         padding: 27px 28px 25px;
+        transform: translateY(14px);
       }
 
       .v8-toast-wave {
@@ -190,7 +191,7 @@ function V8ToastStyles() {
 
       .v8-toast-wave-foam {
         z-index: 5;
-        bottom: -158px;
+        bottom: -150px;
         width: min(118vw, 455px);
         transform: translateX(-50%);
         animation: v8-toast-wave-foam-life 4.07s cubic-bezier(.18,.84,.24,1) forwards;
