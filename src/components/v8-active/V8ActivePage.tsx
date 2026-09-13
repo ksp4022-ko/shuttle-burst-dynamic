@@ -259,12 +259,23 @@ export function V8ActivePage({
     rosterV2Controls.b2.show ? assets.rosterV2B2 : null,
   ].filter((src): src is string => Boolean(src));
 
-  const rosterConfirmed: V8ActiveRosterPerson[] = confirmed.map((person) => ({ id: person.id, name: person.name }));
+  const displayNameForFixedRosterPerson = (person: AlphaSignup) => {
+    if (person.memberId !== lineIdentity?.claimedMemberId) return person.name;
+    return lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName || person.name;
+  };
+
+  const rosterConfirmed: V8ActiveRosterPerson[] = confirmed.map((person) => ({
+    id: person.id,
+    name: displayNameForFixedRosterPerson(person),
+  }));
   const rosterLeave: V8ActiveRosterPerson[] = (roster.fixedLeave || []).map((person) => ({
     id: person.id,
-    name: person.name,
+    name: displayNameForFixedRosterPerson(person),
   }));
-  const rosterWaiting: V8ActiveRosterPerson[] = waiting.map((person) => ({ id: person.id, name: person.name }));
+  const rosterWaiting: V8ActiveRosterPerson[] = waiting.map((person) => ({
+    id: person.id,
+    name: displayNameForFixedRosterPerson(person),
+  }));
 
   const handlePrimaryAction = () => {
     if (!identity) return;
