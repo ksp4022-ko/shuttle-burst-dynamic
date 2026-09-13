@@ -44,27 +44,31 @@ export function V8Toast({
   return (
     <>
       <V8ToastStyles />
-      <button
+      <div
         key={notice}
-        type="button"
         className={`v8-toast is-${tone} ${motionMode === "reduced" ? "is-reduced" : ""}`}
         aria-live={tone === "error" ? "assertive" : "polite"}
+        role={tone === "error" ? "alert" : "status"}
+        tabIndex={0}
         onClick={() => setNotice("")}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setNotice("");
+          }
+        }}
       >
         <span className="v8-toast-wave v8-toast-wave-main" aria-hidden="true">
           <img src={`${assetBase}toast-wave-main.png`} alt="" />
         </span>
         <span className="v8-toast-body" aria-hidden="true" />
         <span className="v8-toast-content">
-          <span className="v8-toast-seal" aria-hidden="true">
-            {tone === "success" ? "妥" : "！"}
-          </span>
           <span className="v8-toast-text">{visibleNotice}</span>
         </span>
         <span className="v8-toast-wave v8-toast-wave-foam" aria-hidden="true">
           <img src={`${assetBase}toast-wave-foam.png`} alt="" />
         </span>
-      </button>
+      </div>
     </>
   );
 }
@@ -89,7 +93,9 @@ function V8ToastStyles() {
         padding: 0;
         text-align: left;
         overflow: visible;
+        isolation: isolate;
         touch-action: manipulation;
+        cursor: pointer;
         animation: v8-toast-shell-life 4.07s cubic-bezier(.22,.8,.24,1) forwards;
       }
 
@@ -137,7 +143,7 @@ function V8ToastStyles() {
         z-index: 4;
         display: flex;
         align-items: center;
-        gap: 12px;
+        justify-content: center;
         min-height: 82px;
         padding: 27px 28px 25px;
       }
@@ -145,6 +151,7 @@ function V8ToastStyles() {
       .v8-toast-wave {
         position: absolute;
         left: 50%;
+        display: block;
         pointer-events: none;
         overflow: visible;
       }
@@ -152,67 +159,36 @@ function V8ToastStyles() {
       .v8-toast-wave img {
         display: block;
         width: 100%;
-        height: 100%;
-        object-fit: cover;
+        height: auto;
         user-select: none;
         -webkit-user-drag: none;
       }
 
       .v8-toast-wave-main {
         z-index: 1;
-        bottom: -32px;
-        width: min(116vw, 470px);
-        height: 132px;
+        bottom: -188px;
+        width: min(136vw, 520px);
         transform: translateX(-50%);
         animation: v8-toast-wave-main-life 4.07s cubic-bezier(.16,.86,.24,1) forwards;
       }
 
-      .v8-toast-wave-main img {
-        object-position: 50% 70%;
-      }
-
       .v8-toast-wave-foam {
         z-index: 5;
-        bottom: -21px;
-        width: min(120vw, 490px);
-        height: 104px;
+        bottom: -205px;
+        width: min(130vw, 500px);
         transform: translateX(-50%);
         animation: v8-toast-wave-foam-life 4.07s cubic-bezier(.18,.84,.24,1) forwards;
       }
 
-      .v8-toast-wave-foam img {
-        object-position: 50% 76%;
-      }
-
-      /* Rounded ink-stamp seal, same visual language as the tiger-scroll
-         card's own status mark / the helper flow's stamp badges -- a
-         themed alternative to the old neon signal dot. */
-      .v8-toast-seal {
-        flex: 0 0 auto;
-        display: grid;
-        place-items: center;
-        width: 26px;
-        height: 26px;
-        border: 2px solid rgba(154, 23, 18, 0.78);
-        border-radius: 48% 52% 44% 56%;
-        color: rgba(154, 23, 18, 0.88);
-        font-size: 12px;
-        font-weight: 900;
-        background: rgba(248, 238, 215, 0.42);
-        transform: rotate(-8deg);
-      }
-
-      .v8-toast.is-error .v8-toast-seal {
-        border-color: rgba(90, 60, 20, 0.7);
-        color: rgba(90, 60, 20, 0.85);
-      }
-
       .v8-toast-text {
+        display: block;
+        width: 100%;
         min-width: 0;
-        font-size: 15px;
+        font-size: 21px;
         font-weight: 800;
-        line-height: 1.35;
+        line-height: 1.34;
         letter-spacing: 0.02em;
+        text-align: center;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.46);
       }
 
