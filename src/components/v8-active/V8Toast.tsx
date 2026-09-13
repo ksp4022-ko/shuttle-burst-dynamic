@@ -21,6 +21,16 @@ function noticeTone(message: string): NoticeTone {
   return SUCCESS_NOTICE_MARKERS.some((marker) => message.includes(marker)) ? "success" : "error";
 }
 
+function splitSuccessNotice(message: string): { name: string; status: string } | null {
+  for (const marker of SUCCESS_NOTICE_MARKERS) {
+    const suffix = ` ${marker}`;
+    if (message.endsWith(suffix)) {
+      return { name: message.slice(0, -suffix.length), status: marker };
+    }
+  }
+  return null;
+}
+
 function preloadToastWaveAssets(assetBase: string) {
   if (toastWaveAssetsPreloaded || typeof window === "undefined") return;
   toastWaveAssetsPreloaded = true;
@@ -56,6 +66,7 @@ export function V8Toast({
   if (!notice) return null;
 
   const tone = noticeTone(notice);
+  const successParts = tone === "success" ? splitSuccessNotice(visibleNotice) : null;
 
   return (
     <>
@@ -79,7 +90,14 @@ export function V8Toast({
         </span>
         <span className="v8-toast-body" aria-hidden="true" />
         <span className="v8-toast-content">
-          <span className="v8-toast-text">{visibleNotice}</span>
+          {successParts ? (
+            <span className="v8-toast-text v8-toast-text-stacked">
+              <span className="v8-toast-name">{successParts.name}</span>
+              <span className="v8-toast-status">{successParts.status}</span>
+            </span>
+          ) : (
+            <span className="v8-toast-text">{visibleNotice}</span>
+          )}
         </span>
         <span className="v8-toast-wave v8-toast-wave-foam" aria-hidden="true">
           <img src={`${assetBase}${TOAST_WAVE_FOAM_ASSET}`} alt="" />
@@ -120,8 +138,8 @@ function V8ToastStyles() {
         z-index: 2;
         left: 28px;
         right: 28px;
-        top: 24px;
-        bottom: -24px;
+        top: 44px;
+        bottom: -44px;
         border: 1px solid rgba(216, 185, 94, 0.72);
         border-radius: 22px 22px 18px 18px;
         background:
@@ -155,14 +173,16 @@ function V8ToastStyles() {
       }
 
       .v8-toast-content {
-        position: relative;
+        position: absolute;
         z-index: 6;
+        left: 28px;
+        right: 28px;
+        top: 44px;
+        bottom: -44px;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 82px;
-        padding: 27px 28px 25px;
-        transform: translateY(14px);
+        padding: 20px 24px;
       }
 
       .v8-toast-wave {
@@ -208,6 +228,25 @@ function V8ToastStyles() {
         text-align: center;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.46);
         transform: translateX(8px);
+      }
+
+      .v8-toast-text-stacked {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+      }
+
+      .v8-toast-name,
+      .v8-toast-status {
+        display: block;
+        width: 100%;
+        text-align: center;
+      }
+
+      .v8-toast-status {
+        color: #1559a8;
       }
 
       @keyframes v8-toast-shell-life {
