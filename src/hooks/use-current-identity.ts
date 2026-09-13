@@ -27,11 +27,19 @@ const fixedIdentityPools = (roster: AlphaRoster): Array<[AlphaSignup[], CurrentI
   [roster.fixedLeave, "leave"],
 ];
 
-function findFixedIdentity(roster: AlphaRoster | null, claimedMemberId: string | null): CurrentIdentity | null {
+function lineDisplayName(lineIdentity: V8LineIdentity): string {
+  return lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName || "";
+}
+
+function findFixedIdentity(
+  roster: AlphaRoster | null,
+  lineIdentity: V8LineIdentity,
+): CurrentIdentity | null {
+  const claimedMemberId = lineIdentity.claimedMemberId;
   if (!roster || !claimedMemberId) return null;
   for (const [list, status] of fixedIdentityPools(roster)) {
     const found = list.find((person) => person.memberId === claimedMemberId);
-    if (found) return { signupId: found.id, name: found.name, signupType: "fixed", status };
+    if (found) return { signupId: found.id, name: lineDisplayName(lineIdentity) || found.name, signupType: "fixed", status };
   }
   return null;
 }
@@ -49,7 +57,7 @@ function toTempIdentity(signup: AlphaCancellableTempSignup | undefined): Current
 function toUnregisteredTempIdentity(lineIdentity: V8LineIdentity): CurrentIdentity {
   return {
     signupId: "",
-    name: lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName,
+    name: lineDisplayName(lineIdentity),
     signupType: "temp",
     status: "unregistered",
   };
@@ -111,7 +119,7 @@ export function useCurrentIdentity({
   const identity = useMemo<CurrentIdentity | null>(() => {
     if (!profileComplete || !lineIdentity) return null;
     if (lineIdentity.identityType === "fixed") {
-      return findFixedIdentity(roster, lineIdentity.claimedMemberId);
+      return findFixedIdentity(roster, lineIdentity);
     }
     if (lineIdentity.identityType === "temp") {
       return toTempIdentity(cancellableTempSignups.find((signup) => signup.participantIsMe)) || toUnregisteredTempIdentity(lineIdentity);

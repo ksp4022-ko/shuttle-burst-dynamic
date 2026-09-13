@@ -1954,7 +1954,7 @@ export function V8ActiveStyles() {
         justify-content: center;
         margin: 0 0 12px;
         font-size: 12px;
-        color: rgba(32, 21, 13, 0.75);
+        color: rgba(32, 21, 13, 0.92);
       }
 
       .v8-line-auth-login-btn {
@@ -1970,10 +1970,10 @@ export function V8ActiveStyles() {
 
       .v8-line-auth-diagnostic {
         margin: -4px 0 10px;
-        color: rgba(32, 21, 13, 0.58);
+        color: rgba(32, 21, 13, 0.78);
         font-size: 11px;
         line-height: 1.35;
-        font-weight: 650;
+        font-weight: 750;
         text-align: center;
       }
 
@@ -1981,7 +1981,7 @@ export function V8ActiveStyles() {
         display: block;
         margin-top: 3px;
         overflow-wrap: anywhere;
-        color: rgba(122, 45, 34, 0.82);
+        color: rgba(122, 45, 34, 0.95);
         font-size: 10px;
         line-height: 1.35;
       }
@@ -1994,10 +1994,10 @@ export function V8ActiveStyles() {
 
       .v8-line-profile-copy {
         margin: 0;
-        color: rgba(32, 21, 13, 0.72);
+        color: rgba(32, 21, 13, 0.9);
         font-size: 13px;
         line-height: 1.45;
-        font-weight: 700;
+        font-weight: 800;
         text-align: center;
       }
 
@@ -2025,7 +2025,8 @@ export function V8ActiveStyles() {
 
       .v8-line-profile-submit:disabled,
       .v8-line-profile-mode:disabled {
-        opacity: 0.55;
+        color: rgba(32, 21, 13, 0.72);
+        opacity: 0.72;
       }
 
       .v8-line-claim-list {
@@ -2072,7 +2073,7 @@ export function V8ActiveStyles() {
       .v8-line-claim-item em {
         flex: 0 0 auto;
         font-style: normal;
-        color: rgba(32, 21, 13, 0.52);
+        color: rgba(32, 21, 13, 0.72);
         font-size: 12px;
         font-weight: 900;
       }
@@ -2081,7 +2082,7 @@ export function V8ActiveStyles() {
         display: flex;
         flex-direction: column;
         gap: 6px;
-        color: rgba(32, 21, 13, 0.66);
+        color: rgba(32, 21, 13, 0.88);
         font-size: 12px;
         font-weight: 900;
       }
@@ -2099,7 +2100,12 @@ export function V8ActiveStyles() {
       }
 
       .v8-line-profile-name input:disabled {
-        opacity: 0.58;
+        color: rgba(32, 21, 13, 0.74);
+        opacity: 0.78;
+      }
+
+      .v8-line-profile-name input::placeholder {
+        color: rgba(32, 21, 13, 0.62);
       }
 
       .v8-line-profile-error {
