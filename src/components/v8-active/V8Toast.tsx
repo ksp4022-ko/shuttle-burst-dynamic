@@ -9,13 +9,25 @@ import type { MotionMode } from "@/hooks/use-homepage-flow";
 // one instead when isV8Route, both driven by the same flow.notice/setNotice
 // state so no new state plumbing was needed.
 const TOAST_LIFETIME_MS = 4070;
+const TOAST_WAVE_MAIN_ASSET = "toast-wave-main-display.webp";
+const TOAST_WAVE_FOAM_ASSET = "toast-wave-foam-display.webp";
 
 type NoticeTone = "success" | "error";
 
 const SUCCESS_NOTICE_MARKERS = ["已切換聚會", "已完成報名", "已請假", "已消假", "已取消報名"];
+let toastWaveAssetsPreloaded = false;
 
 function noticeTone(message: string): NoticeTone {
   return SUCCESS_NOTICE_MARKERS.some((marker) => message.includes(marker)) ? "success" : "error";
+}
+
+function preloadToastWaveAssets(assetBase: string) {
+  if (toastWaveAssetsPreloaded || typeof window === "undefined") return;
+  toastWaveAssetsPreloaded = true;
+  [TOAST_WAVE_MAIN_ASSET, TOAST_WAVE_FOAM_ASSET].forEach((asset) => {
+    const image = new Image();
+    image.src = `${assetBase}${asset}`;
+  });
 }
 
 export function V8Toast({
@@ -28,6 +40,11 @@ export function V8Toast({
   setNotice: Dispatch<SetStateAction<string>>;
 }) {
   const [visibleNotice, setVisibleNotice] = useState("");
+  const assetBase = `${import.meta.env.BASE_URL}v8-toast/`;
+
+  useEffect(() => {
+    preloadToastWaveAssets(assetBase);
+  }, [assetBase]);
 
   useEffect(() => {
     if (!notice) return;
@@ -39,7 +56,6 @@ export function V8Toast({
   if (!notice) return null;
 
   const tone = noticeTone(notice);
-  const assetBase = `${import.meta.env.BASE_URL}v8-toast/`;
 
   return (
     <>
@@ -59,14 +75,14 @@ export function V8Toast({
         }}
       >
         <span className="v8-toast-wave v8-toast-wave-main" aria-hidden="true">
-          <img src={`${assetBase}toast-wave-main.png`} alt="" />
+          <img src={`${assetBase}${TOAST_WAVE_MAIN_ASSET}`} alt="" />
         </span>
         <span className="v8-toast-body" aria-hidden="true" />
         <span className="v8-toast-content">
           <span className="v8-toast-text">{visibleNotice}</span>
         </span>
         <span className="v8-toast-wave v8-toast-wave-foam" aria-hidden="true">
-          <img src={`${assetBase}toast-wave-foam.png`} alt="" />
+          <img src={`${assetBase}${TOAST_WAVE_FOAM_ASSET}`} alt="" />
         </span>
       </div>
     </>
@@ -166,7 +182,7 @@ function V8ToastStyles() {
 
       .v8-toast-wave-main {
         z-index: 1;
-        bottom: -188px;
+        bottom: -118px;
         width: min(136vw, 520px);
         transform: translateX(-50%);
         animation: v8-toast-wave-main-life 4.07s cubic-bezier(.16,.86,.24,1) forwards;
@@ -174,7 +190,7 @@ function V8ToastStyles() {
 
       .v8-toast-wave-foam {
         z-index: 5;
-        bottom: -205px;
+        bottom: -150px;
         width: min(130vw, 500px);
         transform: translateX(-50%);
         animation: v8-toast-wave-foam-life 4.07s cubic-bezier(.18,.84,.24,1) forwards;
@@ -190,6 +206,7 @@ function V8ToastStyles() {
         letter-spacing: 0.02em;
         text-align: center;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.46);
+        transform: translateX(10px);
       }
 
       @keyframes v8-toast-shell-life {
