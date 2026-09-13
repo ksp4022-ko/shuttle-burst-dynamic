@@ -1370,6 +1370,7 @@ function V8IdentityPrompt({
   const [claimOptions, setClaimOptions] = useState<V8ClaimOption[]>([]);
   const [claimLoading, setClaimLoading] = useState(false);
   const [claimLoaded, setClaimLoaded] = useState(false);
+  const [claimLoadError, setClaimLoadError] = useState("");
   const [selectedClaim, setSelectedClaim] = useState<V8ClaimOption | null>(null);
   const [profileName, setProfileName] = useState("");
   const [profileError, setProfileError] = useState("");
@@ -1389,6 +1390,7 @@ function V8IdentityPrompt({
       setSelectedClaim(null);
       setProfileName("");
       setProfileError("");
+      setClaimLoadError("");
       return;
     }
     if (!profileMode) {
@@ -1401,6 +1403,7 @@ function V8IdentityPrompt({
     if (!needsLineProfile || profileMode !== "fixed" || !lineAuthToken || claimLoaded || claimLoading) return;
     setClaimLoading(true);
     setProfileError("");
+    setClaimLoadError("");
     fetchV8ClaimOptions(lineAuthToken, siteId, selectedEventId)
       .then((members) => {
         if (cancelled) return;
@@ -1409,7 +1412,8 @@ function V8IdentityPrompt({
       })
       .catch((error) => {
         if (cancelled) return;
-        setProfileError(error instanceof Error ? error.message : "季打名單讀取失敗");
+        setClaimLoadError(error instanceof Error ? error.message : "季打名單讀取失敗");
+        setClaimLoaded(true);
       })
       .finally(() => {
         if (!cancelled) setClaimLoading(false);
@@ -1424,6 +1428,7 @@ function V8IdentityPrompt({
     setProfileError("");
     setSelectedClaim(null);
     setClaimLoaded(false);
+    setClaimLoadError("");
     setClaimOptions([]);
     if (mode === "temp") {
       setProfileName(lineIdentity?.lineDisplayName || lineIdentity?.displayName || "");
@@ -1436,6 +1441,14 @@ function V8IdentityPrompt({
     setSelectedClaim(member);
     setProfileName(member.name || "");
     setProfileError("");
+  };
+
+  const retryClaimOptions = () => {
+    setClaimLoadError("");
+    setClaimOptions([]);
+    setSelectedClaim(null);
+    setProfileName("");
+    setClaimLoaded(false);
   };
 
   const submitLineProfile = async () => {
@@ -1518,6 +1531,13 @@ function V8IdentityPrompt({
               <div className="v8-line-claim-list" aria-label="季打候選名單">
                 {claimLoading ? (
                   <p className="sd-empty">讀取季打名單中...</p>
+                ) : claimLoadError ? (
+                  <div className="sd-empty">
+                    <p>季打名單讀取失敗：{claimLoadError}</p>
+                    <button type="button" className="v8-line-profile-mode" onClick={retryClaimOptions}>
+                      重新讀取季打名單
+                    </button>
+                  </div>
                 ) : claimOptions.length ? (
                   claimOptions.map((member) => (
                     <button
