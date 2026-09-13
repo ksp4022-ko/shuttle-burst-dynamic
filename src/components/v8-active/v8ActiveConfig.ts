@@ -18,9 +18,9 @@ export const v8ActiveAssetFiles = {
 // hours merged into one "X場/Yhr" label (confirmed by the user) instead of
 // courtCount alone, matching the courttime asset's baked-in "場時" label.
 export const v8ActiveSunBadgeFiles = {
-  ballType: "sun-info-badge-balltype-v2.webp",
-  tempFee: "sun-info-badge-tempfee-v2.webp",
-  courtCount: "sun-info-badge-courttime-v1.webp",
+  ballType: "v8-cloud-shuttle-display.webp",
+  tempFee: "v8-cloud-fee-display.webp",
+  courtCount: "v8-cloud-court-time-display.webp",
 } as const;
 
 // The three-panel roster frame (季打請假/正取名單/備取名單) -- the new
@@ -69,8 +69,8 @@ export const v8ActiveStatusStampFiles = {
 } as const;
 
 export const v8ActiveIdentityTagFiles = {
-  season: "identity-tag-season-v1.webp",
-  temp: "identity-tag-temp-v1.webp",
+  season: "v8-identity-season-display.webp",
+  temp: "v8-identity-temp-display.webp",
 } as const;
 
 // CTA plaques replacing the identity card's text buttons -- 告假/歸陣 are
@@ -93,7 +93,7 @@ export const v8ActiveCtaPlaqueFiles = {
 // its own standalone control group (V8ActiveCapacityBadgeControls below)
 // rather than folded into the older three's shared type, which predates
 // the component baseline and doesn't have Opacity/Z-index.
-export const v8ActiveCapacityBadgeFile = "sun-info-badge-capacity-v1.webp";
+export const v8ActiveCapacityBadgeFile = "v8-cloud-limit-display.webp";
 
 // Three rope-hanging ornaments (注連繩 decoration) threaded along the
 // red/blue rope, below the 已報/尚缺/候補 ema plaques -- purely decorative,
@@ -135,6 +135,7 @@ export const v8ActiveSunSwitchArrowFiles = {
 export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
+  const statusAssetBase = `${baseUrl}v8-status-assets`;
   return {
     sunInfoBadge: `${activeBase}/${v8ActiveAssetFiles.sunInfoBadge}`,
     dragonSea: `${displayBase}/${v8ActiveBackgroundFiles.dragonSea}`,
@@ -145,22 +146,22 @@ export function buildV8ActiveAssets(baseUrl: string) {
     infoCardNeeded: `${activeBase}/${v8ActiveInfoCardFiles.needed}`,
     infoCardWaitlist: `${activeBase}/${v8ActiveInfoCardFiles.waitlist}`,
     infoRope: `${activeBase}/${v8ActiveInfoCardFiles.rope}`,
-    sunBadgeBallType: `${activeBase}/${v8ActiveSunBadgeFiles.ballType}`,
-    sunBadgeTempFee: `${activeBase}/${v8ActiveSunBadgeFiles.tempFee}`,
-    sunBadgeCourtCount: `${activeBase}/${v8ActiveSunBadgeFiles.courtCount}`,
+    sunBadgeBallType: `${statusAssetBase}/${v8ActiveSunBadgeFiles.ballType}`,
+    sunBadgeTempFee: `${statusAssetBase}/${v8ActiveSunBadgeFiles.tempFee}`,
+    sunBadgeCourtCount: `${statusAssetBase}/${v8ActiveSunBadgeFiles.courtCount}`,
     rosterFrame: `${activeBase}/${v8ActiveRosterFrameFile}`,
     statusStampConfirmed: `${activeBase}/${v8ActiveStatusStampFiles.confirmed}`,
     statusStampWaiting: `${activeBase}/${v8ActiveStatusStampFiles.waiting}`,
     statusStampLeave: `${activeBase}/${v8ActiveStatusStampFiles.leave}`,
-    identityTagSeason: `${activeBase}/${v8ActiveIdentityTagFiles.season}`,
-    identityTagTemp: `${activeBase}/${v8ActiveIdentityTagFiles.temp}`,
+    identityTagSeason: `${statusAssetBase}/${v8ActiveIdentityTagFiles.season}`,
+    identityTagTemp: `${statusAssetBase}/${v8ActiveIdentityTagFiles.temp}`,
     ctaSeasonLeave: `${activeBase}/${v8ActiveCtaPlaqueFiles.seasonLeave}`,
     ctaSeasonReturn: `${activeBase}/${v8ActiveCtaPlaqueFiles.seasonReturn}`,
     ctaTempCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.tempCancel}`,
     ctaTempSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.tempSignup}`,
     ctaHelperSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperSignup}`,
     ctaHelperCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperCancel}`,
-    sunBadgeCapacity: `${activeBase}/${v8ActiveCapacityBadgeFile}`,
+    sunBadgeCapacity: `${statusAssetBase}/${v8ActiveCapacityBadgeFile}`,
     ropeOrnamentA: `${activeBase}/${v8ActiveRopeOrnamentFiles.a}`,
     ropeOrnamentB: `${activeBase}/${v8ActiveRopeOrnamentFiles.b}`,
     ropeOrnamentC: `${activeBase}/${v8ActiveRopeOrnamentFiles.c}`,

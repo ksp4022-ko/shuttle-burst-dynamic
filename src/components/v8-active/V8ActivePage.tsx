@@ -1738,8 +1738,9 @@ export function V8ActiveStyles() {
 
       .v8-sun-info-badge img {
         display: block;
-        height: 28px;
-        width: auto;
+        width: 86px;
+        max-width: 100%;
+        height: auto;
         position: relative;
         z-index: 1;
       }
@@ -1843,8 +1844,9 @@ export function V8ActiveStyles() {
 
       .v8-scroll-identity-tag img {
         display: block;
-        height: 26px;
-        width: auto;
+        width: 36px;
+        max-width: 100%;
+        height: auto;
       }
 
       .v8-scroll-status-mark {
