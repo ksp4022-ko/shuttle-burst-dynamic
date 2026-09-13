@@ -65,12 +65,13 @@ export async function fetchV8AuthMe(token: string): Promise<V8LineIdentity | nul
   }
 }
 
-export async function fetchV8ClaimOptions(token: string, siteId: string): Promise<V8ClaimOption[]> {
+export async function fetchV8ClaimOptions(token: string, siteId: string, eventId?: string): Promise<V8ClaimOption[]> {
   const result = await alphaFetch<{ siteId: string; members: V8ClaimOption[] }>(
     `/sites/${encodeURIComponent(siteId)}/claim-options`,
     {
       headers: { authorization: `Bearer ${token}` },
     },
+    eventId ? { eventId } : undefined,
   );
   return result.members || [];
 }
