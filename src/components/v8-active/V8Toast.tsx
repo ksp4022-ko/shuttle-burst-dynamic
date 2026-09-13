@@ -39,6 +39,7 @@ export function V8Toast({
   if (!notice) return null;
 
   const tone = noticeTone(notice);
+  const assetBase = `${import.meta.env.BASE_URL}v8-toast/`;
 
   return (
     <>
@@ -50,10 +51,19 @@ export function V8Toast({
         aria-live={tone === "error" ? "assertive" : "polite"}
         onClick={() => setNotice("")}
       >
-        <span className="v8-toast-seal" aria-hidden="true">
-          {tone === "success" ? "妥" : "！"}
+        <span className="v8-toast-wave v8-toast-wave-main" aria-hidden="true">
+          <img src={`${assetBase}toast-wave-main.png`} alt="" />
         </span>
-        <span className="v8-toast-text">{visibleNotice}</span>
+        <span className="v8-toast-body" aria-hidden="true" />
+        <span className="v8-toast-content">
+          <span className="v8-toast-seal" aria-hidden="true">
+            {tone === "success" ? "妥" : "！"}
+          </span>
+          <span className="v8-toast-text">{visibleNotice}</span>
+        </span>
+        <span className="v8-toast-wave v8-toast-wave-foam" aria-hidden="true">
+          <img src={`${assetBase}toast-wave-foam.png`} alt="" />
+        </span>
       </button>
     </>
   );
@@ -66,36 +76,112 @@ function V8ToastStyles() {
         position: fixed;
         z-index: 60;
         left: 50%;
-        bottom: calc(env(safe-area-inset-bottom) + 76px);
-        display: flex;
-        align-items: center;
-        gap: 11px;
-        width: max-content;
-        max-width: min(calc(100% - 32px), 340px);
-        min-height: 50px;
+        bottom: calc(env(safe-area-inset-bottom) + 50px);
+        display: block;
+        width: min(calc(100vw - 26px), 392px);
+        min-height: 118px;
         appearance: none;
         -webkit-appearance: none;
-        border: 1px solid rgba(216, 185, 94, 0.55);
-        border-radius: 16px;
-        background:
-          radial-gradient(90% 130% at 12% 20%, rgba(255, 255, 255, 0.4), transparent 60%),
-          linear-gradient(180deg, #f4e8cf 0%, #ede0c4 100%);
+        border: 0;
+        border-radius: 0;
+        background: transparent;
         color: #20150d;
-        padding: 11px 16px;
+        padding: 0;
         text-align: left;
-        box-shadow:
-          0 14px 34px rgba(32, 21, 13, 0.28),
-          0 0 0 1px rgba(216, 185, 94, 0.18),
-          inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        overflow: visible;
         touch-action: manipulation;
-        animation: v8-toast-life 4.07s cubic-bezier(.22,.8,.24,1) forwards;
+        animation: v8-toast-shell-life 4.07s cubic-bezier(.22,.8,.24,1) forwards;
       }
 
-      .v8-toast.is-error {
+      .v8-toast-body {
+        position: absolute;
+        z-index: 2;
+        left: 12px;
+        right: 12px;
+        top: 4px;
+        bottom: 20px;
+        border: 1px solid rgba(216, 185, 94, 0.72);
+        border-radius: 22px 22px 18px 18px;
+        background:
+          radial-gradient(75% 130% at 12% 28%, rgba(255, 255, 255, 0.48), transparent 58%),
+          linear-gradient(180deg, rgba(248, 238, 215, 0.94) 0%, rgba(237, 223, 192, 0.96) 100%);
+        box-shadow:
+          0 18px 36px rgba(21, 24, 30, 0.25),
+          0 0 0 1px rgba(126, 88, 36, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.55);
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 0.18) 12%,
+          rgba(0, 0, 0, 0.92) 25%,
+          #000 100%
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 0.18) 12%,
+          rgba(0, 0, 0, 0.92) 25%,
+          #000 100%
+        );
+      }
+
+      .v8-toast.is-error .v8-toast-body {
         border-color: rgba(154, 23, 18, 0.55);
         background:
-          radial-gradient(90% 130% at 12% 20%, rgba(255, 255, 255, 0.35), transparent 60%),
-          linear-gradient(180deg, #f2e2d6 0%, #ecd6cb 100%);
+          radial-gradient(75% 130% at 12% 28%, rgba(255, 255, 255, 0.44), transparent 58%),
+          linear-gradient(180deg, rgba(246, 226, 211, 0.94) 0%, rgba(236, 211, 197, 0.96) 100%);
+      }
+
+      .v8-toast-content {
+        position: relative;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 82px;
+        padding: 27px 28px 25px;
+      }
+
+      .v8-toast-wave {
+        position: absolute;
+        left: 50%;
+        pointer-events: none;
+        overflow: visible;
+      }
+
+      .v8-toast-wave img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+
+      .v8-toast-wave-main {
+        z-index: 1;
+        bottom: -32px;
+        width: min(116vw, 470px);
+        height: 132px;
+        transform: translateX(-50%);
+        animation: v8-toast-wave-main-life 4.07s cubic-bezier(.16,.86,.24,1) forwards;
+      }
+
+      .v8-toast-wave-main img {
+        object-position: 50% 70%;
+      }
+
+      .v8-toast-wave-foam {
+        z-index: 5;
+        bottom: -21px;
+        width: min(120vw, 490px);
+        height: 104px;
+        transform: translateX(-50%);
+        animation: v8-toast-wave-foam-life 4.07s cubic-bezier(.18,.84,.24,1) forwards;
+      }
+
+      .v8-toast-wave-foam img {
+        object-position: 50% 76%;
       }
 
       /* Rounded ink-stamp seal, same visual language as the tiger-scroll
@@ -107,11 +193,12 @@ function V8ToastStyles() {
         place-items: center;
         width: 26px;
         height: 26px;
-        border: 2px solid rgba(154, 23, 18, 0.75);
+        border: 2px solid rgba(154, 23, 18, 0.78);
         border-radius: 48% 52% 44% 56%;
         color: rgba(154, 23, 18, 0.88);
         font-size: 12px;
         font-weight: 900;
+        background: rgba(248, 238, 215, 0.42);
         transform: rotate(-8deg);
       }
 
@@ -122,21 +209,58 @@ function V8ToastStyles() {
 
       .v8-toast-text {
         min-width: 0;
-        font-size: 14px;
-        font-weight: 700;
+        font-size: 15px;
+        font-weight: 800;
         line-height: 1.35;
         letter-spacing: 0.02em;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.46);
       }
 
-      @keyframes v8-toast-life {
-        0% { opacity: 0; transform: translate(-50%, 10px) scale(.96); }
-        5.5% { opacity: 1; transform: translate(-50%, 0) scale(1.01); }
-        11%, 91.4% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-        100% { opacity: 0; transform: translate(-50%, -2px) scale(.97); }
+      @keyframes v8-toast-shell-life {
+        0% { opacity: 0; transform: translate(-50%, 24px); }
+        7% { opacity: 1; transform: translate(-50%, 0); }
+        12%, 91.4% { opacity: 1; transform: translate(-50%, 0); }
+        100% { opacity: 0; transform: translate(-50%, 4px); }
+      }
+
+      @keyframes v8-toast-wave-main-life {
+        0% { opacity: 0; transform: translate(-50%, 46px) scale(.94); }
+        7% { opacity: 1; transform: translate(-50%, -5px) scale(1.035); }
+        14%, 91.4% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, 18px) scale(.99); }
+      }
+
+      @keyframes v8-toast-wave-foam-life {
+        0%, 3% { opacity: 0; transform: translate(-50%, 58px) scale(.96); }
+        9% { opacity: 1; transform: translate(-50%, -9px) scale(1.055); }
+        16%, 91.4% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, 12px) scale(.99); }
       }
 
       .v8-toast.is-reduced {
         animation: none !important;
+      }
+
+      .v8-toast.is-reduced .v8-toast-wave {
+        animation: none !important;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .v8-toast,
+        .v8-toast-wave {
+          animation: none !important;
+        }
+      }
+
+      @media (max-width: 390px) {
+        .v8-toast {
+          width: min(calc(100vw - 20px), 370px);
+          bottom: calc(env(safe-area-inset-bottom) + 42px);
+        }
+
+        .v8-toast-content {
+          padding-inline: 22px;
+        }
       }
     `}</style>
   );
