@@ -40,10 +40,12 @@ export function V8IntroVideo({ config }: V8IntroVideoProps) {
     }
   }, [storageKey]);
 
-  const finish = useCallback(() => {
+  const finish = useCallback((options: { markAsPlayed?: boolean } = {}) => {
     if (finishedRef.current) return;
     finishedRef.current = true;
-    markPlayed();
+    if (options.markAsPlayed !== false) {
+      markPlayed();
+    }
     setExiting(true);
     if (removeTimerRef.current !== null) {
       window.clearTimeout(removeTimerRef.current);
@@ -59,7 +61,6 @@ export function V8IntroVideo({ config }: V8IntroVideoProps) {
     if (storageAvailableRef.current && window.sessionStorage.getItem(storageKey) === "1") {
       return;
     }
-    markPlayed();
     setShouldRender(true);
     skipTimerRef.current = window.setTimeout(() => {
       setSkipVisible(true);
@@ -90,11 +91,12 @@ export function V8IntroVideo({ config }: V8IntroVideoProps) {
         onCanPlay={(event) => {
           const playPromise = event.currentTarget.play();
           if (playPromise) {
-            playPromise.catch(() => finish());
+            playPromise.catch(() => finish({ markAsPlayed: false }));
           }
         }}
+        onPlay={markPlayed}
         onEnded={finish}
-        onError={finish}
+        onError={() => finish({ markAsPlayed: false })}
       />
       {skipVisible ? (
         <button type="button" className="v8-intro-skip" onClick={finish}>

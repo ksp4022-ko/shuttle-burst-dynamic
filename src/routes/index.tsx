@@ -316,7 +316,8 @@ const DEFAULT_VISUAL_TUNING: VisualTuning = {
 export function Index() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isV8Route = pathname === "/v8" || pathname.startsWith("/v8/");
-  const isV8KangxuanRoute = pathname === "/v8/kangxuan";
+  const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  const isV8KangxuanRoute = normalizedPathname === "/v8/kangxuan";
   const [name, setName] = useState("");
   const toastOriginRef = useRef<ToastOrigin | null>(null);
   const eventTitleRef = useRef<HTMLElement | null>(null);
