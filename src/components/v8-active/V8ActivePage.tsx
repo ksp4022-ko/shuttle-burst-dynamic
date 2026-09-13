@@ -1400,7 +1400,7 @@ function V8IdentityPrompt({
 
   useEffect(() => {
     let cancelled = false;
-    if (!needsLineProfile || profileMode !== "fixed" || !lineAuthToken || claimLoaded || claimLoading) return;
+    if (!needsLineProfile || profileMode !== "fixed" || !lineAuthToken || claimLoaded) return;
     setClaimLoading(true);
     setProfileError("");
     setClaimLoadError("");
@@ -1409,19 +1409,18 @@ function V8IdentityPrompt({
         if (cancelled) return;
         setClaimOptions(members);
         setClaimLoaded(true);
+        setClaimLoading(false);
       })
       .catch((error) => {
         if (cancelled) return;
         setClaimLoadError(error instanceof Error ? error.message : "季打名單讀取失敗");
         setClaimLoaded(true);
-      })
-      .finally(() => {
-        if (!cancelled) setClaimLoading(false);
+        setClaimLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [claimLoaded, claimLoading, lineAuthToken, needsLineProfile, profileMode, selectedEventId, siteId]);
+  }, [claimLoaded, lineAuthToken, needsLineProfile, profileMode, selectedEventId, siteId]);
 
   const chooseProfileMode = (mode: V8ProfileIdentityType) => {
     setProfileMode(mode);
