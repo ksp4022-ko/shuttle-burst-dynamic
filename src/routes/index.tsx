@@ -16,6 +16,8 @@ import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import { V8OpeningSunContent, V8OpeningSunStyles } from "@/components/v8-hero/V8OpeningSunContent";
 import { V8ActivePage } from "@/components/v8-active/V8ActivePage";
+import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8IntroVideo";
+import { v8KangxuanIntroConfig } from "@/components/v8-active/v8IntroConfig";
 import {
   HomepageToast,
   clearToastOrigin,
@@ -314,6 +316,7 @@ const DEFAULT_VISUAL_TUNING: VisualTuning = {
 export function Index() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isV8Route = pathname === "/v8" || pathname.startsWith("/v8/");
+  const isV8KangxuanRoute = pathname === "/v8/kangxuan";
   const [name, setName] = useState("");
   const toastOriginRef = useRef<ToastOrigin | null>(null);
   const eventTitleRef = useRef<HTMLElement | null>(null);
@@ -1429,6 +1432,13 @@ export function Index() {
         onConfirm={flow.confirmMemberAction}
         disabled={Boolean(flow.pendingAction)}
       />
+
+      {isV8KangxuanRoute ? (
+        <>
+          <V8IntroVideoStyles />
+          <V8IntroVideo config={v8KangxuanIntroConfig} />
+        </>
+      ) : null}
     </main>
   );
 }
