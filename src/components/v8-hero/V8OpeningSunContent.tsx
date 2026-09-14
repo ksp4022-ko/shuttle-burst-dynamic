@@ -247,7 +247,6 @@ function V8OpeningSunSwitcher({
               <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-main" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
-              <span className="v8-opening-switch-arrow-tip" aria-hidden="true" />
             </span>
           </button>
           <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.next)} onClick={onNextEvent} aria-label="下一場聚會">
@@ -255,7 +254,6 @@ function V8OpeningSunSwitcher({
               <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-main" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
-              <span className="v8-opening-switch-arrow-tip" aria-hidden="true" />
             </span>
           </button>
         </>
@@ -370,8 +368,7 @@ export function V8OpeningSunStyles() {
         animation: v8-opening-switch-arrow-main-echo 5000ms ease-out infinite;
       }
 
-      .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-main,
-      .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-tip {
+      .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-main {
         animation-delay: 300ms;
       }
 
@@ -382,7 +379,7 @@ export function V8OpeningSunStyles() {
         opacity: 0;
         pointer-events: none;
         transform-origin: center center;
-        filter: sepia(0.8) saturate(1.15) brightness(1.12) drop-shadow(0 0 4px rgba(255, 220, 134, 0.52));
+        filter: sepia(0.55) saturate(1.08) brightness(1.05) drop-shadow(0 0 3px rgba(255, 220, 134, 0.32));
       }
 
       .v8-opening-switch-arrow-echo.is-echo-1 {
@@ -403,155 +400,129 @@ export function V8OpeningSunStyles() {
         animation-delay: 300ms;
       }
 
-      .v8-opening-switch-arrow-tip {
-        position: absolute;
-        top: 39%;
-        right: -4px;
-        width: 10px;
-        height: 22%;
-        border-radius: 999px;
-        background: rgba(255, 255, 245, 0.92);
-        box-shadow: 0 0 7px rgba(255, 244, 190, 0.8);
-        opacity: 0;
-        z-index: 4;
-        pointer-events: none;
-        animation: v8-opening-switch-arrow-tip-flash 5000ms ease-out infinite;
-      }
-
-      .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-tip {
-        right: auto;
-        left: -4px;
-      }
-
       @keyframes v8-opening-switch-arrow-main-echo {
         0% {
+          opacity: 1;
           transform: translateX(0) scale(1);
         }
-        6% {
+        4.8% {
+          opacity: 1;
           transform: translateX(0) scale(1);
         }
-        9% {
-          transform: translateX(var(--v8-opening-switch-nudge, 3px)) scale(1.03);
+        10.4% {
+          opacity: 0.42;
+          transform: translateX(0) scale(1);
         }
-        12%,
+        16% {
+          opacity: 0.22;
+          transform: translateX(var(--v8-opening-switch-nudge, 1.5px)) scale(1.015);
+        }
+        21% {
+          opacity: 0.22;
+          transform: translateX(0) scale(1);
+        }
+        28%,
         100% {
+          opacity: 1;
           transform: translateX(0) scale(1);
         }
       }
 
       .v8-opening-switch-arrow-visual.is-prev {
-        --v8-opening-switch-nudge: -3px;
+        --v8-opening-switch-nudge: -1.5px;
       }
 
       .v8-opening-switch-arrow-visual.is-next {
-        --v8-opening-switch-nudge: 3px;
+        --v8-opening-switch-nudge: 1.5px;
       }
 
       @keyframes v8-opening-switch-arrow-echo-1-next {
         0%,
-        2.3% {
-          opacity: 0;
-          transform: translateX(0) scale(1);
-        }
         4.8% {
-          opacity: 0.34;
-          transform: translateX(8px) scale(1.14);
+          opacity: 0;
+          transform: translateX(10px) scale(1.16);
         }
-        13% {
-          opacity: 0.22;
-          transform: translateX(10px) scale(1.17);
+        10.4% {
+          opacity: 0.92;
+          transform: translateX(10px) scale(1.16);
         }
-        18%,
+        21% {
+          opacity: 0.42;
+          transform: translateX(10px) scale(1.16);
+        }
+        28%,
         100% {
           opacity: 0;
-          transform: translateX(12px) scale(1.18);
+          transform: translateX(10px) scale(1.16);
         }
       }
 
       @keyframes v8-opening-switch-arrow-echo-2-next {
         0%,
-        4.8% {
+        10.4% {
           opacity: 0;
-          transform: translateX(0) scale(1);
+          transform: translateX(24px) scale(1.34);
         }
-        7.2% {
-          opacity: 0.18;
-          transform: translateX(20px) scale(1.28);
+        21% {
+          opacity: 0.92;
+          transform: translateX(24px) scale(1.34);
         }
-        16% {
-          opacity: 0.1;
-          transform: translateX(22px) scale(1.31);
+        23% {
+          opacity: 0.92;
+          transform: translateX(24px) scale(1.34);
         }
-        18%,
+        28%,
         100% {
           opacity: 0;
-          transform: translateX(24px) scale(1.32);
+          transform: translateX(24px) scale(1.34);
         }
       }
 
       @keyframes v8-opening-switch-arrow-echo-1-prev {
         0%,
-        2.3% {
-          opacity: 0;
-          transform: translateX(0) scale(1);
-        }
         4.8% {
-          opacity: 0.34;
-          transform: translateX(-8px) scale(1.14);
+          opacity: 0;
+          transform: translateX(-10px) scale(1.16);
         }
-        13% {
-          opacity: 0.22;
-          transform: translateX(-10px) scale(1.17);
+        10.4% {
+          opacity: 0.92;
+          transform: translateX(-10px) scale(1.16);
         }
-        18%,
+        21% {
+          opacity: 0.42;
+          transform: translateX(-10px) scale(1.16);
+        }
+        28%,
         100% {
           opacity: 0;
-          transform: translateX(-12px) scale(1.18);
+          transform: translateX(-10px) scale(1.16);
         }
       }
 
       @keyframes v8-opening-switch-arrow-echo-2-prev {
         0%,
-        4.8% {
+        10.4% {
           opacity: 0;
-          transform: translateX(0) scale(1);
+          transform: translateX(-24px) scale(1.34);
         }
-        7.2% {
-          opacity: 0.18;
-          transform: translateX(-20px) scale(1.28);
+        21% {
+          opacity: 0.92;
+          transform: translateX(-24px) scale(1.34);
         }
-        16% {
-          opacity: 0.1;
-          transform: translateX(-22px) scale(1.31);
+        23% {
+          opacity: 0.92;
+          transform: translateX(-24px) scale(1.34);
         }
-        18%,
+        28%,
         100% {
           opacity: 0;
-          transform: translateX(-24px) scale(1.32);
-        }
-      }
-
-      @keyframes v8-opening-switch-arrow-tip-flash {
-        0%,
-        6% {
-          opacity: 0;
-          transform: scale(0.75);
-        }
-        8% {
-          opacity: 0.75;
-          transform: scale(1);
-        }
-        11%,
-        100% {
-          opacity: 0;
-          transform: scale(1.12);
+          transform: translateX(-24px) scale(1.34);
         }
       }
 
       @media (prefers-reduced-motion: reduce) {
         .v8-opening-switch-arrow-main,
-        .v8-opening-switch-arrow-echo,
-        .v8-opening-switch-arrow-tip {
+        .v8-opening-switch-arrow-echo {
           animation: none !important;
         }
       }
