@@ -243,17 +243,19 @@ function V8OpeningSunSwitcher({
       {controls.show ? (
         <>
           <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.prev)} onClick={onPreviousEvent} aria-label="上一場聚會">
-            <span className="v8-opening-switch-arrow-visual">
-              <img src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-opening-switch-arrow-glow is-outer" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-opening-switch-arrow-glow is-inner" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+            <span className="v8-opening-switch-arrow-visual is-prev">
+              <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-opening-switch-arrow-main" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <span className="v8-opening-switch-arrow-tip" aria-hidden="true" />
             </span>
           </button>
           <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.next)} onClick={onNextEvent} aria-label="下一場聚會">
-            <span className="v8-opening-switch-arrow-visual">
-              <img src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-opening-switch-arrow-glow is-outer" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-opening-switch-arrow-glow is-inner" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+            <span className="v8-opening-switch-arrow-visual is-next">
+              <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-opening-switch-arrow-main" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <span className="v8-opening-switch-arrow-tip" aria-hidden="true" />
             </span>
           </button>
         </>
@@ -281,11 +283,13 @@ export function V8OpeningSunContent({
   controls = v8OpeningSunDefaults,
   onPreviousEvent,
   onNextEvent,
+  canSwitchMeetup = true,
 }: {
   event: AlphaEvent | null | undefined;
   controls?: V8OpeningSunControls;
   onPreviousEvent: () => void;
   onNextEvent: () => void;
+  canSwitchMeetup?: boolean;
 }) {
   const assets = useMemo(() => buildV8OpeningSunAssets(import.meta.env.BASE_URL), []);
   if (!event) return null;
@@ -296,7 +300,9 @@ export function V8OpeningSunContent({
 
   return (
     <>
-      <V8OpeningSunSwitcher assets={assets} controls={controls.switchArrows} onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
+      {canSwitchMeetup ? (
+        <V8OpeningSunSwitcher assets={assets} controls={controls.switchArrows} onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
+      ) : null}
       <V8SunMessage text={shortDate(event.eventDate)} config={controls.messages.date} />
       <V8SunMessage text={event.name} config={controls.messages.name} />
       <V8SunMessage text={event.eventNote || ""} config={controls.messages.note} />
@@ -358,64 +364,194 @@ export function V8OpeningSunStyles() {
         height: auto;
       }
 
-      .v8-opening-switch-arrow-glow {
+      .v8-opening-switch-arrow-main {
+        position: relative;
+        z-index: 3;
+        animation: v8-opening-switch-arrow-main-echo 5000ms ease-out infinite;
+      }
+
+      .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-main,
+      .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-tip {
+        animation-delay: 300ms;
+      }
+
+      .v8-opening-switch-arrow-echo {
         position: absolute;
         inset: 0;
+        z-index: 1;
         opacity: 0;
-        animation: v8-opening-artwork-contour-glow-run 5000ms linear infinite;
         pointer-events: none;
+        transform-origin: center center;
+        filter: sepia(0.8) saturate(1.15) brightness(1.12) drop-shadow(0 0 4px rgba(255, 220, 134, 0.52));
       }
 
-      .v8-opening-switch-arrow-glow.is-outer {
-        filter: brightness(1.8) sepia(1) saturate(1.5) hue-rotate(350deg) drop-shadow(0 0 5px #ffe9a3) drop-shadow(0 0 12px #ffcf6b) drop-shadow(0 0 22px #ffb84d);
+      .v8-opening-switch-arrow-echo.is-echo-1 {
+        animation: v8-opening-switch-arrow-echo-1-next 5000ms ease-out infinite;
       }
 
-      .v8-opening-switch-arrow-glow.is-inner {
-        filter: brightness(4) grayscale(1) drop-shadow(0 0 2px #fff) drop-shadow(0 0 7px #fff);
+      .v8-opening-switch-arrow-echo.is-echo-2 {
+        animation: v8-opening-switch-arrow-echo-2-next 5000ms ease-out infinite;
       }
 
-      @keyframes v8-opening-artwork-contour-glow-run {
+      .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-echo.is-echo-1 {
+        animation-name: v8-opening-switch-arrow-echo-1-prev;
+        animation-delay: 300ms;
+      }
+
+      .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-echo.is-echo-2 {
+        animation-name: v8-opening-switch-arrow-echo-2-prev;
+        animation-delay: 300ms;
+      }
+
+      .v8-opening-switch-arrow-tip {
+        position: absolute;
+        top: 39%;
+        right: -4px;
+        width: 10px;
+        height: 22%;
+        border-radius: 999px;
+        background: rgba(255, 255, 245, 0.92);
+        box-shadow: 0 0 7px rgba(255, 244, 190, 0.8);
+        opacity: 0;
+        z-index: 4;
+        pointer-events: none;
+        animation: v8-opening-switch-arrow-tip-flash 5000ms ease-out infinite;
+      }
+
+      .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-tip {
+        right: auto;
+        left: -4px;
+      }
+
+      @keyframes v8-opening-switch-arrow-main-echo {
         0% {
+          transform: translateX(0) scale(1);
+        }
+        6% {
+          transform: translateX(0) scale(1);
+        }
+        9% {
+          transform: translateX(var(--v8-opening-switch-nudge, 3px)) scale(1.03);
+        }
+        12%,
+        100% {
+          transform: translateX(0) scale(1);
+        }
+      }
+
+      .v8-opening-switch-arrow-visual.is-prev {
+        --v8-opening-switch-nudge: -3px;
+      }
+
+      .v8-opening-switch-arrow-visual.is-next {
+        --v8-opening-switch-nudge: 3px;
+      }
+
+      @keyframes v8-opening-switch-arrow-echo-1-next {
+        0%,
+        2.3% {
           opacity: 0;
-          clip-path: inset(0 100% 76% 0);
+          transform: translateX(0) scale(1);
         }
-        2% {
-          opacity: 1;
+        4.8% {
+          opacity: 0.34;
+          transform: translateX(8px) scale(1.14);
         }
-        7.5% {
-          opacity: 1;
-          clip-path: inset(0 0 76% 78%);
+        13% {
+          opacity: 0.22;
+          transform: translateX(10px) scale(1.17);
         }
-        7.51% {
-          clip-path: inset(0 0 100% 78%);
-        }
-        15% {
-          opacity: 1;
-          clip-path: inset(78% 0 0 78%);
-        }
-        15.01% {
-          clip-path: inset(78% 0 0 100%);
-        }
-        22.5% {
-          opacity: 1;
-          clip-path: inset(78% 76% 0 0);
-        }
-        22.51% {
-          clip-path: inset(100% 76% 0 0);
-        }
-        30% {
-          opacity: 1;
-          clip-path: inset(0 76% 78% 0);
-        }
-        30.01%,
+        18%,
         100% {
           opacity: 0;
-          clip-path: inset(0 76% 78% 0);
+          transform: translateX(12px) scale(1.18);
+        }
+      }
+
+      @keyframes v8-opening-switch-arrow-echo-2-next {
+        0%,
+        4.8% {
+          opacity: 0;
+          transform: translateX(0) scale(1);
+        }
+        7.2% {
+          opacity: 0.18;
+          transform: translateX(20px) scale(1.28);
+        }
+        16% {
+          opacity: 0.1;
+          transform: translateX(22px) scale(1.31);
+        }
+        18%,
+        100% {
+          opacity: 0;
+          transform: translateX(24px) scale(1.32);
+        }
+      }
+
+      @keyframes v8-opening-switch-arrow-echo-1-prev {
+        0%,
+        2.3% {
+          opacity: 0;
+          transform: translateX(0) scale(1);
+        }
+        4.8% {
+          opacity: 0.34;
+          transform: translateX(-8px) scale(1.14);
+        }
+        13% {
+          opacity: 0.22;
+          transform: translateX(-10px) scale(1.17);
+        }
+        18%,
+        100% {
+          opacity: 0;
+          transform: translateX(-12px) scale(1.18);
+        }
+      }
+
+      @keyframes v8-opening-switch-arrow-echo-2-prev {
+        0%,
+        4.8% {
+          opacity: 0;
+          transform: translateX(0) scale(1);
+        }
+        7.2% {
+          opacity: 0.18;
+          transform: translateX(-20px) scale(1.28);
+        }
+        16% {
+          opacity: 0.1;
+          transform: translateX(-22px) scale(1.31);
+        }
+        18%,
+        100% {
+          opacity: 0;
+          transform: translateX(-24px) scale(1.32);
+        }
+      }
+
+      @keyframes v8-opening-switch-arrow-tip-flash {
+        0%,
+        6% {
+          opacity: 0;
+          transform: scale(0.75);
+        }
+        8% {
+          opacity: 0.75;
+          transform: scale(1);
+        }
+        11%,
+        100% {
+          opacity: 0;
+          transform: scale(1.12);
         }
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .v8-opening-switch-arrow-glow {
+        .v8-opening-switch-arrow-main,
+        .v8-opening-switch-arrow-echo,
+        .v8-opening-switch-arrow-tip {
           animation: none !important;
         }
       }

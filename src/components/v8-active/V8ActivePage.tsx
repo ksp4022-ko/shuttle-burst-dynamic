@@ -174,13 +174,14 @@ export function V8ActivePage({
   };
 
   const switchToAdjacentMeetup = (direction: -1 | 1) => {
-    if (!events.length || pendingAction) return;
+    if (events.length <= 1 || pendingAction) return;
     const currentIndex = Math.max(0, events.findIndex((event) => event.id === selectedEventId));
     const nextIndex = (currentIndex + direction + events.length) % events.length;
     const nextEvent = events[nextIndex];
     if (!nextEvent || nextEvent.id === selectedEventId) return;
     flow.setPendingSwitchEventId(nextEvent.id);
   };
+  const canSwitchMeetup = events.length > 1;
 
   const submitTigerSignup = async () => {
     if (!lineAuthToken || !lineIdentity?.profileComplete || lineIdentity.identityType !== "temp") return;
@@ -312,8 +313,8 @@ export function V8ActivePage({
             capacityBadgeControls={capacityBadgeControls}
             messageControls={sunMessageControls}
             switchArrowControls={switchArrowControls}
-            onPreviousEvent={() => switchToAdjacentMeetup(-1)}
-            onNextEvent={() => switchToAdjacentMeetup(1)}
+            onPreviousEvent={canSwitchMeetup ? () => switchToAdjacentMeetup(-1) : undefined}
+            onNextEvent={canSwitchMeetup ? () => switchToAdjacentMeetup(1) : undefined}
           />
         }
         scrollContent={
@@ -816,28 +817,30 @@ function V8SunMeetupSwitcher({
         <>
           <button
             type="button"
-            className="v8-sun-switch-arrow"
+            className="v8-sun-switch-arrow is-prev"
             style={switchArrowStyle(controls.prev)}
             onClick={onPreviousEvent}
             aria-label="上一場聚會"
           >
             <span className="v8-switch-arrow-visual">
-              <img src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-switch-arrow-glow is-outer" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-switch-arrow-glow is-inner" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-main" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <span className="v8-switch-arrow-tip" aria-hidden="true" />
             </span>
           </button>
           <button
             type="button"
-            className="v8-sun-switch-arrow"
+            className="v8-sun-switch-arrow is-next"
             style={switchArrowStyle(controls.next)}
             onClick={onNextEvent}
             aria-label="下一場聚會"
           >
             <span className="v8-switch-arrow-visual">
-              <img src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-switch-arrow-glow is-outer" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-switch-arrow-glow is-inner" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-main" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <span className="v8-switch-arrow-tip" aria-hidden="true" />
             </span>
           </button>
         </>
@@ -1779,20 +1782,63 @@ export function V8ActiveStyles() {
         height: auto;
       }
 
-      .v8-switch-arrow-glow {
+      .v8-switch-arrow-main {
+        position: relative;
+        z-index: 3;
+        animation: v8-switch-arrow-main-echo 5000ms ease-out infinite;
+      }
+
+      .v8-sun-switch-arrow.is-prev .v8-switch-arrow-main,
+      .v8-sun-switch-arrow.is-prev .v8-switch-arrow-tip {
+        animation-delay: 300ms;
+      }
+
+      .v8-switch-arrow-echo {
         position: absolute;
         inset: 0;
+        z-index: 1;
         opacity: 0;
-        animation: v8-artwork-contour-glow-run 5000ms linear infinite;
         pointer-events: none;
+        transform-origin: center center;
+        filter: sepia(0.8) saturate(1.25) brightness(1.14) drop-shadow(0 0 5px rgba(255, 220, 134, 0.62));
       }
 
-      .v8-switch-arrow-glow.is-outer {
-        filter: brightness(1.8) sepia(1) saturate(1.5) hue-rotate(350deg) drop-shadow(0 0 5px #ffe9a3) drop-shadow(0 0 12px #ffcf6b) drop-shadow(0 0 22px #ffb84d);
+      .v8-switch-arrow-echo.is-echo-1 {
+        animation: v8-switch-arrow-echo-1-next 5000ms ease-out infinite;
       }
 
-      .v8-switch-arrow-glow.is-inner {
-        filter: brightness(4) grayscale(1) drop-shadow(0 0 2px #fff) drop-shadow(0 0 7px #fff);
+      .v8-switch-arrow-echo.is-echo-2 {
+        animation: v8-switch-arrow-echo-2-next 5000ms ease-out infinite;
+      }
+
+      .v8-sun-switch-arrow.is-prev .v8-switch-arrow-echo.is-echo-1 {
+        animation-name: v8-switch-arrow-echo-1-prev;
+        animation-delay: 300ms;
+      }
+
+      .v8-sun-switch-arrow.is-prev .v8-switch-arrow-echo.is-echo-2 {
+        animation-name: v8-switch-arrow-echo-2-prev;
+        animation-delay: 300ms;
+      }
+
+      .v8-switch-arrow-tip {
+        position: absolute;
+        top: 39%;
+        right: -4px;
+        width: 10px;
+        height: 22%;
+        border-radius: 999px;
+        background: rgba(255, 255, 245, 0.95);
+        box-shadow: 0 0 8px rgba(255, 244, 190, 0.9);
+        opacity: 0;
+        z-index: 4;
+        pointer-events: none;
+        animation: v8-switch-arrow-tip-flash 5000ms ease-out infinite;
+      }
+
+      .v8-sun-switch-arrow.is-prev .v8-switch-arrow-tip {
+        right: auto;
+        left: -4px;
       }
 
       .v8-sun-info-badge {
@@ -2034,43 +2080,128 @@ export function V8ActiveStyles() {
         text-decoration: underline;
       }
 
-      @keyframes v8-artwork-contour-glow-run {
+      @keyframes v8-switch-arrow-main-echo {
         0% {
+          transform: translateX(0) scale(1);
+        }
+        6% {
+          transform: translateX(0) scale(1);
+        }
+        9% {
+          transform: translateX(var(--v8-switch-nudge, 3px)) scale(1.03);
+        }
+        12%,
+        100% {
+          transform: translateX(0) scale(1);
+        }
+      }
+
+      .v8-sun-switch-arrow.is-prev {
+        --v8-switch-nudge: -3px;
+      }
+
+      .v8-sun-switch-arrow.is-next {
+        --v8-switch-nudge: 3px;
+      }
+
+      @keyframes v8-switch-arrow-echo-1-next {
+        0%,
+        2.3% {
           opacity: 0;
-          clip-path: inset(0 100% 76% 0);
+          transform: translateX(0) scale(1);
         }
-        2% {
-          opacity: 1;
+        4.8% {
+          opacity: 0.4;
+          transform: translateX(8px) scale(1.14);
         }
-        7.5% {
-          opacity: 1;
-          clip-path: inset(0 0 76% 78%);
+        13% {
+          opacity: 0.26;
+          transform: translateX(10px) scale(1.17);
         }
-        7.51% {
-          clip-path: inset(0 0 100% 78%);
-        }
-        15% {
-          opacity: 1;
-          clip-path: inset(78% 0 0 78%);
-        }
-        15.01% {
-          clip-path: inset(78% 0 0 100%);
-        }
-        22.5% {
-          opacity: 1;
-          clip-path: inset(78% 76% 0 0);
-        }
-        22.51% {
-          clip-path: inset(100% 76% 0 0);
-        }
-        30% {
-          opacity: 1;
-          clip-path: inset(0 76% 78% 0);
-        }
-        30.01%,
+        18%,
         100% {
           opacity: 0;
-          clip-path: inset(0 76% 78% 0);
+          transform: translateX(12px) scale(1.18);
+        }
+      }
+
+      @keyframes v8-switch-arrow-echo-2-next {
+        0%,
+        4.8% {
+          opacity: 0;
+          transform: translateX(0) scale(1);
+        }
+        7.2% {
+          opacity: 0.22;
+          transform: translateX(20px) scale(1.28);
+        }
+        16% {
+          opacity: 0.12;
+          transform: translateX(22px) scale(1.31);
+        }
+        18%,
+        100% {
+          opacity: 0;
+          transform: translateX(24px) scale(1.32);
+        }
+      }
+
+      @keyframes v8-switch-arrow-echo-1-prev {
+        0%,
+        2.3% {
+          opacity: 0;
+          transform: translateX(0) scale(1);
+        }
+        4.8% {
+          opacity: 0.4;
+          transform: translateX(-8px) scale(1.14);
+        }
+        13% {
+          opacity: 0.26;
+          transform: translateX(-10px) scale(1.17);
+        }
+        18%,
+        100% {
+          opacity: 0;
+          transform: translateX(-12px) scale(1.18);
+        }
+      }
+
+      @keyframes v8-switch-arrow-echo-2-prev {
+        0%,
+        4.8% {
+          opacity: 0;
+          transform: translateX(0) scale(1);
+        }
+        7.2% {
+          opacity: 0.22;
+          transform: translateX(-20px) scale(1.28);
+        }
+        16% {
+          opacity: 0.12;
+          transform: translateX(-22px) scale(1.31);
+        }
+        18%,
+        100% {
+          opacity: 0;
+          transform: translateX(-24px) scale(1.32);
+        }
+      }
+
+      @keyframes v8-switch-arrow-tip-flash {
+        0%,
+        6% {
+          opacity: 0;
+          transform: scale(0.75);
+        }
+        8% {
+          opacity: 0.9;
+          transform: scale(1);
+        }
+        11%,
+        100% {
+          opacity: 0;
+          transform: scale(1.12);
         }
       }
 
@@ -2123,7 +2254,9 @@ export function V8ActiveStyles() {
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .v8-switch-arrow-glow,
+        .v8-switch-arrow-main,
+        .v8-switch-arrow-echo,
+        .v8-switch-arrow-tip,
         .v8-cta-interaction {
           animation: none !important;
         }

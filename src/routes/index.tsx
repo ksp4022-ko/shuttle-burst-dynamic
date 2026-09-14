@@ -509,6 +509,7 @@ export function Index() {
     flow.events.length > 1 && previewPickedEventIndex >= 0
       ? `${previewPickedEventIndex + 1} / ${flow.events.length}`
       : "";
+  const canSwitchMeetup = flow.events.length > 1;
 
   const markPreviewInteraction = useCallback(() => {
     setPreviewActivityKey((value) => value + 1);
@@ -556,7 +557,7 @@ export function Index() {
 
   const selectAdjacentV8Meetup = useCallback(
     (direction: -1 | 1) => {
-      if (!flow.events.length || flow.pendingAction) return;
+      if (flow.events.length <= 1 || flow.pendingAction) return;
       const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
       const currentIndex = Math.max(
         0,
@@ -1280,8 +1281,8 @@ export function Index() {
               confirmed={v8MeetupConfirmed}
               confirmButtonRef={confirmMeetupButtonRef}
               confirmDisabled={Boolean(flow.pendingAction) || !previewPickedEvent}
-              onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
-              onNextEvent={() => selectAdjacentV8Meetup(1)}
+              onPreviousEvent={canSwitchMeetup ? () => selectAdjacentV8Meetup(-1) : undefined}
+              onNextEvent={canSwitchMeetup ? () => selectAdjacentV8Meetup(1) : undefined}
               onConfirm={() => void confirmV8MeetupSelection()}
               // Open 頁面自己的紅日內容(複製自 Active 的 V8ActiveSunContent，
               // 獨立程式碼、不共用) -- 資料來源接目前預覽/游標選中的那場聚會
@@ -1291,6 +1292,7 @@ export function Index() {
                 <V8OpeningSunContent
                   event={previewPickedEvent}
                   controls={openingSunTuning}
+                  canSwitchMeetup={canSwitchMeetup}
                   onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
                   onNextEvent={() => selectAdjacentV8Meetup(1)}
                 />
