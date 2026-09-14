@@ -14,7 +14,12 @@ import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepa
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
-import { V8OpeningSunContent, V8OpeningSunStyles } from "@/components/v8-hero/V8OpeningSunContent";
+import {
+  V8OpeningSunContent,
+  V8OpeningSunStyles,
+  v8OpeningSunDefaults,
+  type V8OpeningSunControls,
+} from "@/components/v8-hero/V8OpeningSunContent";
 import { V8ActivePage } from "@/components/v8-active/V8ActivePage";
 import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8IntroVideo";
 import { v8KangxuanIntroConfig } from "@/components/v8-active/v8IntroConfig";
@@ -237,6 +242,10 @@ type TutorialToggleKey = "enabled" | "targetGlowEnabled";
 type CountdownNumericKey = "seconds";
 type VisualNumericKey = Exclude<keyof VisualTuning, "interactionBlockerEnabled" | "skipVisible">;
 type VisualToggleKey = "interactionBlockerEnabled" | "skipVisible";
+type OpeningSunMessageId = keyof V8OpeningSunControls["messages"];
+type OpeningSunMessageNumericKey = Exclude<keyof V8OpeningSunControls["messages"]["date"], "show" | "bold">;
+type OpeningSunSwitchArrowId = "prev" | "next";
+type OpeningSunSwitchArrowNumericKey = keyof V8OpeningSunControls["switchArrows"]["prev"];
 const DEFAULT_TUTORIAL_TUNING: TutorialTuning = {
   enabled: true,
   bubbleWidth: 220,
@@ -331,6 +340,7 @@ export function Index() {
   const [tutorialTuning, setTutorialTuning] = useState<TutorialTuning>(DEFAULT_TUTORIAL_TUNING);
   const [countdownTuning, setCountdownTuning] = useState<CountdownTuning>(DEFAULT_COUNTDOWN_TUNING);
   const [visualTuning, setVisualTuning] = useState<VisualTuning>(DEFAULT_VISUAL_TUNING);
+  const [openingSunTuning, setOpeningSunTuning] = useState<V8OpeningSunControls>(v8OpeningSunDefaults);
   const [freezeParticles, setFreezeParticles] = useState(true);
   const [handoffReplayPhase, setHandoffReplayPhase] = useState<HandoffReplayPhase>("idle");
   const [timingLabExpanded, setTimingLabExpanded] = useState(false);
@@ -433,18 +443,21 @@ export function Index() {
         tutorial?: Partial<TutorialTuning>;
         countdown?: Partial<CountdownTuning>;
         visual?: Partial<VisualTuning>;
+        openingSun?: Partial<V8OpeningSunControls>;
       } & Partial<HandoffTiming>;
       setHandoffTiming(normalizeHandoffTiming(parsed.handoff || parsed));
       if (parsed.particle) setParticleTuning(normalizeParticleTuning(parsed.particle));
       if (parsed.tutorial) setTutorialTuning(normalizeTutorialTuning(parsed.tutorial));
       if (parsed.countdown) setCountdownTuning(normalizeCountdownTuning(parsed.countdown));
       if (parsed.visual) setVisualTuning(normalizeVisualTuning(parsed.visual));
+      if (parsed.openingSun) setOpeningSunTuning(normalizeOpeningSunTuning(parsed.openingSun));
     } catch {
       setHandoffTiming(DEFAULT_HANDOFF_TIMING);
       setParticleTuning(DEFAULT_PARTICLE_TUNING);
       setTutorialTuning(DEFAULT_TUTORIAL_TUNING);
       setCountdownTuning(DEFAULT_COUNTDOWN_TUNING);
       setVisualTuning(DEFAULT_VISUAL_TUNING);
+      setOpeningSunTuning(v8OpeningSunDefaults);
     }
   }, []);
 
@@ -458,12 +471,13 @@ export function Index() {
           tutorial: tutorialTuning,
           countdown: countdownTuning,
           visual: visualTuning,
+          openingSun: openingSunTuning,
         }),
       );
     } catch {
       // The lab still works if storage is unavailable.
     }
-  }, [handoffTiming, particleTuning, tutorialTuning, countdownTuning, visualTuning]);
+  }, [handoffTiming, particleTuning, tutorialTuning, countdownTuning, visualTuning, openingSunTuning]);
 
   useEffect(() => {
     if (!active && !rotating) {
@@ -1039,6 +1053,7 @@ export function Index() {
           tutorial={tutorialTuning}
           countdown={countdownTuning}
           visual={visualTuning}
+          openingSun={openingSunTuning}
           freezeParticles={freezeParticles}
           expanded={timingLabExpanded}
           activeSection={activeTuningSection}
@@ -1081,6 +1096,39 @@ export function Index() {
           onVisualToggle={(key) =>
             setVisualTuning((current) => ({ ...current, [key]: !current[key] }))
           }
+          onOpeningSunMessageChange={(message, key, value) =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              messages: {
+                ...current.messages,
+                [message]: { ...current.messages[message], [key]: value },
+              },
+            }))
+          }
+          onOpeningSunMessageToggle={(message, key) =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              messages: {
+                ...current.messages,
+                [message]: { ...current.messages[message], [key]: !current.messages[message][key] },
+              },
+            }))
+          }
+          onOpeningSunSwitchArrowChange={(arrow, key, value) =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              switchArrows: {
+                ...current.switchArrows,
+                [arrow]: { ...current.switchArrows[arrow], [key]: value },
+              },
+            }))
+          }
+          onToggleOpeningSunSwitchArrows={() =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              switchArrows: { ...current.switchArrows, show: !current.switchArrows.show },
+            }))
+          }
           onReplayHandoff={replayHandoff}
           onReplayParticles={() => setParticleReplayKey((value) => value + 1)}
           onReplayTutorial={startTutorial}
@@ -1107,6 +1155,7 @@ export function Index() {
             setTutorialTuning(DEFAULT_TUTORIAL_TUNING);
             setCountdownTuning(DEFAULT_COUNTDOWN_TUNING);
             setVisualTuning(DEFAULT_VISUAL_TUNING);
+            setOpeningSunTuning(v8OpeningSunDefaults);
           }}
         />
       )}
@@ -1241,6 +1290,7 @@ export function Index() {
               sunContent={
                 <V8OpeningSunContent
                   event={previewPickedEvent}
+                  controls={openingSunTuning}
                   onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
                   onNextEvent={() => selectAdjacentV8Meetup(1)}
                 />
@@ -1576,6 +1626,7 @@ function HandoffTimingLab({
   tutorial,
   countdown,
   visual,
+  openingSun,
   freezeParticles,
   expanded,
   activeSection,
@@ -1594,6 +1645,10 @@ function HandoffTimingLab({
   onVisualChange,
   onToggleSkip,
   onVisualToggle,
+  onOpeningSunMessageChange,
+  onOpeningSunMessageToggle,
+  onOpeningSunSwitchArrowChange,
+  onToggleOpeningSunSwitchArrows,
   onReplayHandoff,
   onReplayParticles,
   onReplayTutorial,
@@ -1609,6 +1664,7 @@ function HandoffTimingLab({
   tutorial: TutorialTuning;
   countdown: CountdownTuning;
   visual: VisualTuning;
+  openingSun: V8OpeningSunControls;
   freezeParticles: boolean;
   expanded: boolean;
   activeSection: TuningSectionId;
@@ -1627,6 +1683,10 @@ function HandoffTimingLab({
   onVisualChange: (key: VisualNumericKey, value: number) => void;
   onToggleSkip: () => void;
   onVisualToggle: (key: VisualToggleKey) => void;
+  onOpeningSunMessageChange: (message: OpeningSunMessageId, key: OpeningSunMessageNumericKey, value: number) => void;
+  onOpeningSunMessageToggle: (message: OpeningSunMessageId, key: "show" | "bold") => void;
+  onOpeningSunSwitchArrowChange: (arrow: OpeningSunSwitchArrowId, key: OpeningSunSwitchArrowNumericKey, value: number) => void;
+  onToggleOpeningSunSwitchArrows: () => void;
   onReplayHandoff: () => void;
   onReplayParticles: () => void;
   onReplayTutorial: () => void;
@@ -1638,7 +1698,7 @@ function HandoffTimingLab({
   onReset: () => void;
 }) {
   const copyCurrentSettings = () => {
-    const payload = JSON.stringify({ handoff: timing, particle, tutorial, countdown, visual });
+    const payload = JSON.stringify({ handoff: timing, particle, tutorial, countdown, visual, openingSun });
     void navigator.clipboard?.writeText(payload);
   };
 
@@ -1674,6 +1734,45 @@ function HandoffTimingLab({
             <TimingControl label="INTERWEAVE" description="交織量" value={particle.interweaveAmount} min={0} max={44} step={1} unit="px" onChange={(value) => onParticleChange("interweaveAmount", value)} />
             <TimingControl label="CONVERGE X" description="吸附前匯流位置" value={particle.convergencePosition} min={18} max={58} step={1} unit="%" onChange={(value) => onParticleChange("convergencePosition", value)} />
             <div className="sd-timing-actions is-grid"><button type="button" onClick={onReplayParticles}>Replay particle inflow</button></div>
+
+            <div className="sd-timing-subgroup">OPEN SUN DATE</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("date", "show")}>{openingSun.messages.date.show ? "Hide date" : "Show date"}</button><button type="button" onClick={() => onOpeningSunMessageToggle("date", "bold")}>{openingSun.messages.date.bold ? "Date bold" : "Date regular"}</button></div>
+            <TimingControl label="DATE X" description="開場紅日日期 X" value={openingSun.messages.date.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("date", "x", value)} />
+            <TimingControl label="DATE Y" description="開場紅日日期 Y" value={openingSun.messages.date.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("date", "y", value)} />
+            <TimingControl label="DATE SCALE" description="開場紅日日期縮放" value={openingSun.messages.date.scale} min={0.2} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunMessageChange("date", "scale", value)} />
+            <TimingControl label="DATE ROT" description="開場紅日日期旋轉" value={openingSun.messages.date.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunMessageChange("date", "rotation", value)} />
+            <TimingControl label="DATE FONT" description="開場紅日日期字級" value={openingSun.messages.date.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("date", "fontSize", value)} />
+
+            <div className="sd-timing-subgroup">OPEN SUN NAME</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("name", "show")}>{openingSun.messages.name.show ? "Hide name" : "Show name"}</button><button type="button" onClick={() => onOpeningSunMessageToggle("name", "bold")}>{openingSun.messages.name.bold ? "Name bold" : "Name regular"}</button></div>
+            <TimingControl label="NAME X" description="開場紅日聚會名 X" value={openingSun.messages.name.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "x", value)} />
+            <TimingControl label="NAME Y" description="開場紅日聚會名 Y" value={openingSun.messages.name.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "y", value)} />
+            <TimingControl label="NAME SCALE" description="開場紅日聚會名縮放" value={openingSun.messages.name.scale} min={0.2} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunMessageChange("name", "scale", value)} />
+            <TimingControl label="NAME ROT" description="開場紅日聚會名旋轉" value={openingSun.messages.name.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunMessageChange("name", "rotation", value)} />
+            <TimingControl label="NAME FONT" description="開場紅日聚會名字級" value={openingSun.messages.name.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("name", "fontSize", value)} />
+
+            <div className="sd-timing-subgroup">OPEN SUN NOTE</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("note", "show")}>{openingSun.messages.note.show ? "Hide note" : "Show note"}</button><button type="button" onClick={() => onOpeningSunMessageToggle("note", "bold")}>{openingSun.messages.note.bold ? "Note bold" : "Note regular"}</button></div>
+            <TimingControl label="NOTE X" description="開場紅日備註 X" value={openingSun.messages.note.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("note", "x", value)} />
+            <TimingControl label="NOTE Y" description="開場紅日備註 Y" value={openingSun.messages.note.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("note", "y", value)} />
+            <TimingControl label="NOTE SCALE" description="開場紅日備註縮放" value={openingSun.messages.note.scale} min={0.2} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunMessageChange("note", "scale", value)} />
+            <TimingControl label="NOTE ROT" description="開場紅日備註旋轉" value={openingSun.messages.note.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunMessageChange("note", "rotation", value)} />
+            <TimingControl label="NOTE FONT" description="開場紅日備註字級" value={openingSun.messages.note.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("note", "fontSize", value)} />
+
+            <div className="sd-timing-subgroup">OPEN SWITCH ARROW</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onToggleOpeningSunSwitchArrows}>{openingSun.switchArrows.show ? "Hide arrows" : "Show arrows"}</button></div>
+            <TimingControl label="PREV X" description="開場上一場箭頭 X" value={openingSun.switchArrows.prev.x} min={-30} max={130} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "x", value)} />
+            <TimingControl label="PREV Y" description="開場上一場箭頭 Y" value={openingSun.switchArrows.prev.y} min={-30} max={130} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "y", value)} />
+            <TimingControl label="PREV SCALE" description="開場上一場箭頭縮放" value={openingSun.switchArrows.prev.scale} min={0.3} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "scale", value)} />
+            <TimingControl label="PREV ROT" description="開場上一場箭頭旋轉" value={openingSun.switchArrows.prev.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "rotation", value)} />
+            <TimingControl label="PREV OPACITY" description="開場上一場箭頭透明度" value={openingSun.switchArrows.prev.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "opacity", value)} />
+            <TimingControl label="PREV Z" description="開場上一場箭頭層級" value={openingSun.switchArrows.prev.zIndex} min={0} max={40} step={1} unit="" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "zIndex", value)} />
+            <TimingControl label="NEXT X" description="開場下一場箭頭 X" value={openingSun.switchArrows.next.x} min={-30} max={130} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("next", "x", value)} />
+            <TimingControl label="NEXT Y" description="開場下一場箭頭 Y" value={openingSun.switchArrows.next.y} min={-30} max={130} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("next", "y", value)} />
+            <TimingControl label="NEXT SCALE" description="開場下一場箭頭縮放" value={openingSun.switchArrows.next.scale} min={0.3} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunSwitchArrowChange("next", "scale", value)} />
+            <TimingControl label="NEXT ROT" description="開場下一場箭頭旋轉" value={openingSun.switchArrows.next.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunSwitchArrowChange("next", "rotation", value)} />
+            <TimingControl label="NEXT OPACITY" description="開場下一場箭頭透明度" value={openingSun.switchArrows.next.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("next", "opacity", value)} />
+            <TimingControl label="NEXT Z" description="開場下一場箭頭層級" value={openingSun.switchArrows.next.zIndex} min={0} max={40} step={1} unit="" onChange={(value) => onOpeningSunSwitchArrowChange("next", "zIndex", value)} />
 
             <div className="sd-timing-subgroup">B. 粒子流動 / 吸附</div>
             <TimingControl label="INITIAL SPEED" description="初段流入速度" value={particle.initialInflowSpeed} min={45} max={180} step={5} unit="%" onChange={(value) => onParticleChange("initialInflowSpeed", value)} />
@@ -2129,6 +2228,45 @@ function normalizeVisualTuning(value: Partial<VisualTuning> | undefined): Visual
     spotlightStrength: clampTiming(source.spotlightStrength, 0, 100, DEFAULT_VISUAL_TUNING.spotlightStrength),
     spotlightSoftness: clampTiming(source.spotlightSoftness, 8, 80, DEFAULT_VISUAL_TUNING.spotlightSoftness),
     skipVisible: typeof source.skipVisible === "boolean" ? source.skipVisible : DEFAULT_VISUAL_TUNING.skipVisible,
+  };
+}
+
+function normalizeOpeningSunTuning(value: Partial<V8OpeningSunControls> | undefined): V8OpeningSunControls {
+  const source = value || {};
+  const normalizeMessage = (
+    message: Partial<V8OpeningSunControls["messages"]["date"]> | undefined,
+    fallback: V8OpeningSunControls["messages"]["date"],
+  ) => ({
+    show: typeof message?.show === "boolean" ? message.show : fallback.show,
+    x: clampTiming(message?.x, -50, 150, fallback.x),
+    y: clampTiming(message?.y, -50, 150, fallback.y),
+    scale: clampTiming(message?.scale, 0.2, 3, fallback.scale),
+    rotation: clampTiming(message?.rotation, -180, 180, fallback.rotation),
+    fontSize: clampTiming(message?.fontSize, 4, 48, fallback.fontSize),
+    bold: typeof message?.bold === "boolean" ? message.bold : fallback.bold,
+  });
+  const normalizeArrow = (
+    arrow: Partial<V8OpeningSunControls["switchArrows"]["prev"]> | undefined,
+    fallback: V8OpeningSunControls["switchArrows"]["prev"],
+  ) => ({
+    x: clampTiming(arrow?.x, -30, 130, fallback.x),
+    y: clampTiming(arrow?.y, -30, 130, fallback.y),
+    scale: clampTiming(arrow?.scale, 0.3, 3, fallback.scale),
+    rotation: clampTiming(arrow?.rotation, -180, 180, fallback.rotation),
+    opacity: clampTiming(arrow?.opacity, 0, 100, fallback.opacity),
+    zIndex: clampTiming(arrow?.zIndex, 0, 40, fallback.zIndex),
+  });
+  return {
+    messages: {
+      date: normalizeMessage(source.messages?.date, v8OpeningSunDefaults.messages.date),
+      name: normalizeMessage(source.messages?.name, v8OpeningSunDefaults.messages.name),
+      note: normalizeMessage(source.messages?.note, v8OpeningSunDefaults.messages.note),
+    },
+    switchArrows: {
+      show: typeof source.switchArrows?.show === "boolean" ? source.switchArrows.show : v8OpeningSunDefaults.switchArrows.show,
+      prev: normalizeArrow(source.switchArrows?.prev, v8OpeningSunDefaults.switchArrows.prev),
+      next: normalizeArrow(source.switchArrows?.next, v8OpeningSunDefaults.switchArrows.next),
+    },
   };
 }
 function RacketImage({ src, className = "" }: { src: string; className?: string }) {

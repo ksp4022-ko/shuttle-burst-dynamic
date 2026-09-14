@@ -821,7 +821,11 @@ function V8SunMeetupSwitcher({
             onClick={onPreviousEvent}
             aria-label="上一場聚會"
           >
-            <img src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+            <span className="v8-switch-arrow-visual">
+              <img src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-glow is-outer" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-glow is-inner" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+            </span>
           </button>
           <button
             type="button"
@@ -830,7 +834,11 @@ function V8SunMeetupSwitcher({
             onClick={onNextEvent}
             aria-label="下一場聚會"
           >
-            <img src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+            <span className="v8-switch-arrow-visual">
+              <img src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-glow is-outer" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-switch-arrow-glow is-inner" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+            </span>
           </button>
         </>
       ) : null}
@@ -1281,9 +1289,38 @@ export function V8IdentityScrollContent({
   onHelperSignup: () => void;
   onHelperCancel: () => void;
 }) {
+  const [ctaPressed, setCtaPressed] = useState(false);
+  const [ctaRebounding, setCtaRebounding] = useState(false);
+  const previousBusyRef = useRef(busy);
+  const ctaActionArmedRef = useRef(false);
+
+  useEffect(() => {
+    const wasBusy = previousBusyRef.current;
+    previousBusyRef.current = busy;
+    if (wasBusy || !busy) return;
+    if (!ctaActionArmedRef.current) return;
+    ctaActionArmedRef.current = false;
+    setCtaRebounding(true);
+    const timer = window.setTimeout(() => setCtaRebounding(false), 220);
+    return () => window.clearTimeout(timer);
+  }, [busy]);
+
+  const handlePrimaryClick = () => {
+    ctaActionArmedRef.current = true;
+    onPrimaryAction();
+  };
+
   if (!controls.show) return null;
 
   const status = meetupStatusLabel(identity);
+  const ctaClassName = [
+    "v8-scroll-cta",
+    "v8-scroll-cta-img",
+    ctaPressed ? "is-pressed" : "",
+    ctaRebounding ? "is-rebounding" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className="v8-scroll-identity">
@@ -1300,14 +1337,21 @@ export function V8IdentityScrollContent({
       </div>
       <button
         type="button"
-        className="v8-scroll-cta v8-scroll-cta-img"
+        className={ctaClassName}
         style={identityVisualStyle(controls.cta)}
         disabled={busy}
-        onClick={onPrimaryAction}
+        onClick={handlePrimaryClick}
+        onPointerDown={() => setCtaPressed(true)}
+        onPointerUp={() => setCtaPressed(false)}
+        onPointerLeave={() => setCtaPressed(false)}
+        onPointerCancel={() => setCtaPressed(false)}
+        onBlur={() => setCtaPressed(false)}
         aria-label={busy ? pendingLabel : primaryActionLabel(identity)}
       >
-        <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
-        <V8CtaGlowOutline outlineKey={primaryActionOutlineKey(identity)} />
+        <span className="v8-cta-interaction">
+          <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
+          <V8CtaGlowOutline outlineKey={primaryActionOutlineKey(identity)} />
+        </span>
       </button>
       <button
         type="button"
@@ -1722,10 +1766,33 @@ export function V8ActiveStyles() {
         place-items: center;
       }
 
-      .v8-sun-switch-arrow img {
+      .v8-switch-arrow-visual {
+        position: relative;
         display: block;
         width: 100%;
         height: auto;
+      }
+
+      .v8-switch-arrow-visual > img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .v8-switch-arrow-glow {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        animation: v8-artwork-contour-glow-run 5000ms linear infinite;
+        pointer-events: none;
+      }
+
+      .v8-switch-arrow-glow.is-outer {
+        filter: brightness(1.8) sepia(1) saturate(1.5) hue-rotate(350deg) drop-shadow(0 0 5px #ffe9a3) drop-shadow(0 0 12px #ffcf6b) drop-shadow(0 0 22px #ffb84d);
+      }
+
+      .v8-switch-arrow-glow.is-inner {
+        filter: brightness(4) grayscale(1) drop-shadow(0 0 2px #fff) drop-shadow(0 0 7px #fff);
       }
 
       .v8-sun-info-badge {
@@ -1882,6 +1949,15 @@ export function V8ActiveStyles() {
         padding: 0;
       }
 
+      .v8-cta-interaction {
+        position: relative;
+        display: block;
+        width: max-content;
+        height: max-content;
+        animation: v8-cta-idle-rhythm 5000ms linear infinite;
+        transform-origin: center;
+      }
+
       /* Laser-engraved glow-run reminder (V8CtaGlowOutline) -- sized to
          exactly cover its button, viewBox matches the plaque's own outline
          coordinate space so the traced path lines up with the artwork
@@ -1922,6 +1998,16 @@ export function V8ActiveStyles() {
         height: auto;
       }
 
+      .v8-scroll-cta.is-pressed .v8-cta-interaction {
+        animation: none;
+        transform: translateY(2px) scale(0.91);
+        transition: transform 90ms ease-out;
+      }
+
+      .v8-scroll-cta.is-rebounding .v8-cta-interaction {
+        animation: v8-cta-rebound 200ms cubic-bezier(.2, .9, .2, 1);
+      }
+
       .v8-scroll-cta:disabled,
       .v8-scroll-helper-btn:disabled,
       .v8-scroll-forget:disabled {
@@ -1946,6 +2032,106 @@ export function V8ActiveStyles() {
         color: rgba(58, 42, 18, 0.52);
         line-height: 1;
         text-decoration: underline;
+      }
+
+      @keyframes v8-artwork-contour-glow-run {
+        0% {
+          opacity: 0;
+          clip-path: inset(0 100% 76% 0);
+        }
+        2% {
+          opacity: 1;
+        }
+        7.5% {
+          opacity: 1;
+          clip-path: inset(0 0 76% 78%);
+        }
+        7.51% {
+          clip-path: inset(0 0 100% 78%);
+        }
+        15% {
+          opacity: 1;
+          clip-path: inset(78% 0 0 78%);
+        }
+        15.01% {
+          clip-path: inset(78% 0 0 100%);
+        }
+        22.5% {
+          opacity: 1;
+          clip-path: inset(78% 76% 0 0);
+        }
+        22.51% {
+          clip-path: inset(100% 76% 0 0);
+        }
+        30% {
+          opacity: 1;
+          clip-path: inset(0 76% 78% 0);
+        }
+        30.01%,
+        100% {
+          opacity: 0;
+          clip-path: inset(0 76% 78% 0);
+        }
+      }
+
+      @keyframes v8-cta-idle-rhythm {
+        0%,
+        30%,
+        32% {
+          transform: translateX(0) rotate(0deg) scale(1);
+        }
+        35% {
+          transform: translateX(-5px) rotate(-1.2deg) scale(1);
+        }
+        38% {
+          transform: translateX(5px) rotate(1.2deg) scale(1);
+        }
+        39% {
+          transform: translateX(0) rotate(0deg) scale(1);
+        }
+        41% {
+          transform: translateX(-2px) rotate(-0.7deg) scale(1);
+        }
+        43% {
+          transform: translateX(3px) rotate(0.9deg) scale(1);
+        }
+        45% {
+          transform: translateX(-3px) rotate(-1deg) scale(1);
+        }
+        47% {
+          transform: translateX(2px) rotate(0.7deg) scale(1);
+        }
+        49% {
+          transform: translateX(-1px) rotate(-0.4deg) scale(1);
+        }
+        50%,
+        100% {
+          transform: translateX(0) rotate(0deg) scale(1);
+        }
+      }
+
+      @keyframes v8-cta-rebound {
+        0% {
+          transform: translateY(2px) scale(0.91);
+        }
+        55% {
+          transform: translateY(-1px) scale(1.045);
+        }
+        100% {
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .v8-switch-arrow-glow,
+        .v8-cta-interaction {
+          animation: none !important;
+        }
+
+        .v8-scroll-cta.is-pressed .v8-cta-interaction {
+          transform: none;
+          filter: brightness(0.92);
+        }
       }
 
       .v8-active-identity-prompt {

@@ -128,8 +128,8 @@ export const v8ActiveRosterV2Files = {
 // Meetup switch arrows (‹/›) -- replaces the old CSS-drawn circle+glyph
 // (see V8SunMeetupSwitcher in V8ActivePage.tsx), per the user's request.
 export const v8ActiveSunSwitchArrowFiles = {
-  prev: "sun-switch-arrow-prev-v1.webp",
-  next: "sun-switch-arrow-next-v1.webp",
+  prev: "v8-switch-meetup-prev-display.webp",
+  next: "v8-switch-meetup-next-display.webp",
 } as const;
 
 export function buildV8ActiveAssets(baseUrl: string) {
@@ -168,8 +168,8 @@ export function buildV8ActiveAssets(baseUrl: string) {
     rosterV2A1: `${activeBase}/${v8ActiveRosterV2Files.a1}`,
     rosterV2B1: `${activeBase}/${v8ActiveRosterV2Files.b1}`,
     rosterV2B2: `${activeBase}/${v8ActiveRosterV2Files.b2}`,
-    sunSwitchArrowPrev: `${activeBase}/${v8ActiveSunSwitchArrowFiles.prev}`,
-    sunSwitchArrowNext: `${activeBase}/${v8ActiveSunSwitchArrowFiles.next}`,
+    sunSwitchArrowPrev: `${statusAssetBase}/${v8ActiveSunSwitchArrowFiles.prev}`,
+    sunSwitchArrowNext: `${statusAssetBase}/${v8ActiveSunSwitchArrowFiles.next}`,
   };
 }
 
@@ -377,9 +377,9 @@ export type V8ActiveSunBadgesControls = {
 // exactly (fontSize:11 matches .v8-sun-info-scattered's old fixed 11px) --
 // this refactor only makes them tunable, not a visual change by default.
 export const v8ActiveSunBadgesDefaults: V8ActiveSunBadgesControls = {
-  ballType: { show: true, x: -5, y: 91, scale: 2.04, rotation: 0, fontSize: 11, textOffsetX: 0, textOffsetY: 0, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
-  tempFee: { show: true, x: 101, y: 60, scale: 1.72, rotation: -1, fontSize: 15, textOffsetX: 0, textOffsetY: 0, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
-  courtCount: { show: true, x: -46, y: 42, scale: 1.95, rotation: 0, fontSize: 11, textOffsetX: 0, textOffsetY: 0, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
+  ballType: { show: true, x: 127, y: 26, scale: 1.53, rotation: 0, fontSize: 11, textOffsetX: -5, textOffsetY: 3, shadowX: 15, shadowY: 4, shadowScale: 1, shadowOpacity: 42, shadowBlur: 5 },
+  tempFee: { show: true, x: -9, y: 92, scale: 1.59, rotation: -1, fontSize: 12, textOffsetX: -6, textOffsetY: 4, shadowX: 0, shadowY: 4, shadowScale: 1.34, shadowOpacity: 29, shadowBlur: 6 },
+  courtCount: { show: true, x: 94, y: 62, scale: 1.5, rotation: 0, fontSize: 12, textOffsetX: -2, textOffsetY: 2, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
 };
 
 export const v8ActiveSunBadgesRanges: Record<

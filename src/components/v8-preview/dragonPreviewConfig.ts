@@ -149,6 +149,40 @@ export type PreviewControls = {
   activeSunNoteRotation: number;
   activeSunNoteFontSize: number;
   activeSunNoteBold: boolean;
+  openSunDateShow: boolean;
+  openSunDateX: number;
+  openSunDateY: number;
+  openSunDateScale: number;
+  openSunDateRotation: number;
+  openSunDateFontSize: number;
+  openSunDateBold: boolean;
+  openSunNameShow: boolean;
+  openSunNameX: number;
+  openSunNameY: number;
+  openSunNameScale: number;
+  openSunNameRotation: number;
+  openSunNameFontSize: number;
+  openSunNameBold: boolean;
+  openSunNoteShow: boolean;
+  openSunNoteX: number;
+  openSunNoteY: number;
+  openSunNoteScale: number;
+  openSunNoteRotation: number;
+  openSunNoteFontSize: number;
+  openSunNoteBold: boolean;
+  openSwitchArrowShow: boolean;
+  openSwitchArrowPrevX: number;
+  openSwitchArrowPrevY: number;
+  openSwitchArrowPrevScale: number;
+  openSwitchArrowPrevRotation: number;
+  openSwitchArrowPrevOpacity: number;
+  openSwitchArrowPrevZIndex: number;
+  openSwitchArrowNextX: number;
+  openSwitchArrowNextY: number;
+  openSwitchArrowNextScale: number;
+  openSwitchArrowNextRotation: number;
+  openSwitchArrowNextOpacity: number;
+  openSwitchArrowNextZIndex: number;
   // Active-only: the three status plaques (已報/尚缺/候補) + their shared
   // rope, left of the dragon below the sun -- each independently
   // show/size/position/rotation-controlled (see V8ActiveInfoCards).
@@ -456,6 +490,11 @@ export type PreviewTargetId =
   | "ACTIVE SUN DATE"
   | "ACTIVE SUN NAME"
   | "ACTIVE SUN NOTE"
+  | "OPEN SUN DATE"
+  | "OPEN SUN NAME"
+  | "OPEN SUN NOTE"
+  | "OPEN SWITCH ARROW PREV"
+  | "OPEN SWITCH ARROW NEXT"
   | "ACTIVE TIGER SCROLL"
   | "ACTIVE IDENTITY STATUS MARK"
   | "ACTIVE IDENTITY NAME"
@@ -503,6 +542,11 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "MID WAVE",
   "FRONT FOAM",
   "GOLD / INK",
+  "OPEN SUN DATE",
+  "OPEN SUN NAME",
+  "OPEN SUN NOTE",
+  "OPEN SWITCH ARROW PREV",
+  "OPEN SWITCH ARROW NEXT",
 ];
 
 export const activeTargetOrder: PreviewTargetId[] = [
@@ -714,6 +758,40 @@ export const previewDefaults: PreviewControls = {
   activeSunNoteRotation: 1,
   activeSunNoteFontSize: 10,
   activeSunNoteBold: true,
+  openSunDateShow: true,
+  openSunDateX: 50,
+  openSunDateY: 28,
+  openSunDateScale: 3,
+  openSunDateRotation: 0,
+  openSunDateFontSize: 15,
+  openSunDateBold: true,
+  openSunNameShow: true,
+  openSunNameX: 50,
+  openSunNameY: 50,
+  openSunNameScale: 1.82,
+  openSunNameRotation: 0,
+  openSunNameFontSize: 32,
+  openSunNameBold: true,
+  openSunNoteShow: true,
+  openSunNoteX: 50,
+  openSunNoteY: 67,
+  openSunNoteScale: 1.32,
+  openSunNoteRotation: 0,
+  openSunNoteFontSize: 18,
+  openSunNoteBold: true,
+  openSwitchArrowShow: true,
+  openSwitchArrowPrevX: 0,
+  openSwitchArrowPrevY: 50,
+  openSwitchArrowPrevScale: 1.25,
+  openSwitchArrowPrevRotation: 0,
+  openSwitchArrowPrevOpacity: 100,
+  openSwitchArrowPrevZIndex: 5,
+  openSwitchArrowNextX: 100,
+  openSwitchArrowNextY: 50,
+  openSwitchArrowNextScale: 1.25,
+  openSwitchArrowNextRotation: 0,
+  openSwitchArrowNextOpacity: 100,
+  openSwitchArrowNextZIndex: 5,
   activeInfoRopeShow: true,
   activeInfoRopeX: 30,
   activeInfoRopeY: 27,
@@ -765,38 +843,38 @@ export const previewDefaults: PreviewControls = {
   activeBackgroundFade: 61,
   // Matches v8ActiveSunBadgesDefaults in v8ActiveConfig.ts exactly.
   activeSunBadgeBallTypeShow: true,
-  activeSunBadgeBallTypeX: 2,
-  activeSunBadgeBallTypeY: 99,
-  activeSunBadgeBallTypeScale: 2.04,
+  activeSunBadgeBallTypeX: 127,
+  activeSunBadgeBallTypeY: 26,
+  activeSunBadgeBallTypeScale: 1.53,
   activeSunBadgeBallTypeRotation: 0,
-  activeSunBadgeBallTypeFontSize: 8,
-  activeSunBadgeBallTypeTextOffsetX: -8,
-  activeSunBadgeBallTypeTextOffsetY: 2,
-  activeSunBadgeBallTypeShadowX: 0,
-  activeSunBadgeBallTypeShadowY: 12,
+  activeSunBadgeBallTypeFontSize: 11,
+  activeSunBadgeBallTypeTextOffsetX: -5,
+  activeSunBadgeBallTypeTextOffsetY: 3,
+  activeSunBadgeBallTypeShadowX: 15,
+  activeSunBadgeBallTypeShadowY: 4,
   activeSunBadgeBallTypeShadowScale: 1,
-  activeSunBadgeBallTypeShadowOpacity: 35,
-  activeSunBadgeBallTypeShadowBlur: 6,
+  activeSunBadgeBallTypeShadowOpacity: 42,
+  activeSunBadgeBallTypeShadowBlur: 5,
   activeSunBadgeTempFeeShow: true,
-  activeSunBadgeTempFeeX: 96,
-  activeSunBadgeTempFeeY: 74,
-  activeSunBadgeTempFeeScale: 1.71,
+  activeSunBadgeTempFeeX: -9,
+  activeSunBadgeTempFeeY: 92,
+  activeSunBadgeTempFeeScale: 1.59,
   activeSunBadgeTempFeeRotation: -1,
-  activeSunBadgeTempFeeFontSize: 11,
-  activeSunBadgeTempFeeTextOffsetX: -12,
-  activeSunBadgeTempFeeTextOffsetY: 2,
+  activeSunBadgeTempFeeFontSize: 12,
+  activeSunBadgeTempFeeTextOffsetX: -6,
+  activeSunBadgeTempFeeTextOffsetY: 4,
   activeSunBadgeTempFeeShadowX: 0,
-  activeSunBadgeTempFeeShadowY: 12,
-  activeSunBadgeTempFeeShadowScale: 1,
-  activeSunBadgeTempFeeShadowOpacity: 35,
+  activeSunBadgeTempFeeShadowY: 4,
+  activeSunBadgeTempFeeShadowScale: 1.34,
+  activeSunBadgeTempFeeShadowOpacity: 29,
   activeSunBadgeTempFeeShadowBlur: 6,
   activeSunBadgeCourtCountShow: true,
-  activeSunBadgeCourtCountX: -46,
-  activeSunBadgeCourtCountY: 60,
-  activeSunBadgeCourtCountScale: 1.98,
+  activeSunBadgeCourtCountX: 94,
+  activeSunBadgeCourtCountY: 62,
+  activeSunBadgeCourtCountScale: 1.5,
   activeSunBadgeCourtCountRotation: 0,
-  activeSunBadgeCourtCountFontSize: 9,
-  activeSunBadgeCourtCountTextOffsetX: -6,
+  activeSunBadgeCourtCountFontSize: 12,
+  activeSunBadgeCourtCountTextOffsetX: -2,
   activeSunBadgeCourtCountTextOffsetY: 2,
   activeSunBadgeCourtCountShadowX: 0,
   activeSunBadgeCourtCountShadowY: 12,
@@ -848,9 +926,9 @@ export const previewDefaults: PreviewControls = {
   activeIdentityNameBoxWidth: 90,
   activeIdentityNameBoxHeight: 40,
   activeIdentityTagX: 40,
-  activeIdentityTagY: 94,
-  activeIdentityTagScale: 4,
-  activeIdentityTagRotation: -3,
+  activeIdentityTagY: 96,
+  activeIdentityTagScale: 1.31,
+  activeIdentityTagRotation: 5,
   activeIdentityTagOpacity: 100,
   activeIdentityTagZIndex: 1,
   activeIdentityCtaX: 40,
@@ -888,17 +966,17 @@ export const previewDefaults: PreviewControls = {
   // guess, adjust visually via the console (per-badge X/Y are top-left
   // corner, same convention as the other three).
   activeSunBadgeCapacityShow: true,
-  activeSunBadgeCapacityX: 108,
-  activeSunBadgeCapacityY: 13,
-  activeSunBadgeCapacityScale: 2.8,
+  activeSunBadgeCapacityX: -63,
+  activeSunBadgeCapacityY: 58,
+  activeSunBadgeCapacityScale: 1.57,
   activeSunBadgeCapacityRotation: 0,
-  activeSunBadgeCapacityOpacity: 100,
+  activeSunBadgeCapacityOpacity: 95,
   activeSunBadgeCapacityZIndex: 2,
-  activeSunBadgeCapacityFontSize: 6,
-  activeSunBadgeCapacityTextOffsetX: -8,
+  activeSunBadgeCapacityFontSize: 12,
+  activeSunBadgeCapacityTextOffsetX: -3,
   activeSunBadgeCapacityTextOffsetY: -2,
-  activeSunBadgeCapacityShadowX: 0,
-  activeSunBadgeCapacityShadowY: 12,
+  activeSunBadgeCapacityShadowX: -10,
+  activeSunBadgeCapacityShadowY: -3,
   activeSunBadgeCapacityShadowScale: 1,
   activeSunBadgeCapacityShadowOpacity: 35,
   activeSunBadgeCapacityShadowBlur: 6,
@@ -1030,6 +1108,33 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunNoteRotation",
     "activeSunNoteFontSize",
     "activeSunNoteBold",
+  ],
+  "OPEN SUN DATE": [
+    "openSunDateShow",
+    "openSunDateX",
+    "openSunDateY",
+    "openSunDateScale",
+    "openSunDateRotation",
+    "openSunDateFontSize",
+    "openSunDateBold",
+  ],
+  "OPEN SUN NAME": [
+    "openSunNameShow",
+    "openSunNameX",
+    "openSunNameY",
+    "openSunNameScale",
+    "openSunNameRotation",
+    "openSunNameFontSize",
+    "openSunNameBold",
+  ],
+  "OPEN SUN NOTE": [
+    "openSunNoteShow",
+    "openSunNoteX",
+    "openSunNoteY",
+    "openSunNoteScale",
+    "openSunNoteRotation",
+    "openSunNoteFontSize",
+    "openSunNoteBold",
   ],
   "ACTIVE TIGER SCROLL": [
     "activeTigerScrollX",
@@ -1317,6 +1422,24 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSwitchArrowNextOpacity",
     "activeSwitchArrowNextZIndex",
   ],
+  "OPEN SWITCH ARROW PREV": [
+    "openSwitchArrowShow",
+    "openSwitchArrowPrevX",
+    "openSwitchArrowPrevY",
+    "openSwitchArrowPrevScale",
+    "openSwitchArrowPrevRotation",
+    "openSwitchArrowPrevOpacity",
+    "openSwitchArrowPrevZIndex",
+  ],
+  "OPEN SWITCH ARROW NEXT": [
+    "openSwitchArrowShow",
+    "openSwitchArrowNextX",
+    "openSwitchArrowNextY",
+    "openSwitchArrowNextScale",
+    "openSwitchArrowNextRotation",
+    "openSwitchArrowNextOpacity",
+    "openSwitchArrowNextZIndex",
+  ],
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
@@ -1338,6 +1461,9 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE SUN DATE": "activeSunDateShow",
   "ACTIVE SUN NAME": "activeSunNameShow",
   "ACTIVE SUN NOTE": "activeSunNoteShow",
+  "OPEN SUN DATE": "openSunDateShow",
+  "OPEN SUN NAME": "openSunNameShow",
+  "OPEN SUN NOTE": "openSunNoteShow",
   "ACTIVE IDENTITY STATUS MARK": "activeIdentityShow",
   "ACTIVE IDENTITY NAME": "activeIdentityShow",
   "ACTIVE IDENTITY TAG": "activeIdentityShow",
@@ -1362,6 +1488,8 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE ROSTER V2 B2": "activeRosterV2B2Show",
   "ACTIVE SWITCH ARROW PREV": "activeSwitchArrowShow",
   "ACTIVE SWITCH ARROW NEXT": "activeSwitchArrowShow",
+  "OPEN SWITCH ARROW PREV": "openSwitchArrowShow",
+  "OPEN SWITCH ARROW NEXT": "openSwitchArrowShow",
 };
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
@@ -1472,6 +1600,21 @@ export const controlRanges = {
   activeSunNoteScale: { label: "備註 Scale", min: 0.2, max: 3, step: 0.01 },
   activeSunNoteRotation: { label: "備註 Rotation", min: -180, max: 180 },
   activeSunNoteFontSize: { label: "備註 Font Size", min: 4, max: 48 },
+  openSunDateX: { label: "開場日期 X %", min: -50, max: 150 },
+  openSunDateY: { label: "開場日期 Y %", min: -50, max: 150 },
+  openSunDateScale: { label: "開場日期 Scale", min: 0.2, max: 3, step: 0.01 },
+  openSunDateRotation: { label: "開場日期 Rotation", min: -180, max: 180 },
+  openSunDateFontSize: { label: "開場日期 Font Size", min: 4, max: 48 },
+  openSunNameX: { label: "開場聚會名 X %", min: -50, max: 150 },
+  openSunNameY: { label: "開場聚會名 Y %", min: -50, max: 150 },
+  openSunNameScale: { label: "開場聚會名 Scale", min: 0.2, max: 3, step: 0.01 },
+  openSunNameRotation: { label: "開場聚會名 Rotation", min: -180, max: 180 },
+  openSunNameFontSize: { label: "開場聚會名 Font Size", min: 4, max: 48 },
+  openSunNoteX: { label: "開場備註 X %", min: -50, max: 150 },
+  openSunNoteY: { label: "開場備註 Y %", min: -50, max: 150 },
+  openSunNoteScale: { label: "開場備註 Scale", min: 0.2, max: 3, step: 0.01 },
+  openSunNoteRotation: { label: "開場備註 Rotation", min: -180, max: 180 },
+  openSunNoteFontSize: { label: "開場備註 Font Size", min: 4, max: 48 },
   activeIdentityStatusMarkX: { label: "印章 X %", min: -30, max: 130 },
   activeIdentityStatusMarkY: { label: "印章 Y %", min: -30, max: 160 },
   activeIdentityStatusMarkScale: { label: "印章 Scale", min: 0.3, max: 4, step: 0.01 },
@@ -1676,6 +1819,18 @@ export const controlRanges = {
   activeSwitchArrowNextRotation: { label: "切換箭頭(後) Rotation", min: -180, max: 180 },
   activeSwitchArrowNextOpacity: { label: "切換箭頭(後) Opacity", min: 0, max: 100 },
   activeSwitchArrowNextZIndex: { label: "切換箭頭(後) Z-Index", min: 0, max: 40 },
+  openSwitchArrowPrevX: { label: "開場切換箭頭(前) X %", min: -30, max: 130 },
+  openSwitchArrowPrevY: { label: "開場切換箭頭(前) Y %", min: -30, max: 130 },
+  openSwitchArrowPrevScale: { label: "開場切換箭頭(前) Scale", min: 0.3, max: 3, step: 0.01 },
+  openSwitchArrowPrevRotation: { label: "開場切換箭頭(前) Rotation", min: -180, max: 180 },
+  openSwitchArrowPrevOpacity: { label: "開場切換箭頭(前) Opacity", min: 0, max: 100 },
+  openSwitchArrowPrevZIndex: { label: "開場切換箭頭(前) Z-Index", min: 0, max: 40 },
+  openSwitchArrowNextX: { label: "開場切換箭頭(後) X %", min: -30, max: 130 },
+  openSwitchArrowNextY: { label: "開場切換箭頭(後) Y %", min: -30, max: 130 },
+  openSwitchArrowNextScale: { label: "開場切換箭頭(後) Scale", min: 0.3, max: 3, step: 0.01 },
+  openSwitchArrowNextRotation: { label: "開場切換箭頭(後) Rotation", min: -180, max: 180 },
+  openSwitchArrowNextOpacity: { label: "開場切換箭頭(後) Opacity", min: 0, max: 100 },
+  openSwitchArrowNextZIndex: { label: "開場切換箭頭(後) Z-Index", min: 0, max: 40 },
 } as const;
 
 export const stepModes: Record<StepMode, { position: number; scale: number; rotation: number; size: number }> = {
@@ -2114,6 +2269,59 @@ export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8A
       rotation: controls.activeSunNoteRotation,
       fontSize: controls.activeSunNoteFontSize,
       bold: controls.activeSunNoteBold,
+    },
+  };
+}
+
+export function buildV8OpeningSunControls(controls: PreviewControls) {
+  return {
+    messages: {
+      date: {
+        show: controls.openSunDateShow,
+        x: controls.openSunDateX,
+        y: controls.openSunDateY,
+        scale: controls.openSunDateScale,
+        rotation: controls.openSunDateRotation,
+        fontSize: controls.openSunDateFontSize,
+        bold: controls.openSunDateBold,
+      },
+      name: {
+        show: controls.openSunNameShow,
+        x: controls.openSunNameX,
+        y: controls.openSunNameY,
+        scale: controls.openSunNameScale,
+        rotation: controls.openSunNameRotation,
+        fontSize: controls.openSunNameFontSize,
+        bold: controls.openSunNameBold,
+      },
+      note: {
+        show: controls.openSunNoteShow,
+        x: controls.openSunNoteX,
+        y: controls.openSunNoteY,
+        scale: controls.openSunNoteScale,
+        rotation: controls.openSunNoteRotation,
+        fontSize: controls.openSunNoteFontSize,
+        bold: controls.openSunNoteBold,
+      },
+    },
+    switchArrows: {
+      show: controls.openSwitchArrowShow,
+      prev: {
+        x: controls.openSwitchArrowPrevX,
+        y: controls.openSwitchArrowPrevY,
+        scale: controls.openSwitchArrowPrevScale,
+        rotation: controls.openSwitchArrowPrevRotation,
+        opacity: controls.openSwitchArrowPrevOpacity,
+        zIndex: controls.openSwitchArrowPrevZIndex,
+      },
+      next: {
+        x: controls.openSwitchArrowNextX,
+        y: controls.openSwitchArrowNextY,
+        scale: controls.openSwitchArrowNextScale,
+        rotation: controls.openSwitchArrowNextRotation,
+        opacity: controls.openSwitchArrowNextOpacity,
+        zIndex: controls.openSwitchArrowNextZIndex,
+      },
     },
   };
 }

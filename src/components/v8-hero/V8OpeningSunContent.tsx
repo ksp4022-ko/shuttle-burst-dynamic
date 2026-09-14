@@ -18,13 +18,14 @@ import type { AlphaEvent } from "@/lib/database-alpha";
 // code" in the sense the user meant.
 function buildV8OpeningSunAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
+  const statusAssetBase = `${baseUrl}v8-status-assets`;
   return {
     sunBadgeBallType: `${activeBase}/sun-info-badge-balltype-v2.webp`,
     sunBadgeTempFee: `${activeBase}/sun-info-badge-tempfee-v2.webp`,
     sunBadgeCourtCount: `${activeBase}/sun-info-badge-courttime-v1.webp`,
     sunBadgeCapacity: `${activeBase}/sun-info-badge-capacity-v1.webp`,
-    sunSwitchArrowPrev: `${activeBase}/sun-switch-arrow-prev-v1.webp`,
-    sunSwitchArrowNext: `${activeBase}/sun-switch-arrow-next-v1.webp`,
+    sunSwitchArrowPrev: `${statusAssetBase}/v8-switch-meetup-prev-display.webp`,
+    sunSwitchArrowNext: `${statusAssetBase}/v8-switch-meetup-next-display.webp`,
   };
 }
 
@@ -63,8 +64,32 @@ const SWITCH_ARROW_NEXT = { x: 100, y: 50, scale: 1.25, rotation: 0, opacity: 10
 const SHOW_INFO_BADGES = false;
 
 type SunMessageConfig = { x: number; y: number; scale: number; rotation: number; fontSize: number; bold: boolean };
+type SunMessageControls = SunMessageConfig & { show: boolean };
 type SunBadgeConfig = { x: number; y: number; scale: number; rotation: number; fontSize: number; textOffsetX: number; textOffsetY: number };
 type SwitchArrowConfig = { x: number; y: number; scale: number; rotation: number; opacity: number; zIndex: number };
+type SwitchArrowControls = { show: boolean; prev: SwitchArrowConfig; next: SwitchArrowConfig };
+
+export type V8OpeningSunControls = {
+  messages: {
+    date: SunMessageControls;
+    name: SunMessageControls;
+    note: SunMessageControls;
+  };
+  switchArrows: SwitchArrowControls;
+};
+
+export const v8OpeningSunDefaults: V8OpeningSunControls = {
+  messages: {
+    date: { show: true, ...DATE_MESSAGE },
+    name: { show: true, ...NAME_MESSAGE },
+    note: { show: true, ...NOTE_MESSAGE },
+  },
+  switchArrows: {
+    show: true,
+    prev: SWITCH_ARROW_PREV,
+    next: SWITCH_ARROW_NEXT,
+  },
+};
 
 // Copied from V8SunInfoBadge in V8ActivePage.tsx.
 function V8SunInfoBadge({
@@ -148,8 +173,8 @@ function V8CapacityBadge({ src, label }: { src: string; label: string }) {
 }
 
 // Copied from V8SunMessage in V8ActivePage.tsx.
-function V8SunMessage({ text, config }: { text: string; config: SunMessageConfig }) {
-  if (!text) return null;
+function V8SunMessage({ text, config }: { text: string; config: SunMessageControls }) {
+  if (!config.show || !text) return null;
   return (
     <div
       style={
@@ -188,10 +213,12 @@ function switchArrowStyle(c: SwitchArrowConfig): CSSProperties {
 // Copied from V8SunMeetupSwitcher in V8ActivePage.tsx.
 function V8OpeningSunSwitcher({
   assets,
+  controls,
   onPreviousEvent,
   onNextEvent,
 }: {
   assets: { sunSwitchArrowPrev: string; sunSwitchArrowNext: string };
+  controls: SwitchArrowControls;
   onPreviousEvent: () => void;
   onNextEvent: () => void;
 }) {
@@ -213,12 +240,24 @@ function V8OpeningSunSwitcher({
   return (
     <>
       <div className="v8-opening-sun-swipe-zone" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} aria-hidden="true" />
-      <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(SWITCH_ARROW_PREV)} onClick={onPreviousEvent} aria-label="上一場聚會">
-        <img src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
-      </button>
-      <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(SWITCH_ARROW_NEXT)} onClick={onNextEvent} aria-label="下一場聚會">
-        <img src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
-      </button>
+      {controls.show ? (
+        <>
+          <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.prev)} onClick={onPreviousEvent} aria-label="上一場聚會">
+            <span className="v8-opening-switch-arrow-visual">
+              <img src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-opening-switch-arrow-glow is-outer" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-opening-switch-arrow-glow is-inner" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
+            </span>
+          </button>
+          <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.next)} onClick={onNextEvent} aria-label="下一場聚會">
+            <span className="v8-opening-switch-arrow-visual">
+              <img src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-opening-switch-arrow-glow is-outer" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+              <img className="v8-opening-switch-arrow-glow is-inner" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
+            </span>
+          </button>
+        </>
+      ) : null}
     </>
   );
 }
@@ -239,10 +278,12 @@ function shortDate(value: string) {
 // fixed single event.
 export function V8OpeningSunContent({
   event,
+  controls = v8OpeningSunDefaults,
   onPreviousEvent,
   onNextEvent,
 }: {
   event: AlphaEvent | null | undefined;
+  controls?: V8OpeningSunControls;
   onPreviousEvent: () => void;
   onNextEvent: () => void;
 }) {
@@ -255,10 +296,10 @@ export function V8OpeningSunContent({
 
   return (
     <>
-      <V8OpeningSunSwitcher assets={assets} onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
-      <V8SunMessage text={shortDate(event.eventDate)} config={DATE_MESSAGE} />
-      <V8SunMessage text={event.name} config={NAME_MESSAGE} />
-      <V8SunMessage text={event.eventNote || ""} config={NOTE_MESSAGE} />
+      <V8OpeningSunSwitcher assets={assets} controls={controls.switchArrows} onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
+      <V8SunMessage text={shortDate(event.eventDate)} config={controls.messages.date} />
+      <V8SunMessage text={event.name} config={controls.messages.name} />
+      <V8SunMessage text={event.eventNote || ""} config={controls.messages.note} />
       {SHOW_INFO_BADGES && event.ballType ? (
         <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={event.ballType} config={BALL_TYPE_BADGE} textInset={BADGE_TEXT_INSETS.ballType} />
       ) : null}
@@ -304,10 +345,79 @@ export function V8OpeningSunStyles() {
         place-items: center;
       }
 
-      .v8-opening-sun-switch-arrow img {
+      .v8-opening-switch-arrow-visual {
+        position: relative;
         display: block;
         width: 100%;
         height: auto;
+      }
+
+      .v8-opening-switch-arrow-visual > img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .v8-opening-switch-arrow-glow {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        animation: v8-opening-artwork-contour-glow-run 5000ms linear infinite;
+        pointer-events: none;
+      }
+
+      .v8-opening-switch-arrow-glow.is-outer {
+        filter: brightness(1.8) sepia(1) saturate(1.5) hue-rotate(350deg) drop-shadow(0 0 5px #ffe9a3) drop-shadow(0 0 12px #ffcf6b) drop-shadow(0 0 22px #ffb84d);
+      }
+
+      .v8-opening-switch-arrow-glow.is-inner {
+        filter: brightness(4) grayscale(1) drop-shadow(0 0 2px #fff) drop-shadow(0 0 7px #fff);
+      }
+
+      @keyframes v8-opening-artwork-contour-glow-run {
+        0% {
+          opacity: 0;
+          clip-path: inset(0 100% 76% 0);
+        }
+        2% {
+          opacity: 1;
+        }
+        7.5% {
+          opacity: 1;
+          clip-path: inset(0 0 76% 78%);
+        }
+        7.51% {
+          clip-path: inset(0 0 100% 78%);
+        }
+        15% {
+          opacity: 1;
+          clip-path: inset(78% 0 0 78%);
+        }
+        15.01% {
+          clip-path: inset(78% 0 0 100%);
+        }
+        22.5% {
+          opacity: 1;
+          clip-path: inset(78% 76% 0 0);
+        }
+        22.51% {
+          clip-path: inset(100% 76% 0 0);
+        }
+        30% {
+          opacity: 1;
+          clip-path: inset(0 76% 78% 0);
+        }
+        30.01%,
+        100% {
+          opacity: 0;
+          clip-path: inset(0 76% 78% 0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .v8-opening-switch-arrow-glow {
+          animation: none !important;
+        }
       }
 
       .v8-opening-sun-info-badge {
