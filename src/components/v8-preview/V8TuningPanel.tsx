@@ -369,6 +369,11 @@ export function V8TuningPanel({
             onChange={(value) => update(key, value as PreviewControls[typeof key])}
           />
         ))}
+        {selectedTarget === "ACTIVE SUN SAFE BOX" ? (
+          <button type="button" onClick={() => update("activeSunSafeBoxShowHelper", !controls.activeSunSafeBoxShowHelper)} style={smallButtonStyle}>
+            Helper Box {controls.activeSunSafeBoxShowHelper ? "ON" : "OFF"}
+          </button>
+        ) : null}
         {selectedTarget === "ACTIVE ROSTER LISTS" ? (
           <>
             <label style={inlineSelectLabelStyle}>
@@ -428,21 +433,6 @@ export function V8TuningPanel({
               {controls.activeRosterV2A1Bold ? "Bold ON" : "Bold OFF"}
             </button>
           </>
-        ) : null}
-        {selectedTarget === "ACTIVE SUN DATE" ? (
-          <button type="button" onClick={() => update("activeSunDateBold", !controls.activeSunDateBold)} style={smallButtonStyle}>
-            {controls.activeSunDateBold ? "Bold ON" : "Bold OFF"}
-          </button>
-        ) : null}
-        {selectedTarget === "ACTIVE SUN NAME" ? (
-          <button type="button" onClick={() => update("activeSunNameBold", !controls.activeSunNameBold)} style={smallButtonStyle}>
-            {controls.activeSunNameBold ? "Bold ON" : "Bold OFF"}
-          </button>
-        ) : null}
-        {selectedTarget === "ACTIVE SUN NOTE" ? (
-          <button type="button" onClick={() => update("activeSunNoteBold", !controls.activeSunNoteBold)} style={smallButtonStyle}>
-            {controls.activeSunNoteBold ? "Bold ON" : "Bold OFF"}
-          </button>
         ) : null}
         {selectedTarget === "ACTIVE INFO REGISTERED" ? (
           <label style={inlineSelectLabelStyle}>

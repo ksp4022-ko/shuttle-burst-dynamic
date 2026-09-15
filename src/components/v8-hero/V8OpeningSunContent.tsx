@@ -45,10 +45,11 @@ const BADGE_TEXT_INSETS = {
 // the opening sun's primary meetup copy is intentionally larger and higher
 // in the circle to match the supplied mobile reference.
 const SUN_SCALE_RATIO = 0.68;
-const DATE_MESSAGE = { x: 50, y: 28, scale: 3, rotation: 0, fontSize: 15, bold: true };
-const NAME_MESSAGE = { x: 50, y: 50, scale: 1.82, rotation: 0, fontSize: 32, bold: true };
-const TIME_MESSAGE = { x: 50, y: 62, scale: 1, rotation: 0, fontSize: 12, bold: false };
-const NOTE_MESSAGE = { x: 50, y: 73, scale: 1.32, rotation: 0, fontSize: 18, bold: true };
+const SAFE_BOX = { width: 70, height: 60, showHelperBox: false };
+const DATE_MESSAGE = { x: 31, y: 29, fontSize: 15, opacity: 90, width: 28 };
+const NAME_MESSAGE = { x: 61, y: 29, fontSize: 32, opacity: 100, width: 100 };
+const TIME_MESSAGE = { x: 50, y: 45, fontSize: 12, opacity: 70, width: 72 };
+const NOTE_MESSAGE = { x: 50, y: 59, fontSize: 18, opacity: 88, width: 88 };
 
 // Copied from previewDefaults' activeSunBadge*/activeSwitchArrow* values,
 // same 0.68 scale-ratio adjustment as the messages above.
@@ -66,13 +67,15 @@ const SWITCH_ARROW_NEXT = { x: 100, y: 50, scale: 1.25, rotation: 0, opacity: 10
 // back to true to re-enable; nothing else needs to change.
 const SHOW_INFO_BADGES = false;
 
-type SunMessageConfig = { x: number; y: number; scale: number; rotation: number; fontSize: number; bold: boolean };
+type SunMessageConfig = { x: number; y: number; fontSize: number; opacity: number; width: number };
 type SunMessageControls = SunMessageConfig & { show: boolean };
+type SunSafeBoxControls = { width: number; height: number; showHelperBox: boolean };
 type SunBadgeConfig = { x: number; y: number; scale: number; rotation: number; fontSize: number; textOffsetX: number; textOffsetY: number };
 type SwitchArrowConfig = { x: number; y: number; scale: number; rotation: number; opacity: number; zIndex: number };
 type SwitchArrowControls = { show: boolean; prev: SwitchArrowConfig; next: SwitchArrowConfig };
 
 export type V8OpeningSunControls = {
+  safeBox: SunSafeBoxControls;
   messages: {
     date: SunMessageControls;
     name: SunMessageControls;
@@ -83,6 +86,7 @@ export type V8OpeningSunControls = {
 };
 
 export const v8OpeningSunDefaults: V8OpeningSunControls = {
+  safeBox: SAFE_BOX,
   messages: {
     date: { show: true, ...DATE_MESSAGE },
     name: { show: true, ...NAME_MESSAGE },
@@ -187,12 +191,16 @@ function V8SunMessage({ text, config }: { text: string; config: SunMessageContro
           position: "absolute",
           left: `${config.x}%`,
           top: `${config.y}%`,
-          transform: `translate(-50%, -50%) scale(${config.scale}) rotate(${config.rotation}deg)`,
+          width: `${config.width}%`,
+          transform: "translate(-50%, -50%)",
           fontSize: config.fontSize,
-          fontWeight: config.bold ? 700 : 400,
-          whiteSpace: "nowrap",
+          fontWeight: 700,
+          lineHeight: 1.12,
+          whiteSpace: "normal",
+          overflowWrap: "break-word",
           textAlign: "center",
-          color: "#20150d",
+          color: "#F3E7CF",
+          opacity: config.opacity / 100,
         } as CSSProperties
       }
     >
@@ -224,11 +232,12 @@ function V8SunMeetupName({
           position: "absolute",
           left: `${config.x}%`,
           top: `${config.y}%`,
-          width: `min(58%, ${Math.max(72, config.fontSize * 3.4)}px)`,
+          width: `${config.width}%`,
           height: "auto",
           objectFit: "contain",
-          transform: `translate(-50%, -50%) scale(${config.scale}) rotate(${config.rotation}deg)`,
+          transform: "translate(-50%, -50%)",
           transformOrigin: "center",
+          opacity: config.opacity / 100,
           pointerEvents: "none",
         } as CSSProperties
       }
@@ -335,10 +344,13 @@ export function V8OpeningSunContent({
       {canSwitchMeetup ? (
         <V8OpeningSunSwitcher assets={assets} controls={controls.switchArrows} onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
       ) : null}
-      <V8SunMessage text={formatV8MeetupDate(event.eventDate)} config={controls.messages.date} />
-      <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} config={controls.messages.name} />
-      <V8SunMessage text={meetupDisplay.timeLabel} config={controls.messages.time} />
-      <V8SunMessage text={event.eventNote || ""} config={controls.messages.note} />
+      <div className="v8-opening-sun-message-safe-box" style={{ width: `${controls.safeBox.width}%`, height: `${controls.safeBox.height}%` }}>
+        {controls.safeBox.showHelperBox ? <span className="v8-opening-sun-message-safe-helper" aria-hidden="true" /> : null}
+        <V8SunMessage text={formatV8MeetupDate(event.eventDate)} config={controls.messages.date} />
+        <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} config={controls.messages.name} />
+        <V8SunMessage text={meetupDisplay.timeLabel} config={controls.messages.time} />
+        <V8SunMessage text={event.eventNote || ""} config={controls.messages.note} />
+      </div>
       {SHOW_INFO_BADGES && event.ballType ? (
         <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={event.ballType} config={BALL_TYPE_BADGE} textInset={BADGE_TEXT_INSETS.ballType} />
       ) : null}
@@ -367,6 +379,23 @@ export function V8OpeningSunStyles() {
       .v8-opening-sun-info-scattered {
         position: absolute;
         width: max-content;
+      }
+
+      .v8-opening-sun-message-safe-box {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .v8-opening-sun-message-safe-helper {
+        position: absolute;
+        inset: 0;
+        border: 1px dashed rgba(243, 231, 207, 0.55);
+        background: rgba(243, 231, 207, 0.06);
+        pointer-events: none;
       }
 
       .v8-opening-sun-swipe-zone {

@@ -779,12 +779,16 @@ function V8SunMessage({ text, controls }: { text: string; controls: V8ActiveSunM
           position: "absolute",
           left: `${controls.x}%`,
           top: `${controls.y}%`,
-          transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
+          width: `${controls.width}%`,
+          transform: "translate(-50%, -50%)",
           fontSize: controls.fontSize,
-          fontWeight: controls.bold ? 700 : 400,
-          whiteSpace: "nowrap",
+          fontWeight: 700,
+          lineHeight: 1.12,
+          whiteSpace: "normal",
+          overflowWrap: "break-word",
           textAlign: "center",
-          color: "#20150d",
+          color: "#F3E7CF",
+          opacity: controls.opacity / 100,
         } as CSSProperties
       }
     >
@@ -816,11 +820,12 @@ function V8SunMeetupName({
           position: "absolute",
           left: `${controls.x}%`,
           top: `${controls.y}%`,
-          width: `min(58%, ${Math.max(62, controls.fontSize * 3.4)}px)`,
+          width: `${controls.width}%`,
           height: "auto",
           objectFit: "contain",
-          transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
+          transform: "translate(-50%, -50%)",
           transformOrigin: "center",
+          opacity: controls.opacity / 100,
           pointerEvents: "none",
         } as CSSProperties
       }
@@ -1007,10 +1012,21 @@ export function V8ActiveSunContent({
           onNextEvent={onNextEvent}
         />
       ) : null}
-      <V8SunMessage text={formatV8MeetupDate(eventDate)} controls={messageControls.date} />
-      <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} controls={messageControls.name} />
-      <V8SunMessage text={meetupDisplay.timeLabel} controls={messageControls.time} />
-      <V8SunMessage text={eventNote || ""} controls={messageControls.note} />
+      <div
+        className="v8-sun-message-safe-box"
+        style={
+          {
+            width: `${messageControls.safeBox.width}%`,
+            height: `${messageControls.safeBox.height}%`,
+          } as CSSProperties
+        }
+      >
+        {messageControls.safeBox.showHelperBox ? <span className="v8-sun-message-safe-helper" aria-hidden="true" /> : null}
+        <V8SunMessage text={formatV8MeetupDate(eventDate)} controls={messageControls.date} />
+        <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} controls={messageControls.name} />
+        <V8SunMessage text={meetupDisplay.timeLabel} controls={messageControls.time} />
+        <V8SunMessage text={eventNote || ""} controls={messageControls.note} />
+      </div>
       {ballType ? (
         <V8SunInfoBadgeScattered
           src={assets.sunBadgeBallType}
@@ -1808,6 +1824,23 @@ export function V8ActiveStyles() {
            so nudging X far past the sun no longer compresses it. */
         position: absolute;
         width: max-content;
+      }
+
+      .v8-sun-message-safe-box {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .v8-sun-message-safe-helper {
+        position: absolute;
+        inset: 0;
+        border: 1px dashed rgba(243, 231, 207, 0.55);
+        background: rgba(243, 231, 207, 0.06);
+        pointer-events: none;
       }
 
       /* Swipe-catcher sized to the sun's own circular box (inset:0 of the

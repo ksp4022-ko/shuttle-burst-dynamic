@@ -131,45 +131,49 @@ export type PreviewControls = {
   activeSunDateShow: boolean;
   activeSunDateX: number;
   activeSunDateY: number;
-  activeSunDateScale: number;
-  activeSunDateRotation: number;
   activeSunDateFontSize: number;
-  activeSunDateBold: boolean;
+  activeSunDateOpacity: number;
   activeSunNameShow: boolean;
   activeSunNameX: number;
   activeSunNameY: number;
-  activeSunNameScale: number;
-  activeSunNameRotation: number;
-  activeSunNameFontSize: number;
-  activeSunNameBold: boolean;
+  activeSunNameWidth: number;
+  activeSunNameOpacity: number;
+  activeSunTimeShow: boolean;
+  activeSunTimeX: number;
+  activeSunTimeY: number;
+  activeSunTimeFontSize: number;
+  activeSunTimeOpacity: number;
   activeSunNoteShow: boolean;
   activeSunNoteX: number;
   activeSunNoteY: number;
-  activeSunNoteScale: number;
-  activeSunNoteRotation: number;
   activeSunNoteFontSize: number;
-  activeSunNoteBold: boolean;
+  activeSunNoteOpacity: number;
+  activeSunSafeBoxWidth: number;
+  activeSunSafeBoxHeight: number;
+  activeSunSafeBoxShowHelper: boolean;
   openSunDateShow: boolean;
   openSunDateX: number;
   openSunDateY: number;
-  openSunDateScale: number;
-  openSunDateRotation: number;
   openSunDateFontSize: number;
-  openSunDateBold: boolean;
+  openSunDateOpacity: number;
   openSunNameShow: boolean;
   openSunNameX: number;
   openSunNameY: number;
-  openSunNameScale: number;
-  openSunNameRotation: number;
-  openSunNameFontSize: number;
-  openSunNameBold: boolean;
+  openSunNameWidth: number;
+  openSunNameOpacity: number;
+  openSunTimeShow: boolean;
+  openSunTimeX: number;
+  openSunTimeY: number;
+  openSunTimeFontSize: number;
+  openSunTimeOpacity: number;
   openSunNoteShow: boolean;
   openSunNoteX: number;
   openSunNoteY: number;
-  openSunNoteScale: number;
-  openSunNoteRotation: number;
   openSunNoteFontSize: number;
-  openSunNoteBold: boolean;
+  openSunNoteOpacity: number;
+  openSunSafeBoxWidth: number;
+  openSunSafeBoxHeight: number;
+  openSunSafeBoxShowHelper: boolean;
   openSwitchArrowShow: boolean;
   openSwitchArrowPrevX: number;
   openSwitchArrowPrevY: number;
@@ -487,11 +491,15 @@ export type PreviewTargetId =
   | "FRONT FOAM"
   | "GOLD / INK"
   | "ACTIVE SUN INFO"
+  | "ACTIVE SUN SAFE BOX"
   | "ACTIVE SUN DATE"
   | "ACTIVE SUN NAME"
+  | "ACTIVE SUN TIME"
   | "ACTIVE SUN NOTE"
+  | "OPEN SUN SAFE BOX"
   | "OPEN SUN DATE"
   | "OPEN SUN NAME"
+  | "OPEN SUN TIME"
   | "OPEN SUN NOTE"
   | "OPEN SWITCH ARROW PREV"
   | "OPEN SWITCH ARROW NEXT"
@@ -542,8 +550,10 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "MID WAVE",
   "FRONT FOAM",
   "GOLD / INK",
+  "OPEN SUN SAFE BOX",
   "OPEN SUN DATE",
   "OPEN SUN NAME",
+  "OPEN SUN TIME",
   "OPEN SUN NOTE",
   "OPEN SWITCH ARROW PREV",
   "OPEN SWITCH ARROW NEXT",
@@ -551,8 +561,10 @@ export const openingTargetOrder: PreviewTargetId[] = [
 
 export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE SUN INFO",
+  "ACTIVE SUN SAFE BOX",
   "ACTIVE SUN DATE",
   "ACTIVE SUN NAME",
+  "ACTIVE SUN TIME",
   "ACTIVE SUN NOTE",
   "ACTIVE TIGER SCROLL",
   "ACTIVE IDENTITY STATUS MARK",
@@ -737,48 +749,52 @@ export const previewDefaults: PreviewControls = {
   activeTigerScrollScale: 1.74,
   activeTigerScrollRotation: 0,
   // Matches v8ActiveSunMessagesDefaults in v8ActiveConfig.ts exactly.
+  activeSunSafeBoxWidth: 70,
+  activeSunSafeBoxHeight: 60,
+  activeSunSafeBoxShowHelper: false,
   activeSunDateShow: true,
-  activeSunDateX: 50,
-  activeSunDateY: 26,
-  activeSunDateScale: 3,
-  activeSunDateRotation: 0,
+  activeSunDateX: 31,
+  activeSunDateY: 29,
   activeSunDateFontSize: 9,
-  activeSunDateBold: true,
+  activeSunDateOpacity: 90,
   activeSunNameShow: true,
-  activeSunNameX: 50,
-  activeSunNameY: 53,
-  activeSunNameScale: 1.82,
-  activeSunNameRotation: 0,
-  activeSunNameFontSize: 24,
-  activeSunNameBold: true,
+  activeSunNameX: 61,
+  activeSunNameY: 29,
+  activeSunNameWidth: 100,
+  activeSunNameOpacity: 100,
+  activeSunTimeShow: true,
+  activeSunTimeX: 50,
+  activeSunTimeY: 45,
+  activeSunTimeFontSize: 7,
+  activeSunTimeOpacity: 70,
   activeSunNoteShow: true,
   activeSunNoteX: 50,
-  activeSunNoteY: 78,
-  activeSunNoteScale: 1.32,
-  activeSunNoteRotation: 1,
-  activeSunNoteFontSize: 10,
-  activeSunNoteBold: true,
+  activeSunNoteY: 59,
+  activeSunNoteFontSize: 8,
+  activeSunNoteOpacity: 88,
+  openSunSafeBoxWidth: 70,
+  openSunSafeBoxHeight: 60,
+  openSunSafeBoxShowHelper: false,
   openSunDateShow: true,
-  openSunDateX: 50,
-  openSunDateY: 28,
-  openSunDateScale: 3,
-  openSunDateRotation: 0,
+  openSunDateX: 31,
+  openSunDateY: 29,
   openSunDateFontSize: 15,
-  openSunDateBold: true,
+  openSunDateOpacity: 90,
   openSunNameShow: true,
-  openSunNameX: 50,
-  openSunNameY: 50,
-  openSunNameScale: 1.82,
-  openSunNameRotation: 0,
-  openSunNameFontSize: 32,
-  openSunNameBold: true,
+  openSunNameX: 61,
+  openSunNameY: 29,
+  openSunNameWidth: 100,
+  openSunNameOpacity: 100,
+  openSunTimeShow: true,
+  openSunTimeX: 50,
+  openSunTimeY: 45,
+  openSunTimeFontSize: 12,
+  openSunTimeOpacity: 70,
   openSunNoteShow: true,
   openSunNoteX: 50,
-  openSunNoteY: 67,
-  openSunNoteScale: 1.32,
-  openSunNoteRotation: 0,
+  openSunNoteY: 59,
   openSunNoteFontSize: 18,
-  openSunNoteBold: true,
+  openSunNoteOpacity: 88,
   openSwitchArrowShow: true,
   openSwitchArrowPrevX: 0,
   openSwitchArrowPrevY: 50,
@@ -1082,59 +1098,63 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "FRONT FOAM": ["frontFoamShow", "frontFoamX", "frontFoamY", "frontFoamScale", "frontFoamRotation", "frontFoamOpacity", "frontFoamBlur"],
   "GOLD / INK": ["goldInkShow", "goldInkX", "goldInkY", "goldInkScale", "goldInkRotation", "goldInkOpacity", "goldInkBlur"],
   "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex"],
+  "ACTIVE SUN SAFE BOX": ["activeSunSafeBoxWidth", "activeSunSafeBoxHeight", "activeSunSafeBoxShowHelper"],
   "ACTIVE SUN DATE": [
     "activeSunDateShow",
     "activeSunDateX",
     "activeSunDateY",
-    "activeSunDateScale",
-    "activeSunDateRotation",
     "activeSunDateFontSize",
-    "activeSunDateBold",
+    "activeSunDateOpacity",
   ],
   "ACTIVE SUN NAME": [
     "activeSunNameShow",
     "activeSunNameX",
     "activeSunNameY",
-    "activeSunNameScale",
-    "activeSunNameRotation",
-    "activeSunNameFontSize",
-    "activeSunNameBold",
+    "activeSunNameWidth",
+    "activeSunNameOpacity",
+  ],
+  "ACTIVE SUN TIME": [
+    "activeSunTimeShow",
+    "activeSunTimeX",
+    "activeSunTimeY",
+    "activeSunTimeFontSize",
+    "activeSunTimeOpacity",
   ],
   "ACTIVE SUN NOTE": [
     "activeSunNoteShow",
     "activeSunNoteX",
     "activeSunNoteY",
-    "activeSunNoteScale",
-    "activeSunNoteRotation",
     "activeSunNoteFontSize",
-    "activeSunNoteBold",
+    "activeSunNoteOpacity",
   ],
+  "OPEN SUN SAFE BOX": ["openSunSafeBoxWidth", "openSunSafeBoxHeight", "openSunSafeBoxShowHelper"],
   "OPEN SUN DATE": [
     "openSunDateShow",
     "openSunDateX",
     "openSunDateY",
-    "openSunDateScale",
-    "openSunDateRotation",
     "openSunDateFontSize",
-    "openSunDateBold",
+    "openSunDateOpacity",
   ],
   "OPEN SUN NAME": [
     "openSunNameShow",
     "openSunNameX",
     "openSunNameY",
-    "openSunNameScale",
-    "openSunNameRotation",
-    "openSunNameFontSize",
-    "openSunNameBold",
+    "openSunNameWidth",
+    "openSunNameOpacity",
+  ],
+  "OPEN SUN TIME": [
+    "openSunTimeShow",
+    "openSunTimeX",
+    "openSunTimeY",
+    "openSunTimeFontSize",
+    "openSunTimeOpacity",
   ],
   "OPEN SUN NOTE": [
     "openSunNoteShow",
     "openSunNoteX",
     "openSunNoteY",
-    "openSunNoteScale",
-    "openSunNoteRotation",
     "openSunNoteFontSize",
-    "openSunNoteBold",
+    "openSunNoteOpacity",
   ],
   "ACTIVE TIGER SCROLL": [
     "activeTigerScrollX",
@@ -1460,9 +1480,11 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "GOLD / INK": "goldInkShow",
   "ACTIVE SUN DATE": "activeSunDateShow",
   "ACTIVE SUN NAME": "activeSunNameShow",
+  "ACTIVE SUN TIME": "activeSunTimeShow",
   "ACTIVE SUN NOTE": "activeSunNoteShow",
   "OPEN SUN DATE": "openSunDateShow",
   "OPEN SUN NAME": "openSunNameShow",
+  "OPEN SUN TIME": "openSunTimeShow",
   "OPEN SUN NOTE": "openSunNoteShow",
   "ACTIVE IDENTITY STATUS MARK": "activeIdentityShow",
   "ACTIVE IDENTITY NAME": "activeIdentityShow",
@@ -1585,36 +1607,42 @@ export const controlRanges = {
   activeTigerScrollY: { label: "Tiger+Scroll Y %", min: 0, max: 100 },
   activeTigerScrollScale: { label: "Tiger+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
   activeTigerScrollRotation: { label: "Tiger+Scroll Rotation", min: -45, max: 45 },
-  activeSunDateX: { label: "日期 X %", min: -50, max: 150 },
-  activeSunDateY: { label: "日期 Y %", min: -50, max: 150 },
-  activeSunDateScale: { label: "日期 Scale", min: 0.2, max: 3, step: 0.01 },
-  activeSunDateRotation: { label: "日期 Rotation", min: -180, max: 180 },
+  activeSunSafeBoxWidth: { label: "Safe Width %", min: 20, max: 120 },
+  activeSunSafeBoxHeight: { label: "Safe Height %", min: 20, max: 120 },
+  activeSunDateX: { label: "日期 X %", min: -20, max: 120 },
+  activeSunDateY: { label: "日期 Y %", min: -20, max: 120 },
   activeSunDateFontSize: { label: "日期 Font Size", min: 4, max: 48 },
-  activeSunNameX: { label: "聚會名 X %", min: -50, max: 150 },
-  activeSunNameY: { label: "聚會名 Y %", min: -50, max: 150 },
-  activeSunNameScale: { label: "聚會名 Scale", min: 0.2, max: 3, step: 0.01 },
-  activeSunNameRotation: { label: "聚會名 Rotation", min: -180, max: 180 },
-  activeSunNameFontSize: { label: "聚會名 Font Size", min: 4, max: 48 },
-  activeSunNoteX: { label: "備註 X %", min: -50, max: 150 },
-  activeSunNoteY: { label: "備註 Y %", min: -50, max: 150 },
-  activeSunNoteScale: { label: "備註 Scale", min: 0.2, max: 3, step: 0.01 },
-  activeSunNoteRotation: { label: "備註 Rotation", min: -180, max: 180 },
+  activeSunDateOpacity: { label: "日期 Opacity", min: 0, max: 100 },
+  activeSunNameX: { label: "聚會名 X %", min: -20, max: 120 },
+  activeSunNameY: { label: "聚會名 Y %", min: -20, max: 120 },
+  activeSunNameWidth: { label: "聚會名 Width %", min: 10, max: 140 },
+  activeSunNameOpacity: { label: "聚會名 Opacity", min: 0, max: 100 },
+  activeSunTimeX: { label: "時間 X %", min: -20, max: 120 },
+  activeSunTimeY: { label: "時間 Y %", min: -20, max: 120 },
+  activeSunTimeFontSize: { label: "時間 Font Size", min: 4, max: 48 },
+  activeSunTimeOpacity: { label: "時間 Opacity", min: 0, max: 100 },
+  activeSunNoteX: { label: "備註 X %", min: -20, max: 120 },
+  activeSunNoteY: { label: "備註 Y %", min: -20, max: 120 },
   activeSunNoteFontSize: { label: "備註 Font Size", min: 4, max: 48 },
-  openSunDateX: { label: "開場日期 X %", min: -50, max: 150 },
-  openSunDateY: { label: "開場日期 Y %", min: -50, max: 150 },
-  openSunDateScale: { label: "開場日期 Scale", min: 0.2, max: 3, step: 0.01 },
-  openSunDateRotation: { label: "開場日期 Rotation", min: -180, max: 180 },
+  activeSunNoteOpacity: { label: "備註 Opacity", min: 0, max: 100 },
+  openSunSafeBoxWidth: { label: "開場 Safe Width %", min: 20, max: 120 },
+  openSunSafeBoxHeight: { label: "開場 Safe Height %", min: 20, max: 120 },
+  openSunDateX: { label: "開場日期 X %", min: -20, max: 120 },
+  openSunDateY: { label: "開場日期 Y %", min: -20, max: 120 },
   openSunDateFontSize: { label: "開場日期 Font Size", min: 4, max: 48 },
-  openSunNameX: { label: "開場聚會名 X %", min: -50, max: 150 },
-  openSunNameY: { label: "開場聚會名 Y %", min: -50, max: 150 },
-  openSunNameScale: { label: "開場聚會名 Scale", min: 0.2, max: 3, step: 0.01 },
-  openSunNameRotation: { label: "開場聚會名 Rotation", min: -180, max: 180 },
-  openSunNameFontSize: { label: "開場聚會名 Font Size", min: 4, max: 48 },
-  openSunNoteX: { label: "開場備註 X %", min: -50, max: 150 },
-  openSunNoteY: { label: "開場備註 Y %", min: -50, max: 150 },
-  openSunNoteScale: { label: "開場備註 Scale", min: 0.2, max: 3, step: 0.01 },
-  openSunNoteRotation: { label: "開場備註 Rotation", min: -180, max: 180 },
+  openSunDateOpacity: { label: "開場日期 Opacity", min: 0, max: 100 },
+  openSunNameX: { label: "開場聚會名 X %", min: -20, max: 120 },
+  openSunNameY: { label: "開場聚會名 Y %", min: -20, max: 120 },
+  openSunNameWidth: { label: "開場聚會名 Width %", min: 10, max: 140 },
+  openSunNameOpacity: { label: "開場聚會名 Opacity", min: 0, max: 100 },
+  openSunTimeX: { label: "開場時間 X %", min: -20, max: 120 },
+  openSunTimeY: { label: "開場時間 Y %", min: -20, max: 120 },
+  openSunTimeFontSize: { label: "開場時間 Font Size", min: 4, max: 48 },
+  openSunTimeOpacity: { label: "開場時間 Opacity", min: 0, max: 100 },
+  openSunNoteX: { label: "開場備註 X %", min: -20, max: 120 },
+  openSunNoteY: { label: "開場備註 Y %", min: -20, max: 120 },
   openSunNoteFontSize: { label: "開場備註 Font Size", min: 4, max: 48 },
+  openSunNoteOpacity: { label: "開場備註 Opacity", min: 0, max: 100 },
   activeIdentityStatusMarkX: { label: "印章 X %", min: -30, max: 130 },
   activeIdentityStatusMarkY: { label: "印章 Y %", min: -30, max: 160 },
   activeIdentityStatusMarkScale: { label: "印章 Scale", min: 0.3, max: 4, step: 0.01 },
@@ -1976,32 +2004,38 @@ Y: ${Math.round(controls.activeSunY)}
 Scale: ${controls.activeSunScale.toFixed(2)}
 Z-Index: ${Math.round(controls.activeSunZIndex)}
 
+ACTIVE SUN SAFE BOX
+Width: ${Math.round(controls.activeSunSafeBoxWidth)}
+Height: ${Math.round(controls.activeSunSafeBoxHeight)}
+Helper: ${controls.activeSunSafeBoxShowHelper ? "ON" : "OFF"}
+
 ACTIVE SUN DATE
 Show: ${controls.activeSunDateShow ? "ON" : "OFF"}
 X: ${Math.round(controls.activeSunDateX)}
 Y: ${Math.round(controls.activeSunDateY)}
-Scale: ${controls.activeSunDateScale.toFixed(2)}
-Rotation: ${Math.round(controls.activeSunDateRotation)}
 Font Size: ${Math.round(controls.activeSunDateFontSize)}
-Bold: ${controls.activeSunDateBold ? "ON" : "OFF"}
+Opacity: ${Math.round(controls.activeSunDateOpacity)}
 
 ACTIVE SUN NAME
 Show: ${controls.activeSunNameShow ? "ON" : "OFF"}
 X: ${Math.round(controls.activeSunNameX)}
 Y: ${Math.round(controls.activeSunNameY)}
-Scale: ${controls.activeSunNameScale.toFixed(2)}
-Rotation: ${Math.round(controls.activeSunNameRotation)}
-Font Size: ${Math.round(controls.activeSunNameFontSize)}
-Bold: ${controls.activeSunNameBold ? "ON" : "OFF"}
+Width: ${Math.round(controls.activeSunNameWidth)}
+Opacity: ${Math.round(controls.activeSunNameOpacity)}
+
+ACTIVE SUN TIME
+Show: ${controls.activeSunTimeShow ? "ON" : "OFF"}
+X: ${Math.round(controls.activeSunTimeX)}
+Y: ${Math.round(controls.activeSunTimeY)}
+Font Size: ${Math.round(controls.activeSunTimeFontSize)}
+Opacity: ${Math.round(controls.activeSunTimeOpacity)}
 
 ACTIVE SUN NOTE
 Show: ${controls.activeSunNoteShow ? "ON" : "OFF"}
 X: ${Math.round(controls.activeSunNoteX)}
 Y: ${Math.round(controls.activeSunNoteY)}
-Scale: ${controls.activeSunNoteScale.toFixed(2)}
-Rotation: ${Math.round(controls.activeSunNoteRotation)}
 Font Size: ${Math.round(controls.activeSunNoteFontSize)}
-Bold: ${controls.activeSunNoteBold ? "ON" : "OFF"}
+Opacity: ${Math.round(controls.activeSunNoteOpacity)}
 
 ACTIVE TIGER SCROLL
 X: ${Math.round(controls.activeTigerScrollX)}
@@ -2243,67 +2277,85 @@ export function buildV8ActiveHeroOverrides(controls: PreviewControls): Partial<V
 
 export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8ActiveSunMessagesControls {
   return {
+    safeBox: {
+      width: controls.activeSunSafeBoxWidth,
+      height: controls.activeSunSafeBoxHeight,
+      showHelperBox: controls.activeSunSafeBoxShowHelper,
+    },
     date: {
       show: controls.activeSunDateShow,
       x: controls.activeSunDateX,
       y: controls.activeSunDateY,
-      scale: controls.activeSunDateScale,
-      rotation: controls.activeSunDateRotation,
       fontSize: controls.activeSunDateFontSize,
-      bold: controls.activeSunDateBold,
+      opacity: controls.activeSunDateOpacity,
+      width: v8ActiveSunMessagesDefaults.date.width,
     },
     name: {
       show: controls.activeSunNameShow,
       x: controls.activeSunNameX,
       y: controls.activeSunNameY,
-      scale: controls.activeSunNameScale,
-      rotation: controls.activeSunNameRotation,
-      fontSize: controls.activeSunNameFontSize,
-      bold: controls.activeSunNameBold,
+      fontSize: v8ActiveSunMessagesDefaults.name.fontSize,
+      opacity: controls.activeSunNameOpacity,
+      width: controls.activeSunNameWidth,
     },
-    time: v8ActiveSunMessagesDefaults.time,
+    time: {
+      show: controls.activeSunTimeShow,
+      x: controls.activeSunTimeX,
+      y: controls.activeSunTimeY,
+      fontSize: controls.activeSunTimeFontSize,
+      opacity: controls.activeSunTimeOpacity,
+      width: v8ActiveSunMessagesDefaults.time.width,
+    },
     note: {
       show: controls.activeSunNoteShow,
       x: controls.activeSunNoteX,
       y: controls.activeSunNoteY,
-      scale: controls.activeSunNoteScale,
-      rotation: controls.activeSunNoteRotation,
       fontSize: controls.activeSunNoteFontSize,
-      bold: controls.activeSunNoteBold,
+      opacity: controls.activeSunNoteOpacity,
+      width: v8ActiveSunMessagesDefaults.note.width,
     },
   };
 }
 
 export function buildV8OpeningSunControls(controls: PreviewControls) {
   return {
+    safeBox: {
+      width: controls.openSunSafeBoxWidth,
+      height: controls.openSunSafeBoxHeight,
+      showHelperBox: controls.openSunSafeBoxShowHelper,
+    },
     messages: {
       date: {
         show: controls.openSunDateShow,
         x: controls.openSunDateX,
         y: controls.openSunDateY,
-        scale: controls.openSunDateScale,
-        rotation: controls.openSunDateRotation,
         fontSize: controls.openSunDateFontSize,
-        bold: controls.openSunDateBold,
+        opacity: controls.openSunDateOpacity,
+        width: 28,
       },
       name: {
         show: controls.openSunNameShow,
         x: controls.openSunNameX,
         y: controls.openSunNameY,
-        scale: controls.openSunNameScale,
-        rotation: controls.openSunNameRotation,
-        fontSize: controls.openSunNameFontSize,
-        bold: controls.openSunNameBold,
+        fontSize: 32,
+        opacity: controls.openSunNameOpacity,
+        width: controls.openSunNameWidth,
       },
-      time: { show: true, x: 50, y: 62, scale: 1, rotation: 0, fontSize: 12, bold: false },
+      time: {
+        show: controls.openSunTimeShow,
+        x: controls.openSunTimeX,
+        y: controls.openSunTimeY,
+        fontSize: controls.openSunTimeFontSize,
+        opacity: controls.openSunTimeOpacity,
+        width: 72,
+      },
       note: {
         show: controls.openSunNoteShow,
         x: controls.openSunNoteX,
         y: controls.openSunNoteY,
-        scale: controls.openSunNoteScale,
-        rotation: controls.openSunNoteRotation,
         fontSize: controls.openSunNoteFontSize,
-        bold: controls.openSunNoteBold,
+        opacity: controls.openSunNoteOpacity,
+        width: 88,
       },
     },
     switchArrows: {

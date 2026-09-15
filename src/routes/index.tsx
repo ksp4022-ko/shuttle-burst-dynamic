@@ -243,7 +243,8 @@ type CountdownNumericKey = "seconds";
 type VisualNumericKey = Exclude<keyof VisualTuning, "interactionBlockerEnabled" | "skipVisible">;
 type VisualToggleKey = "interactionBlockerEnabled" | "skipVisible";
 type OpeningSunMessageId = keyof V8OpeningSunControls["messages"];
-type OpeningSunMessageNumericKey = Exclude<keyof V8OpeningSunControls["messages"]["date"], "show" | "bold">;
+type OpeningSunMessageNumericKey = Exclude<keyof V8OpeningSunControls["messages"]["date"], "show">;
+type OpeningSunSafeBoxNumericKey = Exclude<keyof V8OpeningSunControls["safeBox"], "showHelperBox">;
 type OpeningSunSwitchArrowId = "prev" | "next";
 type OpeningSunSwitchArrowNumericKey = keyof V8OpeningSunControls["switchArrows"]["prev"];
 const DEFAULT_TUTORIAL_TUNING: TutorialTuning = {
@@ -1097,7 +1098,7 @@ export function Index() {
           onVisualToggle={(key) =>
             setVisualTuning((current) => ({ ...current, [key]: !current[key] }))
           }
-          onOpeningSunMessageChange={(message, key, value) =>
+  onOpeningSunMessageChange={(message, key, value) =>
             setOpeningSunTuning((current) => ({
               ...current,
               messages: {
@@ -1113,6 +1114,18 @@ export function Index() {
                 ...current.messages,
                 [message]: { ...current.messages[message], [key]: !current.messages[message][key] },
               },
+            }))
+          }
+          onOpeningSunSafeBoxChange={(key, value) =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              safeBox: { ...current.safeBox, [key]: value },
+            }))
+          }
+          onToggleOpeningSunSafeBoxHelper={() =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              safeBox: { ...current.safeBox, showHelperBox: !current.safeBox.showHelperBox },
             }))
           }
           onOpeningSunSwitchArrowChange={(arrow, key, value) =>
@@ -1686,7 +1699,9 @@ function HandoffTimingLab({
   onToggleSkip: () => void;
   onVisualToggle: (key: VisualToggleKey) => void;
   onOpeningSunMessageChange: (message: OpeningSunMessageId, key: OpeningSunMessageNumericKey, value: number) => void;
-  onOpeningSunMessageToggle: (message: OpeningSunMessageId, key: "show" | "bold") => void;
+  onOpeningSunMessageToggle: (message: OpeningSunMessageId, key: "show") => void;
+  onOpeningSunSafeBoxChange: (key: OpeningSunSafeBoxNumericKey, value: number) => void;
+  onToggleOpeningSunSafeBoxHelper: () => void;
   onOpeningSunSwitchArrowChange: (arrow: OpeningSunSwitchArrowId, key: OpeningSunSwitchArrowNumericKey, value: number) => void;
   onToggleOpeningSunSwitchArrows: () => void;
   onReplayHandoff: () => void;
@@ -1737,29 +1752,38 @@ function HandoffTimingLab({
             <TimingControl label="CONVERGE X" description="吸附前匯流位置" value={particle.convergencePosition} min={18} max={58} step={1} unit="%" onChange={(value) => onParticleChange("convergencePosition", value)} />
             <div className="sd-timing-actions is-grid"><button type="button" onClick={onReplayParticles}>Replay particle inflow</button></div>
 
+            <div className="sd-timing-subgroup">OPEN SUN SAFE BOX</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onToggleOpeningSunSafeBoxHelper}>{openingSun.safeBox.showHelperBox ? "Hide helper box" : "Show helper box"}</button></div>
+            <TimingControl label="SAFE WIDTH" description="開場紅日文字安全框寬度" value={openingSun.safeBox.width} min={20} max={120} step={1} unit="%" onChange={(value) => onOpeningSunSafeBoxChange("width", value)} />
+            <TimingControl label="SAFE HEIGHT" description="開場紅日文字安全框高度" value={openingSun.safeBox.height} min={20} max={120} step={1} unit="%" onChange={(value) => onOpeningSunSafeBoxChange("height", value)} />
+
             <div className="sd-timing-subgroup">OPEN SUN DATE</div>
-            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("date", "show")}>{openingSun.messages.date.show ? "Hide date" : "Show date"}</button><button type="button" onClick={() => onOpeningSunMessageToggle("date", "bold")}>{openingSun.messages.date.bold ? "Date bold" : "Date regular"}</button></div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("date", "show")}>{openingSun.messages.date.show ? "Hide date" : "Show date"}</button></div>
             <TimingControl label="DATE X" description="開場紅日日期 X" value={openingSun.messages.date.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("date", "x", value)} />
             <TimingControl label="DATE Y" description="開場紅日日期 Y" value={openingSun.messages.date.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("date", "y", value)} />
-            <TimingControl label="DATE SCALE" description="開場紅日日期縮放" value={openingSun.messages.date.scale} min={0.2} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunMessageChange("date", "scale", value)} />
-            <TimingControl label="DATE ROT" description="開場紅日日期旋轉" value={openingSun.messages.date.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunMessageChange("date", "rotation", value)} />
             <TimingControl label="DATE FONT" description="開場紅日日期字級" value={openingSun.messages.date.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("date", "fontSize", value)} />
+            <TimingControl label="DATE OPACITY" description="開場紅日日期透明度" value={openingSun.messages.date.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("date", "opacity", value)} />
 
             <div className="sd-timing-subgroup">OPEN SUN NAME</div>
-            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("name", "show")}>{openingSun.messages.name.show ? "Hide name" : "Show name"}</button><button type="button" onClick={() => onOpeningSunMessageToggle("name", "bold")}>{openingSun.messages.name.bold ? "Name bold" : "Name regular"}</button></div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("name", "show")}>{openingSun.messages.name.show ? "Hide name" : "Show name"}</button></div>
             <TimingControl label="NAME X" description="開場紅日聚會名 X" value={openingSun.messages.name.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "x", value)} />
             <TimingControl label="NAME Y" description="開場紅日聚會名 Y" value={openingSun.messages.name.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "y", value)} />
-            <TimingControl label="NAME SCALE" description="開場紅日聚會名縮放" value={openingSun.messages.name.scale} min={0.2} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunMessageChange("name", "scale", value)} />
-            <TimingControl label="NAME ROT" description="開場紅日聚會名旋轉" value={openingSun.messages.name.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunMessageChange("name", "rotation", value)} />
-            <TimingControl label="NAME FONT" description="開場紅日聚會名字級" value={openingSun.messages.name.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("name", "fontSize", value)} />
+            <TimingControl label="NAME WIDTH" description="開場紅日聚會名寬度" value={openingSun.messages.name.width} min={10} max={140} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "width", value)} />
+            <TimingControl label="NAME OPACITY" description="開場紅日聚會名透明度" value={openingSun.messages.name.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "opacity", value)} />
+
+            <div className="sd-timing-subgroup">OPEN SUN TIME</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("time", "show")}>{openingSun.messages.time.show ? "Hide time" : "Show time"}</button></div>
+            <TimingControl label="TIME X" description="開場紅日時間 X" value={openingSun.messages.time.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("time", "x", value)} />
+            <TimingControl label="TIME Y" description="開場紅日時間 Y" value={openingSun.messages.time.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("time", "y", value)} />
+            <TimingControl label="TIME FONT" description="開場紅日時間字級" value={openingSun.messages.time.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("time", "fontSize", value)} />
+            <TimingControl label="TIME OPACITY" description="開場紅日時間透明度" value={openingSun.messages.time.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("time", "opacity", value)} />
 
             <div className="sd-timing-subgroup">OPEN SUN NOTE</div>
-            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("note", "show")}>{openingSun.messages.note.show ? "Hide note" : "Show note"}</button><button type="button" onClick={() => onOpeningSunMessageToggle("note", "bold")}>{openingSun.messages.note.bold ? "Note bold" : "Note regular"}</button></div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("note", "show")}>{openingSun.messages.note.show ? "Hide note" : "Show note"}</button></div>
             <TimingControl label="NOTE X" description="開場紅日備註 X" value={openingSun.messages.note.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("note", "x", value)} />
             <TimingControl label="NOTE Y" description="開場紅日備註 Y" value={openingSun.messages.note.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("note", "y", value)} />
-            <TimingControl label="NOTE SCALE" description="開場紅日備註縮放" value={openingSun.messages.note.scale} min={0.2} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunMessageChange("note", "scale", value)} />
-            <TimingControl label="NOTE ROT" description="開場紅日備註旋轉" value={openingSun.messages.note.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunMessageChange("note", "rotation", value)} />
             <TimingControl label="NOTE FONT" description="開場紅日備註字級" value={openingSun.messages.note.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("note", "fontSize", value)} />
+            <TimingControl label="NOTE OPACITY" description="開場紅日備註透明度" value={openingSun.messages.note.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("note", "opacity", value)} />
 
             <div className="sd-timing-subgroup">OPEN SWITCH ARROW</div>
             <div className="sd-timing-actions is-grid"><button type="button" onClick={onToggleOpeningSunSwitchArrows}>{openingSun.switchArrows.show ? "Hide arrows" : "Show arrows"}</button></div>
@@ -2240,12 +2264,11 @@ function normalizeOpeningSunTuning(value: Partial<V8OpeningSunControls> | undefi
     fallback: V8OpeningSunControls["messages"]["date"],
   ) => ({
     show: typeof message?.show === "boolean" ? message.show : fallback.show,
-    x: clampTiming(message?.x, -50, 150, fallback.x),
-    y: clampTiming(message?.y, -50, 150, fallback.y),
-    scale: clampTiming(message?.scale, 0.2, 3, fallback.scale),
-    rotation: clampTiming(message?.rotation, -180, 180, fallback.rotation),
+    x: clampTiming(message?.x, -20, 120, fallback.x),
+    y: clampTiming(message?.y, -20, 120, fallback.y),
     fontSize: clampTiming(message?.fontSize, 4, 48, fallback.fontSize),
-    bold: typeof message?.bold === "boolean" ? message.bold : fallback.bold,
+    opacity: clampTiming(message?.opacity, 0, 100, fallback.opacity),
+    width: clampTiming(message?.width, 10, 140, fallback.width),
   });
   const normalizeArrow = (
     arrow: Partial<V8OpeningSunControls["switchArrows"]["prev"]> | undefined,
@@ -2259,6 +2282,11 @@ function normalizeOpeningSunTuning(value: Partial<V8OpeningSunControls> | undefi
     zIndex: clampTiming(arrow?.zIndex, 0, 40, fallback.zIndex),
   });
   return {
+    safeBox: {
+      width: clampTiming(source.safeBox?.width, 20, 120, v8OpeningSunDefaults.safeBox.width),
+      height: clampTiming(source.safeBox?.height, 20, 120, v8OpeningSunDefaults.safeBox.height),
+      showHelperBox: typeof source.safeBox?.showHelperBox === "boolean" ? source.safeBox.showHelperBox : v8OpeningSunDefaults.safeBox.showHelperBox,
+    },
     messages: {
       date: normalizeMessage(source.messages?.date, v8OpeningSunDefaults.messages.date),
       name: normalizeMessage(source.messages?.name, v8OpeningSunDefaults.messages.name),

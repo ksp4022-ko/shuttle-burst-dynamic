@@ -204,13 +204,19 @@ export type V8ActiveSunMessageControls = {
   show: boolean;
   x: number;
   y: number;
-  scale: number;
-  rotation: number;
   fontSize: number;
-  bold: boolean;
+  opacity: number;
+  width: number;
+};
+
+export type V8ActiveSunSafeBoxControls = {
+  width: number;
+  height: number;
+  showHelperBox: boolean;
 };
 
 export type V8ActiveSunMessagesControls = {
+  safeBox: V8ActiveSunSafeBoxControls;
   date: V8ActiveSunMessageControls;
   name: V8ActiveSunMessageControls;
   time: V8ActiveSunMessageControls;
@@ -225,10 +231,11 @@ export type V8ActiveSunMessagesControls = {
 // the name at a similar size to the date, not shown by default is NOT
 // needed since an empty/undefined eventNote already renders nothing.
 export const v8ActiveSunMessagesDefaults: V8ActiveSunMessagesControls = {
-  date: { show: true, x: 42, y: 32, scale: 1, rotation: 0, fontSize: 9, bold: true },
-  name: { show: true, x: 56, y: 48, scale: 1, rotation: 0, fontSize: 24, bold: true },
-  time: { show: true, x: 56, y: 61, scale: 1, rotation: 0, fontSize: 7, bold: false },
-  note: { show: true, x: 56, y: 72, scale: 1, rotation: 0, fontSize: 8, bold: false },
+  safeBox: { width: 70, height: 60, showHelperBox: false },
+  date: { show: true, x: 31, y: 29, fontSize: 9, opacity: 90, width: 28 },
+  name: { show: true, x: 61, y: 29, fontSize: 24, opacity: 100, width: 100 },
+  time: { show: true, x: 50, y: 45, fontSize: 7, opacity: 70, width: 72 },
+  note: { show: true, x: 50, y: 59, fontSize: 8, opacity: 88, width: 88 },
 };
 
 export const v8ActiveSunMessageRanges: Record<
@@ -236,12 +243,20 @@ export const v8ActiveSunMessageRanges: Record<
   { label: string; min: number; max: number; step?: number }
 > = {
   show: { label: "Show", min: 0, max: 1 },
-  x: { label: "X %", min: -50, max: 150 },
-  y: { label: "Y %", min: -50, max: 150 },
-  scale: { label: "Scale", min: 0.2, max: 3, step: 0.01 },
-  rotation: { label: "Rotation", min: -180, max: 180 },
+  x: { label: "X %", min: -20, max: 120 },
+  y: { label: "Y %", min: -20, max: 120 },
   fontSize: { label: "Font Size", min: 4, max: 48 },
-  bold: { label: "Bold", min: 0, max: 1 },
+  opacity: { label: "Opacity", min: 0, max: 100 },
+  width: { label: "Width %", min: 10, max: 140 },
+};
+
+export const v8ActiveSunSafeBoxRanges: Record<
+  keyof V8ActiveSunSafeBoxControls,
+  { label: string; min: number; max: number; step?: number }
+> = {
+  width: { label: "Safe Width %", min: 20, max: 120 },
+  height: { label: "Safe Height %", min: 20, max: 120 },
+  showHelperBox: { label: "Show Helper Box", min: 0, max: 1 },
 };
 
 // Layout overrides for V8HeroComposition's shared canvas -- applies to
