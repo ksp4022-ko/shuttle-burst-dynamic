@@ -1,4 +1,4 @@
-import { v8ActiveBackgroundFadeOverrides } from "@/components/v8-active/v8ActiveConfig";
+import { v8ActiveBackgroundFadeOverrides, v8ActiveSunMessagesDefaults } from "@/components/v8-active/v8ActiveConfig";
 import type {
   V8ActiveCapacityBadgeControls,
   V8ActiveEmaTextsControls,
@@ -2261,6 +2261,7 @@ export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8A
       fontSize: controls.activeSunNameFontSize,
       bold: controls.activeSunNameBold,
     },
+    time: v8ActiveSunMessagesDefaults.time,
     note: {
       show: controls.activeSunNoteShow,
       x: controls.activeSunNoteX,
@@ -2294,6 +2295,7 @@ export function buildV8OpeningSunControls(controls: PreviewControls) {
         fontSize: controls.openSunNameFontSize,
         bold: controls.openSunNameBold,
       },
+      time: { show: true, x: 50, y: 62, scale: 1, rotation: 0, fontSize: 12, bold: false },
       note: {
         show: controls.openSunNoteShow,
         x: controls.openSunNoteX,

@@ -2262,6 +2262,7 @@ function normalizeOpeningSunTuning(value: Partial<V8OpeningSunControls> | undefi
     messages: {
       date: normalizeMessage(source.messages?.date, v8OpeningSunDefaults.messages.date),
       name: normalizeMessage(source.messages?.name, v8OpeningSunDefaults.messages.name),
+      time: normalizeMessage(source.messages?.time, v8OpeningSunDefaults.messages.time),
       note: normalizeMessage(source.messages?.note, v8OpeningSunDefaults.messages.note),
     },
     switchArrows: {

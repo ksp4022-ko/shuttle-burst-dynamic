@@ -1,5 +1,6 @@
 import { useMemo, useRef, type CSSProperties, type TouchEvent } from "react";
 import type { AlphaEvent } from "@/lib/database-alpha";
+import { formatV8MeetupDate, parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 
 // Standalone copy of the Active page's red-sun content module (see
 // V8ActiveSunContent and its helpers in V8ActivePage.tsx), duplicated here
@@ -26,6 +27,7 @@ function buildV8OpeningSunAssets(baseUrl: string) {
     sunBadgeCapacity: `${activeBase}/sun-info-badge-capacity-v1.webp`,
     sunSwitchArrowPrev: `${statusAssetBase}/v8-switch-meetup-prev-display.webp`,
     sunSwitchArrowNext: `${statusAssetBase}/v8-switch-meetup-next-display.webp`,
+    sunTitleKangxuan: `${statusAssetBase}/v8-kangxuan-calligraphy-ivory-square-v1.webp`,
   };
 }
 
@@ -45,7 +47,8 @@ const BADGE_TEXT_INSETS = {
 const SUN_SCALE_RATIO = 0.68;
 const DATE_MESSAGE = { x: 50, y: 28, scale: 3, rotation: 0, fontSize: 15, bold: true };
 const NAME_MESSAGE = { x: 50, y: 50, scale: 1.82, rotation: 0, fontSize: 32, bold: true };
-const NOTE_MESSAGE = { x: 50, y: 67, scale: 1.32, rotation: 0, fontSize: 18, bold: true };
+const TIME_MESSAGE = { x: 50, y: 62, scale: 1, rotation: 0, fontSize: 12, bold: false };
+const NOTE_MESSAGE = { x: 50, y: 73, scale: 1.32, rotation: 0, fontSize: 18, bold: true };
 
 // Copied from previewDefaults' activeSunBadge*/activeSwitchArrow* values,
 // same 0.68 scale-ratio adjustment as the messages above.
@@ -73,6 +76,7 @@ export type V8OpeningSunControls = {
   messages: {
     date: SunMessageControls;
     name: SunMessageControls;
+    time: SunMessageControls;
     note: SunMessageControls;
   };
   switchArrows: SwitchArrowControls;
@@ -82,6 +86,7 @@ export const v8OpeningSunDefaults: V8OpeningSunControls = {
   messages: {
     date: { show: true, ...DATE_MESSAGE },
     name: { show: true, ...NAME_MESSAGE },
+    time: { show: true, ...TIME_MESSAGE },
     note: { show: true, ...NOTE_MESSAGE },
   },
   switchArrows: {
@@ -196,6 +201,41 @@ function V8SunMessage({ text, config }: { text: string; config: SunMessageContro
   );
 }
 
+function V8SunMeetupName({
+  displayName,
+  kangxuanSrc,
+  config,
+}: {
+  displayName: string;
+  kangxuanSrc: string;
+  config: SunMessageControls;
+}) {
+  if (!config.show || !displayName) return null;
+  if (displayName !== "康軒") return <V8SunMessage text={displayName} config={config} />;
+
+  return (
+    <img
+      src={kangxuanSrc}
+      alt={displayName}
+      className="v8-opening-sun-kangxuan-title"
+      draggable={false}
+      style={
+        {
+          position: "absolute",
+          left: `${config.x}%`,
+          top: `${config.y}%`,
+          width: `min(58%, ${Math.max(72, config.fontSize * 3.4)}px)`,
+          height: "auto",
+          objectFit: "contain",
+          transform: `translate(-50%, -50%) scale(${config.scale}) rotate(${config.rotation}deg)`,
+          transformOrigin: "center",
+          pointerEvents: "none",
+        } as CSSProperties
+      }
+    />
+  );
+}
+
 const SWIPE_THRESHOLD_PX = 40;
 
 // Copied from switchArrowStyle in V8ActivePage.tsx.
@@ -262,13 +302,6 @@ function V8OpeningSunSwitcher({
   );
 }
 
-function shortDate(value: string) {
-  const [, month = "", day = ""] = String(value || "").split("-");
-  const monthNumber = Number(month);
-  const dayNumber = Number(day);
-  return monthNumber > 0 && dayNumber > 0 ? `${monthNumber}/${dayNumber}` : value;
-}
-
 // Renders as a CHILD of V8HeroComposition's sun container (passed via the
 // sunContent prop), same as Active's V8ActiveSunContent -- every position
 // here is relative to the sun's own box (100% = the sun's own diameter).
@@ -295,14 +328,16 @@ export function V8OpeningSunContent({
   // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label, same as
   // Active's own courtTimeLabel logic.
   const courtTimeLabel = event.courtCount ? (event.hours ? `${event.courtCount}場/${event.hours}hr` : `${event.courtCount}場`) : null;
+  const meetupDisplay = parseV8MeetupDisplay(event.name);
 
   return (
     <>
       {canSwitchMeetup ? (
         <V8OpeningSunSwitcher assets={assets} controls={controls.switchArrows} onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
       ) : null}
-      <V8SunMessage text={shortDate(event.eventDate)} config={controls.messages.date} />
-      <V8SunMessage text={event.name} config={controls.messages.name} />
+      <V8SunMessage text={formatV8MeetupDate(event.eventDate)} config={controls.messages.date} />
+      <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} config={controls.messages.name} />
+      <V8SunMessage text={meetupDisplay.timeLabel} config={controls.messages.time} />
       <V8SunMessage text={event.eventNote || ""} config={controls.messages.note} />
       {SHOW_INFO_BADGES && event.ballType ? (
         <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={event.ballType} config={BALL_TYPE_BADGE} textInset={BADGE_TEXT_INSETS.ballType} />

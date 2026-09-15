@@ -132,6 +132,10 @@ export const v8ActiveSunSwitchArrowFiles = {
   next: "v8-switch-meetup-next-display.webp",
 } as const;
 
+export const v8ActiveSunTitleFiles = {
+  kangxuan: "v8-kangxuan-calligraphy-ivory-square-v1.webp",
+} as const;
+
 export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
@@ -170,6 +174,7 @@ export function buildV8ActiveAssets(baseUrl: string) {
     rosterV2B2: `${activeBase}/${v8ActiveRosterV2Files.b2}`,
     sunSwitchArrowPrev: `${statusAssetBase}/${v8ActiveSunSwitchArrowFiles.prev}`,
     sunSwitchArrowNext: `${statusAssetBase}/${v8ActiveSunSwitchArrowFiles.next}`,
+    sunTitleKangxuan: `${statusAssetBase}/${v8ActiveSunTitleFiles.kangxuan}`,
   };
 }
 
@@ -208,6 +213,7 @@ export type V8ActiveSunMessageControls = {
 export type V8ActiveSunMessagesControls = {
   date: V8ActiveSunMessageControls;
   name: V8ActiveSunMessageControls;
+  time: V8ActiveSunMessageControls;
   note: V8ActiveSunMessageControls;
 };
 
@@ -219,9 +225,10 @@ export type V8ActiveSunMessagesControls = {
 // the name at a similar size to the date, not shown by default is NOT
 // needed since an empty/undefined eventNote already renders nothing.
 export const v8ActiveSunMessagesDefaults: V8ActiveSunMessagesControls = {
-  date: { show: true, x: 50, y: 32, scale: 1, rotation: 0, fontSize: 9, bold: true },
-  name: { show: true, x: 50, y: 50, scale: 1, rotation: 0, fontSize: 24, bold: true },
-  note: { show: true, x: 50, y: 68, scale: 1, rotation: 0, fontSize: 8, bold: false },
+  date: { show: true, x: 42, y: 32, scale: 1, rotation: 0, fontSize: 9, bold: true },
+  name: { show: true, x: 56, y: 48, scale: 1, rotation: 0, fontSize: 24, bold: true },
+  time: { show: true, x: 56, y: 61, scale: 1, rotation: 0, fontSize: 7, bold: false },
+  note: { show: true, x: 56, y: 72, scale: 1, rotation: 0, fontSize: 8, bold: false },
 };
 
 export const v8ActiveSunMessageRanges: Record<

@@ -49,6 +49,7 @@ import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { V8Toast } from "./V8Toast";
 import { v8CtaGlowOutlines, type V8CtaGlowOutlineKey } from "./v8CtaGlowOutlines";
+import { formatV8MeetupDate, parseV8MeetupDisplay } from "./v8MeetupDisplay";
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
@@ -755,6 +756,41 @@ function V8SunMessage({ text, controls }: { text: string; controls: V8ActiveSunM
   );
 }
 
+function V8SunMeetupName({
+  displayName,
+  kangxuanSrc,
+  controls,
+}: {
+  displayName: string;
+  kangxuanSrc: string;
+  controls: V8ActiveSunMessageControls;
+}) {
+  if (!controls.show || !displayName) return null;
+  if (displayName !== "康軒") return <V8SunMessage text={displayName} controls={controls} />;
+
+  return (
+    <img
+      src={kangxuanSrc}
+      alt={displayName}
+      className="v8-sun-kangxuan-title"
+      draggable={false}
+      style={
+        {
+          position: "absolute",
+          left: `${controls.x}%`,
+          top: `${controls.y}%`,
+          width: `min(58%, ${Math.max(62, controls.fontSize * 3.4)}px)`,
+          height: "auto",
+          objectFit: "contain",
+          transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
+          transformOrigin: "center",
+          pointerEvents: "none",
+        } as CSSProperties
+      }
+    />
+  );
+}
+
 // Meetup switcher -- a transparent swipe-catcher sized to the sun itself
 // (so a swipe anywhere on the red circle works, not just a small arrow
 // hit-target) plus two small arrow icons at the sun's left/right edge as
@@ -892,6 +928,7 @@ export function V8ActiveSunContent({
     sunBadgeCapacity: string;
     sunSwitchArrowPrev: string;
     sunSwitchArrowNext: string;
+    sunTitleKangxuan: string;
   };
   eventDate: string;
   eventName: string;
@@ -921,6 +958,7 @@ export function V8ActiveSunContent({
   // user's exact spec (courtCount:2, hours:3 -> "2場/3hr") -- courtCount
   // alone if hours isn't set, rather than showing a dangling "/undefinedhr".
   const courtTimeLabel = courtCount ? (hours ? `${courtCount}場/${hours}hr` : `${courtCount}場`) : null;
+  const meetupDisplay = parseV8MeetupDisplay(eventName);
 
   return (
     <>
@@ -932,8 +970,9 @@ export function V8ActiveSunContent({
           onNextEvent={onNextEvent}
         />
       ) : null}
-      <V8SunMessage text={shortDate(eventDate)} controls={messageControls.date} />
-      <V8SunMessage text={eventName} controls={messageControls.name} />
+      <V8SunMessage text={formatV8MeetupDate(eventDate)} controls={messageControls.date} />
+      <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} controls={messageControls.name} />
+      <V8SunMessage text={meetupDisplay.timeLabel} controls={messageControls.time} />
       <V8SunMessage text={eventNote || ""} controls={messageControls.note} />
       {ballType ? (
         <V8SunInfoBadgeScattered
@@ -1688,13 +1727,6 @@ function V8IdentityPrompt({
       )}
     </section>
   );
-}
-
-function shortDate(value: string) {
-  const [, month = "", day = ""] = String(value || "").split("-");
-  const monthNumber = Number(month);
-  const dayNumber = Number(day);
-  return monthNumber > 0 && dayNumber > 0 ? `${monthNumber}/${dayNumber}` : value;
 }
 
 // TEMPORARY layout/visual pass -- identity/status/CTA is still the interim
