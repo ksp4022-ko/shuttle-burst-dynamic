@@ -196,9 +196,20 @@ export function V8ActivePage({
   const canSwitchMeetup = events.length > 1;
 
   const submitTigerSignup = async () => {
-    if (!lineAuthToken || !lineIdentity?.profileComplete || lineIdentity.identityType !== "temp") return;
+    if (!lineAuthToken || !lineIdentity?.profileComplete) return;
+    if (!(identity?.signupType === "temp" && identity.status === "unregistered")) return;
     const submittedName = lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName;
-    const result = await flow.submitSignup(submittedName, lineAuthToken, { selfSignup: true });
+    // Real temp identities get the backend's selfSignup treatment (name
+    // override + participant tracking). A "fixed" identity landing here is
+    // the ad-hoc-event/unclaimed-new-season fallback (see use-current-
+    // identity.ts) -- backend's selfSignup requires identityType:"temp", so
+    // this goes through as a plain temp signup instead (still correctly
+    // attributed via created_by_line_identity_id, no backend change needed).
+    const result = await flow.submitSignup(
+      submittedName,
+      lineAuthToken,
+      lineIdentity.identityType === "temp" ? { selfSignup: true } : {},
+    );
     if (result.ok) await refreshCancellableTempSignups();
   };
 
