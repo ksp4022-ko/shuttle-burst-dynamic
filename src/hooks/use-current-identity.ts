@@ -119,7 +119,16 @@ export function useCurrentIdentity({
   const identity = useMemo<CurrentIdentity | null>(() => {
     if (!profileComplete || !lineIdentity) return null;
     if (lineIdentity.identityType === "fixed") {
-      return findFixedIdentity(roster, lineIdentity);
+      // Not every event auto-includes the season roster (ad-hoc/extra
+      // meetups, or a new season before this member has re-claimed) -- when
+      // this claim doesn't match THIS event's fixed lists, fall back to the
+      // same temp resolution as a real temp identity so they can just sign
+      // up/cancel for this one event instead of being stuck.
+      return (
+        findFixedIdentity(roster, lineIdentity) ||
+        toTempIdentity(cancellableTempSignups.find((signup) => signup.participantIsMe)) ||
+        toUnregisteredTempIdentity(lineIdentity)
+      );
     }
     if (lineIdentity.identityType === "temp") {
       return toTempIdentity(cancellableTempSignups.find((signup) => signup.participantIsMe)) || toUnregisteredTempIdentity(lineIdentity);
