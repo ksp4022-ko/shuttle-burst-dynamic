@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type TouchEvent } from "react";
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth, type V8LineAuthDiagnostic } from "@/hooks/use-v8-line-auth";
@@ -107,6 +107,17 @@ export function V8ActivePage({
   // out. Reset whenever the cancel screen (re)opens or closes.
   const [selectedCancelPerson, setSelectedCancelPerson] = useState<AlphaSignup | null>(null);
   const assets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
+  // Instant tap feedback for every busy-triggering action (請假/歸陣/退陣/
+  // 應戰/代報/代退/切換聚會) -- captured on pointerdown (before the click
+  // handler even runs, let alone before pendingAction's async round-trip
+  // resolves) so the ripple appears the moment a finger lands, not after
+  // the network responds. Harmless if the tap never actually goes busy
+  // (nothing renders it) -- see the pending overlay below, which is the
+  // only thing that reads this.
+  const [ripplePoint, setRipplePoint] = useState<{ x: number; y: number } | null>(null);
+  const captureRipplePoint = (event: ReactPointerEvent<HTMLDivElement>) => {
+    setRipplePoint({ x: event.clientX, y: event.clientY });
+  };
 
   // Live tuning, opened via the hidden corner easter-egg button below --
   // reads/writes the SAME localStorage session as /v8/preview (see
@@ -291,7 +302,11 @@ export function V8ActivePage({
   };
 
   return (
-    <div className="v8-active" data-identity={identity ? "known" : "unknown"}>
+    <div
+      className="v8-active"
+      data-identity={identity ? "known" : "unknown"}
+      onPointerDownCapture={captureRipplePoint}
+    >
       <V8ActiveStyles />
 
       <V8HeroComposition
@@ -368,6 +383,28 @@ export function V8ActivePage({
           </>
         }
       />
+
+      {/* Instant feedback for every busy action (請假/歸陣/退陣/應戰/代報/
+          代退/切換聚會) -- a light sea-blue wash (same #1559a8 blue the wave
+          toast's status text uses, diluted -- not the identity-gate's brown/
+          blur treatment, which is for "you must finish this before anything
+          else is usable", a different feeling than "hang on, this is in
+          flight"). No blur (blur is a real perf cost on mobile Safari and
+          this needs to feel instant). z-index sits below V8Toast (60) so the
+          wave toast always shows on top once the result lands; ripplePoint
+          was captured on pointerdown, before pendingAction even existed, so
+          it appears with zero perceived delay regardless of how long the
+          network round-trip takes. */}
+      {busy ? (
+        <div className={`v8-pending-overlay${flow.motionMode === "reduced" ? " is-reduced" : ""}`}>
+          {ripplePoint ? (
+            <span
+              className="v8-pending-ripple"
+              style={{ left: ripplePoint.x, top: ripplePoint.y }}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Full-screen identity gate -- until the LINE identity maps to this
           event (or a temp player signs up), this
@@ -1881,6 +1918,59 @@ export function V8ActiveStyles() {
            request to keep both sets of overlay text visually consistent. */
         color: #7a2a12;
         z-index: 2;
+      }
+
+      /* Busy-action feedback -- light sea-blue wash + a ripple at the exact
+         tap point, covering the gap between "finger down" and "server
+         responded" for 請假/歸陣/退陣/應戰/代報/代退/切換聚會. No blur
+         (unlike .v8-identity-gate below): this needs to read as instant,
+         and backdrop-filter has a real cost on mobile Safari that would
+         work against that. pointer-events:auto so it also physically blocks
+         stray taps during the round-trip, on top of each button's own
+         disabled={busy} -- belt and suspenders for the switch-meetup arrows
+         specifically, whose hit target is small and sits on a moving sun.
+         z-index 45: above the identity gate (35) and tuning trigger (40),
+         below V8Toast (60) so the wave toast is always readable on top once
+         the result lands. */
+      .v8-pending-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 45;
+        background: rgba(21, 89, 168, 0.28);
+        pointer-events: auto;
+        overflow: hidden;
+      }
+
+      .v8-pending-ripple {
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        margin-left: -8px;
+        margin-top: -8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.55);
+        box-shadow: 0 0 0 1px rgba(21, 89, 168, 0.35);
+        animation: v8-pending-ripple-life 0.6s ease-out forwards;
+      }
+
+      .v8-pending-overlay.is-reduced {
+        animation: none;
+      }
+
+      .v8-pending-overlay.is-reduced .v8-pending-ripple {
+        animation: none;
+        opacity: 0.35;
+      }
+
+      @keyframes v8-pending-ripple-life {
+        0% {
+          transform: scale(1);
+          opacity: 0.85;
+        }
+        100% {
+          transform: scale(14);
+          opacity: 0;
+        }
       }
 
       /* Full-screen identity gate -- fixed over the whole viewport (not
