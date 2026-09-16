@@ -2291,9 +2291,10 @@ export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8A
       show: controls.activeSunDateShow,
       x: controls.activeSunDateX,
       y: controls.activeSunDateY,
-      fontSize: controls.activeSunDateFontSize,
+      fontSize: v8ActiveSunMessagesDefaults.date.fontSize,
       opacity: controls.activeSunDateOpacity,
-      width: v8ActiveSunMessagesDefaults.date.width,
+      width: controls.activeSunDateWidth,
+      height: controls.activeSunDateHeight,
     },
     name: {
       show: controls.activeSunNameShow,
@@ -2302,6 +2303,7 @@ export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8A
       fontSize: v8ActiveSunMessagesDefaults.name.fontSize,
       opacity: controls.activeSunNameOpacity,
       width: controls.activeSunNameWidth,
+      height: v8ActiveSunMessagesDefaults.name.height,
     },
     time: {
       show: controls.activeSunTimeShow,
@@ -2310,6 +2312,7 @@ export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8A
       fontSize: controls.activeSunTimeFontSize,
       opacity: controls.activeSunTimeOpacity,
       width: v8ActiveSunMessagesDefaults.time.width,
+      height: v8ActiveSunMessagesDefaults.time.height,
     },
     note: {
       show: controls.activeSunNoteShow,
@@ -2318,6 +2321,7 @@ export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8A
       fontSize: controls.activeSunNoteFontSize,
       opacity: controls.activeSunNoteOpacity,
       width: v8ActiveSunMessagesDefaults.note.width,
+      height: v8ActiveSunMessagesDefaults.note.height,
     },
   };
 }
