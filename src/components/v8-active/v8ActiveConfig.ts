@@ -207,6 +207,7 @@ export type V8ActiveSunMessageControls = {
   fontSize: number;
   opacity: number;
   width: number;
+  height: number;
 };
 
 export type V8ActiveSunSafeBoxControls = {
@@ -232,10 +233,10 @@ export type V8ActiveSunMessagesControls = {
 // needed since an empty/undefined eventNote already renders nothing.
 export const v8ActiveSunMessagesDefaults: V8ActiveSunMessagesControls = {
   safeBox: { width: 70, height: 60, showHelperBox: false },
-  date: { show: true, x: 31, y: 29, fontSize: 9, opacity: 90, width: 28 },
-  name: { show: true, x: 61, y: 29, fontSize: 24, opacity: 100, width: 100 },
-  time: { show: true, x: 50, y: 45, fontSize: 7, opacity: 70, width: 72 },
-  note: { show: true, x: 50, y: 59, fontSize: 8, opacity: 88, width: 88 },
+  date: { show: true, x: 31, y: 29, fontSize: 9, opacity: 90, width: 28, height: 12 },
+  name: { show: true, x: 61, y: 29, fontSize: 24, opacity: 100, width: 100, height: 24 },
+  time: { show: true, x: 50, y: 45, fontSize: 7, opacity: 70, width: 72, height: 12 },
+  note: { show: true, x: 50, y: 59, fontSize: 8, opacity: 88, width: 88, height: 14 },
 };
 
 export const v8ActiveSunMessageRanges: Record<
@@ -248,6 +249,7 @@ export const v8ActiveSunMessageRanges: Record<
   fontSize: { label: "Font Size", min: 4, max: 48 },
   opacity: { label: "Opacity", min: 0, max: 100 },
   width: { label: "Width %", min: 10, max: 140 },
+  height: { label: "Height %", min: 4, max: 80 },
 };
 
 export const v8ActiveSunSafeBoxRanges: Record<
