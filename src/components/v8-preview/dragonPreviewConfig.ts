@@ -131,7 +131,8 @@ export type PreviewControls = {
   activeSunDateShow: boolean;
   activeSunDateX: number;
   activeSunDateY: number;
-  activeSunDateFontSize: number;
+  activeSunDateWidth: number;
+  activeSunDateHeight: number;
   activeSunDateOpacity: number;
   activeSunNameShow: boolean;
   activeSunNameX: number;
@@ -755,7 +756,8 @@ export const previewDefaults: PreviewControls = {
   activeSunDateShow: true,
   activeSunDateX: 31,
   activeSunDateY: 29,
-  activeSunDateFontSize: 9,
+  activeSunDateWidth: 28,
+  activeSunDateHeight: 12,
   activeSunDateOpacity: 90,
   activeSunNameShow: true,
   activeSunNameX: 61,
@@ -1103,7 +1105,8 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunDateShow",
     "activeSunDateX",
     "activeSunDateY",
-    "activeSunDateFontSize",
+    "activeSunDateWidth",
+    "activeSunDateHeight",
     "activeSunDateOpacity",
   ],
   "ACTIVE SUN NAME": [
@@ -1611,7 +1614,8 @@ export const controlRanges = {
   activeSunSafeBoxHeight: { label: "Safe Height %", min: 20, max: 120 },
   activeSunDateX: { label: "日期 X %", min: -20, max: 120 },
   activeSunDateY: { label: "日期 Y %", min: -20, max: 120 },
-  activeSunDateFontSize: { label: "日期 Font Size", min: 4, max: 48 },
+  activeSunDateWidth: { label: "日期 Width %", min: 6, max: 80 },
+  activeSunDateHeight: { label: "日期 Height %", min: 4, max: 40 },
   activeSunDateOpacity: { label: "日期 Opacity", min: 0, max: 100 },
   activeSunNameX: { label: "聚會名 X %", min: -20, max: 120 },
   activeSunNameY: { label: "聚會名 Y %", min: -20, max: 120 },
@@ -2013,7 +2017,8 @@ ACTIVE SUN DATE
 Show: ${controls.activeSunDateShow ? "ON" : "OFF"}
 X: ${Math.round(controls.activeSunDateX)}
 Y: ${Math.round(controls.activeSunDateY)}
-Font Size: ${Math.round(controls.activeSunDateFontSize)}
+Width: ${Math.round(controls.activeSunDateWidth)}
+Height: ${Math.round(controls.activeSunDateHeight)}
 Opacity: ${Math.round(controls.activeSunDateOpacity)}
 
 ACTIVE SUN NAME

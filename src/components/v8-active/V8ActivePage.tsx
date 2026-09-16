@@ -808,6 +808,113 @@ function V8SunMessage({ text, controls }: { text: string; controls: V8ActiveSunM
   );
 }
 
+function V8SunDateAutoFitMessage({
+  text,
+  controls,
+  showHelperBox,
+}: {
+  text: string;
+  controls: V8ActiveSunMessageControls;
+  showHelperBox: boolean;
+}) {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const textRef = useRef<HTMLSpanElement | null>(null);
+  const [fontSize, setFontSize] = useState(controls.fontSize);
+
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const textNode = textRef.current;
+    if (!box || !textNode || !text) return;
+
+    const fit = () => {
+      const boxWidth = box.clientWidth;
+      const boxHeight = box.clientHeight;
+      if (boxWidth <= 0 || boxHeight <= 0) return;
+
+      let low = 4;
+      let high = 64;
+      let best = low;
+      const previousMaxWidth = textNode.style.maxWidth;
+      const previousMaxHeight = textNode.style.maxHeight;
+      const previousOverflow = textNode.style.overflow;
+      textNode.style.maxWidth = "none";
+      textNode.style.maxHeight = "none";
+      textNode.style.overflow = "visible";
+      for (let index = 0; index < 9; index += 1) {
+        const mid = (low + high) / 2;
+        textNode.style.fontSize = `${mid}px`;
+        const fits = textNode.scrollWidth <= boxWidth && textNode.scrollHeight <= boxHeight;
+        if (fits) {
+          best = mid;
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+      textNode.style.fontSize = "";
+      textNode.style.maxWidth = previousMaxWidth;
+      textNode.style.maxHeight = previousMaxHeight;
+      textNode.style.overflow = previousOverflow;
+      setFontSize(Math.floor(best * 10) / 10);
+    };
+
+    fit();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
+    observer?.observe(box);
+    window.addEventListener("resize", fit);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [controls.height, controls.width, text]);
+
+  if (!controls.show || !text) return null;
+  return (
+    <div
+      ref={boxRef}
+      className="v8-sun-date-fit-box"
+      style={
+        {
+          position: "absolute",
+          left: `${controls.x}%`,
+          top: `${controls.y}%`,
+          width: `${controls.width}%`,
+          height: `${controls.height}%`,
+          transform: "translate(-50%, -50%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: controls.opacity / 100,
+          pointerEvents: "none",
+          boxSizing: "border-box",
+          outline: showHelperBox ? "1px dashed rgba(243, 231, 207, 0.62)" : "none",
+          outlineOffset: 0,
+        } as CSSProperties
+      }
+    >
+      <span
+        ref={textRef}
+        style={
+          {
+            display: "block",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            fontSize,
+            fontWeight: 700,
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+            textAlign: "center",
+            color: "#F3E7CF",
+            overflow: "hidden",
+          } as CSSProperties
+        }
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
 function V8SunMeetupName({
   displayName,
   kangxuanSrc,
@@ -1033,7 +1140,11 @@ export function V8ActiveSunContent({
         }
       >
         {messageControls.safeBox.showHelperBox ? <span className="v8-sun-message-safe-helper" aria-hidden="true" /> : null}
-        <V8SunMessage text={formatV8MeetupDate(eventDate)} controls={messageControls.date} />
+        <V8SunDateAutoFitMessage
+          text={formatV8MeetupDate(eventDate)}
+          controls={messageControls.date}
+          showHelperBox={messageControls.safeBox.showHelperBox}
+        />
         <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} controls={messageControls.name} />
         <V8SunMessage text={meetupDisplay.timeLabel} controls={messageControls.time} />
         <V8SunMessage text={eventNote || ""} controls={messageControls.note} />
