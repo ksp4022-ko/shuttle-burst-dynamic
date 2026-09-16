@@ -819,50 +819,49 @@ function V8SunDateAutoFitMessage({
 }) {
   const boxRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLSpanElement | null>(null);
+  const measureRef = useRef<HTMLSpanElement | null>(null);
   const [fontSize, setFontSize] = useState(controls.fontSize);
 
   useLayoutEffect(() => {
     const box = boxRef.current;
-    const textNode = textRef.current;
-    if (!box || !textNode || !text) return;
+    const measureNode = measureRef.current;
+    if (!box || !measureNode || !text) return;
 
+    let frame = 0;
     const fit = () => {
-      const boxWidth = box.clientWidth;
-      const boxHeight = box.clientHeight;
-      if (boxWidth <= 0 || boxHeight <= 0) return;
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const boxRect = box.getBoundingClientRect();
+        const boxWidth = boxRect.width;
+        const boxHeight = boxRect.height;
+        if (boxWidth <= 0 || boxHeight <= 0) return;
 
-      let low = 4;
-      let high = 64;
-      let best = low;
-      const previousMaxWidth = textNode.style.maxWidth;
-      const previousMaxHeight = textNode.style.maxHeight;
-      const previousOverflow = textNode.style.overflow;
-      textNode.style.maxWidth = "none";
-      textNode.style.maxHeight = "none";
-      textNode.style.overflow = "visible";
-      for (let index = 0; index < 9; index += 1) {
-        const mid = (low + high) / 2;
-        textNode.style.fontSize = `${mid}px`;
-        const fits = textNode.scrollWidth <= boxWidth && textNode.scrollHeight <= boxHeight;
-        if (fits) {
-          best = mid;
-          low = mid;
-        } else {
-          high = mid;
+        let low = 4;
+        let high = 96;
+        let best = low;
+        for (let index = 0; index < 12; index += 1) {
+          const mid = (low + high) / 2;
+          measureNode.style.fontSize = `${mid}px`;
+          const textRect = measureNode.getBoundingClientRect();
+          const fits = textRect.width <= boxWidth && textRect.height <= boxHeight;
+          if (fits) {
+            best = mid;
+            low = mid;
+          } else {
+            high = mid;
+          }
         }
-      }
-      textNode.style.fontSize = "";
-      textNode.style.maxWidth = previousMaxWidth;
-      textNode.style.maxHeight = previousMaxHeight;
-      textNode.style.overflow = previousOverflow;
-      setFontSize(Math.floor(best * 10) / 10);
+        setFontSize(Math.floor(best * 10) / 10);
+      });
     };
 
     fit();
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
     observer?.observe(box);
     window.addEventListener("resize", fit);
+    document.fonts?.ready.then(fit).catch(() => undefined);
     return () => {
+      if (frame) window.cancelAnimationFrame(frame);
       observer?.disconnect();
       window.removeEventListener("resize", fit);
     };
@@ -906,6 +905,25 @@ function V8SunDateAutoFitMessage({
             textAlign: "center",
             color: "#F3E7CF",
             overflow: "hidden",
+          } as CSSProperties
+        }
+      >
+        {text}
+      </span>
+      <span
+        ref={measureRef}
+        aria-hidden="true"
+        style={
+          {
+            position: "absolute",
+            left: 0,
+            top: 0,
+            visibility: "hidden",
+            pointerEvents: "none",
+            fontWeight: 700,
+            lineHeight: 1,
+            whiteSpace: "nowrap",
+            color: "transparent",
           } as CSSProperties
         }
       >
