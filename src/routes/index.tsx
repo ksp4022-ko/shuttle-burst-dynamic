@@ -1501,7 +1501,7 @@ export function Index() {
           clearToastOrigin(toastOriginRef);
           flow.closeMemberPicker();
         }}
-        onConfirm={flow.confirmMemberAction}
+        onConfirm={() => void flow.confirmMemberAction()}
         disabled={Boolean(flow.pendingAction)}
       />
 
