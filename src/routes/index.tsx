@@ -1735,6 +1735,8 @@ function HandoffTimingLab({
   onVisualToggle,
   onOpeningSunMessageChange,
   onOpeningSunMessageToggle,
+  onOpeningSunSafeBoxChange,
+  onToggleOpeningSunSafeBoxHelper,
   onOpeningSunSwitchArrowChange,
   onToggleOpeningSunSwitchArrows,
   onReplayHandoff,
@@ -2342,6 +2344,7 @@ function normalizeOpeningSunTuning(value: Partial<V8OpeningSunControls> | undefi
     fontSize: clampTiming(message?.fontSize, 4, 48, fallback.fontSize),
     opacity: clampTiming(message?.opacity, 0, 100, fallback.opacity),
     width: clampTiming(message?.width, 10, 140, fallback.width),
+    height: clampTiming(message?.height, 4, 80, fallback.height),
   });
   const normalizeArrow = (
     arrow: Partial<V8OpeningSunControls["switchArrows"]["prev"]> | undefined,
