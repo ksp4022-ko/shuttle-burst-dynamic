@@ -818,9 +818,8 @@ function V8SunDateAutoFitMessage({
   showHelperBox: boolean;
 }) {
   const boxRef = useRef<HTMLDivElement | null>(null);
-  const textRef = useRef<HTMLSpanElement | null>(null);
   const measureRef = useRef<HTMLSpanElement | null>(null);
-  const [fontSize, setFontSize] = useState(controls.fontSize);
+  const [scale, setScale] = useState({ x: 1, y: 1 });
 
   useLayoutEffect(() => {
     const box = boxRef.current;
@@ -832,26 +831,13 @@ function V8SunDateAutoFitMessage({
       if (frame) window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
         const boxRect = box.getBoundingClientRect();
-        const boxWidth = boxRect.width;
-        const boxHeight = boxRect.height;
-        if (boxWidth <= 0 || boxHeight <= 0) return;
+        const textRect = measureNode.getBoundingClientRect();
+        if (boxRect.width <= 0 || boxRect.height <= 0 || textRect.width <= 0 || textRect.height <= 0) return;
 
-        let low = 4;
-        let high = 96;
-        let best = low;
-        for (let index = 0; index < 12; index += 1) {
-          const mid = (low + high) / 2;
-          measureNode.style.fontSize = `${mid}px`;
-          const textRect = measureNode.getBoundingClientRect();
-          const fits = textRect.width <= boxWidth && textRect.height <= boxHeight;
-          if (fits) {
-            best = mid;
-            low = mid;
-          } else {
-            high = mid;
-          }
-        }
-        setFontSize(Math.floor(best * 10) / 10);
+        setScale({
+          x: boxRect.width / textRect.width,
+          y: boxRect.height / textRect.height,
+        });
       });
     };
 
@@ -865,7 +851,7 @@ function V8SunDateAutoFitMessage({
       observer?.disconnect();
       window.removeEventListener("resize", fit);
     };
-  }, [controls.height, controls.width, text]);
+  }, [controls.fontSize, controls.height, controls.width, text]);
 
   if (!controls.show || !text) return null;
   return (
@@ -880,31 +866,29 @@ function V8SunDateAutoFitMessage({
           width: `${controls.width}%`,
           height: `${controls.height}%`,
           transform: "translate(-50%, -50%)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
           opacity: controls.opacity / 100,
           pointerEvents: "none",
           boxSizing: "border-box",
+          overflow: "hidden",
           outline: showHelperBox ? "1px dashed rgba(243, 231, 207, 0.62)" : "none",
           outlineOffset: 0,
         } as CSSProperties
       }
     >
       <span
-        ref={textRef}
         style={
           {
-            display: "block",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            fontSize,
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            fontSize: controls.fontSize,
             fontWeight: 700,
             lineHeight: 1,
             whiteSpace: "nowrap",
             textAlign: "center",
             color: "#F3E7CF",
-            overflow: "hidden",
+            transformOrigin: "center center",
+            transform: `translate(-50%, -50%) scale(${scale.x}, ${scale.y})`,
           } as CSSProperties
         }
       >
@@ -920,6 +904,7 @@ function V8SunDateAutoFitMessage({
             top: 0,
             visibility: "hidden",
             pointerEvents: "none",
+            fontSize: controls.fontSize,
             fontWeight: 700,
             lineHeight: 1,
             whiteSpace: "nowrap",
@@ -932,7 +917,6 @@ function V8SunDateAutoFitMessage({
     </div>
   );
 }
-
 function V8SunMeetupName({
   displayName,
   kangxuanSrc,
