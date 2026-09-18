@@ -1323,6 +1323,7 @@ export function Index() {
               // 獨立程式碼、不共用) -- 資料來源接目前預覽/游標選中的那場聚會
               // (previewPickedEvent，輪播切換時即時更新)，非固定單一場次。
               controlOverrides={openHeroOverrides}
+              revealImmediately
               sunContent={
                 <V8OpeningSunContent
                   event={previewPickedEvent}

@@ -70,6 +70,7 @@ type V8HeroCompositionProps = {
   // cut off" screenshots). Callers pass the same URLs they hand to those
   // content props so this gate covers them too.
   extraPreloadSrcs?: string[] | undefined;
+  revealImmediately?: boolean | undefined;
   // Overrides stageStyle's default 390/890 aspect ratio. The Opening reveal
   // needs the taller 890 canvas (its own back-wave art bleeds down to
   // y=890), but the Active page has no such requirement -- with a roster
@@ -300,10 +301,11 @@ export function V8HeroComposition({
   infoCardsContent,
   rosterListsContent,
   extraPreloadSrcs,
+  revealImmediately = false,
   stageAspectRatio,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
-  const [assetsReady, setAssetsReady] = useState(false);
+  const [assetsReady, setAssetsReady] = useState(revealImmediately);
   const controls = controlOverrides ? { ...v8HeroDefaults, ...controlOverrides } : v8HeroDefaults;
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
   const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
@@ -341,6 +343,12 @@ export function V8HeroComposition({
 
   useEffect(() => {
     let cancelled = false;
+    if (revealImmediately) {
+      setAssetsReady(true);
+      return () => {
+        cancelled = true;
+      };
+    }
     setAssetsReady(false);
     preloadHeroImagesWithTimeout([...requiredAssets, ...(extraPreloadSrcs || [])]).then(() => {
       if (!cancelled) setAssetsReady(true);

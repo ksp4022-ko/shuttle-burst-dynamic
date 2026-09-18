@@ -2390,11 +2390,16 @@ export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8A
 }
 
 export function buildV8OpeningHeroOverrides(controls: PreviewControls): Partial<V8HeroControls> {
+  const clampNumber = (value: number, fallback: number, min: number, max: number) => {
+    if (!Number.isFinite(value)) return fallback;
+    return Math.min(max, Math.max(min, value));
+  };
+
   return {
-    sunX: controls.openSunX,
-    sunY: controls.openSunY,
-    sunScale: controls.openSunScale,
-    sunZIndex: controls.openSunZIndex,
+    sunX: clampNumber(controls.openSunX, previewDefaults.openSunX, 0, 100),
+    sunY: clampNumber(controls.openSunY, previewDefaults.openSunY, 0, 100),
+    sunScale: clampNumber(controls.openSunScale, previewDefaults.openSunScale, 0.2, 3),
+    sunZIndex: Math.round(clampNumber(controls.openSunZIndex, previewDefaults.openSunZIndex, 0, 50)),
   };
 }
 
