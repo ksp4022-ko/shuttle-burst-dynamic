@@ -1,6 +1,7 @@
 import { useMemo, useRef, type CSSProperties, type TouchEvent } from "react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
+import { V8SunDateStretchText } from "@/components/v8-active/V8SunDateStretchText";
 
 // Standalone copy of the Active page's red-sun content module (see
 // V8ActiveSunContent and its helpers in V8ActivePage.tsx), duplicated here
@@ -46,10 +47,10 @@ const BADGE_TEXT_INSETS = {
 // in the circle to match the supplied mobile reference.
 const SUN_SCALE_RATIO = 0.68;
 const SAFE_BOX = { width: 70, height: 60, showHelperBox: false };
-const DATE_MESSAGE = { x: 31, y: 29, fontSize: 15, opacity: 90, width: 28 };
-const NAME_MESSAGE = { x: 61, y: 29, fontSize: 32, opacity: 100, width: 100 };
-const TIME_MESSAGE = { x: 50, y: 45, fontSize: 12, opacity: 70, width: 72 };
-const NOTE_MESSAGE = { x: 50, y: 59, fontSize: 18, opacity: 88, width: 88 };
+const DATE_MESSAGE = { x: 31, y: 29, fontSize: 15, opacity: 90, width: 31, height: 14 };
+const NAME_MESSAGE = { x: 61, y: 29, fontSize: 32, opacity: 100, width: 100, height: 26 };
+const TIME_MESSAGE = { x: 50, y: 45, fontSize: 12, opacity: 70, width: 72, height: 12 };
+const NOTE_MESSAGE = { x: 50, y: 59, fontSize: 18, opacity: 88, width: 88, height: 18 };
 
 // Copied from previewDefaults' activeSunBadge*/activeSwitchArrow* values,
 // same 0.68 scale-ratio adjustment as the messages above.
@@ -67,7 +68,7 @@ const SWITCH_ARROW_NEXT = { x: 100, y: 50, scale: 1.25, rotation: 0, opacity: 10
 // back to true to re-enable; nothing else needs to change.
 const SHOW_INFO_BADGES = false;
 
-type SunMessageConfig = { x: number; y: number; fontSize: number; opacity: number; width: number };
+type SunMessageConfig = { x: number; y: number; fontSize: number; opacity: number; width: number; height: number };
 type SunMessageControls = SunMessageConfig & { show: boolean };
 type SunSafeBoxControls = { width: number; height: number; showHelperBox: boolean };
 type SunBadgeConfig = { x: number; y: number; scale: number; rotation: number; fontSize: number; textOffsetX: number; textOffsetY: number };
@@ -346,7 +347,12 @@ export function V8OpeningSunContent({
       ) : null}
       <div className="v8-opening-sun-message-safe-box" style={{ width: `${controls.safeBox.width}%`, height: `${controls.safeBox.height}%` }}>
         {controls.safeBox.showHelperBox ? <span className="v8-opening-sun-message-safe-helper" aria-hidden="true" /> : null}
-        <V8SunMessage text={formatV8MeetupDate(event.eventDate)} config={controls.messages.date} />
+        <V8SunDateStretchText
+          text={formatV8MeetupDate(event.eventDate)}
+          controls={controls.messages.date}
+          showHelperBox={controls.safeBox.showHelperBox}
+          className="v8-opening-sun-date-fit-box"
+        />
         <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} config={controls.messages.name} />
         <V8SunMessage text={meetupDisplay.timeLabel} config={controls.messages.time} />
         <V8SunMessage text={event.eventNote || ""} config={controls.messages.note} />

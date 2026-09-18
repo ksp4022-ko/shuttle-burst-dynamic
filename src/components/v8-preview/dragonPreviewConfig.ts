@@ -11,7 +11,7 @@ import type {
   V8ActiveSunMessagesControls,
   V8ActiveSwitchArrowsControls,
 } from "@/components/v8-active/v8ActiveConfig";
-import type { V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
+import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
 
 export type PreviewControls = {
   dragonShow: boolean;
@@ -152,9 +152,15 @@ export type PreviewControls = {
   activeSunSafeBoxWidth: number;
   activeSunSafeBoxHeight: number;
   activeSunSafeBoxShowHelper: boolean;
+  openSunX: number;
+  openSunY: number;
+  openSunScale: number;
+  openSunZIndex: number;
   openSunDateShow: boolean;
   openSunDateX: number;
   openSunDateY: number;
+  openSunDateWidth: number;
+  openSunDateHeight: number;
   openSunDateFontSize: number;
   openSunDateOpacity: number;
   openSunNameShow: boolean;
@@ -497,6 +503,7 @@ export type PreviewTargetId =
   | "ACTIVE SUN NAME"
   | "ACTIVE SUN TIME"
   | "ACTIVE SUN NOTE"
+  | "OPEN SUN INFO"
   | "OPEN SUN SAFE BOX"
   | "OPEN SUN DATE"
   | "OPEN SUN NAME"
@@ -551,6 +558,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "MID WAVE",
   "FRONT FOAM",
   "GOLD / INK",
+  "OPEN SUN INFO",
   "OPEN SUN SAFE BOX",
   "OPEN SUN DATE",
   "OPEN SUN NAME",
@@ -774,12 +782,18 @@ export const previewDefaults: PreviewControls = {
   activeSunNoteY: 59,
   activeSunNoteFontSize: 8,
   activeSunNoteOpacity: 88,
+  openSunX: v8HeroDefaults.sunX,
+  openSunY: v8HeroDefaults.sunY,
+  openSunScale: v8HeroDefaults.sunScale,
+  openSunZIndex: 11,
   openSunSafeBoxWidth: 70,
   openSunSafeBoxHeight: 60,
   openSunSafeBoxShowHelper: false,
   openSunDateShow: true,
   openSunDateX: 31,
   openSunDateY: 29,
+  openSunDateWidth: 31,
+  openSunDateHeight: 14,
   openSunDateFontSize: 15,
   openSunDateOpacity: 90,
   openSunNameShow: true,
@@ -1130,11 +1144,14 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunNoteFontSize",
     "activeSunNoteOpacity",
   ],
+  "OPEN SUN INFO": ["openSunX", "openSunY", "openSunScale", "openSunZIndex"],
   "OPEN SUN SAFE BOX": ["openSunSafeBoxWidth", "openSunSafeBoxHeight", "openSunSafeBoxShowHelper"],
   "OPEN SUN DATE": [
     "openSunDateShow",
     "openSunDateX",
     "openSunDateY",
+    "openSunDateWidth",
+    "openSunDateHeight",
     "openSunDateFontSize",
     "openSunDateOpacity",
   ],
@@ -1629,11 +1646,17 @@ export const controlRanges = {
   activeSunNoteY: { label: "備註 Y %", min: -20, max: 120 },
   activeSunNoteFontSize: { label: "備註 Font Size", min: 4, max: 48 },
   activeSunNoteOpacity: { label: "備註 Opacity", min: 0, max: 100 },
+  openSunX: { label: "開場 Sun X %", min: 0, max: 100 },
+  openSunY: { label: "開場 Sun Y %", min: 0, max: 100 },
+  openSunScale: { label: "開場 Sun Scale", min: 0.3, max: 2, step: 0.01 },
+  openSunZIndex: { label: "開場 Sun Z-Index", min: 0, max: 30 },
   openSunSafeBoxWidth: { label: "開場 Safe Width %", min: 20, max: 120 },
   openSunSafeBoxHeight: { label: "開場 Safe Height %", min: 20, max: 120 },
   openSunDateX: { label: "開場日期 X %", min: -20, max: 120 },
   openSunDateY: { label: "開場日期 Y %", min: -20, max: 120 },
-  openSunDateFontSize: { label: "開場日期 Font Size", min: 4, max: 48 },
+  openSunDateWidth: { label: "開場日期 Width %", min: 6, max: 80 },
+  openSunDateHeight: { label: "開場日期 Height %", min: 4, max: 40 },
+  openSunDateFontSize: { label: "開場日期 Base Font", min: 4, max: 48 },
   openSunDateOpacity: { label: "開場日期 Opacity", min: 0, max: 100 },
   openSunNameX: { label: "開場聚會名 X %", min: -20, max: 120 },
   openSunNameY: { label: "開場聚會名 Y %", min: -20, max: 120 },
@@ -2042,6 +2065,46 @@ Y: ${Math.round(controls.activeSunNoteY)}
 Font Size: ${Math.round(controls.activeSunNoteFontSize)}
 Opacity: ${Math.round(controls.activeSunNoteOpacity)}
 
+OPEN SUN INFO
+X: ${Math.round(controls.openSunX)}
+Y: ${Math.round(controls.openSunY)}
+Scale: ${controls.openSunScale.toFixed(2)}
+Z-Index: ${Math.round(controls.openSunZIndex)}
+
+OPEN SUN SAFE BOX
+Width: ${Math.round(controls.openSunSafeBoxWidth)}
+Height: ${Math.round(controls.openSunSafeBoxHeight)}
+Helper: ${controls.openSunSafeBoxShowHelper ? "ON" : "OFF"}
+
+OPEN SUN DATE
+Show: ${controls.openSunDateShow ? "ON" : "OFF"}
+X: ${Math.round(controls.openSunDateX)}
+Y: ${Math.round(controls.openSunDateY)}
+Width: ${Math.round(controls.openSunDateWidth)}
+Height: ${Math.round(controls.openSunDateHeight)}
+Opacity: ${Math.round(controls.openSunDateOpacity)}
+
+OPEN SUN NAME
+Show: ${controls.openSunNameShow ? "ON" : "OFF"}
+X: ${Math.round(controls.openSunNameX)}
+Y: ${Math.round(controls.openSunNameY)}
+Width: ${Math.round(controls.openSunNameWidth)}
+Opacity: ${Math.round(controls.openSunNameOpacity)}
+
+OPEN SUN TIME
+Show: ${controls.openSunTimeShow ? "ON" : "OFF"}
+X: ${Math.round(controls.openSunTimeX)}
+Y: ${Math.round(controls.openSunTimeY)}
+Font Size: ${Math.round(controls.openSunTimeFontSize)}
+Opacity: ${Math.round(controls.openSunTimeOpacity)}
+
+OPEN SUN NOTE
+Show: ${controls.openSunNoteShow ? "ON" : "OFF"}
+X: ${Math.round(controls.openSunNoteX)}
+Y: ${Math.round(controls.openSunNoteY)}
+Font Size: ${Math.round(controls.openSunNoteFontSize)}
+Opacity: ${Math.round(controls.openSunNoteOpacity)}
+
 ACTIVE TIGER SCROLL
 X: ${Math.round(controls.activeTigerScrollX)}
 Y: ${Math.round(controls.activeTigerScrollY)}
@@ -2326,6 +2389,15 @@ export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8A
   };
 }
 
+export function buildV8OpeningHeroOverrides(controls: PreviewControls): Partial<V8HeroControls> {
+  return {
+    sunX: controls.openSunX,
+    sunY: controls.openSunY,
+    sunScale: controls.openSunScale,
+    sunZIndex: controls.openSunZIndex,
+  };
+}
+
 export function buildV8OpeningSunControls(controls: PreviewControls) {
   return {
     safeBox: {
@@ -2340,7 +2412,8 @@ export function buildV8OpeningSunControls(controls: PreviewControls) {
         y: controls.openSunDateY,
         fontSize: controls.openSunDateFontSize,
         opacity: controls.openSunDateOpacity,
-        width: 28,
+        width: controls.openSunDateWidth,
+        height: controls.openSunDateHeight,
       },
       name: {
         show: controls.openSunNameShow,
@@ -2349,6 +2422,7 @@ export function buildV8OpeningSunControls(controls: PreviewControls) {
         fontSize: 32,
         opacity: controls.openSunNameOpacity,
         width: controls.openSunNameWidth,
+        height: 26,
       },
       time: {
         show: controls.openSunTimeShow,
@@ -2357,6 +2431,7 @@ export function buildV8OpeningSunControls(controls: PreviewControls) {
         fontSize: controls.openSunTimeFontSize,
         opacity: controls.openSunTimeOpacity,
         width: 72,
+        height: 12,
       },
       note: {
         show: controls.openSunNoteShow,
@@ -2365,6 +2440,7 @@ export function buildV8OpeningSunControls(controls: PreviewControls) {
         fontSize: controls.openSunNoteFontSize,
         opacity: controls.openSunNoteOpacity,
         width: 88,
+        height: 18,
       },
     },
     switchArrows: {

@@ -21,6 +21,16 @@ import {
   type V8OpeningSunControls,
 } from "@/components/v8-hero/V8OpeningSunContent";
 import { V8ActivePage } from "@/components/v8-active/V8ActivePage";
+import { V8TuningPanel } from "@/components/v8-preview/V8TuningPanel";
+import {
+  buildV8OpeningHeroOverrides,
+  buildV8OpeningSunControls,
+  loadSavedControls,
+  previewDefaults,
+  saveControls,
+  type PreviewControls,
+  type PreviewTargetId,
+} from "@/components/v8-preview/dragonPreviewConfig";
 import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8IntroVideo";
 import { v8KangxuanIntroConfig } from "@/components/v8-active/v8IntroConfig";
 import {
@@ -51,6 +61,7 @@ const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
 const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
 const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
 const V8_LINE_LOGIN_RETURN_STORAGE_KEY = "shuttle-v8-line-login-return-v1";
+const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE"];
 
 function isV8BrowserPath(pathname: string) {
   return pathname.split("/").filter(Boolean).includes("v8");
@@ -342,6 +353,11 @@ export function Index() {
   const [countdownTuning, setCountdownTuning] = useState<CountdownTuning>(DEFAULT_COUNTDOWN_TUNING);
   const [visualTuning, setVisualTuning] = useState<VisualTuning>(DEFAULT_VISUAL_TUNING);
   const [openingSunTuning, setOpeningSunTuning] = useState<V8OpeningSunControls>(v8OpeningSunDefaults);
+  const [openTuningOpen, setOpenTuningOpen] = useState(false);
+  const [openTuningControls, setOpenTuningControls] = useState<PreviewControls>(() =>
+    typeof window === "undefined" ? previewDefaults : loadSavedControls(),
+  );
+  const [openTuningTarget, setOpenTuningTarget] = useState<PreviewTargetId>("OPEN SUN INFO");
   const [freezeParticles, setFreezeParticles] = useState(true);
   const [handoffReplayPhase, setHandoffReplayPhase] = useState<HandoffReplayPhase>("idle");
   const [timingLabExpanded, setTimingLabExpanded] = useState(false);
@@ -391,6 +407,8 @@ export function Index() {
   // full-viewport gap above the Active page's content.
   const v8HeroPickerStage = v8HeroStage && !v8MeetupConfirmed;
   const legacyActiveStage = (active || rotating) && !v8HeroStage;
+  const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls);
+  const openSunControls = buildV8OpeningSunControls(openTuningControls);
 
   useEffect(() => {
     if (!hasV8LineAuthCallback()) return;
@@ -461,6 +479,10 @@ export function Index() {
       setOpeningSunTuning(v8OpeningSunDefaults);
     }
   }, []);
+
+  useEffect(() => {
+    saveControls(openTuningControls);
+  }, [openTuningControls]);
 
   useEffect(() => {
     try {
@@ -1300,17 +1322,67 @@ export function Index() {
               // Open 頁面自己的紅日內容(複製自 Active 的 V8ActiveSunContent，
               // 獨立程式碼、不共用) -- 資料來源接目前預覽/游標選中的那場聚會
               // (previewPickedEvent，輪播切換時即時更新)，非固定單一場次。
-              controlOverrides={{ sunZIndex: 11 }}
+              controlOverrides={openHeroOverrides}
               sunContent={
                 <V8OpeningSunContent
                   event={previewPickedEvent}
-                  controls={openingSunTuning}
+                  controls={openSunControls}
                   canSwitchMeetup={canSwitchMeetup}
                   onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
                   onNextEvent={() => selectAdjacentV8Meetup(1)}
                 />
               }
             />
+            {openTuningOpen ? null : (
+              <button
+                type="button"
+                onClick={() => setOpenTuningOpen(true)}
+                aria-label="Open tuning panel"
+                style={{
+                  position: "fixed",
+                  left: 6,
+                  bottom: 6,
+                  width: 30,
+                  height: 30,
+                  border: "none",
+                  borderRadius: "50%",
+                  background: "transparent",
+                  opacity: 0.001,
+                  zIndex: 40,
+                } as CSSProperties}
+              />
+            )}
+            {openTuningOpen ? (
+              <V8TuningPanel
+                controls={openTuningControls}
+                setControls={setOpenTuningControls}
+                targetOrder={OPEN_SUN_TUNING_TARGETS}
+                selectedTarget={openTuningTarget}
+                onSelectTarget={setOpenTuningTarget}
+              />
+            ) : null}
+            {openTuningOpen ? (
+              <button
+                type="button"
+                onClick={() => setOpenTuningOpen(false)}
+                aria-label="Close tuning panel"
+                style={{
+                  position: "fixed",
+                  left: 6,
+                  bottom: 6,
+                  width: 30,
+                  height: 30,
+                  border: "1px solid rgba(247, 239, 224, 0.3)",
+                  borderRadius: "50%",
+                  background: "rgba(24, 17, 13, 0.5)",
+                  color: "#f7efe0",
+                  fontSize: 10,
+                  zIndex: 40,
+                } as CSSProperties}
+              >
+                ×
+              </button>
+            ) : null}
           </>
         ) : null}
 
