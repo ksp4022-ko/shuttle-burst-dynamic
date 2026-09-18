@@ -2004,7 +2004,7 @@ function HandoffTimingLab({
             <div className="sd-timing-actions is-grid"><button type="button" onClick={onJumpStep2}>Replay Step 2</button></div>
           </TuningSection>
           <TuningSection id="countdown" title="⑤ 聚會選擇 / 倒數 / 自動進入" active={activeSection} onSelect={onSetSection}>
-            <TimingControl label="COUNTDOWN" description="倒數秒數" value={countdown.seconds} min={3} max={60} step={1} unit="s" onChange={(value) => onCountdownChange("seconds", value)} />
+            <TimingControl label="COUNTDOWN" description="倒數秒數（自動進入 Active 頁面）" value={countdown.seconds} min={5} max={15} step={1} unit="s" onChange={(value) => onCountdownChange("seconds", value)} />
             <ToggleControl label="SHOW COUNTDOWN" enabled={countdown.showCountdown} onToggle={() => onCountdownToggle("showCountdown")} />
             <ToggleControl label="AUTO ENTER" enabled={countdown.autoEnterAtZero} onToggle={() => onCountdownToggle("autoEnterAtZero")} />
             <ToggleControl label="RESET ON CHANGE" enabled={countdown.resetOnMeetupChange} onToggle={() => onCountdownToggle("resetOnMeetupChange")} />
@@ -2313,7 +2313,7 @@ function normalizeTutorialTuning(value: Partial<TutorialTuning> | undefined): Tu
 function normalizeCountdownTuning(value: Partial<CountdownTuning> | undefined): CountdownTuning {
   const source = value || {};
   return {
-    seconds: clampTiming(source.seconds, 3, 60, DEFAULT_COUNTDOWN_TUNING.seconds),
+    seconds: clampTiming(source.seconds, 5, 15, DEFAULT_COUNTDOWN_TUNING.seconds),
     showCountdown: typeof source.showCountdown === "boolean" ? source.showCountdown : DEFAULT_COUNTDOWN_TUNING.showCountdown,
     autoEnterAtZero: typeof source.autoEnterAtZero === "boolean" ? source.autoEnterAtZero : DEFAULT_COUNTDOWN_TUNING.autoEnterAtZero,
     resetOnMeetupChange: typeof source.resetOnMeetupChange === "boolean" ? source.resetOnMeetupChange : DEFAULT_COUNTDOWN_TUNING.resetOnMeetupChange,
