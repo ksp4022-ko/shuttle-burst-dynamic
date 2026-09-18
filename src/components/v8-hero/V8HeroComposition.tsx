@@ -90,7 +90,7 @@ type V8HeroCompositionProps = {
 // possible first-paint jank, not worth the hang risk now that
 // V8HeroComposition mounts more than once per page load (the Active page
 // reuses this same canvas) instead of just once.
-const preloadHeroImage = (src: string) =>
+const preloadHeroImage = (src: string, priority: "high" | "auto" = "auto") =>
   new Promise<void>((resolve) => {
     const image = new Image();
     let settled = false;
@@ -102,10 +102,27 @@ const preloadHeroImage = (src: string) =>
     image.onload = finish;
     image.onerror = finish;
     image.decoding = "async";
+    // Feature-detected (Safari only picked this up in 17.2) -- on older
+    // browsers this is just a no-op property set, every image preloads the
+    // same as before.
+    if ("fetchPriority" in image) image.fetchPriority = priority;
     image.src = src;
   });
 
-const preloadHeroImages = (sources: string[]) => Promise.all([...new Set(sources)].map(preloadHeroImage));
+// dragon/tiger body art are consistently the largest files in this set
+// (300-580KB pre-compression, still the biggest post-compression) and are
+// exactly what the user's own screenshots showed still blank after the
+// 9s gate had already opened -- every image fires its request in the same
+// tick regardless of order, so without a priority hint the browser has no
+// reason to favor these over a much smaller decor layer requested a
+// microtask earlier. Listing them first AND marking them high-priority
+// gives them first claim on the connection instead of splitting bandwidth
+// evenly across everything.
+const preloadHeroImages = (sources: string[], prioritySources: string[] = []) => {
+  const prioritySet = new Set(prioritySources);
+  const ordered = [...new Set(sources)].sort((a, b) => Number(prioritySet.has(b)) - Number(prioritySet.has(a)));
+  return Promise.all(ordered.map((src) => preloadHeroImage(src, prioritySet.has(src) ? "high" : "auto")));
+};
 
 // Safety net for the asset-preload gate below: if a single image's request
 // hangs at the network level (flaky/slow connection -- neither onload nor
@@ -126,9 +143,9 @@ const preloadHeroImages = (sources: string[]) => Promise.all([...new Set(sources
 // the extraPreloadSrcs filtering at each call site) rather than relying on
 // a longer timeout alone.
 const ASSET_PRELOAD_TIMEOUT_MS = 9000;
-const preloadHeroImagesWithTimeout = (sources: string[]) =>
+const preloadHeroImagesWithTimeout = (sources: string[], prioritySources: string[] = []) =>
   Promise.race([
-    preloadHeroImages(sources),
+    preloadHeroImages(sources, prioritySources),
     new Promise<void>((resolve) => window.setTimeout(resolve, ASSET_PRELOAD_TIMEOUT_MS)),
   ]);
 
@@ -319,7 +336,7 @@ export function V8HeroComposition({
   // preload gate blocking the reveal for images nobody was ever going to
   // see. Filter down to only the layers THIS render's own controls turn on
   // before handing them to the gate.
-  const requiredAssets = (
+  const requiredAssetEntries = (
     [
       ["body", controls.dragonShow],
       ["rearClaw", controls.rearClawShow],
@@ -337,8 +354,16 @@ export function V8HeroComposition({
       ["scroll", controls.scrollShow],
       ["tigerScroll", controls.tigerScrollShow],
     ] satisfies Array<[keyof typeof assets, boolean]>
-  )
-    .filter(([, shown]) => shown)
+  ).filter(([, shown]) => shown);
+  const requiredAssets = requiredAssetEntries.map(([key]) => assets[key]);
+  // The dragon/tiger body art (and the tiger's scroll, once claimed) are
+  // consistently the biggest files in this set and exactly what real-device
+  // reports showed still blank after the 9s gate opened -- give them first
+  // claim on the connection instead of splitting bandwidth evenly with
+  // smaller decor layers requested in the same tick (see preloadHeroImages).
+  const PRIORITY_ASSET_KEYS = new Set<keyof typeof assets>(["body", "tigerBody", "tigerScroll", "scroll"]);
+  const priorityAssets = requiredAssetEntries
+    .filter(([key]) => PRIORITY_ASSET_KEYS.has(key))
     .map(([key]) => assets[key]);
 
   useEffect(() => {
@@ -350,7 +375,7 @@ export function V8HeroComposition({
       };
     }
     setAssetsReady(false);
-    preloadHeroImagesWithTimeout([...requiredAssets, ...(extraPreloadSrcs || [])]).then(() => {
+    preloadHeroImagesWithTimeout([...requiredAssets, ...(extraPreloadSrcs || [])], priorityAssets).then(() => {
       if (!cancelled) setAssetsReady(true);
     });
     return () => {
