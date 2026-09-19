@@ -178,6 +178,8 @@ export type PreviewControls = {
   openSunNoteY: number;
   openSunNoteFontSize: number;
   openSunNoteOpacity: number;
+  countdownSeconds: number;
+  countdownAutoEnter: boolean;
   openSunSafeBoxWidth: number;
   openSunSafeBoxHeight: number;
   openSunSafeBoxShowHelper: boolean;
@@ -509,6 +511,7 @@ export type PreviewTargetId =
   | "OPEN SUN NAME"
   | "OPEN SUN TIME"
   | "OPEN SUN NOTE"
+  | "OPEN COUNTDOWN"
   | "OPEN SWITCH ARROW PREV"
   | "OPEN SWITCH ARROW NEXT"
   | "ACTIVE TIGER SCROLL"
@@ -564,6 +567,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "OPEN SUN NAME",
   "OPEN SUN TIME",
   "OPEN SUN NOTE",
+  "OPEN COUNTDOWN",
   "OPEN SWITCH ARROW PREV",
   "OPEN SWITCH ARROW NEXT",
 ];
@@ -811,6 +815,8 @@ export const previewDefaults: PreviewControls = {
   openSunNoteY: 59,
   openSunNoteFontSize: 18,
   openSunNoteOpacity: 88,
+  countdownSeconds: 9,
+  countdownAutoEnter: true,
   openSwitchArrowShow: true,
   openSwitchArrowPrevX: 0,
   openSwitchArrowPrevY: 50,
@@ -1176,6 +1182,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "openSunNoteFontSize",
     "openSunNoteOpacity",
   ],
+  "OPEN COUNTDOWN": ["countdownSeconds", "countdownAutoEnter"],
   "ACTIVE TIGER SCROLL": [
     "activeTigerScrollX",
     "activeTigerScrollY",
@@ -1670,6 +1677,7 @@ export const controlRanges = {
   openSunNoteY: { label: "開場備註 Y %", min: -20, max: 120 },
   openSunNoteFontSize: { label: "開場備註 Font Size", min: 4, max: 48 },
   openSunNoteOpacity: { label: "開場備註 Opacity", min: 0, max: 100 },
+  countdownSeconds: { label: "自動進入倒數 (秒)", min: 5, max: 15, step: 1 },
   activeIdentityStatusMarkX: { label: "印章 X %", min: -30, max: 130 },
   activeIdentityStatusMarkY: { label: "印章 Y %", min: -30, max: 160 },
   activeIdentityStatusMarkScale: { label: "印章 Scale", min: 0.3, max: 4, step: 0.01 },

@@ -374,6 +374,11 @@ export function V8TuningPanel({
             Helper Box {controls.activeSunSafeBoxShowHelper ? "ON" : "OFF"}
           </button>
         ) : null}
+        {selectedTarget === "OPEN COUNTDOWN" ? (
+          <button type="button" onClick={() => update("countdownAutoEnter", !controls.countdownAutoEnter)} style={smallButtonStyle}>
+            Auto Enter {controls.countdownAutoEnter ? "ON" : "OFF"}
+          </button>
+        ) : null}
         {selectedTarget === "ACTIVE ROSTER LISTS" ? (
           <>
             <label style={inlineSelectLabelStyle}>

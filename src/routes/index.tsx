@@ -61,7 +61,7 @@ const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
 const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
 const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
 const V8_LINE_LOGIN_RETURN_STORAGE_KEY = "shuttle-v8-line-login-return-v1";
-const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE"];
+const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE", "OPEN COUNTDOWN"];
 
 function isV8BrowserPath(pathname: string) {
   return pathname.split("/").filter(Boolean).includes("v8");
@@ -892,16 +892,24 @@ export function Index() {
     tutorialTuning.closeButtonDelay,
     tutorialTuning.step2TextTiming,
   ]);
+  // V8 has no HandoffTimingLab UI reachable during its own picker stage
+  // (see PR #48 -- showing that whole V7-oriented panel there collided
+  // with V8's own openTuningOpen trigger in the same screen corner), so
+  // the countdown value it uses comes from openTuningControls instead --
+  // the SAME "OPEN COUNTDOWN" target already reachable from the existing
+  // V8-specific tuning panel, not a second/separate control surface.
+  const effectiveCountdownSeconds = isV8Route ? openTuningControls.countdownSeconds : countdownTuning.seconds;
+  const effectiveAutoEnterAtZero = isV8Route ? openTuningControls.countdownAutoEnter : countdownTuning.autoEnterAtZero;
   useEffect(() => {
     if (!preview || !flow.events.length || tutorialOpen || flow.pendingAction || v8IntroBlocking) {
       setCountdownRemaining(null);
       return;
     }
-    if (!countdownTuning.showCountdown && !countdownTuning.autoEnterAtZero) {
+    if (!countdownTuning.showCountdown && !effectiveAutoEnterAtZero) {
       setCountdownRemaining(null);
       return;
     }
-    const seconds = Math.max(0, Math.round(countdownTuning.seconds));
+    const seconds = Math.max(0, Math.round(effectiveCountdownSeconds));
     const startedAt = window.performance.now();
     setCountdownRemaining(countdownTuning.showCountdown ? seconds : null);
     const timer = window.setInterval(() => {
@@ -910,14 +918,14 @@ export function Index() {
       if (countdownTuning.showCountdown) setCountdownRemaining(remaining);
       if (remaining <= 0) {
         window.clearInterval(timer);
-        if (countdownTuning.autoEnterAtZero) enterPreviewSelection();
+        if (effectiveAutoEnterAtZero) enterPreviewSelection();
       }
     }, 250);
     return () => window.clearInterval(timer);
   }, [
     countdownKey,
-    countdownTuning.autoEnterAtZero,
-    countdownTuning.seconds,
+    effectiveAutoEnterAtZero,
+    effectiveCountdownSeconds,
     countdownTuning.showCountdown,
     enterPreviewSelection,
     flow.events.length,
