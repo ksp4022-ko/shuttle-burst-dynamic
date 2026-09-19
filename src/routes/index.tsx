@@ -378,6 +378,7 @@ export function Index() {
   const [rosterVisible, setRosterVisible] = useState(false);
   const [v8MeetupConfirmed, setV8MeetupConfirmed] = useState(false);
   const [v8IntroBlocking, setV8IntroBlocking] = useState(isV8KangxuanRoute);
+  const [v8IntroReplaySignal, setV8IntroReplaySignal] = useState(0);
   const replayTimersRef = useRef<number[]>([]);
   const tutorialTimersRef = useRef<number[]>([]);
   const tutorialStartIntervalRef = useRef<number | null>(null);
@@ -1599,7 +1600,43 @@ export function Index() {
       {isV8KangxuanRoute ? (
         <>
           <V8IntroVideoStyles />
-          <V8IntroVideo config={v8KangxuanIntroConfig} onBlockingChange={setV8IntroBlocking} />
+          <V8IntroVideo
+            config={v8KangxuanIntroConfig}
+            onBlockingChange={setV8IntroBlocking}
+            replaySignal={v8IntroReplaySignal}
+          />
+          {/* Countdown auto-enter is already paused via v8IntroBlocking
+              (set true the instant V8IntroVideo starts playing, including
+              a forced replay -- see replaySignal) and only resumes once
+              the video's onEnded/onError/skip fires -- reuses the exact
+              same blocking mechanism as the very first play, nothing
+              countdown-specific needed here beyond bumping the signal. */}
+          <button
+            type="button"
+            className="v8-intro-replay-button"
+            onClick={() => setV8IntroReplaySignal((current) => current + 1)}
+          >
+            Replay Intro
+          </button>
+          <style>{`
+            .v8-intro-replay-button {
+              position: fixed;
+              top: max(12px, env(safe-area-inset-top));
+              left: max(12px, env(safe-area-inset-left));
+              z-index: 79;
+              min-height: 30px;
+              padding: 5px 11px;
+              border: 1px solid rgba(255, 255, 255, 0.4);
+              border-radius: 999px;
+              background: rgba(14, 11, 8, 0.4);
+              color: rgba(255, 255, 255, 0.82);
+              font-size: 11px;
+              font-weight: 800;
+              letter-spacing: 0.3px;
+              backdrop-filter: blur(6px);
+              -webkit-backdrop-filter: blur(6px);
+            }
+          `}</style>
         </>
       ) : null}
     </main>

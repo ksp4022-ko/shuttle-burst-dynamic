@@ -4,6 +4,13 @@ import type { V8IntroConfig } from "./v8IntroConfig";
 type V8IntroVideoProps = {
   config: V8IntroConfig;
   onBlockingChange?: (blocking: boolean) => void;
+  // Bump this (e.g. a counter incremented on each click) to force the
+  // intro to play again regardless of the session's "already played"
+  // flag -- see the "Replay Intro" button in routes/index.tsx. 0/undefined
+  // on first mount means "normal first-visit behavior", so only values
+  // greater than the PREVIOUS render's count trigger a forced replay, not
+  // the initial mount itself.
+  replaySignal?: number;
 };
 
 function storageKeyFor(config: V8IntroConfig) {
@@ -22,7 +29,7 @@ function canUseSessionStorage() {
   }
 }
 
-export function V8IntroVideo({ config, onBlockingChange }: V8IntroVideoProps) {
+export function V8IntroVideo({ config, onBlockingChange, replaySignal = 0 }: V8IntroVideoProps) {
   const storageKey = useMemo(() => storageKeyFor(config), [config]);
   const [shouldRender, setShouldRender] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -31,6 +38,7 @@ export function V8IntroVideo({ config, onBlockingChange }: V8IntroVideoProps) {
   const storageAvailableRef = useRef(false);
   const removeTimerRef = useRef<number | null>(null);
   const skipTimerRef = useRef<number | null>(null);
+  const previousReplaySignalRef = useRef(replaySignal);
 
   const markPlayed = useCallback(() => {
     if (!storageAvailableRef.current) return;
@@ -58,15 +66,21 @@ export function V8IntroVideo({ config, onBlockingChange }: V8IntroVideoProps) {
   }, [config.fadeDurationMs, markPlayed, onBlockingChange]);
 
   useEffect(() => {
+    const isForcedReplay = replaySignal !== previousReplaySignalRef.current;
+    previousReplaySignalRef.current = replaySignal;
+
     if (!config.enabled || typeof window === "undefined") {
       onBlockingChange?.(false);
       return;
     }
     storageAvailableRef.current = canUseSessionStorage();
-    if (storageAvailableRef.current && window.sessionStorage.getItem(storageKey) === "1") {
+    if (!isForcedReplay && storageAvailableRef.current && window.sessionStorage.getItem(storageKey) === "1") {
       onBlockingChange?.(false);
       return;
     }
+    finishedRef.current = false;
+    setExiting(false);
+    setSkipVisible(false);
     onBlockingChange?.(true);
     setShouldRender(true);
     skipTimerRef.current = window.setTimeout(() => {
@@ -77,7 +91,7 @@ export function V8IntroVideo({ config, onBlockingChange }: V8IntroVideoProps) {
       if (removeTimerRef.current !== null) window.clearTimeout(removeTimerRef.current);
       onBlockingChange?.(false);
     };
-  }, [config.enabled, config.skipDelayMs, onBlockingChange, storageKey]);
+  }, [config.enabled, config.skipDelayMs, onBlockingChange, replaySignal, storageKey]);
 
   if (!shouldRender) return null;
 

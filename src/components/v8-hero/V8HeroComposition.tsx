@@ -12,6 +12,7 @@ import {
   v8HeroDefaults,
   type V8HeroControls,
 } from "./v8HeroConfig";
+import { V8CtaGlowOutline, V8CtaGlowOutlineStyles } from "@/components/v8-active/V8CtaGlowOutline";
 
 type V8HeroCompositionProps = {
   // Only used pre-confirm (the meetup picker) -- optional so callers that
@@ -223,6 +224,26 @@ function DecorLayer({
 function V8HeroAmbientStyles() {
   return (
     <style>{`
+      .v8-hero-enter-battle-cta {
+        border: none;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+      }
+
+      .v8-hero-enter-battle-cta img {
+        display: block;
+        width: 176px;
+        height: auto;
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+
+      .v8-hero-enter-battle-cta:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+
       .v8-wave-drift-front {
         animation: v8-wave-drift-front 8.6s ease-in-out infinite;
         animation-delay: -1.8s;
@@ -393,6 +414,7 @@ export function V8HeroComposition({
   return (
     <section className="sd-v8-hero-composition" aria-label="V8 聚會選擇" style={rootStyle}>
       <V8HeroAmbientStyles />
+      <V8CtaGlowOutlineStyles />
       <div style={stageShellStyle}>
         <div style={stageAspectRatio ? { ...stageStyle, aspectRatio: stageAspectRatio } : stageStyle}>
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
@@ -619,17 +641,20 @@ export function V8HeroComposition({
                   type="button"
                   disabled={confirmDisabled}
                   onClick={onConfirm}
+                  className="v8-hero-enter-battle-cta"
                   style={{
-                    ...ctaStyle,
                     position: "absolute",
                     left: "70%",
-                    top: "80%",
+                    top: "58%",
                     margin: 0,
                     transform: `translate(-50%, -50%) translateY(${controls.heroCtaY}px)`,
                     pointerEvents: "auto",
                   }}
                 >
-                  進入戰局
+                  <span className="v8-cta-interaction">
+                    <img src={assets.enterBattleCta} alt="進入戰局" draggable={false} />
+                    <V8CtaGlowOutline outlineKey="enterBattle" />
+                  </span>
                 </button>
               )}
             </div>
@@ -877,20 +902,6 @@ const eventPositionStyle: CSSProperties = {
   fontSize: 11,
   fontWeight: 800,
   letterSpacing: 1.2,
-};
-
-const ctaStyle: CSSProperties = {
-  width: 150,
-  height: 42,
-  margin: "24px auto 0",
-  border: "2px solid #20150d",
-  borderRadius: 999,
-  display: "grid",
-  placeItems: "center",
-  background: "rgba(245, 237, 219, 0.7)",
-  color: "#20150d",
-  fontSize: 16,
-  fontWeight: 900,
 };
 
 // confirmedStyle removed -- the confirmed-state placeholder text it styled
