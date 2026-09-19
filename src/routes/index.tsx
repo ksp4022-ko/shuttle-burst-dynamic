@@ -1070,7 +1070,17 @@ export function Index() {
         </header>
       ) : null}
 
-      {(preview || rotating || active) && !v8HeroStage && (
+      {/* Normally hidden once v8HeroStage takes over (V8ActivePage mounts
+          its own canvas, and most of this panel's sections -- particle
+          intro, tutorial steps -- don't apply there). The COUNTDOWN section
+          is the one exception: it drives enterPreviewSelection's auto-enter
+          timer for V8's own picker stage too (isV8Route is not excluded in
+          that effect), so a V8 user has no way to see/adjust it without
+          this panel -- keep it reachable during v8HeroPickerStage
+          specifically (the picker, before v8MeetupConfirmed), not the full
+          v8HeroStage (which also covers the already-confirmed Active view,
+          where the countdown no longer applies). */}
+      {(preview || rotating || active) && (!v8HeroStage || v8HeroPickerStage) && (
         <HandoffTimingLab
           timing={handoffTiming}
           particle={particleTuning}
