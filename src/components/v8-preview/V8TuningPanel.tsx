@@ -369,6 +369,32 @@ export function V8TuningPanel({
             onChange={(value) => update(key, value as PreviewControls[typeof key])}
           />
         ))}
+        {selectedTarget === "OPEN SUN MOTION" ? (
+          <>
+            <button type="button" onClick={() => update("openSunMotionEnabled", !controls.openSunMotionEnabled)} style={smallButtonStyle}>
+              Motion {controls.openSunMotionEnabled ? "ON" : "OFF"}
+            </button>
+            <button type="button" onClick={() => update("openSunMotionFloatEnabled", !controls.openSunMotionFloatEnabled)} style={smallButtonStyle}>
+              Float {controls.openSunMotionFloatEnabled ? "ON" : "OFF"}
+            </button>
+            <button type="button" onClick={() => update("openSunMotionPulseEnabled", !controls.openSunMotionPulseEnabled)} style={smallButtonStyle}>
+              Pulse {controls.openSunMotionPulseEnabled ? "ON" : "OFF"}
+            </button>
+          </>
+        ) : null}
+        {selectedTarget === "ACTIVE SUN MOTION" ? (
+          <>
+            <button type="button" onClick={() => update("activeSunMotionEnabled", !controls.activeSunMotionEnabled)} style={smallButtonStyle}>
+              Motion {controls.activeSunMotionEnabled ? "ON" : "OFF"}
+            </button>
+            <button type="button" onClick={() => update("activeSunMotionFloatEnabled", !controls.activeSunMotionFloatEnabled)} style={smallButtonStyle}>
+              Float {controls.activeSunMotionFloatEnabled ? "ON" : "OFF"}
+            </button>
+            <button type="button" onClick={() => update("activeSunMotionPulseEnabled", !controls.activeSunMotionPulseEnabled)} style={smallButtonStyle}>
+              Pulse {controls.activeSunMotionPulseEnabled ? "ON" : "OFF"}
+            </button>
+          </>
+        ) : null}
         {selectedTarget === "ACTIVE SUN SAFE BOX" ? (
           <button type="button" onClick={() => update("activeSunSafeBoxShowHelper", !controls.activeSunSafeBoxShowHelper)} style={smallButtonStyle}>
             Helper Box {controls.activeSunSafeBoxShowHelper ? "ON" : "OFF"}

@@ -310,12 +310,31 @@ function V8HeroAmbientStyles() {
         100% { transform: translate(0px, 0px);    opacity: 0.90; }
       }
 
+      .v8-sun-motion-float-active {
+        animation: v8-sun-motion-float var(--v8-sun-float-duration, 5s) ease-in-out infinite;
+      }
+      .v8-sun-motion-pulse-active {
+        animation: v8-sun-motion-pulse var(--v8-sun-pulse-duration, 4s) ease-in-out infinite;
+      }
+
+      @keyframes v8-sun-motion-float {
+        0%, 100% { transform: translateY(0px); }
+        50%      { transform: translateY(calc(-1 * var(--v8-sun-float-distance, 3px))); }
+      }
+
+      @keyframes v8-sun-motion-pulse {
+        0%, 100% { transform: scale(1); }
+        50%      { transform: scale(calc(1 + var(--v8-sun-pulse-amplitude, 1.5) / 100)); }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .v8-wave-drift-front,
         .v8-wave-drift-back,
         .v8-wave-drift-mid,
         .v8-cloud-drift-back,
-        .v8-cloud-drift-front {
+        .v8-cloud-drift-front,
+        .v8-sun-motion-float-active,
+        .v8-sun-motion-pulse-active {
           animation: none;
         }
       }
@@ -424,7 +443,8 @@ export function V8HeroComposition({
             <div
               style={
                 {
-                  ...sunStyle,
+                  position: "absolute",
+                  aspectRatio: "1",
                   left: `${controls.sunX}%`,
                   top: `${controls.sunY}%`,
                   width: `${52 * controls.sunScale}%`,
@@ -432,7 +452,32 @@ export function V8HeroComposition({
                 } as CSSProperties
               }
             >
-              {sunContent}
+              <div
+                className={controls.sunMotionEnabled && controls.sunMotionFloatEnabled ? "v8-sun-motion-float-layer v8-sun-motion-float-active" : "v8-sun-motion-float-layer"}
+                style={
+                  {
+                    ...sunStyle,
+                    position: "absolute",
+                    inset: 0,
+                    "--v8-sun-float-duration": `${controls.sunMotionFloatDurationSec}s`,
+                    "--v8-sun-float-distance": `${controls.sunMotionFloatDistancePx}px`,
+                  } as CSSProperties
+                }
+              >
+                <div
+                  className={controls.sunMotionEnabled && controls.sunMotionPulseEnabled ? "v8-sun-motion-pulse-layer v8-sun-motion-pulse-active" : "v8-sun-motion-pulse-layer"}
+                  style={
+                    {
+                      position: "absolute",
+                      inset: 0,
+                      "--v8-sun-pulse-duration": `${controls.sunMotionPulseDurationSec}s`,
+                      "--v8-sun-pulse-amplitude": `${controls.sunMotionPulseAmplitudePct}`,
+                    } as CSSProperties
+                  }
+                >
+                  {sunContent}
+                </div>
+              </div>
             </div>
             <DecorLayer src={assets.cloud} x={controls.cloudBackX} y={controls.cloudBackY} scale={controls.cloudBackScale} rotation={controls.cloudBackRotation} opacity={controls.cloudBackOpacity} blur={decorBlur(controls.cloudBackBlur)} zIndex={5} driftClassName="v8-cloud-drift-back" />
             <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={5} driftClassName="v8-cloud-drift-front" />
@@ -769,9 +814,12 @@ const paperStyle: CSSProperties = {
 // left/top/width/zIndex are always supplied at the call site from
 // controls.sunX/sunY/sunScale/sunZIndex (see v8HeroConfig.ts) -- kept out of
 // this base object so there's no stale default to accidentally fall back to.
+// The outer SUN POSITION CONTAINER div owns left/top/width/aspectRatio/
+// zIndex (unaffected by the Red Sun Motion Lab); this background paint is
+// applied one level in, on the FLOAT LAYER, via position:absolute+inset:0,
+// so Float/Pulse move the red circle together with sunContent instead of
+// leaving it behind as a stationary backdrop.
 const sunStyle: CSSProperties = {
-  position: "absolute",
-  aspectRatio: "1",
   borderRadius: "50%",
   background: "#c64325",
   opacity: 0.9,

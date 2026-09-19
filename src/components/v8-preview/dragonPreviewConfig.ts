@@ -116,6 +116,17 @@ export type PreviewControls = {
   activeSunY: number;
   activeSunScale: number;
   activeSunZIndex: number;
+  // Red Sun Motion Lab (M1+M2: Float/Pulse only -- Halo/Ring/Energy/preview
+  // isolation/play-pause/reset are reserved for a later batch, see
+  // buildV8ActiveHeroOverrides below). Prefixed active*/open* like the rest
+  // of this flat object so ACTIVE and OPEN keep fully independent values.
+  activeSunMotionEnabled: boolean;
+  activeSunMotionFloatEnabled: boolean;
+  activeSunMotionFloatDuration: number;
+  activeSunMotionFloatDistance: number;
+  activeSunMotionPulseEnabled: boolean;
+  activeSunMotionPulseDuration: number;
+  activeSunMotionPulseAmplitude: number;
   // The user's own pre-composed tiger-gripping-a-scroll art (replaces the
   // earlier dragon-gripped version) -- applied by ActiveCanvas regardless of
   // the mock character toggle, matching v8ActiveTigerScrollOverrides' now-
@@ -156,6 +167,13 @@ export type PreviewControls = {
   openSunY: number;
   openSunScale: number;
   openSunZIndex: number;
+  openSunMotionEnabled: boolean;
+  openSunMotionFloatEnabled: boolean;
+  openSunMotionFloatDuration: number;
+  openSunMotionFloatDistance: number;
+  openSunMotionPulseEnabled: boolean;
+  openSunMotionPulseDuration: number;
+  openSunMotionPulseAmplitude: number;
   openSunDateShow: boolean;
   openSunDateX: number;
   openSunDateY: number;
@@ -500,12 +518,14 @@ export type PreviewTargetId =
   | "FRONT FOAM"
   | "GOLD / INK"
   | "ACTIVE SUN INFO"
+  | "ACTIVE SUN MOTION"
   | "ACTIVE SUN SAFE BOX"
   | "ACTIVE SUN DATE"
   | "ACTIVE SUN NAME"
   | "ACTIVE SUN TIME"
   | "ACTIVE SUN NOTE"
   | "OPEN SUN INFO"
+  | "OPEN SUN MOTION"
   | "OPEN SUN SAFE BOX"
   | "OPEN SUN DATE"
   | "OPEN SUN NAME"
@@ -562,6 +582,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "FRONT FOAM",
   "GOLD / INK",
   "OPEN SUN INFO",
+  "OPEN SUN MOTION",
   "OPEN SUN SAFE BOX",
   "OPEN SUN DATE",
   "OPEN SUN NAME",
@@ -574,6 +595,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
 
 export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE SUN INFO",
+  "ACTIVE SUN MOTION",
   "ACTIVE SUN SAFE BOX",
   "ACTIVE SUN DATE",
   "ACTIVE SUN NAME",
@@ -757,6 +779,13 @@ export const previewDefaults: PreviewControls = {
   activeSunY: 1,
   activeSunScale: 0.68,
   activeSunZIndex: 30,
+  activeSunMotionEnabled: false,
+  activeSunMotionFloatEnabled: false,
+  activeSunMotionFloatDuration: 5,
+  activeSunMotionFloatDistance: 3,
+  activeSunMotionPulseEnabled: false,
+  activeSunMotionPulseDuration: 4,
+  activeSunMotionPulseAmplitude: 1.5,
   activeTigerScrollX: 84,
   activeTigerScrollY: 43,
   activeTigerScrollScale: 1.74,
@@ -790,6 +819,13 @@ export const previewDefaults: PreviewControls = {
   openSunY: v8HeroDefaults.sunY,
   openSunScale: v8HeroDefaults.sunScale,
   openSunZIndex: 11,
+  openSunMotionEnabled: false,
+  openSunMotionFloatEnabled: false,
+  openSunMotionFloatDuration: 5,
+  openSunMotionFloatDistance: 3,
+  openSunMotionPulseEnabled: false,
+  openSunMotionPulseDuration: 4,
+  openSunMotionPulseAmplitude: 1.5,
   openSunSafeBoxWidth: 70,
   openSunSafeBoxHeight: 60,
   openSunSafeBoxShowHelper: false,
@@ -1120,6 +1156,15 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "FRONT FOAM": ["frontFoamShow", "frontFoamX", "frontFoamY", "frontFoamScale", "frontFoamRotation", "frontFoamOpacity", "frontFoamBlur"],
   "GOLD / INK": ["goldInkShow", "goldInkX", "goldInkY", "goldInkScale", "goldInkRotation", "goldInkOpacity", "goldInkBlur"],
   "ACTIVE SUN INFO": ["activeSunX", "activeSunY", "activeSunScale", "activeSunZIndex"],
+  "ACTIVE SUN MOTION": [
+    "activeSunMotionEnabled",
+    "activeSunMotionFloatEnabled",
+    "activeSunMotionFloatDuration",
+    "activeSunMotionFloatDistance",
+    "activeSunMotionPulseEnabled",
+    "activeSunMotionPulseDuration",
+    "activeSunMotionPulseAmplitude",
+  ],
   "ACTIVE SUN SAFE BOX": ["activeSunSafeBoxWidth", "activeSunSafeBoxHeight", "activeSunSafeBoxShowHelper"],
   "ACTIVE SUN DATE": [
     "activeSunDateShow",
@@ -1151,6 +1196,15 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunNoteOpacity",
   ],
   "OPEN SUN INFO": ["openSunX", "openSunY", "openSunScale", "openSunZIndex"],
+  "OPEN SUN MOTION": [
+    "openSunMotionEnabled",
+    "openSunMotionFloatEnabled",
+    "openSunMotionFloatDuration",
+    "openSunMotionFloatDistance",
+    "openSunMotionPulseEnabled",
+    "openSunMotionPulseDuration",
+    "openSunMotionPulseAmplitude",
+  ],
   "OPEN SUN SAFE BOX": ["openSunSafeBoxWidth", "openSunSafeBoxHeight", "openSunSafeBoxShowHelper"],
   "OPEN SUN DATE": [
     "openSunDateShow",
@@ -1630,6 +1684,10 @@ export const controlRanges = {
   activeSunY: { label: "Sun Y %", min: 0, max: 100 },
   activeSunScale: { label: "Sun Scale", min: 0.3, max: 2, step: 0.01 },
   activeSunZIndex: { label: "Sun Z-Index", min: 0, max: 30 },
+  activeSunMotionFloatDuration: { label: "Float Duration (s)", min: 2, max: 10, step: 0.5 },
+  activeSunMotionFloatDistance: { label: "Float Distance (px)", min: 0, max: 12, step: 0.5 },
+  activeSunMotionPulseDuration: { label: "Pulse Duration (s)", min: 2, max: 10, step: 0.5 },
+  activeSunMotionPulseAmplitude: { label: "Pulse Amplitude (%)", min: 0, max: 5, step: 0.1 },
   activeTigerScrollX: { label: "Tiger+Scroll X %", min: 0, max: 100 },
   activeTigerScrollY: { label: "Tiger+Scroll Y %", min: 0, max: 100 },
   activeTigerScrollScale: { label: "Tiger+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
@@ -1657,6 +1715,10 @@ export const controlRanges = {
   openSunY: { label: "開場 Sun Y %", min: 0, max: 100 },
   openSunScale: { label: "開場 Sun Scale", min: 0.3, max: 2, step: 0.01 },
   openSunZIndex: { label: "開場 Sun Z-Index", min: 0, max: 30 },
+  openSunMotionFloatDuration: { label: "開場 Float Duration (s)", min: 2, max: 10, step: 0.5 },
+  openSunMotionFloatDistance: { label: "開場 Float Distance (px)", min: 0, max: 12, step: 0.5 },
+  openSunMotionPulseDuration: { label: "開場 Pulse Duration (s)", min: 2, max: 10, step: 0.5 },
+  openSunMotionPulseAmplitude: { label: "開場 Pulse Amplitude (%)", min: 0, max: 5, step: 0.1 },
   openSunSafeBoxWidth: { label: "開場 Safe Width %", min: 20, max: 120 },
   openSunSafeBoxHeight: { label: "開場 Safe Height %", min: 20, max: 120 },
   openSunDateX: { label: "開場日期 X %", min: -20, max: 120 },
@@ -2039,6 +2101,15 @@ Y: ${Math.round(controls.activeSunY)}
 Scale: ${controls.activeSunScale.toFixed(2)}
 Z-Index: ${Math.round(controls.activeSunZIndex)}
 
+ACTIVE SUN MOTION
+Motion: ${controls.activeSunMotionEnabled ? "ON" : "OFF"}
+Float: ${controls.activeSunMotionFloatEnabled ? "ON" : "OFF"}
+Float Duration: ${controls.activeSunMotionFloatDuration.toFixed(1)}
+Float Distance: ${controls.activeSunMotionFloatDistance.toFixed(1)}
+Pulse: ${controls.activeSunMotionPulseEnabled ? "ON" : "OFF"}
+Pulse Duration: ${controls.activeSunMotionPulseDuration.toFixed(1)}
+Pulse Amplitude: ${controls.activeSunMotionPulseAmplitude.toFixed(1)}
+
 ACTIVE SUN SAFE BOX
 Width: ${Math.round(controls.activeSunSafeBoxWidth)}
 Height: ${Math.round(controls.activeSunSafeBoxHeight)}
@@ -2078,6 +2149,15 @@ X: ${Math.round(controls.openSunX)}
 Y: ${Math.round(controls.openSunY)}
 Scale: ${controls.openSunScale.toFixed(2)}
 Z-Index: ${Math.round(controls.openSunZIndex)}
+
+OPEN SUN MOTION
+Motion: ${controls.openSunMotionEnabled ? "ON" : "OFF"}
+Float: ${controls.openSunMotionFloatEnabled ? "ON" : "OFF"}
+Float Duration: ${controls.openSunMotionFloatDuration.toFixed(1)}
+Float Distance: ${controls.openSunMotionFloatDistance.toFixed(1)}
+Pulse: ${controls.openSunMotionPulseEnabled ? "ON" : "OFF"}
+Pulse Duration: ${controls.openSunMotionPulseDuration.toFixed(1)}
+Pulse Amplitude: ${controls.openSunMotionPulseAmplitude.toFixed(1)}
 
 OPEN SUN SAFE BOX
 Width: ${Math.round(controls.openSunSafeBoxWidth)}
@@ -2333,6 +2413,13 @@ export function buildV8ActiveHeroOverrides(controls: PreviewControls): Partial<V
     sunY: controls.activeSunY,
     sunScale: controls.activeSunScale,
     sunZIndex: controls.activeSunZIndex,
+    sunMotionEnabled: controls.activeSunMotionEnabled,
+    sunMotionFloatEnabled: controls.activeSunMotionFloatEnabled,
+    sunMotionFloatDurationSec: controls.activeSunMotionFloatDuration,
+    sunMotionFloatDistancePx: controls.activeSunMotionFloatDistance,
+    sunMotionPulseEnabled: controls.activeSunMotionPulseEnabled,
+    sunMotionPulseDurationSec: controls.activeSunMotionPulseDuration,
+    sunMotionPulseAmplitudePct: controls.activeSunMotionPulseAmplitude,
     ...v8ActiveBackgroundFadeOverrides(controls.activeBackgroundFade),
     // Uniform tiger-scroll personal-status display for every confirmed
     // identity (season or casual) -- not itself user-tunable, only its
@@ -2408,6 +2495,13 @@ export function buildV8OpeningHeroOverrides(controls: PreviewControls): Partial<
     sunY: clampNumber(controls.openSunY, previewDefaults.openSunY, 0, 100),
     sunScale: clampNumber(controls.openSunScale, previewDefaults.openSunScale, 0.2, 3),
     sunZIndex: Math.round(clampNumber(controls.openSunZIndex, previewDefaults.openSunZIndex, 0, 50)),
+    sunMotionEnabled: controls.openSunMotionEnabled,
+    sunMotionFloatEnabled: controls.openSunMotionFloatEnabled,
+    sunMotionFloatDurationSec: controls.openSunMotionFloatDuration,
+    sunMotionFloatDistancePx: controls.openSunMotionFloatDistance,
+    sunMotionPulseEnabled: controls.openSunMotionPulseEnabled,
+    sunMotionPulseDurationSec: controls.openSunMotionPulseDuration,
+    sunMotionPulseAmplitudePct: controls.openSunMotionPulseAmplitude,
   };
 }
 

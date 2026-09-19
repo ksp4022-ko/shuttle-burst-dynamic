@@ -125,6 +125,21 @@ export type V8HeroControls = {
   sunY: number;
   sunScale: number;
   sunZIndex: number;
+  // Red Sun Motion Lab (M1+M2 only: Float/Pulse) -- additive ambient motion
+  // layered INSIDE the sun's existing position/size box above, never
+  // altering sunX/sunY/sunScale/sunZIndex themselves. Already resolved to
+  // this page's own values by buildV8OpeningHeroOverrides/
+  // buildV8ActiveHeroOverrides (see dragonPreviewConfig.ts) from the
+  // prefixed openSunMotion*/activeSunMotion* PreviewControls fields, so
+  // OPEN and ACTIVE naturally get independent settings the same way they
+  // already do for sunX/sunY/sunScale/sunZIndex.
+  sunMotionEnabled: boolean;
+  sunMotionFloatEnabled: boolean;
+  sunMotionFloatDurationSec: number;
+  sunMotionFloatDistancePx: number;
+  sunMotionPulseEnabled: boolean;
+  sunMotionPulseDurationSec: number;
+  sunMotionPulseAmplitudePct: number;
 };
 
 export const v8HeroDefaults: V8HeroControls = {
@@ -238,6 +253,13 @@ export const v8HeroDefaults: V8HeroControls = {
   sunY: 29,
   sunScale: 0.9,
   sunZIndex: 4,
+  sunMotionEnabled: false,
+  sunMotionFloatEnabled: false,
+  sunMotionFloatDurationSec: 5,
+  sunMotionFloatDistancePx: 3,
+  sunMotionPulseEnabled: false,
+  sunMotionPulseDurationSec: 4,
+  sunMotionPulseAmplitudePct: 1.5,
 };
 
 export const v8HeroDisplayAssets = {
