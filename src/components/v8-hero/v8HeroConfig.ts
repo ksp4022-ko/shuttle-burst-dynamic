@@ -272,6 +272,13 @@ export const v8HeroActiveAssetFile = "scroll-identity-v1.webp";
 // comment on the tigerScrollShow block in V8HeroComposition.tsx.
 export const v8HeroTigerScrollAssetFile = "tiger-scroll-fixed-v2.webp";
 
+// "進入戰局" confirm CTA plaque -- same pipeline as the 4 Active identity-
+// card plaques (see v8CtaGlowOutlines.ts's enterBattle entry): a plain
+// uniform downscale of cta-plaque-enter-battle-v1-source.png (2172x724),
+// no letterboxing needed since there's only one asset, not four that need
+// to match sizes.
+export const v8HeroEnterBattleCtaFile = "cta-plaque-enter-battle-v1.webp";
+
 export const buildV8HeroAssets = (baseUrl: string) => {
   const displayAssetBase = `${baseUrl}v8-preview/display`;
   return {
@@ -290,6 +297,7 @@ export const buildV8HeroAssets = (baseUrl: string) => {
     goldInk: `${displayAssetBase}/${v8HeroDisplayAssets.goldInk}`,
     scroll: `${baseUrl}v8-preview/active/${v8HeroActiveAssetFile}`,
     tigerScroll: `${baseUrl}v8-preview/active/${v8HeroTigerScrollAssetFile}`,
+    enterBattleCta: `${baseUrl}v8-preview/active/${v8HeroEnterBattleCtaFile}`,
   };
 };
 

@@ -36,6 +36,17 @@ export const v8CtaGlowOutlines = {
     viewBoxHeight: 589,
     d: "M 12.0 284.15 L 24.2 327.84 L 44.39 342.4 L 65.51 342.4 L 80.53 376.69 L 113.86 394.54 L 135.92 418.97 L 179.11 429.77 L 259.84 416.15 L 306.32 434.0 L 354.66 422.73 L 391.75 434.0 L 441.03 416.15 L 518.95 429.77 L 550.4 425.07 L 585.61 394.54 L 613.3 382.33 L 633.96 342.4 L 653.67 342.87 L 670.57 332.54 L 687.0 296.83 L 679.02 261.13 L 598.28 170.47 L 561.2 165.78 L 520.83 183.63 L 465.91 189.73 L 414.75 169.06 L 390.34 171.41 L 351.38 139.0 L 324.15 153.09 L 313.36 169.06 L 285.19 168.59 L 232.15 189.73 L 179.11 183.63 L 134.98 165.31 L 104.47 169.06 L 48.14 225.43 Z",
   },
+  // Opening page's "進入戰局" plaque -- same pipeline, different source
+  // image/viewBox: cta-plaque-enter-battle-v1-source.png is 2172x724, the
+  // display webp is a plain uniform 700-wide downscale (no letterbox), so
+  // the contour points only need a single scale factor (700/2172), no
+  // bbox-matching offset like the 4 letterboxed identity-card plaques
+  // above. Verified by redrawing this path over the display webp.
+  enterBattle: {
+    viewBoxWidth: 700,
+    viewBoxHeight: 233,
+    d: "M 20.95 124.08 L 23.20 141.48 L 37.71 159.85 L 72.51 165.33 L 89.27 190.47 L 115.70 196.59 L 143.42 215.93 L 173.71 218.19 L 259.12 202.39 L 303.91 217.54 L 330.99 214.64 L 350.32 225.92 L 369.66 214.96 L 398.66 217.22 L 442.17 202.39 L 529.51 218.51 L 555.29 216.25 L 583.33 196.59 L 610.41 190.15 L 626.84 165.33 L 660.04 160.17 L 677.12 131.17 L 667.45 102.16 L 586.56 30.62 L 555.94 26.75 L 506.63 46.41 L 461.51 49.31 L 408.01 29.01 L 387.38 32.55 L 351.93 4.83 L 312.29 32.87 L 290.38 29.33 L 236.23 49.63 L 193.69 46.41 L 145.99 27.07 L 114.73 30.29 L 34.16 98.94 Z",
+  },
 } as const;
 
 export type V8CtaGlowOutlineKey = keyof typeof v8CtaGlowOutlines;
