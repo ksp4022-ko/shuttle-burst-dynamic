@@ -20,8 +20,10 @@ import {
   buildV8ActiveSunMessagesControls,
   buildV8ActiveSwitchArrowsControls,
   loadSavedControls,
+  motionPreviewLabDefaults,
   previewDefaults,
   saveControls,
+  type MotionPreviewLabState,
   type PreviewControls,
   type PreviewTargetId,
 } from "@/components/v8-preview/dragonPreviewConfig";
@@ -131,6 +133,9 @@ export function V8ActivePage({
     typeof window === "undefined" ? previewDefaults : loadSavedControls(),
   );
   const [tuningTarget, setTuningTarget] = useState<PreviewTargetId>("ACTIVE SUN INFO");
+  // Red Sun Motion Lab preview state -- see the matching comment in
+  // routes/index.tsx (openMotionPreviewLab). Transient, never persisted.
+  const [motionPreviewLab, setMotionPreviewLab] = useState<MotionPreviewLabState>(motionPreviewLabDefaults);
 
   useEffect(() => {
     saveControls(tuningControls);
@@ -247,7 +252,7 @@ export function V8ActivePage({
   // dragonPreviewConfig.ts) -- this page's own hidden tuning panel (below)
   // edits tuningControls directly, so what you tune here IS what's live,
   // not a mock standing in for it.
-  const heroOverrides = buildV8ActiveHeroOverrides(tuningControls);
+  const heroOverrides = buildV8ActiveHeroOverrides(tuningControls, motionPreviewLab);
   const infoCardsControls = buildV8ActiveInfoCardsControls(tuningControls);
   const rosterListsControls = buildV8ActiveRosterListsControls(tuningControls);
   const sunBadgeControls = buildV8ActiveSunBadgesControls(tuningControls);
@@ -589,6 +594,8 @@ export function V8ActivePage({
           targetOrder={activeTargetOrder}
           selectedTarget={tuningTarget}
           onSelectTarget={setTuningTarget}
+          motionPreviewLab={motionPreviewLab}
+          onMotionPreviewLabChange={setMotionPreviewLab}
         />
       ) : null}
       {tuningOpen ? (

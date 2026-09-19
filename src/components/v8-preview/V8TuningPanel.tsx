@@ -5,13 +5,16 @@ import {
   controlRanges,
   formatPreviewSettings,
   getButtonStep,
+  motionPreviewLabDefaults,
   previewDefaults,
   targetControlKeys,
   targetVisibilityKeys,
+  type MotionPreviewLabState,
   type PreviewControls,
   type PreviewMode,
   type PreviewTargetId,
   type StepMode,
+  type SunMotionEffectKey,
 } from "./dragonPreviewConfig";
 import { v8ActiveRosterFontOptions } from "@/components/v8-active/v8ActiveConfig";
 import { resetV8LineProfile } from "@/lib/v8-line-auth";
@@ -90,6 +93,8 @@ export function V8TuningPanel({
   onModeChange,
   highlightEnabled = true,
   onHighlightChange,
+  motionPreviewLab,
+  onMotionPreviewLabChange,
 }: {
   controls: PreviewControls;
   setControls: Dispatch<SetStateAction<PreviewControls>>;
@@ -101,6 +106,16 @@ export function V8TuningPanel({
   onModeChange?: (mode: PreviewMode) => void;
   highlightEnabled?: boolean;
   onHighlightChange?: (enabled: boolean) => void;
+  // Red Sun Motion Lab preview (single-effect isolate / play-pause / reset)
+  // -- transient UI state, deliberately NOT part of PreviewControls (see
+  // MotionPreviewLabState in dragonPreviewConfig.ts). Optional + falls back
+  // to an internal, uncontrolled useState below so callers that don't need
+  // it (the /v8/preview mock console) don't have to wire anything; the real
+  // OPEN/ACTIVE pages pass both so the isolate/pause state can also reach
+  // the actual rendered sun via buildV8OpeningHeroOverrides/
+  // buildV8ActiveHeroOverrides.
+  motionPreviewLab?: MotionPreviewLabState;
+  onMotionPreviewLabChange?: (next: MotionPreviewLabState) => void;
 }) {
   const [panelMinimized, setPanelMinimized] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
@@ -110,6 +125,9 @@ export function V8TuningPanel({
   const [stepMode, setStepMode] = useState<StepMode>("Normal");
   const [moreOpen, setMoreOpen] = useState(false);
   const [lineAuthResetStatus, setLineAuthResetStatus] = useState<"idle" | "cleared">("idle");
+  const [internalMotionPreviewLab, setInternalMotionPreviewLab] = useState<MotionPreviewLabState>(motionPreviewLabDefaults);
+  const effectiveMotionPreviewLab = motionPreviewLab ?? internalMotionPreviewLab;
+  const setMotionPreviewLab = onMotionPreviewLabChange ?? setInternalMotionPreviewLab;
   const panelRef = useRef<HTMLElement | null>(null);
   const copyFeedbackTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const lineAuthResetTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
@@ -371,28 +389,102 @@ export function V8TuningPanel({
         ))}
         {selectedTarget === "OPEN SUN MOTION" ? (
           <>
-            <button type="button" onClick={() => update("openSunMotionEnabled", !controls.openSunMotionEnabled)} style={smallButtonStyle}>
-              Motion {controls.openSunMotionEnabled ? "ON" : "OFF"}
-            </button>
-            <button type="button" onClick={() => update("openSunMotionFloatEnabled", !controls.openSunMotionFloatEnabled)} style={smallButtonStyle}>
-              Float {controls.openSunMotionFloatEnabled ? "ON" : "OFF"}
-            </button>
-            <button type="button" onClick={() => update("openSunMotionPulseEnabled", !controls.openSunMotionPulseEnabled)} style={smallButtonStyle}>
-              Pulse {controls.openSunMotionPulseEnabled ? "ON" : "OFF"}
-            </button>
+            <div style={motionLabRowStyle}>
+              <button type="button" onClick={() => update("openSunMotionEnabled", !controls.openSunMotionEnabled)} style={smallButtonStyle}>
+                Motion {controls.openSunMotionEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("openSunMotionFloatEnabled", !controls.openSunMotionFloatEnabled)} style={smallButtonStyle}>
+                Float {controls.openSunMotionFloatEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("openSunMotionPulseEnabled", !controls.openSunMotionPulseEnabled)} style={smallButtonStyle}>
+                Pulse {controls.openSunMotionPulseEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("openSunMotionHaloEnabled", !controls.openSunMotionHaloEnabled)} style={smallButtonStyle}>
+                Halo {controls.openSunMotionHaloEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("openSunMotionRingEnabled", !controls.openSunMotionRingEnabled)} style={smallButtonStyle}>
+                Ring {controls.openSunMotionRingEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("openSunMotionEnergyEnabled", !controls.openSunMotionEnergyEnabled)} style={smallButtonStyle}>
+                Energy {controls.openSunMotionEnergyEnabled ? "ON" : "OFF"}
+              </button>
+            </div>
+            <div style={motionLabRowStyle}>
+              <span style={controlLabelStyle}>Preview</span>
+              {(["float", "pulse", "halo", "ring", "energy"] as const satisfies readonly SunMotionEffectKey[]).map((effect) => (
+                <button
+                  key={effect}
+                  type="button"
+                  onClick={() => setMotionPreviewLab({ ...effectiveMotionPreviewLab, isolatedEffect: effectiveMotionPreviewLab.isolatedEffect === effect ? null : effect })}
+                  style={effectiveMotionPreviewLab.isolatedEffect === effect ? motionPreviewActiveButtonStyle : smallButtonStyle}
+                >
+                  {effect}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setMotionPreviewLab({ ...effectiveMotionPreviewLab, isolatedEffect: null })}
+                style={effectiveMotionPreviewLab.isolatedEffect === null ? motionPreviewActiveButtonStyle : smallButtonStyle}
+              >
+                All
+              </button>
+              <button type="button" onClick={() => setMotionPreviewLab({ ...effectiveMotionPreviewLab, paused: !effectiveMotionPreviewLab.paused })} style={smallButtonStyle}>
+                {effectiveMotionPreviewLab.paused ? "Play" : "Pause"}
+              </button>
+              <button type="button" onClick={() => setMotionPreviewLab(motionPreviewLabDefaults)} style={smallButtonStyle}>
+                Preview Reset
+              </button>
+            </div>
           </>
         ) : null}
         {selectedTarget === "ACTIVE SUN MOTION" ? (
           <>
-            <button type="button" onClick={() => update("activeSunMotionEnabled", !controls.activeSunMotionEnabled)} style={smallButtonStyle}>
-              Motion {controls.activeSunMotionEnabled ? "ON" : "OFF"}
-            </button>
-            <button type="button" onClick={() => update("activeSunMotionFloatEnabled", !controls.activeSunMotionFloatEnabled)} style={smallButtonStyle}>
-              Float {controls.activeSunMotionFloatEnabled ? "ON" : "OFF"}
-            </button>
-            <button type="button" onClick={() => update("activeSunMotionPulseEnabled", !controls.activeSunMotionPulseEnabled)} style={smallButtonStyle}>
-              Pulse {controls.activeSunMotionPulseEnabled ? "ON" : "OFF"}
-            </button>
+            <div style={motionLabRowStyle}>
+              <button type="button" onClick={() => update("activeSunMotionEnabled", !controls.activeSunMotionEnabled)} style={smallButtonStyle}>
+                Motion {controls.activeSunMotionEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("activeSunMotionFloatEnabled", !controls.activeSunMotionFloatEnabled)} style={smallButtonStyle}>
+                Float {controls.activeSunMotionFloatEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("activeSunMotionPulseEnabled", !controls.activeSunMotionPulseEnabled)} style={smallButtonStyle}>
+                Pulse {controls.activeSunMotionPulseEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("activeSunMotionHaloEnabled", !controls.activeSunMotionHaloEnabled)} style={smallButtonStyle}>
+                Halo {controls.activeSunMotionHaloEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("activeSunMotionRingEnabled", !controls.activeSunMotionRingEnabled)} style={smallButtonStyle}>
+                Ring {controls.activeSunMotionRingEnabled ? "ON" : "OFF"}
+              </button>
+              <button type="button" onClick={() => update("activeSunMotionEnergyEnabled", !controls.activeSunMotionEnergyEnabled)} style={smallButtonStyle}>
+                Energy {controls.activeSunMotionEnergyEnabled ? "ON" : "OFF"}
+              </button>
+            </div>
+            <div style={motionLabRowStyle}>
+              <span style={controlLabelStyle}>Preview</span>
+              {(["float", "pulse", "halo", "ring", "energy"] as const satisfies readonly SunMotionEffectKey[]).map((effect) => (
+                <button
+                  key={effect}
+                  type="button"
+                  onClick={() => setMotionPreviewLab({ ...effectiveMotionPreviewLab, isolatedEffect: effectiveMotionPreviewLab.isolatedEffect === effect ? null : effect })}
+                  style={effectiveMotionPreviewLab.isolatedEffect === effect ? motionPreviewActiveButtonStyle : smallButtonStyle}
+                >
+                  {effect}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setMotionPreviewLab({ ...effectiveMotionPreviewLab, isolatedEffect: null })}
+                style={effectiveMotionPreviewLab.isolatedEffect === null ? motionPreviewActiveButtonStyle : smallButtonStyle}
+              >
+                All
+              </button>
+              <button type="button" onClick={() => setMotionPreviewLab({ ...effectiveMotionPreviewLab, paused: !effectiveMotionPreviewLab.paused })} style={smallButtonStyle}>
+                {effectiveMotionPreviewLab.paused ? "Play" : "Pause"}
+              </button>
+              <button type="button" onClick={() => setMotionPreviewLab(motionPreviewLabDefaults)} style={smallButtonStyle}>
+                Preview Reset
+              </button>
+            </div>
           </>
         ) : null}
         {selectedTarget === "ACTIVE SUN SAFE BOX" ? (
@@ -736,6 +828,28 @@ const smallButtonStyle: CSSProperties = {
   fontSize: 11,
   fontWeight: 900,
   whiteSpace: "nowrap",
+};
+
+// "Selected" variant of smallButtonStyle for the Motion Lab preview row's
+// isolate/All buttons, so it's visually obvious at a glance which single
+// effect (if any) is currently being previewed in isolation.
+const motionPreviewActiveButtonStyle: CSSProperties = {
+  ...smallButtonStyle,
+  background: "rgba(255, 196, 64, 0.85)",
+  borderColor: "rgba(255, 214, 120, 0.95)",
+  color: "#3a2405",
+};
+
+// Compact, clearly-grouped Motion Lab row -- wraps the Motion/Float/Pulse/
+// Halo/Ring/Energy toggles and the Preview row into flexible rows instead
+// of each button taking its own full-width grid row (the default for
+// panelBodyStyle's children), so all five effect toggles stay reachable
+// without scrolling past unrelated controls on a phone-width panel.
+const motionLabRowStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 5,
+  alignItems: "center",
 };
 
 const panelBodyStyle: CSSProperties = {

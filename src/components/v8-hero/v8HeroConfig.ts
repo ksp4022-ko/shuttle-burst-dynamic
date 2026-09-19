@@ -125,21 +125,40 @@ export type V8HeroControls = {
   sunY: number;
   sunScale: number;
   sunZIndex: number;
-  // Red Sun Motion Lab (M1+M2 only: Float/Pulse) -- additive ambient motion
-  // layered INSIDE the sun's existing position/size box above, never
-  // altering sunX/sunY/sunScale/sunZIndex themselves. Already resolved to
-  // this page's own values by buildV8OpeningHeroOverrides/
-  // buildV8ActiveHeroOverrides (see dragonPreviewConfig.ts) from the
-  // prefixed openSunMotion*/activeSunMotion* PreviewControls fields, so
-  // OPEN and ACTIVE naturally get independent settings the same way they
-  // already do for sunX/sunY/sunScale/sunZIndex.
-  sunMotionEnabled: boolean;
+  // Red Sun Motion Lab -- additive ambient motion layered INSIDE the sun's
+  // existing position/size box above, never altering sunX/sunY/sunScale/
+  // sunZIndex themselves. Already FULLY RESOLVED to this page's own values
+  // by buildV8OpeningHeroOverrides/buildV8ActiveHeroOverrides (see
+  // dragonPreviewConfig.ts) from the prefixed openSunMotion*/
+  // activeSunMotion* PreviewControls fields, so OPEN and ACTIVE naturally
+  // get independent settings the same way they already do for sunX/sunY/
+  // sunScale/sunZIndex. "Resolved" also means each *Enabled flag below
+  // already folds in the saved Motion-master toggle AND the transient
+  // Motion Lab single-effect preview override (see MotionPreviewLabState)
+  // -- V8HeroComposition trusts these flags directly and does not need to
+  // know about the master toggle or preview-isolation concept itself.
   sunMotionFloatEnabled: boolean;
   sunMotionFloatDurationSec: number;
   sunMotionFloatDistancePx: number;
   sunMotionPulseEnabled: boolean;
   sunMotionPulseDurationSec: number;
   sunMotionPulseAmplitudePct: number;
+  sunMotionHaloEnabled: boolean;
+  sunMotionHaloDurationSec: number;
+  sunMotionHaloIntensityPct: number;
+  sunMotionHaloOpacityPct: number;
+  sunMotionRingEnabled: boolean;
+  sunMotionRingDurationSec: number;
+  sunMotionRingExpansionPct: number;
+  sunMotionRingOpacityPct: number;
+  sunMotionEnergyEnabled: boolean;
+  sunMotionEnergyDurationSec: number;
+  sunMotionEnergyIntensityPct: number;
+  sunMotionEnergyOpacityPct: number;
+  // Motion Lab Play/Pause -- freezes whichever animations are currently
+  // resolved as enabled via CSS animation-play-state (keeps the current
+  // frame instead of resetting to the keyframe's 0% state).
+  sunMotionPaused: boolean;
 };
 
 export const v8HeroDefaults: V8HeroControls = {
@@ -253,13 +272,25 @@ export const v8HeroDefaults: V8HeroControls = {
   sunY: 29,
   sunScale: 0.9,
   sunZIndex: 4,
-  sunMotionEnabled: false,
   sunMotionFloatEnabled: false,
   sunMotionFloatDurationSec: 5,
   sunMotionFloatDistancePx: 3,
   sunMotionPulseEnabled: false,
   sunMotionPulseDurationSec: 4,
   sunMotionPulseAmplitudePct: 1.5,
+  sunMotionHaloEnabled: false,
+  sunMotionHaloDurationSec: 3,
+  sunMotionHaloIntensityPct: 50,
+  sunMotionHaloOpacityPct: 40,
+  sunMotionRingEnabled: false,
+  sunMotionRingDurationSec: 3,
+  sunMotionRingExpansionPct: 40,
+  sunMotionRingOpacityPct: 35,
+  sunMotionEnergyEnabled: false,
+  sunMotionEnergyDurationSec: 4,
+  sunMotionEnergyIntensityPct: 50,
+  sunMotionEnergyOpacityPct: 45,
+  sunMotionPaused: false,
 };
 
 export const v8HeroDisplayAssets = {

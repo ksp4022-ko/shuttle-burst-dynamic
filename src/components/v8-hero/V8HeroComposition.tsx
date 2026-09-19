@@ -327,6 +327,49 @@ function V8HeroAmbientStyles() {
         50%      { transform: scale(calc(1 + var(--v8-sun-pulse-amplitude, 1.5) / 100)); }
       }
 
+      .v8-sun-motion-halo-active {
+        animation: v8-sun-motion-halo var(--v8-sun-halo-duration, 3s) ease-in-out infinite;
+      }
+      @keyframes v8-sun-motion-halo {
+        0%, 100% { opacity: calc(var(--v8-sun-halo-opacity, 40) / 100 * 0.45); }
+        50%      { opacity: calc(var(--v8-sun-halo-opacity, 40) / 100); }
+      }
+
+      /* Ring: 3 staggered echoes sharing one keyframe (same "echo" pattern
+         already used by the switch-arrow animations elsewhere on this
+         page) so the expansion reads as a continuous, repeating ripple
+         rather than 3 rings pulsing in lockstep. */
+      .v8-sun-motion-ring {
+        animation: v8-sun-motion-ring var(--v8-sun-ring-duration, 3s) ease-out infinite;
+      }
+      .v8-sun-motion-ring.is-echo-1 { animation-delay: calc(var(--v8-sun-ring-duration, 3s) / 3 * -1); }
+      .v8-sun-motion-ring.is-echo-2 { animation-delay: calc(var(--v8-sun-ring-duration, 3s) / 3 * -2); }
+      @keyframes v8-sun-motion-ring {
+        0%   { transform: scale(0.86); opacity: calc(var(--v8-sun-ring-opacity, 35) / 100); }
+        70%  { opacity: calc(var(--v8-sun-ring-opacity, 35) / 100 * 0.35); }
+        100% { transform: scale(calc(1 + var(--v8-sun-ring-expansion, 40) / 100)); opacity: 0; }
+      }
+
+      /* Energy: mostly-0 opacity dwell with a brief peak near the end of
+         each cycle -- an intermittent flash, not a continuously rotating
+         spinner (no rotate() is ever animated here, only opacity). */
+      .v8-sun-motion-energy-active {
+        animation: v8-sun-motion-energy var(--v8-sun-energy-duration, 4s) ease-in-out infinite;
+      }
+      @keyframes v8-sun-motion-energy {
+        0%, 82%, 100% { opacity: 0; }
+        90%           { opacity: calc(var(--v8-sun-energy-opacity, 45) / 100); }
+      }
+
+      /* Motion Lab Play/Pause -- a dedicated class (rather than the inline
+         animation-play-state used in an earlier revision, which did not
+         reliably freeze the animation in every tested environment) so the
+         override is an unambiguous, !important cascade win regardless of
+         how the "-active" class's animation shorthand is declared. */
+      .v8-sun-motion-paused {
+        animation-play-state: paused !important;
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .v8-wave-drift-front,
         .v8-wave-drift-back,
@@ -336,6 +379,11 @@ function V8HeroAmbientStyles() {
         .v8-sun-motion-float-active,
         .v8-sun-motion-pulse-active {
           animation: none;
+        }
+        .v8-sun-motion-halo-layer,
+        .v8-sun-motion-ring-wrap,
+        .v8-sun-motion-energy-layer {
+          display: none;
         }
       }
     `}</style>
@@ -453,7 +501,13 @@ export function V8HeroComposition({
               }
             >
               <div
-                className={controls.sunMotionEnabled && controls.sunMotionFloatEnabled ? "v8-sun-motion-float-layer v8-sun-motion-float-active" : "v8-sun-motion-float-layer"}
+                className={[
+                  "v8-sun-motion-float-layer",
+                  controls.sunMotionFloatEnabled ? "v8-sun-motion-float-active" : "",
+                  controls.sunMotionPaused ? "v8-sun-motion-paused" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 style={
                   {
                     ...sunStyle,
@@ -465,7 +519,13 @@ export function V8HeroComposition({
                 }
               >
                 <div
-                  className={controls.sunMotionEnabled && controls.sunMotionPulseEnabled ? "v8-sun-motion-pulse-layer v8-sun-motion-pulse-active" : "v8-sun-motion-pulse-layer"}
+                  className={[
+                    "v8-sun-motion-pulse-layer",
+                    controls.sunMotionPulseEnabled ? "v8-sun-motion-pulse-active" : "",
+                    controls.sunMotionPaused ? "v8-sun-motion-paused" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   style={
                     {
                       position: "absolute",
@@ -475,6 +535,67 @@ export function V8HeroComposition({
                     } as CSSProperties
                   }
                 >
+                  {/* M3 decorative layers -- siblings to sunContent, painted
+                      BEFORE it in DOM order so sunContent (text/badges/
+                      buttons) always stays visually on top; each carries
+                      pointer-events:none so they never intercept clicks, and
+                      follow Float/Pulse for free by living inside both
+                      layers above. */}
+                  {controls.sunMotionHaloEnabled ? (
+                    <div
+                      aria-hidden="true"
+                      className={controls.sunMotionPaused ? "v8-sun-motion-halo-layer v8-sun-motion-halo-active v8-sun-motion-paused" : "v8-sun-motion-halo-layer v8-sun-motion-halo-active"}
+                      style={
+                        {
+                          position: "absolute",
+                          inset: "-26%",
+                          borderRadius: "50%",
+                          pointerEvents: "none",
+                          background: `radial-gradient(circle, rgba(255,214,120,${((0.55 * controls.sunMotionHaloIntensityPct) / 100).toFixed(3)}) 0%, rgba(255,196,64,${((0.32 * controls.sunMotionHaloIntensityPct) / 100).toFixed(3)}) 42%, rgba(255,196,64,0) 72%)`,
+                          "--v8-sun-halo-duration": `${controls.sunMotionHaloDurationSec}s`,
+                          "--v8-sun-halo-opacity": `${controls.sunMotionHaloOpacityPct}`,
+                        } as CSSProperties
+                      }
+                    />
+                  ) : null}
+                  {controls.sunMotionRingEnabled ? (
+                    <div aria-hidden="true" className="v8-sun-motion-ring-wrap" style={{ position: "absolute", inset: 0, pointerEvents: "none" } as CSSProperties}>
+                      {(["is-echo-0", "is-echo-1", "is-echo-2"] as const).map((echoClass) => (
+                        <span
+                          key={echoClass}
+                          className={controls.sunMotionPaused ? `v8-sun-motion-ring ${echoClass} v8-sun-motion-paused` : `v8-sun-motion-ring ${echoClass}`}
+                          style={
+                            {
+                              position: "absolute",
+                              inset: 0,
+                              borderRadius: "50%",
+                              border: "1.5px solid rgba(255,214,120,0.92)",
+                              "--v8-sun-ring-duration": `${controls.sunMotionRingDurationSec}s`,
+                              "--v8-sun-ring-expansion": `${controls.sunMotionRingExpansionPct}`,
+                              "--v8-sun-ring-opacity": `${controls.sunMotionRingOpacityPct}`,
+                            } as CSSProperties
+                          }
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  {controls.sunMotionEnergyEnabled ? (
+                    <div
+                      aria-hidden="true"
+                      className={controls.sunMotionPaused ? "v8-sun-motion-energy-layer v8-sun-motion-energy-active v8-sun-motion-paused" : "v8-sun-motion-energy-layer v8-sun-motion-energy-active"}
+                      style={
+                        {
+                          position: "absolute",
+                          inset: "-8%",
+                          borderRadius: "50%",
+                          pointerEvents: "none",
+                          background: `conic-gradient(from 40deg, rgba(255,224,140,${(0.05 + (0.55 * controls.sunMotionEnergyIntensityPct) / 100).toFixed(3)}) 0deg, rgba(255,196,64,0) 40deg, rgba(255,224,140,${(0.04 + (0.4 * controls.sunMotionEnergyIntensityPct) / 100).toFixed(3)}) 130deg, rgba(255,196,64,0) 190deg, rgba(255,224,140,${(0.05 + (0.5 * controls.sunMotionEnergyIntensityPct) / 100).toFixed(3)}) 260deg, rgba(255,196,64,0) 320deg)`,
+                          "--v8-sun-energy-duration": `${controls.sunMotionEnergyDurationSec}s`,
+                          "--v8-sun-energy-opacity": `${controls.sunMotionEnergyOpacityPct}`,
+                        } as CSSProperties
+                      }
+                    />
+                  ) : null}
                   {sunContent}
                 </div>
               </div>

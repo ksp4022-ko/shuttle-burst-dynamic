@@ -127,6 +127,20 @@ export type PreviewControls = {
   activeSunMotionPulseEnabled: boolean;
   activeSunMotionPulseDuration: number;
   activeSunMotionPulseAmplitude: number;
+  // M3: Halo/Ring/Energy -- decorative-only, resolved into V8HeroControls
+  // alongside Float/Pulse by buildV8ActiveHeroOverrides.
+  activeSunMotionHaloEnabled: boolean;
+  activeSunMotionHaloDuration: number;
+  activeSunMotionHaloIntensity: number;
+  activeSunMotionHaloOpacity: number;
+  activeSunMotionRingEnabled: boolean;
+  activeSunMotionRingDuration: number;
+  activeSunMotionRingExpansion: number;
+  activeSunMotionRingOpacity: number;
+  activeSunMotionEnergyEnabled: boolean;
+  activeSunMotionEnergyDuration: number;
+  activeSunMotionEnergyIntensity: number;
+  activeSunMotionEnergyOpacity: number;
   // The user's own pre-composed tiger-gripping-a-scroll art (replaces the
   // earlier dragon-gripped version) -- applied by ActiveCanvas regardless of
   // the mock character toggle, matching v8ActiveTigerScrollOverrides' now-
@@ -174,6 +188,18 @@ export type PreviewControls = {
   openSunMotionPulseEnabled: boolean;
   openSunMotionPulseDuration: number;
   openSunMotionPulseAmplitude: number;
+  openSunMotionHaloEnabled: boolean;
+  openSunMotionHaloDuration: number;
+  openSunMotionHaloIntensity: number;
+  openSunMotionHaloOpacity: number;
+  openSunMotionRingEnabled: boolean;
+  openSunMotionRingDuration: number;
+  openSunMotionRingExpansion: number;
+  openSunMotionRingOpacity: number;
+  openSunMotionEnergyEnabled: boolean;
+  openSunMotionEnergyDuration: number;
+  openSunMotionEnergyIntensity: number;
+  openSunMotionEnergyOpacity: number;
   openSunDateShow: boolean;
   openSunDateX: number;
   openSunDateY: number;
@@ -786,6 +812,18 @@ export const previewDefaults: PreviewControls = {
   activeSunMotionPulseEnabled: false,
   activeSunMotionPulseDuration: 4,
   activeSunMotionPulseAmplitude: 1.5,
+  activeSunMotionHaloEnabled: false,
+  activeSunMotionHaloDuration: 3,
+  activeSunMotionHaloIntensity: 50,
+  activeSunMotionHaloOpacity: 40,
+  activeSunMotionRingEnabled: false,
+  activeSunMotionRingDuration: 3,
+  activeSunMotionRingExpansion: 40,
+  activeSunMotionRingOpacity: 35,
+  activeSunMotionEnergyEnabled: false,
+  activeSunMotionEnergyDuration: 4,
+  activeSunMotionEnergyIntensity: 50,
+  activeSunMotionEnergyOpacity: 45,
   activeTigerScrollX: 84,
   activeTigerScrollY: 43,
   activeTigerScrollScale: 1.74,
@@ -826,6 +864,18 @@ export const previewDefaults: PreviewControls = {
   openSunMotionPulseEnabled: false,
   openSunMotionPulseDuration: 4,
   openSunMotionPulseAmplitude: 1.5,
+  openSunMotionHaloEnabled: false,
+  openSunMotionHaloDuration: 3,
+  openSunMotionHaloIntensity: 50,
+  openSunMotionHaloOpacity: 40,
+  openSunMotionRingEnabled: false,
+  openSunMotionRingDuration: 3,
+  openSunMotionRingExpansion: 40,
+  openSunMotionRingOpacity: 35,
+  openSunMotionEnergyEnabled: false,
+  openSunMotionEnergyDuration: 4,
+  openSunMotionEnergyIntensity: 50,
+  openSunMotionEnergyOpacity: 45,
   openSunSafeBoxWidth: 70,
   openSunSafeBoxHeight: 60,
   openSunSafeBoxShowHelper: false,
@@ -1164,6 +1214,18 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunMotionPulseEnabled",
     "activeSunMotionPulseDuration",
     "activeSunMotionPulseAmplitude",
+    "activeSunMotionHaloEnabled",
+    "activeSunMotionHaloDuration",
+    "activeSunMotionHaloIntensity",
+    "activeSunMotionHaloOpacity",
+    "activeSunMotionRingEnabled",
+    "activeSunMotionRingDuration",
+    "activeSunMotionRingExpansion",
+    "activeSunMotionRingOpacity",
+    "activeSunMotionEnergyEnabled",
+    "activeSunMotionEnergyDuration",
+    "activeSunMotionEnergyIntensity",
+    "activeSunMotionEnergyOpacity",
   ],
   "ACTIVE SUN SAFE BOX": ["activeSunSafeBoxWidth", "activeSunSafeBoxHeight", "activeSunSafeBoxShowHelper"],
   "ACTIVE SUN DATE": [
@@ -1204,6 +1266,18 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "openSunMotionPulseEnabled",
     "openSunMotionPulseDuration",
     "openSunMotionPulseAmplitude",
+    "openSunMotionHaloEnabled",
+    "openSunMotionHaloDuration",
+    "openSunMotionHaloIntensity",
+    "openSunMotionHaloOpacity",
+    "openSunMotionRingEnabled",
+    "openSunMotionRingDuration",
+    "openSunMotionRingExpansion",
+    "openSunMotionRingOpacity",
+    "openSunMotionEnergyEnabled",
+    "openSunMotionEnergyDuration",
+    "openSunMotionEnergyIntensity",
+    "openSunMotionEnergyOpacity",
   ],
   "OPEN SUN SAFE BOX": ["openSunSafeBoxWidth", "openSunSafeBoxHeight", "openSunSafeBoxShowHelper"],
   "OPEN SUN DATE": [
@@ -1688,6 +1762,15 @@ export const controlRanges = {
   activeSunMotionFloatDistance: { label: "Float Distance (px)", min: 0, max: 12, step: 0.5 },
   activeSunMotionPulseDuration: { label: "Pulse Duration (s)", min: 2, max: 10, step: 0.5 },
   activeSunMotionPulseAmplitude: { label: "Pulse Amplitude (%)", min: 0, max: 5, step: 0.1 },
+  activeSunMotionHaloDuration: { label: "Halo Duration (s)", min: 2, max: 8, step: 0.5 },
+  activeSunMotionHaloIntensity: { label: "Halo Intensity (%)", min: 0, max: 100, step: 5 },
+  activeSunMotionHaloOpacity: { label: "Halo Opacity (%)", min: 0, max: 100, step: 5 },
+  activeSunMotionRingDuration: { label: "Ring Duration (s)", min: 2, max: 8, step: 0.5 },
+  activeSunMotionRingExpansion: { label: "Ring Expansion (%)", min: 10, max: 100, step: 5 },
+  activeSunMotionRingOpacity: { label: "Ring Opacity (%)", min: 0, max: 100, step: 5 },
+  activeSunMotionEnergyDuration: { label: "Energy Interval (s)", min: 2, max: 10, step: 0.5 },
+  activeSunMotionEnergyIntensity: { label: "Energy Intensity (%)", min: 0, max: 100, step: 5 },
+  activeSunMotionEnergyOpacity: { label: "Energy Opacity (%)", min: 0, max: 100, step: 5 },
   activeTigerScrollX: { label: "Tiger+Scroll X %", min: 0, max: 100 },
   activeTigerScrollY: { label: "Tiger+Scroll Y %", min: 0, max: 100 },
   activeTigerScrollScale: { label: "Tiger+Scroll Scale", min: 0.3, max: 2, step: 0.01 },
@@ -1719,6 +1802,15 @@ export const controlRanges = {
   openSunMotionFloatDistance: { label: "開場 Float Distance (px)", min: 0, max: 12, step: 0.5 },
   openSunMotionPulseDuration: { label: "開場 Pulse Duration (s)", min: 2, max: 10, step: 0.5 },
   openSunMotionPulseAmplitude: { label: "開場 Pulse Amplitude (%)", min: 0, max: 5, step: 0.1 },
+  openSunMotionHaloDuration: { label: "開場 Halo Duration (s)", min: 2, max: 8, step: 0.5 },
+  openSunMotionHaloIntensity: { label: "開場 Halo Intensity (%)", min: 0, max: 100, step: 5 },
+  openSunMotionHaloOpacity: { label: "開場 Halo Opacity (%)", min: 0, max: 100, step: 5 },
+  openSunMotionRingDuration: { label: "開場 Ring Duration (s)", min: 2, max: 8, step: 0.5 },
+  openSunMotionRingExpansion: { label: "開場 Ring Expansion (%)", min: 10, max: 100, step: 5 },
+  openSunMotionRingOpacity: { label: "開場 Ring Opacity (%)", min: 0, max: 100, step: 5 },
+  openSunMotionEnergyDuration: { label: "開場 Energy Interval (s)", min: 2, max: 10, step: 0.5 },
+  openSunMotionEnergyIntensity: { label: "開場 Energy Intensity (%)", min: 0, max: 100, step: 5 },
+  openSunMotionEnergyOpacity: { label: "開場 Energy Opacity (%)", min: 0, max: 100, step: 5 },
   openSunSafeBoxWidth: { label: "開場 Safe Width %", min: 20, max: 120 },
   openSunSafeBoxHeight: { label: "開場 Safe Height %", min: 20, max: 120 },
   openSunDateX: { label: "開場日期 X %", min: -20, max: 120 },
@@ -2109,6 +2201,18 @@ Float Distance: ${controls.activeSunMotionFloatDistance.toFixed(1)}
 Pulse: ${controls.activeSunMotionPulseEnabled ? "ON" : "OFF"}
 Pulse Duration: ${controls.activeSunMotionPulseDuration.toFixed(1)}
 Pulse Amplitude: ${controls.activeSunMotionPulseAmplitude.toFixed(1)}
+Halo: ${controls.activeSunMotionHaloEnabled ? "ON" : "OFF"}
+Halo Duration: ${controls.activeSunMotionHaloDuration.toFixed(1)}
+Halo Intensity: ${Math.round(controls.activeSunMotionHaloIntensity)}
+Halo Opacity: ${Math.round(controls.activeSunMotionHaloOpacity)}
+Ring: ${controls.activeSunMotionRingEnabled ? "ON" : "OFF"}
+Ring Duration: ${controls.activeSunMotionRingDuration.toFixed(1)}
+Ring Expansion: ${Math.round(controls.activeSunMotionRingExpansion)}
+Ring Opacity: ${Math.round(controls.activeSunMotionRingOpacity)}
+Energy: ${controls.activeSunMotionEnergyEnabled ? "ON" : "OFF"}
+Energy Interval: ${controls.activeSunMotionEnergyDuration.toFixed(1)}
+Energy Intensity: ${Math.round(controls.activeSunMotionEnergyIntensity)}
+Energy Opacity: ${Math.round(controls.activeSunMotionEnergyOpacity)}
 
 ACTIVE SUN SAFE BOX
 Width: ${Math.round(controls.activeSunSafeBoxWidth)}
@@ -2158,6 +2262,18 @@ Float Distance: ${controls.openSunMotionFloatDistance.toFixed(1)}
 Pulse: ${controls.openSunMotionPulseEnabled ? "ON" : "OFF"}
 Pulse Duration: ${controls.openSunMotionPulseDuration.toFixed(1)}
 Pulse Amplitude: ${controls.openSunMotionPulseAmplitude.toFixed(1)}
+Halo: ${controls.openSunMotionHaloEnabled ? "ON" : "OFF"}
+Halo Duration: ${controls.openSunMotionHaloDuration.toFixed(1)}
+Halo Intensity: ${Math.round(controls.openSunMotionHaloIntensity)}
+Halo Opacity: ${Math.round(controls.openSunMotionHaloOpacity)}
+Ring: ${controls.openSunMotionRingEnabled ? "ON" : "OFF"}
+Ring Duration: ${controls.openSunMotionRingDuration.toFixed(1)}
+Ring Expansion: ${Math.round(controls.openSunMotionRingExpansion)}
+Ring Opacity: ${Math.round(controls.openSunMotionRingOpacity)}
+Energy: ${controls.openSunMotionEnergyEnabled ? "ON" : "OFF"}
+Energy Interval: ${controls.openSunMotionEnergyDuration.toFixed(1)}
+Energy Intensity: ${Math.round(controls.openSunMotionEnergyIntensity)}
+Energy Opacity: ${Math.round(controls.openSunMotionEnergyOpacity)}
 
 OPEN SUN SAFE BOX
 Width: ${Math.round(controls.openSunSafeBoxWidth)}
@@ -2407,19 +2523,62 @@ export function clearSavedControls() {
 // (v8ActiveConfig.ts's static exports vs. this file's previewDefaults) did
 // repeatedly this session (see the -vN storage-key comment above for the
 // user-visible fallout of that).
-export function buildV8ActiveHeroOverrides(controls: PreviewControls): Partial<V8HeroControls> {
+// Red Sun Motion Lab -- which single effect (if any) the hidden tuning
+// panel is currently isolating for inspection, and whether playback is
+// paused. Deliberately NOT part of PreviewControls: this is transient,
+// per-session UI state owned by the real OPEN/ACTIVE page components
+// (never written to previewDefaults/localStorage), so Preview Reset /
+// closing the panel / reloading the page all naturally discard it without
+// touching any saved setting. See resolveSunMotionOverrides below for how
+// it's combined with the saved Motion-master + per-effect Enabled flags.
+export type SunMotionEffectKey = "float" | "pulse" | "halo" | "ring" | "energy";
+
+export type MotionPreviewLabState = {
+  isolatedEffect: SunMotionEffectKey | null;
+  paused: boolean;
+};
+
+export const motionPreviewLabDefaults: MotionPreviewLabState = { isolatedEffect: null, paused: false };
+
+function resolveMotionEffectEnabled(
+  masterEnabled: boolean,
+  effectEnabled: boolean,
+  effectKey: SunMotionEffectKey,
+  previewLab: MotionPreviewLabState,
+): boolean {
+  // Isolating an effect previews it regardless of its own/the master saved
+  // Enabled flag (so an not-yet-enabled effect can be inspected without
+  // flipping its saved value) and forces every OTHER effect off, matching
+  // "Single-effect preview does not overwrite saved enabled flags."
+  if (previewLab.isolatedEffect) return previewLab.isolatedEffect === effectKey;
+  return masterEnabled && effectEnabled;
+}
+
+export function buildV8ActiveHeroOverrides(controls: PreviewControls, previewLab: MotionPreviewLabState = motionPreviewLabDefaults): Partial<V8HeroControls> {
   return {
     sunX: controls.activeSunX,
     sunY: controls.activeSunY,
     sunScale: controls.activeSunScale,
     sunZIndex: controls.activeSunZIndex,
-    sunMotionEnabled: controls.activeSunMotionEnabled,
-    sunMotionFloatEnabled: controls.activeSunMotionFloatEnabled,
+    sunMotionFloatEnabled: resolveMotionEffectEnabled(controls.activeSunMotionEnabled, controls.activeSunMotionFloatEnabled, "float", previewLab),
     sunMotionFloatDurationSec: controls.activeSunMotionFloatDuration,
     sunMotionFloatDistancePx: controls.activeSunMotionFloatDistance,
-    sunMotionPulseEnabled: controls.activeSunMotionPulseEnabled,
+    sunMotionPulseEnabled: resolveMotionEffectEnabled(controls.activeSunMotionEnabled, controls.activeSunMotionPulseEnabled, "pulse", previewLab),
     sunMotionPulseDurationSec: controls.activeSunMotionPulseDuration,
     sunMotionPulseAmplitudePct: controls.activeSunMotionPulseAmplitude,
+    sunMotionHaloEnabled: resolveMotionEffectEnabled(controls.activeSunMotionEnabled, controls.activeSunMotionHaloEnabled, "halo", previewLab),
+    sunMotionHaloDurationSec: controls.activeSunMotionHaloDuration,
+    sunMotionHaloIntensityPct: controls.activeSunMotionHaloIntensity,
+    sunMotionHaloOpacityPct: controls.activeSunMotionHaloOpacity,
+    sunMotionRingEnabled: resolveMotionEffectEnabled(controls.activeSunMotionEnabled, controls.activeSunMotionRingEnabled, "ring", previewLab),
+    sunMotionRingDurationSec: controls.activeSunMotionRingDuration,
+    sunMotionRingExpansionPct: controls.activeSunMotionRingExpansion,
+    sunMotionRingOpacityPct: controls.activeSunMotionRingOpacity,
+    sunMotionEnergyEnabled: resolveMotionEffectEnabled(controls.activeSunMotionEnabled, controls.activeSunMotionEnergyEnabled, "energy", previewLab),
+    sunMotionEnergyDurationSec: controls.activeSunMotionEnergyDuration,
+    sunMotionEnergyIntensityPct: controls.activeSunMotionEnergyIntensity,
+    sunMotionEnergyOpacityPct: controls.activeSunMotionEnergyOpacity,
+    sunMotionPaused: previewLab.paused,
     ...v8ActiveBackgroundFadeOverrides(controls.activeBackgroundFade),
     // Uniform tiger-scroll personal-status display for every confirmed
     // identity (season or casual) -- not itself user-tunable, only its
@@ -2484,7 +2643,7 @@ export function buildV8ActiveSunMessagesControls(controls: PreviewControls): V8A
   };
 }
 
-export function buildV8OpeningHeroOverrides(controls: PreviewControls): Partial<V8HeroControls> {
+export function buildV8OpeningHeroOverrides(controls: PreviewControls, previewLab: MotionPreviewLabState = motionPreviewLabDefaults): Partial<V8HeroControls> {
   const clampNumber = (value: number, fallback: number, min: number, max: number) => {
     if (!Number.isFinite(value)) return fallback;
     return Math.min(max, Math.max(min, value));
@@ -2495,13 +2654,25 @@ export function buildV8OpeningHeroOverrides(controls: PreviewControls): Partial<
     sunY: clampNumber(controls.openSunY, previewDefaults.openSunY, 0, 100),
     sunScale: clampNumber(controls.openSunScale, previewDefaults.openSunScale, 0.2, 3),
     sunZIndex: Math.round(clampNumber(controls.openSunZIndex, previewDefaults.openSunZIndex, 0, 50)),
-    sunMotionEnabled: controls.openSunMotionEnabled,
-    sunMotionFloatEnabled: controls.openSunMotionFloatEnabled,
+    sunMotionFloatEnabled: resolveMotionEffectEnabled(controls.openSunMotionEnabled, controls.openSunMotionFloatEnabled, "float", previewLab),
     sunMotionFloatDurationSec: controls.openSunMotionFloatDuration,
     sunMotionFloatDistancePx: controls.openSunMotionFloatDistance,
-    sunMotionPulseEnabled: controls.openSunMotionPulseEnabled,
+    sunMotionPulseEnabled: resolveMotionEffectEnabled(controls.openSunMotionEnabled, controls.openSunMotionPulseEnabled, "pulse", previewLab),
     sunMotionPulseDurationSec: controls.openSunMotionPulseDuration,
     sunMotionPulseAmplitudePct: controls.openSunMotionPulseAmplitude,
+    sunMotionHaloEnabled: resolveMotionEffectEnabled(controls.openSunMotionEnabled, controls.openSunMotionHaloEnabled, "halo", previewLab),
+    sunMotionHaloDurationSec: controls.openSunMotionHaloDuration,
+    sunMotionHaloIntensityPct: controls.openSunMotionHaloIntensity,
+    sunMotionHaloOpacityPct: controls.openSunMotionHaloOpacity,
+    sunMotionRingEnabled: resolveMotionEffectEnabled(controls.openSunMotionEnabled, controls.openSunMotionRingEnabled, "ring", previewLab),
+    sunMotionRingDurationSec: controls.openSunMotionRingDuration,
+    sunMotionRingExpansionPct: controls.openSunMotionRingExpansion,
+    sunMotionRingOpacityPct: controls.openSunMotionRingOpacity,
+    sunMotionEnergyEnabled: resolveMotionEffectEnabled(controls.openSunMotionEnabled, controls.openSunMotionEnergyEnabled, "energy", previewLab),
+    sunMotionEnergyDurationSec: controls.openSunMotionEnergyDuration,
+    sunMotionEnergyIntensityPct: controls.openSunMotionEnergyIntensity,
+    sunMotionEnergyOpacityPct: controls.openSunMotionEnergyOpacity,
+    sunMotionPaused: previewLab.paused,
   };
 }
 

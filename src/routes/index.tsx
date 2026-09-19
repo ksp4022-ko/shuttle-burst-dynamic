@@ -26,8 +26,10 @@ import {
   buildV8OpeningHeroOverrides,
   buildV8OpeningSunControls,
   loadSavedControls,
+  motionPreviewLabDefaults,
   previewDefaults,
   saveControls,
+  type MotionPreviewLabState,
   type PreviewControls,
   type PreviewTargetId,
 } from "@/components/v8-preview/dragonPreviewConfig";
@@ -358,6 +360,12 @@ export function Index() {
     typeof window === "undefined" ? previewDefaults : loadSavedControls(),
   );
   const [openTuningTarget, setOpenTuningTarget] = useState<PreviewTargetId>("OPEN SUN INFO");
+  // Red Sun Motion Lab preview (single-effect isolate / play-pause / preview
+  // reset) -- transient session-only UI state, deliberately never persisted
+  // to PreviewControls/localStorage (see MotionPreviewLabState). Lifted up
+  // to this page component (rather than left inside V8TuningPanel) so it
+  // can also reach the actual rendered sun via openHeroOverrides below.
+  const [openMotionPreviewLab, setOpenMotionPreviewLab] = useState<MotionPreviewLabState>(motionPreviewLabDefaults);
   const [freezeParticles, setFreezeParticles] = useState(true);
   const [handoffReplayPhase, setHandoffReplayPhase] = useState<HandoffReplayPhase>("idle");
   const [timingLabExpanded, setTimingLabExpanded] = useState(false);
@@ -408,7 +416,7 @@ export function Index() {
   // full-viewport gap above the Active page's content.
   const v8HeroPickerStage = v8HeroStage && !v8MeetupConfirmed;
   const legacyActiveStage = (active || rotating) && !v8HeroStage;
-  const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls);
+  const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls, openMotionPreviewLab);
   const openSunControls = buildV8OpeningSunControls(openTuningControls);
 
   useEffect(() => {
@@ -1379,6 +1387,8 @@ export function Index() {
                 targetOrder={OPEN_SUN_TUNING_TARGETS}
                 selectedTarget={openTuningTarget}
                 onSelectTarget={setOpenTuningTarget}
+                motionPreviewLab={openMotionPreviewLab}
+                onMotionPreviewLabChange={setOpenMotionPreviewLab}
               />
             ) : null}
             {openTuningOpen ? (
