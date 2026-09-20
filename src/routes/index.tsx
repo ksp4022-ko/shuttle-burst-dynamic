@@ -387,6 +387,7 @@ export function Index() {
   const [v8MeetupConfirmed, setV8MeetupConfirmed] = useState(false);
   const [v8IntroBlocking, setV8IntroBlocking] = useState(isV8KangxuanRoute);
   const [v8IntroReplaySignal, setV8IntroReplaySignal] = useState(0);
+  const [v8AutoEnterSuspended, setV8AutoEnterSuspended] = useState(false);
   const replayTimersRef = useRef<number[]>([]);
   const tutorialTimersRef = useRef<number[]>([]);
   const tutorialStartIntervalRef = useRef<number | null>(null);
@@ -544,6 +545,7 @@ export function Index() {
   const canSwitchMeetup = flow.events.length > 1;
 
   const markPreviewInteraction = useCallback(() => {
+    setV8AutoEnterSuspended(false);
     setPreviewActivityKey((value) => value + 1);
     if (countdownTuning.resetOnMeetupChange) {
       setCountdownKey((value) => value + 1);
@@ -551,7 +553,7 @@ export function Index() {
   }, [countdownTuning.resetOnMeetupChange]);
 
   const enterPreviewSelection = useCallback(() => {
-    if (flow.pendingAction) return;
+    if (flow.pendingAction || (isV8Route && v8AutoEnterSuspended)) return;
     const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
     if (!targetId) return;
     setCountdownRemaining(null);
@@ -585,7 +587,15 @@ export function Index() {
     flow.setPendingSwitchEventId,
     flow.switchMeetup,
     isV8Route,
+    v8AutoEnterSuspended,
   ]);
+
+  const returnFromV8IdentityGate = useCallback(() => {
+    setCountdownRemaining(null);
+    setV8AutoEnterSuspended(true);
+    setV8MeetupConfirmed(false);
+    setCountdownKey((value) => value + 1);
+  }, []);
 
   const selectAdjacentV8Meetup = useCallback(
     (direction: -1 | 1) => {
@@ -1567,7 +1577,7 @@ export function Index() {
       )}
 
       {isV8Route && v8MeetupConfirmed ? (
-        <V8ActivePage flow={flow} onBeforeLineLogin={rememberV8LineLoginReturn} />
+        <V8ActivePage flow={flow} onBeforeLineLogin={rememberV8LineLoginReturn} onBackToOpen={returnFromV8IdentityGate} />
       ) : null}
 
       {!isV8Route && (

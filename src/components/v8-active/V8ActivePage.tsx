@@ -77,9 +77,11 @@ type HelperMode = "signup" | "cancel" | null;
 export function V8ActivePage({
   flow,
   onBeforeLineLogin,
+  onBackToOpen,
 }: {
   flow: HomepageFlow;
   onBeforeLineLogin?: () => void;
+  onBackToOpen?: () => void;
 }) {
   const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
   const {
@@ -442,6 +444,7 @@ export function V8ActivePage({
               lineAuthDiagnostic={lineAuthDiagnostic}
               selectedEventId={selectedEventId}
               {...(onBeforeLineLogin ? { onBeforeLineLogin } : {})}
+              {...(onBackToOpen ? { onBackToOpen } : {})}
               onStartLineLogin={startLineLogin}
               onLineIdentityConfirmed={updateLineIdentity}
               onRefreshLineIdentity={refreshLineIdentity}
@@ -1446,6 +1449,7 @@ function V8IdentityPrompt({
   lineAuthDiagnostic,
   selectedEventId,
   onBeforeLineLogin,
+  onBackToOpen,
   onStartLineLogin,
   onLineIdentityConfirmed,
   onRefreshLineIdentity,
@@ -1459,6 +1463,7 @@ function V8IdentityPrompt({
   lineAuthDiagnostic: V8LineAuthDiagnostic;
   selectedEventId: string;
   onBeforeLineLogin?: () => void;
+  onBackToOpen?: () => void;
   onStartLineLogin: () => void;
   onLineIdentityConfirmed: (identity: V8LineIdentity) => void;
   onRefreshLineIdentity: () => Promise<V8LineIdentity | null>;
@@ -1479,6 +1484,14 @@ function V8IdentityPrompt({
   const startLineLogin = () => {
     onBeforeLineLogin?.();
     onStartLineLogin();
+  };
+
+  const returnToIdentityChoice = () => {
+    setProfileMode(null);
+    setSelectedClaim(null);
+    setProfileError("");
+    setClaimLoadError("");
+    setProfileName(lineIdentity?.lineDisplayName || lineIdentity?.displayName || "");
   };
 
   useEffect(() => {
@@ -1620,6 +1633,11 @@ function V8IdentityPrompt({
                   我是臨打
                 </button>
               </div>
+              {onBackToOpen ? (
+                <button type="button" className="v8-dialog-secondary" onClick={onBackToOpen}>
+                  返回選場
+                </button>
+              ) : null}
             </>
           ) : profileMode === "fixed" ? (
             <>
@@ -1668,9 +1686,14 @@ function V8IdentityPrompt({
               >
                 {profileSubmitting ? "確認中" : "確認季打身份"}
               </button>
-              <button type="button" className="v8-active-helper-cancel" onClick={() => chooseProfileMode("temp")}>
-                我不是季打，改用臨打
-              </button>
+              <div className="v8-dialog-secondary-row">
+                <button type="button" className="v8-dialog-secondary" onClick={returnToIdentityChoice}>
+                  返回身份選擇
+                </button>
+                <button type="button" className="v8-dialog-secondary" onClick={() => chooseProfileMode("temp")}>
+                  我不是季打，改用臨打
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -1696,9 +1719,14 @@ function V8IdentityPrompt({
               >
                 {profileSubmitting ? "確認中" : "確認臨打名稱"}
               </button>
-              <button type="button" className="v8-active-helper-cancel" onClick={() => chooseProfileMode("fixed")}>
-                我是季打會員
-              </button>
+              <div className="v8-dialog-secondary-row">
+                <button type="button" className="v8-dialog-secondary" onClick={returnToIdentityChoice}>
+                  返回身份選擇
+                </button>
+                <button type="button" className="v8-dialog-secondary" onClick={() => chooseProfileMode("fixed")}>
+                  我是季打會員
+                </button>
+              </div>
             </>
           )}
           {profileError ? <p className="v8-line-profile-error">{profileError}</p> : null}
@@ -1971,8 +1999,8 @@ export function V8ActiveStyles() {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 16px;
-        background: rgba(20, 15, 10, 0.45);
+        padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+        background: rgba(20, 15, 10, 0.48);
         -webkit-backdrop-filter: blur(14px);
         backdrop-filter: blur(14px);
       }
@@ -1980,6 +2008,9 @@ export function V8ActiveStyles() {
       .v8-identity-gate-card {
         width: 100%;
         max-width: 360px;
+        max-height: calc(100svh - max(32px, env(safe-area-inset-top)) - max(32px, env(safe-area-inset-bottom)));
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
         border-radius: 20px;
       }
@@ -1994,8 +2025,8 @@ export function V8ActiveStyles() {
            floats over a blurred dark backdrop instead of sitting on the
            page's own cream background, so it needs more contrast of its
            own to stay legible. */
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid rgba(32, 21, 13, 0.10);
+        background: rgba(255, 252, 244, 0.98);
+        border: 1px solid rgba(58, 42, 18, 0.18);
         margin-bottom: 8px;
       }
 
@@ -2350,8 +2381,9 @@ export function V8ActiveStyles() {
       .v8-active-prompt-title {
         margin: 0 0 12px;
         text-align: center;
-        font-size: 15px;
-        font-weight: 800;
+        font-size: 18px;
+        font-weight: 900;
+        color: #20150d;
       }
 
       /* Phase F1 (LINE Login) -- a status line/entry button above the
@@ -2377,8 +2409,8 @@ export function V8ActiveStyles() {
 
       .v8-line-auth-diagnostic {
         margin: -4px 0 10px;
-        color: rgba(32, 21, 13, 0.78);
-        font-size: 11px;
+        color: rgba(32, 21, 13, 0.84);
+        font-size: 12px;
         line-height: 1.35;
         font-weight: 750;
         text-align: center;
@@ -2401,8 +2433,8 @@ export function V8ActiveStyles() {
 
       .v8-line-profile-copy {
         margin: 0;
-        color: rgba(32, 21, 13, 0.9);
-        font-size: 13px;
+        color: rgba(32, 21, 13, 0.94);
+        font-size: 14px;
         line-height: 1.45;
         font-weight: 800;
         text-align: center;
@@ -2417,17 +2449,19 @@ export function V8ActiveStyles() {
       .v8-line-profile-mode,
       .v8-line-profile-submit {
         min-height: 44px;
-        border: 2px solid #20150d;
+        border: 2px solid rgba(32, 21, 13, 0.88);
         border-radius: 14px;
-        background: rgba(245, 237, 219, 0.9);
+        background: #fff7e8;
         color: #20150d;
         font-size: 14px;
         font-weight: 900;
       }
 
       .v8-line-profile-submit {
+        border-color: #20150d;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.78);
+        background: #20150d;
+        color: #fff7e8;
       }
 
       .v8-line-profile-submit:disabled,
@@ -2498,9 +2532,9 @@ export function V8ActiveStyles() {
         width: 100%;
         height: 44px;
         padding: 0 12px;
-        border: 1px solid rgba(32, 21, 13, 0.24);
+        border: 2px solid rgba(32, 21, 13, 0.34);
         border-radius: 14px;
-        background: rgba(255, 255, 255, 0.74);
+        background: #fffdf8;
         color: #20150d;
         font-size: 16px;
         font-weight: 800;
@@ -2615,12 +2649,24 @@ export function V8ActiveStyles() {
         color: rgba(32, 21, 13, 0.56);
       }
 
-      .v8-active-helper-cancel {
-        background: transparent !important;
-        border: none !important;
-        color: rgba(32, 21, 13, 0.56);
-        text-decoration: underline;
+      .v8-active-helper-cancel,
+      .v8-dialog-secondary {
+        min-height: 44px;
+        padding: 0 14px;
+        border: 1px solid rgba(32, 21, 13, 0.28) !important;
+        border-radius: 999px;
+        background: rgba(255, 250, 238, 0.86) !important;
+        color: rgba(32, 21, 13, 0.86);
+        font-size: 14px;
+        font-weight: 850;
+        text-decoration: none;
         margin-top: 4px;
+      }
+
+      .v8-dialog-secondary-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
       }
 
       /* 幫人報名/取消 -- redesigned 2026-09-09 per the user's request: no
@@ -2632,14 +2678,15 @@ export function V8ActiveStyles() {
          Card itself stretches a little wider than the identity gate's
          default since person names + a stamp need more breathing room. */
       .v8-helper-card {
-        max-width: 320px;
+        max-width: 340px;
       }
 
       .v8-helper-title {
         margin: 0 0 12px;
         text-align: center;
-        font-size: 15px;
-        font-weight: 800;
+        font-size: 18px;
+        font-weight: 900;
+        color: #20150d;
       }
 
       .v8-helper-signup {
@@ -2651,10 +2698,11 @@ export function V8ActiveStyles() {
       .v8-helper-signup-input {
         height: 46px;
         padding: 0 14px;
-        border: 1px solid rgba(32, 21, 13, 0.24);
+        border: 2px solid rgba(32, 21, 13, 0.36);
         border-radius: 14px;
-        background: rgba(255, 255, 255, 0.75);
-        font-size: 15px;
+        background: #fffdf8;
+        color: #20150d;
+        font-size: 16px;
       }
 
       /* Same pill shape as the tiger-scroll identity card's own CTA
@@ -2664,10 +2712,10 @@ export function V8ActiveStyles() {
       .v8-helper-cta {
         height: 46px;
         padding: 0 16px;
-        border: 2px solid #3a2a12;
+        border: 2px solid #20150d;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.75);
-        color: #3a2a12;
+        background: #20150d;
+        color: #fff7e8;
         font-size: 15px;
         font-weight: 900;
       }
@@ -2677,9 +2725,9 @@ export function V8ActiveStyles() {
       }
 
       .v8-helper-cta-danger {
-        border-color: rgba(154, 23, 18, 0.75);
-        color: rgba(154, 23, 18, 0.9);
-        background: rgba(255, 255, 255, 0.85);
+        border-color: rgba(154, 23, 18, 0.92);
+        color: #fff7e8;
+        background: rgba(154, 23, 18, 0.96);
         margin-top: 4px;
       }
 
@@ -2692,7 +2740,7 @@ export function V8ActiveStyles() {
         display: flex;
         flex-direction: column;
         gap: 6px;
-        max-height: 320px;
+        max-height: min(44svh, 320px);
         overflow-y: auto;
       }
 
@@ -2701,7 +2749,7 @@ export function V8ActiveStyles() {
         font-size: 11px;
         font-weight: 800;
         letter-spacing: 1px;
-        color: rgba(32, 21, 13, 0.5);
+        color: rgba(32, 21, 13, 0.72);
       }
 
       .v8-helper-group-label:first-child {
@@ -2719,16 +2767,17 @@ export function V8ActiveStyles() {
         min-height: 52px;
         padding: 0 14px;
         border: none;
-        border-left: 4px solid rgba(216, 185, 94, 0.7);
-        border-radius: 4px;
-        background: rgba(255, 255, 255, 0.5);
+        border-left: 5px solid rgba(216, 185, 94, 0.86);
+        border-radius: 10px;
+        background: rgba(255, 253, 247, 0.86);
+        color: #20150d;
         text-align: left;
       }
 
       .v8-helper-person-row.is-selected {
-        border-left-color: rgba(154, 23, 18, 0.85);
-        background: rgba(255, 255, 255, 0.85);
-        box-shadow: 0 0 0 1px rgba(154, 23, 18, 0.35);
+        border-left-color: rgba(154, 23, 18, 0.95);
+        background: #fff7e8;
+        box-shadow: 0 0 0 2px rgba(154, 23, 18, 0.28);
       }
 
       .v8-helper-person-row:disabled {
