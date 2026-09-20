@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import type { HomepageFlow } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth, type V8LineAuthDiagnostic } from "@/hooks/use-v8-line-auth";
-import { confirmV8LineProfile, fetchV8ClaimOptions, resetV8LineProfile, type V8ClaimOption, type V8ProfileIdentityType } from "@/lib/v8-line-auth";
+import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption, type V8ProfileIdentityType } from "@/lib/v8-line-auth";
 import { type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
@@ -77,11 +77,9 @@ type HelperMode = "signup" | "cancel" | null;
 export function V8ActivePage({
   flow,
   onBeforeLineLogin,
-  onBackToOpen,
 }: {
   flow: HomepageFlow;
   onBeforeLineLogin?: () => void;
-  onBackToOpen?: () => void;
 }) {
   const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
   const {
@@ -93,6 +91,8 @@ export function V8ActivePage({
     updateIdentity: updateLineIdentity,
     refreshIdentity: refreshLineIdentity,
   } = useV8LineAuth();
+  const [identityResetDraft, setIdentityResetDraft] = useState<V8LineIdentity | null>(null);
+  const effectiveLineIdentity = identityResetDraft || lineIdentity;
   const {
     identity,
     cancellableTempSignups,
@@ -100,13 +100,12 @@ export function V8ActivePage({
     refreshCancellableTempSignups,
   } = useCurrentIdentity({
     roster,
-    lineIdentity,
+    lineIdentity: effectiveLineIdentity,
     lineAuthToken,
     eventId: selectedEventId,
   });
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
-  const [identityResetting, setIdentityResetting] = useState(false);
   // Two-step cancel (select, then a separate confirm button) -- the old
   // single-tap-to-cancel design had no undo/confirm step at all, so a
   // mis-tap directly cancelled someone's signup with no chance to back
@@ -171,7 +170,7 @@ export function V8ActivePage({
 
   if (!selectedEvent || !roster) return null;
 
-  const busy = Boolean(pendingAction) || identityResetting;
+  const busy = Boolean(pendingAction);
 
   const runAction = async (action: "fixed-leave" | "fixed-return" | "cancel-temp") => {
     if (!identity || !lineAuthToken) return;
@@ -179,19 +178,27 @@ export function V8ActivePage({
     if (ok) await refreshCancellableTempSignups();
   };
 
-  const resetLineIdentity = async () => {
-    if (!lineAuthToken || identityResetting) return;
-    setIdentityResetting(true);
-    try {
-      const result = await resetV8LineProfile(lineAuthToken);
-      updateLineIdentity(result.identity);
-      setHelperMode(null);
-      setSelectedCancelPerson(null);
-      await refreshLineIdentity();
-      await refreshCancellableTempSignups();
-    } finally {
-      setIdentityResetting(false);
-    }
+  const beginIdentityCorrection = () => {
+    if (!lineIdentity?.profileComplete || busy) return;
+    setIdentityResetDraft({
+      ...lineIdentity,
+      identityType: null,
+      claimedMemberId: null,
+      confirmedName: null,
+      nameConfirmedAt: null,
+      profileComplete: false,
+    });
+    setHelperMode(null);
+    setSelectedCancelPerson(null);
+  };
+
+  const cancelIdentityCorrection = () => {
+    setIdentityResetDraft(null);
+  };
+
+  const confirmLineIdentity = (nextIdentity: V8LineIdentity) => {
+    setIdentityResetDraft(null);
+    updateLineIdentity(nextIdentity);
   };
 
   const switchToAdjacentMeetup = (direction: -1 | 1) => {
@@ -293,8 +300,8 @@ export function V8ActivePage({
   ].filter((src): src is string => Boolean(src));
 
   const displayNameForFixedRosterPerson = (person: AlphaSignup) => {
-    if (person.memberId !== lineIdentity?.claimedMemberId) return person.name;
-    return lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName || person.name;
+    if (!effectiveLineIdentity || person.memberId !== effectiveLineIdentity.claimedMemberId) return person.name;
+    return effectiveLineIdentity.confirmedName || effectiveLineIdentity.displayName || effectiveLineIdentity.lineDisplayName || person.name;
   };
 
   const rosterConfirmed: V8ActiveRosterPerson[] = confirmed.map((person) => ({
@@ -362,7 +369,7 @@ export function V8ActivePage({
               busy={busy}
               pendingLabel={pendingAction?.label}
               onPrimaryAction={handlePrimaryAction}
-              onForget={() => void resetLineIdentity()}
+              onForget={beginIdentityCorrection}
               onHelperSignup={() => setHelperMode("signup")}
               onHelperCancel={() => {
                 setSelectedCancelPerson(null);
@@ -438,15 +445,15 @@ export function V8ActivePage({
               onSubmitTiger={() => void submitTigerSignup()}
               busy={busy}
               identityLoading={cancellableLoading}
-              lineIdentity={lineIdentity}
+              lineIdentity={effectiveLineIdentity}
               lineAuthToken={lineAuthToken}
               lineAuthLoading={lineAuthLoading}
               lineAuthDiagnostic={lineAuthDiagnostic}
               selectedEventId={selectedEventId}
               {...(onBeforeLineLogin ? { onBeforeLineLogin } : {})}
-              {...(onBackToOpen ? { onBackToOpen } : {})}
+              {...(identityResetDraft ? { onCancelIdentityCorrection: cancelIdentityCorrection } : {})}
               onStartLineLogin={startLineLogin}
-              onLineIdentityConfirmed={updateLineIdentity}
+              onLineIdentityConfirmed={confirmLineIdentity}
               onRefreshLineIdentity={refreshLineIdentity}
             />
           </div>
@@ -1449,7 +1456,7 @@ function V8IdentityPrompt({
   lineAuthDiagnostic,
   selectedEventId,
   onBeforeLineLogin,
-  onBackToOpen,
+  onCancelIdentityCorrection,
   onStartLineLogin,
   onLineIdentityConfirmed,
   onRefreshLineIdentity,
@@ -1463,7 +1470,7 @@ function V8IdentityPrompt({
   lineAuthDiagnostic: V8LineAuthDiagnostic;
   selectedEventId: string;
   onBeforeLineLogin?: () => void;
-  onBackToOpen?: () => void;
+  onCancelIdentityCorrection?: () => void;
   onStartLineLogin: () => void;
   onLineIdentityConfirmed: (identity: V8LineIdentity) => void;
   onRefreshLineIdentity: () => Promise<V8LineIdentity | null>;
@@ -1633,9 +1640,9 @@ function V8IdentityPrompt({
                   我是臨打
                 </button>
               </div>
-              {onBackToOpen ? (
-                <button type="button" className="v8-dialog-secondary" onClick={onBackToOpen}>
-                  返回選場
+              {onCancelIdentityCorrection ? (
+                <button type="button" className="v8-dialog-secondary" onClick={onCancelIdentityCorrection}>
+                  取消
                 </button>
               ) : null}
             </>
@@ -2019,13 +2026,13 @@ export function V8ActiveStyles() {
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 16px;
-        border-radius: 20px;
+        padding: 14px;
+        border-radius: 18px;
         /* More opaque than the old inline-card treatment (0.5) -- this now
            floats over a blurred dark backdrop instead of sitting on the
            page's own cream background, so it needs more contrast of its
            own to stay legible. */
-        background: rgba(255, 252, 244, 0.98);
+        background: rgba(255, 250, 238, 0.99);
         border: 1px solid rgba(58, 42, 18, 0.18);
         margin-bottom: 8px;
       }
@@ -2379,9 +2386,9 @@ export function V8ActiveStyles() {
       }
 
       .v8-active-prompt-title {
-        margin: 0 0 12px;
+        margin: 0 0 10px;
         text-align: center;
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 900;
         color: #20150d;
       }
@@ -2428,7 +2435,7 @@ export function V8ActiveStyles() {
       .v8-line-profile-flow {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
       }
 
       .v8-line-profile-copy {
@@ -2484,7 +2491,7 @@ export function V8ActiveStyles() {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
+        gap: 8px;
         width: 100%;
         min-height: 44px;
         padding: 8px 12px;
@@ -2561,7 +2568,7 @@ export function V8ActiveStyles() {
       .v8-active-prompt-row {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
       }
 
       .v8-active-prompt-season {
@@ -2678,13 +2685,13 @@ export function V8ActiveStyles() {
          Card itself stretches a little wider than the identity gate's
          default since person names + a stamp need more breathing room. */
       .v8-helper-card {
-        max-width: 340px;
+        max-width: 326px;
       }
 
       .v8-helper-title {
-        margin: 0 0 12px;
+        margin: 0 0 10px;
         text-align: center;
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 900;
         color: #20150d;
       }
@@ -2692,12 +2699,12 @@ export function V8ActiveStyles() {
       .v8-helper-signup {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
       }
 
       .v8-helper-signup-input {
-        height: 46px;
-        padding: 0 14px;
+        height: 44px;
+        padding: 0 12px;
         border: 2px solid rgba(32, 21, 13, 0.36);
         border-radius: 14px;
         background: #fffdf8;
@@ -2710,13 +2717,13 @@ export function V8ActiveStyles() {
          "themed action button" instead of a second, different-looking
          button style. */
       .v8-helper-cta {
-        height: 46px;
-        padding: 0 16px;
+        height: 44px;
+        padding: 0 14px;
         border: 2px solid #20150d;
         border-radius: 999px;
         background: #20150d;
         color: #fff7e8;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 900;
       }
 
@@ -2762,10 +2769,10 @@ export function V8ActiveStyles() {
       .v8-helper-person-row {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         width: 100%;
-        min-height: 52px;
-        padding: 0 14px;
+        min-height: 48px;
+        padding: 0 12px;
         border: none;
         border-left: 5px solid rgba(216, 185, 94, 0.86);
         border-radius: 10px;
@@ -2808,8 +2815,8 @@ export function V8ActiveStyles() {
       }
 
       .v8-helper-person-name {
-        font-size: 18px;
-        font-weight: 700;
+        font-size: 16px;
+        font-weight: 800;
         color: #20150d;
       }
 
