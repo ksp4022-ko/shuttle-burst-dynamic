@@ -347,7 +347,12 @@ export function V8TuningPanel({
         ) : null}
         <label style={targetSelectLabelStyle} onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()}>
           <span style={targetPrefixStyle}>TARGET</span>
-          <select value={selectedTarget} onChange={(event) => onSelectTarget(event.currentTarget.value as PreviewTargetId)} style={targetSelectStyle}>
+          <select value={selectedTarget} onChange={(event) => {
+              const next = event.currentTarget.value as PreviewTargetId;
+              onSelectTarget(next);
+              const tigerMatch = /^OPEN TIGER ([123])$/.exec(next);
+              if (tigerMatch) update("openTigerVariant", Number(tigerMatch[1]));
+            }} style={targetSelectStyle}>
             {targetOrder.map((target) => (
               <option key={target} value={target}>
                 {target}
@@ -378,15 +383,6 @@ export function V8TuningPanel({
         </div>
       </div>
       <div style={panelBodyStyle}>
-        {selectedControlKeys.map((key) => (
-          <RangeControl
-            key={key}
-            controlKey={key}
-            value={controls[key]}
-            stepMode={stepMode}
-            onChange={(value) => update(key, value as PreviewControls[typeof key])}
-          />
-        ))}
         {selectedTarget === "OPEN TIGER 1" || selectedTarget === "OPEN TIGER 2" || selectedTarget === "OPEN TIGER 3" || selectedTarget === "OPEN TIGER RACKET" ? (
           <div style={motionLabRowStyle}>
             <span style={controlLabelStyle}>顯示哪隻</span>
@@ -406,6 +402,15 @@ export function V8TuningPanel({
             {selectedTarget === "OPEN TIGER RACKET" ? <span style={controlLabelStyle}>球拍僅虎1有獨立圖層</span> : null}
           </div>
         ) : null}
+        {selectedControlKeys.map((key) => (
+          <RangeControl
+            key={key}
+            controlKey={key}
+            value={controls[key]}
+            stepMode={stepMode}
+            onChange={(value) => update(key, value as PreviewControls[typeof key])}
+          />
+        ))}
         {selectedTarget === "OPEN SUN MOTION" ? (
           <>
             <div style={motionLabRowStyle}>

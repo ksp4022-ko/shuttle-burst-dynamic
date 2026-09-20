@@ -203,7 +203,9 @@ export type PreviewControls = {
 // OPEN-page tiger variants (1 = original body+racket, 2/3 = pre-composed
   // tiger-with-racket art). Mapped into V8HeroControls by
   // buildV8OpeningHeroOverrides; independent from the mock-only tiger* fields.
-  openTigerShow: boolean;
+  openTiger1Show: boolean;
+  openTiger2Show: boolean;
+  openTiger3Show: boolean;
   openTigerVariant: number;
   openTiger1X: number;
   openTiger1Y: number;
@@ -910,7 +912,9 @@ export const previewDefaults: PreviewControls = {
   openSunMotionEnergyDuration: 4,
   openSunMotionEnergyIntensity: 50,
   openSunMotionEnergyOpacity: 45,
-  openTigerShow: true,
+  openTiger1Show: true,
+  openTiger2Show: true,
+  openTiger3Show: true,
   openTigerVariant: 1,
   openTiger1X: 78,
   openTiger1Y: -105,
@@ -1683,9 +1687,9 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
-  "OPEN TIGER 1": "openTigerShow",
-  "OPEN TIGER 2": "openTigerShow",
-  "OPEN TIGER 3": "openTigerShow",
+  "OPEN TIGER 1": "openTiger1Show",
+  "OPEN TIGER 2": "openTiger2Show",
+  "OPEN TIGER 3": "openTiger3Show",
   "OPEN TIGER RACKET": "openTigerRacketShow",
   "DRAGON RIG": "dragonShow",
   "REAR CLAW": "rearClawShow",
@@ -2370,7 +2374,7 @@ Energy Intensity: ${Math.round(controls.openSunMotionEnergyIntensity)}
 Energy Opacity: ${Math.round(controls.openSunMotionEnergyOpacity)}
 
 OPEN TIGER 1
-Show: ${controls.openTigerShow ? "ON" : "OFF"}
+Show: ${controls.openTiger1Show ? "ON" : "OFF"}
 Variant: ${Math.round(controls.openTigerVariant)}
 X: ${Math.round(controls.openTiger1X)}
 Y: ${Math.round(controls.openTiger1Y)}
@@ -2380,6 +2384,7 @@ Opacity: ${Math.round(controls.openTiger1Opacity)}
 Z-Index: ${Math.round(controls.openTiger1ZIndex)}
 
 OPEN TIGER 2
+Show: ${controls.openTiger2Show ? "ON" : "OFF"}
 X: ${Math.round(controls.openTiger2X)}
 Y: ${Math.round(controls.openTiger2Y)}
 Scale: ${controls.openTiger2Scale.toFixed(2)}
@@ -2388,6 +2393,7 @@ Opacity: ${Math.round(controls.openTiger2Opacity)}
 Z-Index: ${Math.round(controls.openTiger2ZIndex)}
 
 OPEN TIGER 3
+Show: ${controls.openTiger3Show ? "ON" : "OFF"}
 X: ${Math.round(controls.openTiger3X)}
 Y: ${Math.round(controls.openTiger3Y)}
 Scale: ${controls.openTiger3Scale.toFixed(2)}
@@ -2804,7 +2810,7 @@ export function buildV8OpeningHeroOverrides(controls: PreviewControls, previewLa
     sunMotionEnergyIntensityPct: controls.openSunMotionEnergyIntensity,
     sunMotionEnergyOpacityPct: controls.openSunMotionEnergyOpacity,
     sunMotionPaused: previewLab.paused,
-    tigerShow: controls.openTigerShow,
+    tigerShow: tigerVariant === 3 ? controls.openTiger3Show : tigerVariant === 2 ? controls.openTiger2Show : controls.openTiger1Show,
     tigerVariant,
     tigerX: controls.openTiger1X,
     tigerY: controls.openTiger1Y,
