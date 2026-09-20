@@ -414,6 +414,10 @@ export function V8HeroComposition({
   const controls = controlOverrides ? { ...v8HeroDefaults, ...controlOverrides } : v8HeroDefaults;
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
   const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
+  const tigerAltRigTransform = `translate(${controls.tigerAltX}px, ${controls.tigerAltY}px) scale(${controls.tigerAltScale}) rotate(${controls.tigerAltRotation}deg)`;
+  // OPEN tiger variants: 1 = original body + separate racket, 2/3 = a
+  // pre-composed tiger-with-racket image that replaces both.
+  const tigerUsesOriginal = controls.tigerVariant === 1;
   const fallbackConfirmButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // 2026-09-11: `assets` (buildV8HeroAssets) always returns the FULL set of
@@ -431,8 +435,10 @@ export function V8HeroComposition({
       ["claw", controls.clawShow],
       ["bagBase", controls.bagBaseShow],
       ["bagStrap", controls.bagStrapShow],
-      ["tigerBody", controls.tigerShow],
-      ["tigerRacket", controls.tigerRacketShow],
+      ["tigerBody", controls.tigerShow && tigerUsesOriginal],
+      ["tigerRacket", controls.tigerShow && tigerUsesOriginal && controls.tigerRacketShow],
+      ["tigerAlt2", controls.tigerShow && controls.tigerVariant === 2],
+      ["tigerAlt3", controls.tigerShow && controls.tigerVariant === 3],
       ["cloud", controls.cloudShow],
       ["mountain", controls.mountainShow],
       ["backWave", controls.backWaveShow],
@@ -771,7 +777,30 @@ export function V8HeroComposition({
                 </div>
               </div>
             ) : null}
-            {controls.tigerShow ? (
+            {controls.tigerShow && !tigerUsesOriginal ? (
+              <div
+                aria-hidden="true"
+                style={{
+                  ...tigerRigStyle,
+                  left: tigerRigBaseline.left,
+                  top: tigerRigBaseline.top,
+                  width: tigerRigBaseline.width,
+                  transform: tigerAltRigTransform,
+                  opacity: controls.tigerAltOpacity / 100,
+                  zIndex: controls.tigerAltZIndex,
+                }}
+              >
+                <img
+                  src={controls.tigerVariant === 3 ? assets.tigerAlt3 : assets.tigerAlt2}
+                  alt=""
+                  decoding="async"
+                  loading="eager"
+                  draggable={false}
+                  style={{ ...stageImageStyle, inset: 0, width: "100%" }}
+                />
+              </div>
+            ) : null}
+            {controls.tigerShow && tigerUsesOriginal ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -780,7 +809,8 @@ export function V8HeroComposition({
                   top: tigerRigBaseline.top,
                   width: tigerRigBaseline.width,
                   transform: tigerRigTransform,
-                  zIndex: 9,
+                  opacity: controls.tigerOpacity / 100,
+                  zIndex: controls.tigerZIndex,
                 }}
               >
                 <img src={assets.tigerBody} alt="" decoding="async" loading="eager" draggable={false} style={{ ...stageImageStyle, inset: 0, width: "100%", transform: `rotate(${tigerRigBaseline.bodyRotation}deg)`, zIndex: 0 }} />
@@ -824,7 +854,7 @@ export function V8HeroComposition({
                 </button>
               )}
             </div>
-            {controls.tigerShow && controls.tigerRacketShow ? (
+            {controls.tigerShow && tigerUsesOriginal && controls.tigerRacketShow ? (
               <div
                 aria-hidden="true"
                 style={{
@@ -833,7 +863,8 @@ export function V8HeroComposition({
                   top: tigerRigBaseline.top,
                   width: tigerRigBaseline.width,
                   transform: tigerRigTransform,
-                  zIndex: 12,
+                  opacity: controls.tigerRacketOpacity / 100,
+                  zIndex: controls.tigerRacketZIndex,
                 }}
               >
                 <img

@@ -34,6 +34,22 @@ export type V8HeroControls = {
   tigerRacketY: number;
   tigerRacketScale: number;
   tigerRacketRotation: number;
+  // OPEN-page tiger variants: 1 = the original tiger body + separate racket
+  // (tigerBody/tigerRacket assets), 2/3 = pre-composed tiger-with-racket
+  // art (tigerAlt2/tigerAlt3) that replaces BOTH. tigerAlt* below is
+  // already resolved to whichever alt variant is selected (see
+  // buildV8OpeningHeroOverrides), so the renderer only ever needs one set.
+  tigerVariant: number;
+  tigerOpacity: number;
+  tigerZIndex: number;
+  tigerRacketOpacity: number;
+  tigerRacketZIndex: number;
+  tigerAltX: number;
+  tigerAltY: number;
+  tigerAltScale: number;
+  tigerAltRotation: number;
+  tigerAltOpacity: number;
+  tigerAltZIndex: number;
   heroX: number;
   heroY: number;
   heroScale: number;
@@ -197,6 +213,17 @@ export const v8HeroDefaults: V8HeroControls = {
   tigerRacketY: 20,
   tigerRacketScale: 1.09,
   tigerRacketRotation: 1,
+  tigerVariant: 1,
+  tigerOpacity: 100,
+  tigerZIndex: 9,
+  tigerRacketOpacity: 100,
+  tigerRacketZIndex: 12,
+  tigerAltX: 78,
+  tigerAltY: -105,
+  tigerAltScale: 0.86,
+  tigerAltRotation: 0,
+  tigerAltOpacity: 100,
+  tigerAltZIndex: 9,
   heroX: -10,
   heroY: -41,
   heroScale: 1,
@@ -301,6 +328,8 @@ export const v8HeroDisplayAssets = {
   bagStrap: "dragon-bag-strap-v2-display.webp",
   tigerBody: "tiger-body-v1-display.webp",
   tigerRacket: "tiger-racket-v1-display.webp",
+  tigerAlt2: "tiger-alt-02-v1-display.webp",
+  tigerAlt3: "tiger-alt-03-v1-display.webp",
   cloud: "ukiyoe-cloud-v1-display.webp",
   mountain: "ukiyoe-mountain-v1-display.webp",
   backWave: "ukiyoe-back-wave-v1-display.webp",
@@ -342,6 +371,8 @@ export const buildV8HeroAssets = (baseUrl: string) => {
     bagStrap: `${displayAssetBase}/${v8HeroDisplayAssets.bagStrap}`,
     tigerBody: `${displayAssetBase}/${v8HeroDisplayAssets.tigerBody}`,
     tigerRacket: `${displayAssetBase}/${v8HeroDisplayAssets.tigerRacket}`,
+    tigerAlt2: `${displayAssetBase}/${v8HeroDisplayAssets.tigerAlt2}`,
+    tigerAlt3: `${displayAssetBase}/${v8HeroDisplayAssets.tigerAlt3}`,
     cloud: `${displayAssetBase}/${v8HeroDisplayAssets.cloud}`,
     mountain: `${displayAssetBase}/${v8HeroDisplayAssets.mountain}`,
     backWave: `${displayAssetBase}/${v8HeroDisplayAssets.backWave}`,

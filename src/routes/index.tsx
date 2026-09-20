@@ -63,7 +63,7 @@ const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
 const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
 const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
 const V8_LINE_LOGIN_RETURN_STORAGE_KEY = "shuttle-v8-line-login-return-v1";
-const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN MOTION", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE", "OPEN COUNTDOWN"];
+const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN MOTION", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE", "OPEN TIGER 1", "OPEN TIGER 2", "OPEN TIGER 3", "OPEN TIGER RACKET", "OPEN COUNTDOWN"];
 
 function isV8BrowserPath(pathname: string) {
   return pathname.split("/").filter(Boolean).includes("v8");

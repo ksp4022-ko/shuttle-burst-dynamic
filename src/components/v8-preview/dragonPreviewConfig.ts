@@ -200,6 +200,36 @@ export type PreviewControls = {
   openSunMotionEnergyDuration: number;
   openSunMotionEnergyIntensity: number;
   openSunMotionEnergyOpacity: number;
+// OPEN-page tiger variants (1 = original body+racket, 2/3 = pre-composed
+  // tiger-with-racket art). Mapped into V8HeroControls by
+  // buildV8OpeningHeroOverrides; independent from the mock-only tiger* fields.
+  openTigerShow: boolean;
+  openTigerVariant: number;
+  openTiger1X: number;
+  openTiger1Y: number;
+  openTiger1Scale: number;
+  openTiger1Rotation: number;
+  openTiger1Opacity: number;
+  openTiger1ZIndex: number;
+  openTiger2X: number;
+  openTiger2Y: number;
+  openTiger2Scale: number;
+  openTiger2Rotation: number;
+  openTiger2Opacity: number;
+  openTiger2ZIndex: number;
+  openTiger3X: number;
+  openTiger3Y: number;
+  openTiger3Scale: number;
+  openTiger3Rotation: number;
+  openTiger3Opacity: number;
+  openTiger3ZIndex: number;
+  openTigerRacketShow: boolean;
+  openTigerRacketX: number;
+  openTigerRacketY: number;
+  openTigerRacketScale: number;
+  openTigerRacketRotation: number;
+  openTigerRacketOpacity: number;
+  openTigerRacketZIndex: number;
   openSunDateShow: boolean;
   openSunDateX: number;
   openSunDateY: number;
@@ -557,6 +587,10 @@ export type PreviewTargetId =
   | "OPEN SUN NAME"
   | "OPEN SUN TIME"
   | "OPEN SUN NOTE"
+  | "OPEN TIGER 1"
+  | "OPEN TIGER 2"
+  | "OPEN TIGER 3"
+  | "OPEN TIGER RACKET"
   | "OPEN COUNTDOWN"
   | "OPEN SWITCH ARROW PREV"
   | "OPEN SWITCH ARROW NEXT"
@@ -876,6 +910,33 @@ export const previewDefaults: PreviewControls = {
   openSunMotionEnergyDuration: 4,
   openSunMotionEnergyIntensity: 50,
   openSunMotionEnergyOpacity: 45,
+  openTigerShow: true,
+  openTigerVariant: 1,
+  openTiger1X: 78,
+  openTiger1Y: -105,
+  openTiger1Scale: 0.86,
+  openTiger1Rotation: 0,
+  openTiger1Opacity: 100,
+  openTiger1ZIndex: 9,
+  openTiger2X: 78,
+  openTiger2Y: -105,
+  openTiger2Scale: 0.86,
+  openTiger2Rotation: 0,
+  openTiger2Opacity: 100,
+  openTiger2ZIndex: 9,
+  openTiger3X: 78,
+  openTiger3Y: -105,
+  openTiger3Scale: 0.86,
+  openTiger3Rotation: 0,
+  openTiger3Opacity: 100,
+  openTiger3ZIndex: 9,
+  openTigerRacketShow: true,
+  openTigerRacketX: -57,
+  openTigerRacketY: 20,
+  openTigerRacketScale: 1.09,
+  openTigerRacketRotation: 1,
+  openTigerRacketOpacity: 100,
+  openTigerRacketZIndex: 12,
   openSunSafeBoxWidth: 70,
   openSunSafeBoxHeight: 60,
   openSunSafeBoxShowHelper: false,
@@ -1311,6 +1372,10 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "openSunNoteOpacity",
   ],
   "OPEN COUNTDOWN": ["countdownSeconds", "countdownAutoEnter"],
+  "OPEN TIGER 1": ["openTiger1X", "openTiger1Y", "openTiger1Scale", "openTiger1Rotation", "openTiger1Opacity", "openTiger1ZIndex"],
+  "OPEN TIGER 2": ["openTiger2X", "openTiger2Y", "openTiger2Scale", "openTiger2Rotation", "openTiger2Opacity", "openTiger2ZIndex"],
+  "OPEN TIGER 3": ["openTiger3X", "openTiger3Y", "openTiger3Scale", "openTiger3Rotation", "openTiger3Opacity", "openTiger3ZIndex"],
+  "OPEN TIGER RACKET": ["openTigerRacketX", "openTigerRacketY", "openTigerRacketScale", "openTigerRacketRotation", "openTigerRacketOpacity", "openTigerRacketZIndex"],
   "ACTIVE TIGER SCROLL": [
     "activeTigerScrollX",
     "activeTigerScrollY",
@@ -1618,6 +1683,10 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
 };
 
 export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBooleanControlKey>> = {
+  "OPEN TIGER 1": "openTigerShow",
+  "OPEN TIGER 2": "openTigerShow",
+  "OPEN TIGER 3": "openTigerShow",
+  "OPEN TIGER RACKET": "openTigerRacketShow",
   "DRAGON RIG": "dragonShow",
   "REAR CLAW": "rearClawShow",
   "FRONT CLAW": "clawShow",
@@ -1811,6 +1880,31 @@ export const controlRanges = {
   openSunMotionEnergyDuration: { label: "開場 Energy Interval (s)", min: 2, max: 10, step: 0.5 },
   openSunMotionEnergyIntensity: { label: "開場 Energy Intensity (%)", min: 0, max: 100, step: 5 },
   openSunMotionEnergyOpacity: { label: "開場 Energy Opacity (%)", min: 0, max: 100, step: 5 },
+  openTigerVariant: { label: "開場 虎款式 (1-3)", min: 1, max: 3 },
+  openTiger1X: { label: "開場 虎1 X", min: -300, max: 300 },
+  openTiger1Y: { label: "開場 虎1 Y", min: -400, max: 400 },
+  openTiger1Scale: { label: "開場 虎1 Scale", min: 0.3, max: 2.2, step: 0.01 },
+  openTiger1Rotation: { label: "開場 虎1 Rotation", min: -45, max: 45 },
+  openTiger1Opacity: { label: "開場 虎1 Opacity", min: 0, max: 100 },
+  openTiger1ZIndex: { label: "開場 虎1 Z-Index", min: 0, max: 30 },
+  openTiger2X: { label: "開場 虎2 X", min: -300, max: 300 },
+  openTiger2Y: { label: "開場 虎2 Y", min: -400, max: 400 },
+  openTiger2Scale: { label: "開場 虎2 Scale", min: 0.3, max: 2.2, step: 0.01 },
+  openTiger2Rotation: { label: "開場 虎2 Rotation", min: -45, max: 45 },
+  openTiger2Opacity: { label: "開場 虎2 Opacity", min: 0, max: 100 },
+  openTiger2ZIndex: { label: "開場 虎2 Z-Index", min: 0, max: 30 },
+  openTiger3X: { label: "開場 虎3 X", min: -300, max: 300 },
+  openTiger3Y: { label: "開場 虎3 Y", min: -400, max: 400 },
+  openTiger3Scale: { label: "開場 虎3 Scale", min: 0.3, max: 2.2, step: 0.01 },
+  openTiger3Rotation: { label: "開場 虎3 Rotation", min: -45, max: 45 },
+  openTiger3Opacity: { label: "開場 虎3 Opacity", min: 0, max: 100 },
+  openTiger3ZIndex: { label: "開場 虎3 Z-Index", min: 0, max: 30 },
+  openTigerRacketX: { label: "開場 虎1拍 X", min: -300, max: 300 },
+  openTigerRacketY: { label: "開場 虎1拍 Y", min: -400, max: 400 },
+  openTigerRacketScale: { label: "開場 虎1拍 Scale", min: 0.3, max: 2.2, step: 0.01 },
+  openTigerRacketRotation: { label: "開場 虎1拍 Rotation", min: -45, max: 45 },
+  openTigerRacketOpacity: { label: "開場 虎1拍 Opacity", min: 0, max: 100 },
+  openTigerRacketZIndex: { label: "開場 虎1拍 Z-Index", min: 0, max: 30 },
   openSunSafeBoxWidth: { label: "開場 Safe Width %", min: 20, max: 120 },
   openSunSafeBoxHeight: { label: "開場 Safe Height %", min: 20, max: 120 },
   openSunDateX: { label: "開場日期 X %", min: -20, max: 120 },
@@ -2275,6 +2369,41 @@ Energy Interval: ${controls.openSunMotionEnergyDuration.toFixed(1)}
 Energy Intensity: ${Math.round(controls.openSunMotionEnergyIntensity)}
 Energy Opacity: ${Math.round(controls.openSunMotionEnergyOpacity)}
 
+OPEN TIGER 1
+Show: ${controls.openTigerShow ? "ON" : "OFF"}
+Variant: ${Math.round(controls.openTigerVariant)}
+X: ${Math.round(controls.openTiger1X)}
+Y: ${Math.round(controls.openTiger1Y)}
+Scale: ${controls.openTiger1Scale.toFixed(2)}
+Rotation: ${Math.round(controls.openTiger1Rotation)}
+Opacity: ${Math.round(controls.openTiger1Opacity)}
+Z-Index: ${Math.round(controls.openTiger1ZIndex)}
+
+OPEN TIGER 2
+X: ${Math.round(controls.openTiger2X)}
+Y: ${Math.round(controls.openTiger2Y)}
+Scale: ${controls.openTiger2Scale.toFixed(2)}
+Rotation: ${Math.round(controls.openTiger2Rotation)}
+Opacity: ${Math.round(controls.openTiger2Opacity)}
+Z-Index: ${Math.round(controls.openTiger2ZIndex)}
+
+OPEN TIGER 3
+X: ${Math.round(controls.openTiger3X)}
+Y: ${Math.round(controls.openTiger3Y)}
+Scale: ${controls.openTiger3Scale.toFixed(2)}
+Rotation: ${Math.round(controls.openTiger3Rotation)}
+Opacity: ${Math.round(controls.openTiger3Opacity)}
+Z-Index: ${Math.round(controls.openTiger3ZIndex)}
+
+OPEN TIGER RACKET
+Show: ${controls.openTigerRacketShow ? "ON" : "OFF"}
+X: ${Math.round(controls.openTigerRacketX)}
+Y: ${Math.round(controls.openTigerRacketY)}
+Scale: ${controls.openTigerRacketScale.toFixed(2)}
+Rotation: ${Math.round(controls.openTigerRacketRotation)}
+Opacity: ${Math.round(controls.openTigerRacketOpacity)}
+Z-Index: ${Math.round(controls.openTigerRacketZIndex)}
+
 OPEN SUN SAFE BOX
 Width: ${Math.round(controls.openSunSafeBoxWidth)}
 Height: ${Math.round(controls.openSunSafeBoxHeight)}
@@ -2649,6 +2778,8 @@ export function buildV8OpeningHeroOverrides(controls: PreviewControls, previewLa
     return Math.min(max, Math.max(min, value));
   };
 
+  const tigerVariant = Math.min(3, Math.max(1, Math.round(controls.openTigerVariant)));
+
   return {
     sunX: clampNumber(controls.openSunX, previewDefaults.openSunX, 0, 100),
     sunY: clampNumber(controls.openSunY, previewDefaults.openSunY, 0, 100),
@@ -2673,6 +2804,27 @@ export function buildV8OpeningHeroOverrides(controls: PreviewControls, previewLa
     sunMotionEnergyIntensityPct: controls.openSunMotionEnergyIntensity,
     sunMotionEnergyOpacityPct: controls.openSunMotionEnergyOpacity,
     sunMotionPaused: previewLab.paused,
+    tigerShow: controls.openTigerShow,
+    tigerVariant,
+    tigerX: controls.openTiger1X,
+    tigerY: controls.openTiger1Y,
+    tigerScale: controls.openTiger1Scale,
+    tigerRotation: controls.openTiger1Rotation,
+    tigerOpacity: controls.openTiger1Opacity,
+    tigerZIndex: Math.round(controls.openTiger1ZIndex),
+    tigerRacketShow: controls.openTigerRacketShow,
+    tigerRacketX: controls.openTigerRacketX,
+    tigerRacketY: controls.openTigerRacketY,
+    tigerRacketScale: controls.openTigerRacketScale,
+    tigerRacketRotation: controls.openTigerRacketRotation,
+    tigerRacketOpacity: controls.openTigerRacketOpacity,
+    tigerRacketZIndex: Math.round(controls.openTigerRacketZIndex),
+    tigerAltX: tigerVariant === 3 ? controls.openTiger3X : controls.openTiger2X,
+    tigerAltY: tigerVariant === 3 ? controls.openTiger3Y : controls.openTiger2Y,
+    tigerAltScale: tigerVariant === 3 ? controls.openTiger3Scale : controls.openTiger2Scale,
+    tigerAltRotation: tigerVariant === 3 ? controls.openTiger3Rotation : controls.openTiger2Rotation,
+    tigerAltOpacity: tigerVariant === 3 ? controls.openTiger3Opacity : controls.openTiger2Opacity,
+    tigerAltZIndex: Math.round(tigerVariant === 3 ? controls.openTiger3ZIndex : controls.openTiger2ZIndex),
   };
 }
 

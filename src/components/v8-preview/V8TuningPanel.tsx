@@ -387,6 +387,25 @@ export function V8TuningPanel({
             onChange={(value) => update(key, value as PreviewControls[typeof key])}
           />
         ))}
+        {selectedTarget === "OPEN TIGER 1" || selectedTarget === "OPEN TIGER 2" || selectedTarget === "OPEN TIGER 3" || selectedTarget === "OPEN TIGER RACKET" ? (
+          <div style={motionLabRowStyle}>
+            <span style={controlLabelStyle}>顯示哪隻</span>
+            {([1, 2, 3] as const).map((variant) => (
+              <button
+                key={variant}
+                type="button"
+                onClick={() => {
+                  update("openTigerVariant", variant);
+                  onSelectTarget(`OPEN TIGER ${variant}` as PreviewTargetId);
+                }}
+                style={Math.round(controls.openTigerVariant) === variant ? motionPreviewActiveButtonStyle : smallButtonStyle}
+              >
+                虎{variant}
+              </button>
+            ))}
+            {selectedTarget === "OPEN TIGER RACKET" ? <span style={controlLabelStyle}>球拍僅虎1有獨立圖層</span> : null}
+          </div>
+        ) : null}
         {selectedTarget === "OPEN SUN MOTION" ? (
           <>
             <div style={motionLabRowStyle}>
