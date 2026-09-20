@@ -34,6 +34,7 @@ import {
   type PreviewTargetId,
 } from "@/components/v8-preview/dragonPreviewConfig";
 import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8IntroVideo";
+import { V8LoadingCover } from "@/components/v8-active/V8LoadingCover";
 import { v8KangxuanIntroConfig } from "@/components/v8-active/v8IntroConfig";
 import {
   HomepageToast,
@@ -409,6 +410,9 @@ export function Index() {
     flow.phase,
   );
   const v8HeroStage = isV8Route && (preview || v8MeetupConfirmed);
+  // load-error counts as settled so a failed API never leaves the loading
+  // screen up forever -- the page underneath shows its own error state.
+  const v8OpenReady = (["meetup-preview", "rotating-to-active", "active", "load-error"] as string[]).includes(flow.phase);
   // Once confirmed, V8ActivePage renders its own V8HeroComposition (same
   // canvas, active-state content) internally -- so the standalone mount
   // here (and the section's reserved 100svh height for it) is picker-only,
@@ -1064,6 +1068,10 @@ export function Index() {
       }
     >
       <HomepageStyles />
+      {/* Opaque V8 loading screen until data/OPEN is ready (all real V8
+          routes, incl. same-session revisits and /v8/rian which has no
+          Intro) -- the Intro overlay (z 80) plays on top of it. */}
+      {isV8Route ? <V8LoadingCover ready={v8OpenReady} /> : null}
       {!isV8Route && (
         <>
           <ParticleRacket

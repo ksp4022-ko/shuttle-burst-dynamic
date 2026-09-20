@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { V8IntroConfig } from "./v8IntroConfig";
 
 type V8IntroVideoProps = {
@@ -12,6 +12,14 @@ type V8IntroVideoProps = {
   // the initial mount itself.
   replaySignal?: number;
 };
+
+// Per-page-load memory (module scope, so it also survives this component
+// remounting during SPA navigation): a run that FAILED to start is never
+// retried automatically within the same visit, and a run that played is not
+// replayed even when sessionStorage is unavailable. The user's explicit
+// Replay Intro click (replaySignal) always bypasses both.
+const failedThisVisit = new Set<string>();
+const playedThisVisit = new Set<string>();
 
 function storageKeyFor(config: V8IntroConfig) {
   return `v8:kangxuan:intro:${config.version}:played`;
@@ -34,6 +42,9 @@ export function V8IntroVideo({ config, onBlockingChange, replaySignal = 0 }: V8I
   const [shouldRender, setShouldRender] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [skipVisible, setSkipVisible] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const startTimerRef = useRef<number | null>(null);
+  const playbackStartedRef = useRef(false);
   const finishedRef = useRef(false);
   const storageAvailableRef = useRef(false);
   const removeTimerRef = useRef<number | null>(null);
@@ -41,6 +52,7 @@ export function V8IntroVideo({ config, onBlockingChange, replaySignal = 0 }: V8I
   const previousReplaySignalRef = useRef(replaySignal);
 
   const markPlayed = useCallback(() => {
+    playedThisVisit.add(storageKey);
     if (!storageAvailableRef.current) return;
     try {
       window.sessionStorage.setItem(storageKey, "1");
@@ -50,10 +62,18 @@ export function V8IntroVideo({ config, onBlockingChange, replaySignal = 0 }: V8I
   }, [storageKey]);
 
   const finish = useCallback((options: { markAsPlayed?: boolean } = {}) => {
+    // Single exit path for ended / skip / error / play-rejected / start
+    // timeout -- whichever fires first wins, every later one is a no-op.
     if (finishedRef.current) return;
     finishedRef.current = true;
+    if (startTimerRef.current !== null) {
+      window.clearTimeout(startTimerRef.current);
+      startTimerRef.current = null;
+    }
     if (options.markAsPlayed !== false) {
       markPlayed();
+    } else {
+      failedThisVisit.add(storageKey);
     }
     setExiting(true);
     if (removeTimerRef.current !== null) {
@@ -63,9 +83,14 @@ export function V8IntroVideo({ config, onBlockingChange, replaySignal = 0 }: V8I
       setShouldRender(false);
       onBlockingChange?.(false);
     }, config.fadeDurationMs);
-  }, [config.fadeDurationMs, markPlayed, onBlockingChange]);
+  }, [config.fadeDurationMs, markPlayed, onBlockingChange, storageKey]);
 
-  useEffect(() => {
+  const finishRef = useRef(finish);
+  finishRef.current = finish;
+
+  // Layout effect (not passive) so the opaque overlay is committed before the
+  // first paint instead of one frame later.
+  useLayoutEffect(() => {
     const isForcedReplay = replaySignal !== previousReplaySignalRef.current;
     previousReplaySignalRef.current = replaySignal;
 
@@ -74,24 +99,37 @@ export function V8IntroVideo({ config, onBlockingChange, replaySignal = 0 }: V8I
       return;
     }
     storageAvailableRef.current = canUseSessionStorage();
-    if (!isForcedReplay && storageAvailableRef.current && window.sessionStorage.getItem(storageKey) === "1") {
+    const alreadyHandled =
+      playedThisVisit.has(storageKey) ||
+      failedThisVisit.has(storageKey) ||
+      (storageAvailableRef.current && window.sessionStorage.getItem(storageKey) === "1");
+    if (!isForcedReplay && alreadyHandled) {
       onBlockingChange?.(false);
       return;
     }
     finishedRef.current = false;
+    playbackStartedRef.current = false;
     setExiting(false);
     setSkipVisible(false);
+    setPlaying(false);
     onBlockingChange?.(true);
     setShouldRender(true);
+    // Only bounds the wait for playback to START; cleared on the first
+    // playing frame so a healthy intro is never interrupted.
+    startTimerRef.current = window.setTimeout(() => {
+      startTimerRef.current = null;
+      if (!playbackStartedRef.current) finishRef.current({ markAsPlayed: false });
+    }, config.startTimeoutMs);
     skipTimerRef.current = window.setTimeout(() => {
       setSkipVisible(true);
     }, config.skipDelayMs);
     return () => {
       if (skipTimerRef.current !== null) window.clearTimeout(skipTimerRef.current);
+      if (startTimerRef.current !== null) window.clearTimeout(startTimerRef.current);
       if (removeTimerRef.current !== null) window.clearTimeout(removeTimerRef.current);
       onBlockingChange?.(false);
     };
-  }, [config.enabled, config.skipDelayMs, onBlockingChange, replaySignal, storageKey]);
+  }, [config.enabled, config.skipDelayMs, config.startTimeoutMs, onBlockingChange, replaySignal, storageKey]);
 
   if (!shouldRender) return null;
 
@@ -99,7 +137,7 @@ export function V8IntroVideo({ config, onBlockingChange, replaySignal = 0 }: V8I
 
   return (
     <div
-      className={`v8-intro-video${exiting ? " is-exiting" : ""}`}
+      className={`v8-intro-video${exiting ? " is-exiting" : ""}${playing ? " is-playing" : ""}`}
       style={{ "--v8-intro-fade-ms": `${config.fadeDurationMs}ms` } as CSSProperties}
     >
       <video
@@ -113,10 +151,21 @@ export function V8IntroVideo({ config, onBlockingChange, replaySignal = 0 }: V8I
         onCanPlay={(event) => {
           const playPromise = event.currentTarget.play();
           if (playPromise) {
-            playPromise.catch(() => finish({ markAsPlayed: false }));
+            playPromise.catch(() => {
+              if (!playbackStartedRef.current) finish({ markAsPlayed: false });
+            });
           }
         }}
-        onPlay={markPlayed}
+        onPlaying={() => {
+          if (finishedRef.current) return;
+          playbackStartedRef.current = true;
+          if (startTimerRef.current !== null) {
+            window.clearTimeout(startTimerRef.current);
+            startTimerRef.current = null;
+          }
+          markPlayed();
+          setPlaying(true);
+        }}
         onEnded={() => finish()}
         onError={() => finish({ markAsPlayed: false })}
       />
@@ -140,7 +189,9 @@ export function V8IntroVideoStyles() {
         height: 100svh;
         min-height: 100vh;
         overflow: hidden;
-        background: transparent;
+        /* Opaque V8 paper (same tones as the OPEN/ACTIVE canvas) so nothing
+           dark ever shows before the first video frame or after a failure. */
+        background: linear-gradient(135deg, #f4e8cf 0%, #e2c795 54%, #f2dfb8 100%);
         opacity: 1;
         transition: opacity var(--v8-intro-fade-ms, 350ms) ease;
       }
@@ -156,6 +207,11 @@ export function V8IntroVideoStyles() {
         height: 100%;
         object-fit: cover;
         background: transparent;
+        opacity: 0;
+      }
+
+      .v8-intro-video.is-playing .v8-intro-video-media {
+        opacity: 1;
       }
 
       .v8-intro-skip {

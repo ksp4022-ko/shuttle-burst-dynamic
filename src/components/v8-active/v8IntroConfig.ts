@@ -4,6 +4,9 @@ export const v8KangxuanIntroConfig = {
   version: "v1",
   skipDelayMs: 1000,
   fadeDurationMs: 350,
+  // Max wait for playback to actually START (first frame playing); never
+  // applied once the video is playing, so a healthy intro is never cut off.
+  startTimeoutMs: 8000,
 } as const;
 
 export type V8IntroConfig = typeof v8KangxuanIntroConfig;

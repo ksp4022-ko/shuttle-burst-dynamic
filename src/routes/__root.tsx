@@ -86,6 +86,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Shuttle Dynamics｜羽球報名系統" },
     ],
+    // Real V8 routes: paint the V8 paper colour before React mounts so the
+    // dark body never flashes. The class is removed again by V8LoadingCover.
+    styles: [
+      {
+        children:
+          "html.v8-boot,html.v8-boot body{background:linear-gradient(135deg,#f4e8cf 0%,#e2c795 54%,#f2dfb8 100%) fixed !important}",
+      },
+    ],
+    scripts: [
+      {
+        children:
+          'try{if(location.pathname.indexOf("/v8")>-1)document.documentElement.classList.add("v8-boot")}catch(e){}',
+      },
+    ],
     links: [
       {
         rel: "stylesheet",
@@ -109,7 +123,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="zh-Hant">
+    <html lang="zh-Hant" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
