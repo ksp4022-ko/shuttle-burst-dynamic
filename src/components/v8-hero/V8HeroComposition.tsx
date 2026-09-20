@@ -817,8 +817,8 @@ export function V8HeroComposition({
               </div>
             ) : null}
             <DecorLayer src={assets.midWave} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={10} driftClassName="v8-wave-drift-mid" />
-            <div style={heroStyle}>
-              {confirmed ? null : (
+            <div style={{ ...heroStyle, zIndex: controls.ctaZIndex }}>
+              {confirmed || !controls.ctaShow ? null : (
                 // 2026-09-11: eyebrow/title/event-selector/position-label
                 // (previously rendered here, all visually inside the red
                 // sun) are replaced by the new copied sun module -- see
@@ -840,10 +840,11 @@ export function V8HeroComposition({
                   className="v8-hero-enter-battle-cta"
                   style={{
                     position: "absolute",
-                    left: "70%",
-                    top: "58%",
+                    left: `${controls.ctaX}%`,
+                    top: `${controls.ctaY}%`,
                     margin: 0,
-                    transform: `translate(-50%, -50%) translateY(${controls.heroCtaY}px)`,
+                    opacity: controls.ctaOpacity / 100,
+                    transform: `translate(-50%, -50%) translateY(${controls.heroCtaY}px) scale(${controls.ctaScale}) rotate(${controls.ctaRotation}deg)`,
                     pointerEvents: "auto",
                   }}
                 >

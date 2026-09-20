@@ -225,6 +225,13 @@ export type PreviewControls = {
   openTiger3Rotation: number;
   openTiger3Opacity: number;
   openTiger3ZIndex: number;
+  openCtaShow: boolean;
+  openCtaX: number;
+  openCtaY: number;
+  openCtaScale: number;
+  openCtaRotation: number;
+  openCtaOpacity: number;
+  openCtaZIndex: number;
   openTigerRacketShow: boolean;
   openTigerRacketX: number;
   openTigerRacketY: number;
@@ -593,6 +600,7 @@ export type PreviewTargetId =
   | "OPEN TIGER 2"
   | "OPEN TIGER 3"
   | "OPEN TIGER RACKET"
+  | "OPEN CTA"
   | "OPEN COUNTDOWN"
   | "OPEN SWITCH ARROW PREV"
   | "OPEN SWITCH ARROW NEXT"
@@ -934,6 +942,13 @@ export const previewDefaults: PreviewControls = {
   openTiger3Rotation: 0,
   openTiger3Opacity: 100,
   openTiger3ZIndex: 9,
+  openCtaShow: true,
+  openCtaX: 70,
+  openCtaY: 58,
+  openCtaScale: 1,
+  openCtaRotation: 0,
+  openCtaOpacity: 100,
+  openCtaZIndex: 11,
   openTigerRacketShow: true,
   openTigerRacketX: -57,
   openTigerRacketY: 20,
@@ -1379,6 +1394,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
   "OPEN TIGER 1": ["openTiger1X", "openTiger1Y", "openTiger1Scale", "openTiger1Rotation", "openTiger1Opacity", "openTiger1ZIndex"],
   "OPEN TIGER 2": ["openTiger2X", "openTiger2Y", "openTiger2Scale", "openTiger2Rotation", "openTiger2Opacity", "openTiger2ZIndex"],
   "OPEN TIGER 3": ["openTiger3X", "openTiger3Y", "openTiger3Scale", "openTiger3Rotation", "openTiger3Opacity", "openTiger3ZIndex"],
+  "OPEN CTA": ["openCtaX", "openCtaY", "openCtaScale", "openCtaRotation", "openCtaOpacity", "openCtaZIndex"],
   "OPEN TIGER RACKET": ["openTigerRacketX", "openTigerRacketY", "openTigerRacketScale", "openTigerRacketRotation", "openTigerRacketOpacity", "openTigerRacketZIndex"],
   "ACTIVE TIGER SCROLL": [
     "activeTigerScrollX",
@@ -1691,6 +1707,7 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "OPEN TIGER 2": "openTiger2Show",
   "OPEN TIGER 3": "openTiger3Show",
   "OPEN TIGER RACKET": "openTigerRacketShow",
+  "OPEN CTA": "openCtaShow",
   "DRAGON RIG": "dragonShow",
   "REAR CLAW": "rearClawShow",
   "FRONT CLAW": "clawShow",
@@ -1884,6 +1901,12 @@ export const controlRanges = {
   openSunMotionEnergyDuration: { label: "開場 Energy Interval (s)", min: 2, max: 10, step: 0.5 },
   openSunMotionEnergyIntensity: { label: "開場 Energy Intensity (%)", min: 0, max: 100, step: 5 },
   openSunMotionEnergyOpacity: { label: "開場 Energy Opacity (%)", min: 0, max: 100, step: 5 },
+  openCtaX: { label: "進入戰局 X %", min: 0, max: 100 },
+  openCtaY: { label: "進入戰局 Y %", min: 0, max: 100 },
+  openCtaScale: { label: "進入戰局 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  openCtaRotation: { label: "進入戰局 Rotation", min: -45, max: 45 },
+  openCtaOpacity: { label: "進入戰局 Opacity", min: 0, max: 100 },
+  openCtaZIndex: { label: "進入戰局 Z-Index", min: 0, max: 30 },
   openTigerVariant: { label: "開場 虎款式 (1-3)", min: 1, max: 3 },
   openTiger1X: { label: "開場 虎1 X", min: -300, max: 300 },
   openTiger1Y: { label: "開場 虎1 Y", min: -400, max: 400 },
@@ -2401,6 +2424,15 @@ Rotation: ${Math.round(controls.openTiger3Rotation)}
 Opacity: ${Math.round(controls.openTiger3Opacity)}
 Z-Index: ${Math.round(controls.openTiger3ZIndex)}
 
+OPEN CTA
+Show: ${controls.openCtaShow ? "ON" : "OFF"}
+X: ${controls.openCtaX}
+Y: ${controls.openCtaY}
+Scale: ${controls.openCtaScale}
+Rotation: ${controls.openCtaRotation}
+Opacity: ${controls.openCtaOpacity}
+ZIndex: ${controls.openCtaZIndex}
+
 OPEN TIGER RACKET
 Show: ${controls.openTigerRacketShow ? "ON" : "OFF"}
 X: ${Math.round(controls.openTigerRacketX)}
@@ -2810,6 +2842,13 @@ export function buildV8OpeningHeroOverrides(controls: PreviewControls, previewLa
     sunMotionEnergyIntensityPct: controls.openSunMotionEnergyIntensity,
     sunMotionEnergyOpacityPct: controls.openSunMotionEnergyOpacity,
     sunMotionPaused: previewLab.paused,
+    ctaShow: controls.openCtaShow,
+    ctaX: controls.openCtaX,
+    ctaY: controls.openCtaY,
+    ctaScale: controls.openCtaScale,
+    ctaRotation: controls.openCtaRotation,
+    ctaOpacity: controls.openCtaOpacity,
+    ctaZIndex: Math.round(controls.openCtaZIndex),
     tigerShow: tigerVariant === 3 ? controls.openTiger3Show : tigerVariant === 2 ? controls.openTiger2Show : controls.openTiger1Show,
     tigerVariant,
     tigerX: controls.openTiger1X,

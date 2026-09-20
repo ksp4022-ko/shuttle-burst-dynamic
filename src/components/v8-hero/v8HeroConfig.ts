@@ -56,6 +56,15 @@ export type V8HeroControls = {
   heroWidth: number;
   heroEventY: number;
   heroCtaY: number;
+  // OPEN enter-battle CTA: X/Y are % of the stage (the button's own center),
+  // heroCtaY above stays as an extra px nudge so the previous look is kept.
+  ctaShow: boolean;
+  ctaX: number;
+  ctaY: number;
+  ctaScale: number;
+  ctaRotation: number;
+  ctaOpacity: number;
+  ctaZIndex: number;
   decorMode: "FULL" | "LIGHT";
   cloudShow: boolean;
   cloudX: number;
@@ -230,6 +239,13 @@ export const v8HeroDefaults: V8HeroControls = {
   heroWidth: 276,
   heroEventY: -16,
   heroCtaY: -31,
+  ctaShow: true,
+  ctaX: 70,
+  ctaY: 58,
+  ctaScale: 1,
+  ctaRotation: 0,
+  ctaOpacity: 100,
+  ctaZIndex: 11,
   decorMode: "FULL",
   // Front cloud layer. The "breathing" look still comes from a CSS
   // animation (V8HeroWaveStyles' v8-cloud-drift-front keyframes) -- this
