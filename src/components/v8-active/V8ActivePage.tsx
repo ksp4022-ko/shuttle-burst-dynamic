@@ -74,6 +74,44 @@ function meetupStatusLabel(identity: CurrentIdentity) {
 
 type HelperMode = "signup" | "cancel" | null;
 
+function V8HelperDialogWave() {
+  return (
+    <svg className="v8-helper-wave" viewBox="0 0 360 118" aria-hidden="true" focusable="false">
+      <path
+        className="v8-helper-wave-main"
+        d="M-18 98 C34 38 73 80 105 54 C142 24 178 22 222 45 C262 67 294 59 378 20 L378 136 L-18 136 Z"
+      />
+      <path
+        className="v8-helper-wave-shadow"
+        d="M-12 105 C38 52 78 88 116 62 C154 36 181 44 215 61 C250 79 304 65 372 38 L372 136 L-12 136 Z"
+      />
+      <path
+        className="v8-helper-wave-small"
+        d="M26 86 C45 65 63 66 79 81 C61 74 48 82 35 96"
+      />
+      <path
+        className="v8-helper-wave-small v8-helper-wave-small-right"
+        d="M254 64 C279 43 304 47 321 68 C300 58 282 65 265 82"
+      />
+      <path
+        className="v8-helper-wave-foam"
+        d="M-6 94 C25 70 45 66 69 79 C88 89 105 82 119 69 C133 56 151 45 176 45 C202 45 224 57 249 68 C281 83 316 67 368 26"
+      />
+      <path
+        className="v8-helper-wave-foam"
+        d="M55 91 C77 102 99 97 119 78"
+      />
+      <path
+        className="v8-helper-wave-foam"
+        d="M198 59 C217 62 234 70 252 79"
+      />
+      <circle className="v8-helper-wave-dot" cx="35" cy="61" r="4" />
+      <circle className="v8-helper-wave-dot" cx="79" cy="49" r="3" />
+      <circle className="v8-helper-wave-dot" cx="303" cy="39" r="4" />
+    </svg>
+  );
+}
+
 export function V8ActivePage({
   flow,
   onBeforeLineLogin,
@@ -472,100 +510,105 @@ export function V8ActivePage({
       {helperMode ? (
         <div className="v8-identity-gate">
           <div className="v8-identity-gate-card v8-helper-card">
-            {helperMode === "signup" ? (
-              <div className="v8-helper-signup">
-                <p className="v8-helper-title">幫誰報名？</p>
-                <input
-                  className="v8-helper-signup-input"
-                  value={helperName}
-                  onChange={(event) => setHelperName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void submitHelperSignup();
-                  }}
-                  placeholder="輸入姓名"
-                  disabled={busy}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  className="v8-helper-cta"
-                  disabled={!helperName.trim() || busy}
-                  onClick={() => void submitHelperSignup()}
-                >
-                  {busy ? "報名中" : "確認報名"}
-                </button>
-                <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
-                  取消
-                </button>
-              </div>
-            ) : (
-              <div className="v8-helper-cancel">
-                <p className="v8-helper-title">幫誰取消？</p>
-                {tempCandidates.length ? (
-                  <div className="v8-helper-person-list">
-                    {tempConfirmedCandidates.length ? (
-                      <>
-                        <p className="v8-helper-group-label">臨打</p>
-                        {tempConfirmedCandidates.map((person) => (
-                          <button
-                            key={person.id}
-                            type="button"
-                            className={
-                              "v8-helper-person-row" +
-                              (selectedCancelPerson?.id === person.id ? " is-selected" : "")
-                            }
-                            disabled={busy}
-                            onClick={() => setSelectedCancelPerson(person)}
-                          >
-                            <span className="v8-helper-stamp">臨打</span>
-                            <span className="v8-helper-person-name">{person.name}</span>
-                          </button>
-                        ))}
-                      </>
-                    ) : null}
-                    {tempWaitingCandidates.length ? (
-                      <>
-                        <p className="v8-helper-group-label">候補</p>
-                        {tempWaitingCandidates.map((person) => (
-                          <button
-                            key={person.id}
-                            type="button"
-                            className={
-                              "v8-helper-person-row" +
-                              (selectedCancelPerson?.id === person.id ? " is-selected" : "")
-                            }
-                            disabled={busy}
-                            onClick={() => setSelectedCancelPerson(person)}
-                          >
-                            <span className="v8-helper-stamp v8-helper-stamp-waiting">候補</span>
-                            <span className="v8-helper-person-name">{person.name}</span>
-                          </button>
-                        ))}
-                      </>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="sd-empty">目前沒有臨打報名可取消</p>
-                )}
-                {selectedCancelPerson ? (
+            <V8HelperDialogWave />
+            <div className="v8-helper-content">
+              {helperMode === "signup" ? (
+                <div className="v8-helper-signup">
+                  <p className="v8-helper-title">幫誰報名？</p>
+                  <p className="v8-helper-copy">輸入要代報的臨打名稱。</p>
+                  <input
+                    className="v8-helper-signup-input"
+                    value={helperName}
+                    onChange={(event) => setHelperName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void submitHelperSignup();
+                    }}
+                    placeholder="輸入姓名"
+                    disabled={busy}
+                    autoFocus
+                  />
                   <button
                     type="button"
-                    className="v8-helper-cta v8-helper-cta-danger"
-                    disabled={busy}
-                    onClick={() => void cancelForSomeoneElse(selectedCancelPerson)}
+                    className="v8-helper-cta"
+                    disabled={!helperName.trim() || busy}
+                    onClick={() => void submitHelperSignup()}
                   >
-                    {busy ? "取消中" : `確認取消 ${selectedCancelPerson.name}`}
+                    {busy ? "報名中" : "確認報名"}
                   </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="v8-active-helper-cancel"
-                  onClick={() => (selectedCancelPerson ? setSelectedCancelPerson(null) : setHelperMode(null))}
-                >
-                  {selectedCancelPerson ? "重新選擇" : "返回"}
-                </button>
-              </div>
-            )}
+                  <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
+                    取消
+                  </button>
+                </div>
+              ) : (
+                <div className="v8-helper-cancel">
+                  <p className="v8-helper-title">幫誰取消？</p>
+                  <p className="v8-helper-copy">先選擇一位臨打或候補，再確認取消。</p>
+                  {tempCandidates.length ? (
+                    <div className="v8-helper-person-list">
+                      {tempConfirmedCandidates.length ? (
+                        <>
+                          <p className="v8-helper-group-label">臨打</p>
+                          {tempConfirmedCandidates.map((person) => (
+                            <button
+                              key={person.id}
+                              type="button"
+                              className={
+                                "v8-helper-person-row" +
+                                (selectedCancelPerson?.id === person.id ? " is-selected" : "")
+                              }
+                              disabled={busy}
+                              onClick={() => setSelectedCancelPerson(person)}
+                            >
+                              <span className="v8-helper-stamp">臨打</span>
+                              <span className="v8-helper-person-name">{person.name}</span>
+                            </button>
+                          ))}
+                        </>
+                      ) : null}
+                      {tempWaitingCandidates.length ? (
+                        <>
+                          <p className="v8-helper-group-label">候補</p>
+                          {tempWaitingCandidates.map((person) => (
+                            <button
+                              key={person.id}
+                              type="button"
+                              className={
+                                "v8-helper-person-row" +
+                                (selectedCancelPerson?.id === person.id ? " is-selected" : "")
+                              }
+                              disabled={busy}
+                              onClick={() => setSelectedCancelPerson(person)}
+                            >
+                              <span className="v8-helper-stamp v8-helper-stamp-waiting">候補</span>
+                              <span className="v8-helper-person-name">{person.name}</span>
+                            </button>
+                          ))}
+                        </>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="sd-empty v8-helper-empty">目前沒有臨打報名可取消</p>
+                  )}
+                  {selectedCancelPerson ? (
+                    <button
+                      type="button"
+                      className="v8-helper-cta v8-helper-cta-danger"
+                      disabled={busy}
+                      onClick={() => void cancelForSomeoneElse(selectedCancelPerson)}
+                    >
+                      {busy ? "取消中" : `確認取消 ${selectedCancelPerson.name}`}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="v8-active-helper-cancel"
+                    onClick={() => (selectedCancelPerson ? setSelectedCancelPerson(null) : setHelperMode(null))}
+                  >
+                    {selectedCancelPerson ? "重新選擇" : "返回"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ) : null}
@@ -2659,15 +2702,15 @@ export function V8ActiveStyles() {
       .v8-active-helper-cancel,
       .v8-dialog-secondary {
         min-height: 44px;
-        padding: 0 14px;
+        padding: 0 16px;
         border: 1px solid rgba(32, 21, 13, 0.28) !important;
         border-radius: 999px;
-        background: rgba(255, 250, 238, 0.86) !important;
-        color: rgba(32, 21, 13, 0.86);
+        background: #fff8e9 !important;
+        color: #3a2414;
         font-size: 14px;
         font-weight: 850;
         text-decoration: none;
-        margin-top: 4px;
+        margin-top: 2px;
       }
 
       .v8-dialog-secondary-row {
@@ -2676,40 +2719,75 @@ export function V8ActiveStyles() {
         gap: 8px;
       }
 
-      /* 幫人報名/取消 -- redesigned 2026-09-09 per the user's request: no
-         table-like rows, no generic browser-style buttons, full-width name
-         rows with a real font size instead of the old cramped inline
-         input+button+link row (which overflowed the card's own 360px max-
-         width, pushing "取消" out into the blurred backdrop where its low-
-         contrast text was nearly invisible -- confirmed via screenshot).
-         Card itself stretches a little wider than the identity gate's
-         default since person names + a stamp need more breathing room. */
+      /* Helper signup/cancel dialogs intentionally have their own opaque
+         paper shell instead of inheriting the identity card translucency. */
       .v8-helper-card {
+        position: relative;
+        width: min(326px, calc(100vw - 34px));
         max-width: 326px;
+        padding: 18px 18px 86px;
+        border: 2px solid rgba(68, 43, 18, 0.38);
+        background:
+          linear-gradient(180deg, #fff9ea 0%, #f8edcf 100%),
+          #fff6de;
+        box-shadow:
+          0 20px 42px rgba(20, 13, 7, 0.34),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.62);
+        overflow: hidden;
+      }
+
+      .v8-helper-card::before {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border: 1px solid rgba(155, 112, 39, 0.18);
+        border-radius: 18px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .v8-helper-content {
+        position: relative;
+        z-index: 2;
       }
 
       .v8-helper-title {
-        margin: 0 0 10px;
+        margin: 0 0 8px;
         text-align: center;
-        font-size: 17px;
+        font-size: 18px;
         font-weight: 900;
         color: #20150d;
+      }
+
+      .v8-helper-copy {
+        margin: 0 0 10px;
+        color: rgba(47, 31, 17, 0.78);
+        font-size: 13px;
+        font-weight: 750;
+        line-height: 1.45;
+        text-align: center;
       }
 
       .v8-helper-signup {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 9px;
       }
 
       .v8-helper-signup-input {
         height: 44px;
         padding: 0 12px;
-        border: 2px solid rgba(32, 21, 13, 0.36);
-        border-radius: 14px;
-        background: #fffdf8;
+        border: 2px solid rgba(58, 35, 16, 0.52);
+        border-radius: 12px;
+        background: #fffdf6;
         color: #20150d;
         font-size: 16px;
+        font-weight: 750;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      }
+
+      .v8-helper-signup-input::placeholder {
+        color: rgba(32, 21, 13, 0.46);
       }
 
       /* Same pill shape as the tiger-scroll identity card's own CTA
@@ -2718,13 +2796,14 @@ export function V8ActiveStyles() {
          button style. */
       .v8-helper-cta {
         height: 44px;
-        padding: 0 14px;
+        padding: 0 16px;
         border: 2px solid #20150d;
         border-radius: 999px;
         background: #20150d;
         color: #fff7e8;
         font-size: 14px;
         font-weight: 900;
+        box-shadow: 0 5px 0 rgba(0, 0, 0, 0.16);
       }
 
       .v8-helper-cta:disabled {
@@ -2732,31 +2811,33 @@ export function V8ActiveStyles() {
       }
 
       .v8-helper-cta-danger {
-        border-color: rgba(154, 23, 18, 0.92);
+        border-color: #8f1710;
         color: #fff7e8;
-        background: rgba(154, 23, 18, 0.96);
-        margin-top: 4px;
+        background: #9d2016;
+        margin-top: 8px;
       }
 
       .v8-helper-cancel {
         display: flex;
         flex-direction: column;
+        gap: 8px;
       }
 
       .v8-helper-person-list {
         display: flex;
         flex-direction: column;
         gap: 6px;
-        max-height: min(44svh, 320px);
+        max-height: min(38svh, 260px);
         overflow-y: auto;
+        padding-right: 2px;
       }
 
       .v8-helper-group-label {
-        margin: 10px 0 2px;
+        margin: 8px 0 0;
         font-size: 11px;
         font-weight: 800;
         letter-spacing: 1px;
-        color: rgba(32, 21, 13, 0.72);
+        color: rgba(32, 21, 13, 0.82);
       }
 
       .v8-helper-group-label:first-child {
@@ -2771,20 +2852,21 @@ export function V8ActiveStyles() {
         align-items: center;
         gap: 8px;
         width: 100%;
-        min-height: 48px;
+        min-height: 46px;
         padding: 0 12px;
-        border: none;
+        border: 1px solid rgba(86, 58, 27, 0.2);
         border-left: 5px solid rgba(216, 185, 94, 0.86);
         border-radius: 10px;
-        background: rgba(255, 253, 247, 0.86);
+        background: #fffaf0;
         color: #20150d;
         text-align: left;
       }
 
       .v8-helper-person-row.is-selected {
-        border-left-color: rgba(154, 23, 18, 0.95);
-        background: #fff7e8;
-        box-shadow: 0 0 0 2px rgba(154, 23, 18, 0.28);
+        border-color: rgba(154, 23, 18, 0.46);
+        border-left-color: #9d2016;
+        background: #fff2dc;
+        box-shadow: 0 0 0 2px rgba(154, 23, 18, 0.18);
       }
 
       .v8-helper-person-row:disabled {
@@ -2818,6 +2900,59 @@ export function V8ActiveStyles() {
         font-size: 16px;
         font-weight: 800;
         color: #20150d;
+      }
+
+      .v8-helper-empty {
+        margin: 4px 0 0;
+        color: rgba(32, 21, 13, 0.78);
+        font-size: 14px;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      .v8-helper-wave {
+        position: absolute;
+        left: 50%;
+        bottom: -10px;
+        z-index: 1;
+        width: 116%;
+        height: auto;
+        transform: translateX(-50%);
+        pointer-events: none;
+      }
+
+      .v8-helper-wave-main {
+        fill: #123f83;
+      }
+
+      .v8-helper-wave-shadow {
+        fill: #0b2b5f;
+        opacity: 0.92;
+      }
+
+      .v8-helper-wave-small {
+        fill: none;
+        stroke: #1a62af;
+        stroke-width: 10;
+        stroke-linecap: round;
+        opacity: 0.95;
+      }
+
+      .v8-helper-wave-small-right {
+        stroke-width: 9;
+      }
+
+      .v8-helper-wave-foam {
+        fill: none;
+        stroke: #fff9ec;
+        stroke-width: 7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .v8-helper-wave-dot {
+        fill: #fff9ec;
+        opacity: 0.95;
       }
 
       /* V8ActiveRosterLists is rendered via V8HeroComposition's
