@@ -3,6 +3,7 @@ import type { V8IntroConfig } from "./v8IntroConfig";
 
 type V8IntroVideoProps = {
   config: V8IntroConfig;
+  siteId: "kangxuan" | "rian";
   onBlockingChange?: (blocking: boolean) => void;
   // Bump this (e.g. a counter incremented on each click) to force the
   // intro to play again regardless of the session's "already played"
@@ -21,8 +22,8 @@ type V8IntroVideoProps = {
 const failedThisVisit = new Set<string>();
 const playedThisVisit = new Set<string>();
 
-function storageKeyFor(config: V8IntroConfig) {
-  return `v8:kangxuan:intro:${config.version}:played`;
+function storageKeyFor(config: V8IntroConfig, siteId: V8IntroVideoProps["siteId"]) {
+  return `v8:${siteId}:intro:${config.version}:played`;
 }
 
 function canUseSessionStorage() {
@@ -37,8 +38,8 @@ function canUseSessionStorage() {
   }
 }
 
-export function V8IntroVideo({ config, onBlockingChange, replaySignal = 0 }: V8IntroVideoProps) {
-  const storageKey = useMemo(() => storageKeyFor(config), [config]);
+export function V8IntroVideo({ config, siteId, onBlockingChange, replaySignal = 0 }: V8IntroVideoProps) {
+  const storageKey = useMemo(() => storageKeyFor(config, siteId), [config, siteId]);
   const [shouldRender, setShouldRender] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [skipVisible, setSkipVisible] = useState(false);

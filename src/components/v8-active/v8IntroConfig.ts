@@ -1,4 +1,4 @@
-export const v8KangxuanIntroConfig = {
+export const v8IntroConfig = {
   enabled: true,
   assetPath: "v8-intro/intro_web_crf27_muted.mp4",
   version: "v1",
@@ -9,4 +9,6 @@ export const v8KangxuanIntroConfig = {
   startTimeoutMs: 8000,
 } as const;
 
-export type V8IntroConfig = typeof v8KangxuanIntroConfig;
+export const v8KangxuanIntroConfig = v8IntroConfig;
+
+export type V8IntroConfig = typeof v8IntroConfig;

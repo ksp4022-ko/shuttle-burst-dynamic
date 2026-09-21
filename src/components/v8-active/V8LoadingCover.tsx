@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 // Opaque V8-paper loading screen shown on every real V8 route until the
 // OPEN/ACTIVE stage is ready (or a safety timeout elapses), so the shared
 // dark .sd-page background never shows during first load, after the Intro
-// ends before data is ready, on same-session revisits, or on /v8/rian
-// (which has no Intro). It sits BELOW the Intro overlay (z-index 80) and the
+// ends before data is ready, or on same-session revisits. It sits BELOW
+// the Intro overlay (z-index 80) and the
 // Replay Intro button (79), so the Intro plays on top of it unchanged.
 const FADE_MS = 300;
 

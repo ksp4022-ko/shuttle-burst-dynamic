@@ -35,7 +35,7 @@ import {
 } from "@/components/v8-preview/dragonPreviewConfig";
 import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8IntroVideo";
 import { V8LoadingCover } from "@/components/v8-active/V8LoadingCover";
-import { v8KangxuanIntroConfig } from "@/components/v8-active/v8IntroConfig";
+import { v8IntroConfig } from "@/components/v8-active/v8IntroConfig";
 import {
   HomepageToast,
   clearToastOrigin,
@@ -341,7 +341,8 @@ export function Index() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isV8Route = pathname === "/v8" || pathname.startsWith("/v8/");
   const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-  const isV8KangxuanRoute = normalizedPathname === "/v8/kangxuan";
+  const v8IntroSiteId =
+    normalizedPathname === "/v8/kangxuan" ? "kangxuan" : normalizedPathname === "/v8/rian" ? "rian" : "";
   const [name, setName] = useState("");
   const toastOriginRef = useRef<ToastOrigin | null>(null);
   const eventTitleRef = useRef<HTMLElement | null>(null);
@@ -386,7 +387,7 @@ export function Index() {
   const [countdownKey, setCountdownKey] = useState(0);
   const [rosterVisible, setRosterVisible] = useState(false);
   const [v8MeetupConfirmed, setV8MeetupConfirmed] = useState(false);
-  const [v8IntroBlocking, setV8IntroBlocking] = useState(isV8KangxuanRoute);
+  const [v8IntroBlocking, setV8IntroBlocking] = useState(Boolean(v8IntroSiteId));
   const [v8IntroReplaySignal, setV8IntroReplaySignal] = useState(0);
   const replayTimersRef = useRef<number[]>([]);
   const tutorialTimersRef = useRef<number[]>([]);
@@ -439,8 +440,8 @@ export function Index() {
   }, [isV8Route]);
 
   useLayoutEffect(() => {
-    setV8IntroBlocking(isV8KangxuanRoute);
-  }, [isV8KangxuanRoute]);
+    setV8IntroBlocking(Boolean(v8IntroSiteId));
+  }, [v8IntroSiteId]);
 
   useLayoutEffect(() => {
     const alignMaterializedRacket = () => {
@@ -1068,9 +1069,9 @@ export function Index() {
       }
     >
       <HomepageStyles />
-      {/* Opaque V8 loading screen until data/OPEN is ready (all real V8
-          routes, incl. same-session revisits and /v8/rian which has no
-          Intro) -- the Intro overlay (z 80) plays on top of it. */}
+      {/* Opaque V8 loading screen until data/OPEN is ready on all real V8
+          routes and same-session revisits -- the Intro overlay (z 80)
+          plays on top of it when enabled for the current site. */}
       {isV8Route ? <V8LoadingCover ready={v8OpenReady} /> : null}
       {!isV8Route && (
         <>
@@ -1616,11 +1617,13 @@ export function Index() {
         disabled={Boolean(flow.pendingAction)}
       />
 
-      {isV8KangxuanRoute ? (
+      {v8IntroSiteId ? (
         <>
           <V8IntroVideoStyles />
           <V8IntroVideo
-            config={v8KangxuanIntroConfig}
+            key={v8IntroSiteId}
+            config={v8IntroConfig}
+            siteId={v8IntroSiteId}
             onBlockingChange={setV8IntroBlocking}
             replaySignal={v8IntroReplaySignal}
           />
