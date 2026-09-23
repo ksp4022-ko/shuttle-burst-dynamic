@@ -338,7 +338,11 @@ export function V8ActivePage({
   ].filter((src): src is string => Boolean(src));
 
   const displayNameForFixedRosterPerson = (person: AlphaSignup) => {
-    if (!effectiveLineIdentity || person.memberId !== effectiveLineIdentity.claimedMemberId) return person.name;
+    // Temp identities have no claimedMemberId and temp signups have no
+    // memberId -- without the truthy check null === null would rename every
+    // temp signup to the viewer's LINE name.
+    const claimedMemberId = effectiveLineIdentity?.claimedMemberId;
+    if (!effectiveLineIdentity || !claimedMemberId || person.memberId !== claimedMemberId) return person.name;
     return effectiveLineIdentity.confirmedName || effectiveLineIdentity.displayName || effectiveLineIdentity.lineDisplayName || person.name;
   };
 
