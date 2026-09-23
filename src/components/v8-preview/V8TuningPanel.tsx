@@ -696,6 +696,43 @@ export function V8TuningPanel({
               {lineAuthResetStatus === "cleared" ? "LINE 已重置" : "重置 LINE 測試"}
             </button>
           </div>
+          {controlsScope === "open" ? (
+            // Local-only testing tools for repeat login/first-visit tests: they
+            // never call the server, unlike 重置 LINE 測試 above (which also
+            // clears the server-side name claim).
+            <div style={resetBarStyle}>
+              <button
+                type="button"
+                onClick={() => {
+                  clearV8LineAuthStorage();
+                  window.location.reload();
+                }}
+                style={resetButtonStyle}
+              >
+                遺忘 LINE 登入
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!window.confirm("清空本機所有紀錄？（LINE 登入、控制台設定、Intro 播放紀錄等，不影響伺服器資料）")) return;
+                  try {
+                    window.localStorage.clear();
+                  } catch {
+                    // storage unavailable -- nothing to clear
+                  }
+                  try {
+                    window.sessionStorage.clear();
+                  } catch {
+                    // storage unavailable -- nothing to clear
+                  }
+                  window.location.reload();
+                }}
+                style={resetButtonStyle}
+              >
+                清空本機紀錄
+              </button>
+            </div>
+          ) : null}
         </>
       ) : null}
     </section>
