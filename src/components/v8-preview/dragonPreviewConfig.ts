@@ -2184,6 +2184,39 @@ export const getButtonStep = (key: keyof PreviewControls, mode: StepMode) => {
   return stepModes[mode].position;
 };
 
+// The real OPEN and ACTIVE pages each keep their own in-memory copy of the
+// flat PreviewControls but persist to the same storage key. A page may only
+// write (and copy/reset) the fields it owns, otherwise its stale copy of
+// the other page's fields would overwrite values tuned on that page.
+export type ControlsScope = "open" | "active";
+
+export function isControlKeyInScope(key: string, scope: ControlsScope) {
+  if (scope === "active") return key.startsWith("active");
+  return key.startsWith("open") || key.startsWith("countdown");
+}
+
+export function pickScopedControls(controls: PreviewControls, scope: ControlsScope): Partial<PreviewControls> {
+  const picked: Partial<PreviewControls> = {};
+  for (const key of Object.keys(controls) as (keyof PreviewControls)[]) {
+    if (isControlKeyInScope(key, scope)) (picked as Record<string, unknown>)[key] = controls[key];
+  }
+  return picked;
+}
+
+export function formatScopedPreviewSettings(controls: PreviewControls, scope?: ControlsScope) {
+  const full = formatPreviewSettings(controls);
+  if (!scope) return full;
+  const prefix = scope === "active" ? "ACTIVE " : "OPEN ";
+  const blocks = full.split("\n\n");
+  const [title, ...sections] = blocks;
+  const firstLine = (block: string) => block.split("\n")[0] || "";
+  const titleHeader = firstLine(title || "");
+  const kept = sections.filter((block) => firstLine(block).startsWith(prefix));
+  // The title block may also carry the first section (no blank line after
+  // the "V8 PREVIEW SETTINGS" heading); keep only the heading line then.
+  return [titleHeader, ...kept].join("\n\n");
+}
+
 export const formatPreviewSettings = (controls: PreviewControls) => `V8 PREVIEW SETTINGS
 
 DRAGON RIG
@@ -2668,6 +2701,19 @@ export function saveControls(controls: PreviewControls) {
   } catch {
     // Private browsing / storage disabled / quota exceeded -- tuning still
     // works for this session, it just won't survive a refresh.
+  }
+}
+
+export function saveScopedControls(controls: PreviewControls, scope: ControlsScope) {
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
+    const saved = raw ? (JSON.parse(raw) as Partial<PreviewControls>) : {};
+    window.localStorage.setItem(
+      PREVIEW_CONTROLS_STORAGE_KEY,
+      JSON.stringify({ ...saved, ...pickScopedControls(controls, scope) }),
+    );
+  } catch {
+    // Same as saveControls -- non-fatal.
   }
 }
 

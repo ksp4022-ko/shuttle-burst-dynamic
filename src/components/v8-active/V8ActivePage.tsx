@@ -22,7 +22,7 @@ import {
   loadSavedControls,
   motionPreviewLabDefaults,
   previewDefaults,
-  saveControls,
+  saveScopedControls,
   type MotionPreviewLabState,
   type PreviewControls,
   type PreviewTargetId,
@@ -177,7 +177,7 @@ export function V8ActivePage({
   const [motionPreviewLab, setMotionPreviewLab] = useState<MotionPreviewLabState>(motionPreviewLabDefaults);
 
   useEffect(() => {
-    saveControls(tuningControls);
+    saveScopedControls(tuningControls, "active");
   }, [tuningControls]);
 
   // Direct-switch meetup (arrows/swipe on the sun) -- per the user's
@@ -649,6 +649,7 @@ export function V8ActivePage({
           onSelectTarget={setTuningTarget}
           motionPreviewLab={motionPreviewLab}
           onMotionPreviewLabChange={setMotionPreviewLab}
+          controlsScope="active"
         />
       ) : null}
       {tuningOpen ? (

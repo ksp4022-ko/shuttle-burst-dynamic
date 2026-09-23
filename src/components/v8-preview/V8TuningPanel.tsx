@@ -3,7 +3,9 @@ import type { CSSProperties, Dispatch, MouseEvent, PointerEvent, SetStateAction,
 import {
   clearSavedControls,
   controlRanges,
-  formatPreviewSettings,
+  formatScopedPreviewSettings,
+  pickScopedControls,
+  type ControlsScope,
   getButtonStep,
   motionPreviewLabDefaults,
   previewDefaults,
@@ -95,6 +97,7 @@ export function V8TuningPanel({
   onHighlightChange,
   motionPreviewLab,
   onMotionPreviewLabChange,
+  controlsScope,
 }: {
   controls: PreviewControls;
   setControls: Dispatch<SetStateAction<PreviewControls>>;
@@ -116,6 +119,9 @@ export function V8TuningPanel({
   // buildV8ActiveHeroOverrides.
   motionPreviewLab?: MotionPreviewLabState;
   onMotionPreviewLabChange?: (next: MotionPreviewLabState) => void;
+  // Set by the real OPEN/ACTIVE pages: Copy and Reset All then only cover
+  // that page's own fields (see ControlsScope). /v8/preview omits it.
+  controlsScope?: ControlsScope;
 }) {
   const [panelMinimized, setPanelMinimized] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
@@ -171,7 +177,7 @@ export function V8TuningPanel({
   };
 
   const copySettings = async () => {
-    await writeClipboard(formatPreviewSettings(controls));
+    await writeClipboard(formatScopedPreviewSettings(controls, controlsScope));
     setCopyStatus("copied");
     if (copyFeedbackTimer.current) window.clearTimeout(copyFeedbackTimer.current);
     copyFeedbackTimer.current = window.setTimeout(() => setCopyStatus("idle"), 1700);
@@ -675,8 +681,12 @@ export function V8TuningPanel({
             <button
               type="button"
               onClick={() => {
-                setControls(previewDefaults);
-                clearSavedControls();
+                if (controlsScope) {
+                  setControls((current) => ({ ...current, ...pickScopedControls(previewDefaults, controlsScope) }));
+                } else {
+                  setControls(previewDefaults);
+                  clearSavedControls();
+                }
               }}
               style={resetButtonStyle}
             >

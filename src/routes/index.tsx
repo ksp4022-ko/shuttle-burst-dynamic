@@ -28,7 +28,7 @@ import {
   loadSavedControls,
   motionPreviewLabDefaults,
   previewDefaults,
-  saveControls,
+  saveScopedControls,
   type MotionPreviewLabState,
   type PreviewControls,
   type PreviewTargetId,
@@ -495,7 +495,7 @@ export function Index() {
   }, []);
 
   useEffect(() => {
-    saveControls(openTuningControls);
+    saveScopedControls(openTuningControls, "open");
   }, [openTuningControls]);
 
   useEffect(() => {
@@ -1399,6 +1399,7 @@ export function Index() {
                 onSelectTarget={setOpenTuningTarget}
                 motionPreviewLab={openMotionPreviewLab}
                 onMotionPreviewLabChange={setOpenMotionPreviewLab}
+                controlsScope="open"
               />
             ) : null}
             {openTuningOpen ? (
