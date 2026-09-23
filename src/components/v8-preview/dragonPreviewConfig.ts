@@ -2662,7 +2662,12 @@ Next: X ${Math.round(controls.activeSwitchArrowNextX)}, Y ${Math.round(controls.
 // were a %, landing every identity element at the box's top-left corner
 // instead of the new measured defaults, with no error. See this file's own
 // comment above on why this class of change needs a version bump.
-export const PREVIEW_CONTROLS_STORAGE_KEY = "v8-preview-controls-v3";
+// v4 (2026-09-23): every earlier visit saved the WHOLE object (defaults
+// included) on first load, so later default updates never reached anyone
+// who had visited before. v4 drops those frozen blobs; saves are now sparse
+// (only fields that differ from previewDefaults), so future default
+// updates apply to every field a device has not deliberately tuned.
+export const PREVIEW_CONTROLS_STORAGE_KEY = "v8-preview-controls-v4";
 
 // Fields whose COORDINATE-SYSTEM MEANING changed but didn't warrant a full
 // -vN storage bump (that would discard every OTHER field the user has
@@ -2695,9 +2700,17 @@ export function loadSavedControls(): PreviewControls {
   }
 }
 
+function withoutDefaultValues(values: Partial<PreviewControls>): Partial<PreviewControls> {
+  const sparse: Partial<PreviewControls> = {};
+  for (const key of Object.keys(values) as (keyof PreviewControls)[]) {
+    if (values[key] !== previewDefaults[key]) (sparse as Record<string, unknown>)[key] = values[key];
+  }
+  return sparse;
+}
+
 export function saveControls(controls: PreviewControls) {
   try {
-    window.localStorage.setItem(PREVIEW_CONTROLS_STORAGE_KEY, JSON.stringify(controls));
+    window.localStorage.setItem(PREVIEW_CONTROLS_STORAGE_KEY, JSON.stringify(withoutDefaultValues(controls)));
   } catch {
     // Private browsing / storage disabled / quota exceeded -- tuning still
     // works for this session, it just won't survive a refresh.
@@ -2708,9 +2721,12 @@ export function saveScopedControls(controls: PreviewControls, scope: ControlsSco
   try {
     const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
     const saved = raw ? (JSON.parse(raw) as Partial<PreviewControls>) : {};
+    for (const key of Object.keys(saved)) {
+      if (isControlKeyInScope(key, scope)) delete (saved as Record<string, unknown>)[key];
+    }
     window.localStorage.setItem(
       PREVIEW_CONTROLS_STORAGE_KEY,
-      JSON.stringify({ ...saved, ...pickScopedControls(controls, scope) }),
+      JSON.stringify({ ...saved, ...withoutDefaultValues(pickScopedControls(controls, scope)) }),
     );
   } catch {
     // Same as saveControls -- non-fatal.
