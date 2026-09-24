@@ -247,7 +247,7 @@ function V8SunMeetupName({
   );
 }
 
-const SWIPE_THRESHOLD_PX = 40;
+const SWIPE_THRESHOLD_PX = 24;
 
 // Copied from switchArrowStyle in V8ActivePage.tsx.
 function switchArrowStyle(c: SwitchArrowConfig): CSSProperties {
@@ -320,24 +320,53 @@ function V8OpeningSunSwitcher({
   hasPrevious: boolean;
   hasNext: boolean;
 }) {
-  const startXRef = useRef<number | null>(null);
+  // Decided while the finger moves (not only on release): a mostly
+  // horizontal move past the threshold switches once per gesture. Safari
+  // can cancel a touch mid-way (touchcancel, no touchend), so waiting for
+  // the release made swipes feel unreliable.
+  const startRef = useRef<{ x: number; y: number; fired: boolean } | null>(null);
 
   const handleTouchStart = (event: TouchEvent) => {
-    startXRef.current = event.touches[0]?.clientX ?? 0;
+    const touch = event.touches[0];
+    startRef.current = touch ? { x: touch.clientX, y: touch.clientY, fired: false } : null;
+  };
+
+  const trySwipe = (x: number, y: number) => {
+    const start = startRef.current;
+    if (!start || start.fired) return;
+    const dx = x - start.x;
+    const dy = y - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    start.fired = true;
+    if (dx > 0) onPreviousEvent();
+    else onNextEvent();
+  };
+
+  const handleTouchMove = (event: TouchEvent) => {
+    const touch = event.touches[0];
+    if (touch) trySwipe(touch.clientX, touch.clientY);
   };
 
   const handleTouchEnd = (event: TouchEvent) => {
-    if (startXRef.current === null) return;
-    const endX = event.changedTouches[0]?.clientX ?? startXRef.current;
-    const delta = endX - startXRef.current;
-    if (delta > SWIPE_THRESHOLD_PX) onPreviousEvent();
-    else if (delta < -SWIPE_THRESHOLD_PX) onNextEvent();
-    startXRef.current = null;
+    const touch = event.changedTouches[0];
+    if (touch) trySwipe(touch.clientX, touch.clientY);
+    startRef.current = null;
+  };
+
+  const handleTouchCancel = () => {
+    startRef.current = null;
   };
 
   return (
     <>
-      <div className="v8-opening-sun-swipe-zone" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} aria-hidden="true" />
+      <div
+        className="v8-opening-sun-swipe-zone"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
+        aria-hidden="true"
+      />
       {controls.show ? (
         <>
           <button type="button" className={hasPrevious ? "v8-opening-sun-switch-arrow" : "v8-opening-sun-switch-arrow is-end"} style={switchArrowStyle(controls.prev)} aria-disabled={!hasPrevious} onClick={onPreviousEvent} aria-label="上一場聚會">
@@ -489,6 +518,7 @@ export function V8OpeningSunStyles() {
       .v8-opening-sun-info-scattered {
         position: absolute;
         width: max-content;
+        pointer-events: none;
       }
 
       /* SUN-DIAL (日輪旋轉) */
@@ -563,13 +593,16 @@ export function V8OpeningSunStyles() {
 
       /* End of the meetup list: a small turn that springs back. */
       .v8-opening-sun-dial-clip.is-bump {
-        animation: v8-opening-dial-bump 320ms cubic-bezier(.3, 1.6, .5, 1);
+        animation: v8-opening-dial-bump 360ms ease-out;
       }
 
+      /* A sideways "no" shake -- deliberately not a rotation, so it can't
+         be mistaken for an actual switch. */
       @keyframes v8-opening-dial-bump {
-        0% { transform: rotate(0deg); }
-        40% { transform: rotate(calc(var(--bump-dir, 1) * 8deg)); }
-        100% { transform: rotate(0deg); }
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(calc(var(--bump-dir, 1) * 7px)); }
+        45% { transform: translateX(calc(var(--bump-dir, 1) * -5px)); }
+        70% { transform: translateX(calc(var(--bump-dir, 1) * 3px)); }
       }
 
       .v8-opening-sun-dots {
@@ -619,7 +652,8 @@ export function V8OpeningSunStyles() {
 
       .v8-opening-sun-swipe-zone {
         position: absolute;
-        inset: 0;
+        inset: -12%;
+        border-radius: 50%;
         touch-action: pan-y;
       }
 

@@ -13,6 +13,7 @@ import {
 import { flushSync } from "react-dom";
 import { buildV8ActiveAssets } from "@/components/v8-active/v8ActiveConfig";
 import { V8Toast } from "@/components/v8-active/V8Toast";
+import { useV8PageLock } from "@/components/v8-active/useV8PageLock";
 import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepage/HomepageSheets";
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
@@ -434,6 +435,8 @@ export function Index() {
   // or the canvas would render twice and this section would leave a blank
   // full-viewport gap above the Active page's content.
   const v8HeroPickerStage = v8HeroStage && !v8MeetupConfirmed;
+  // Opening is one screen too (Active locks via V8ListBuoys).
+  useV8PageLock(isV8Route && !v8MeetupConfirmed);
 
   // ENTER-MORPH: warm the Active page's own art while Opening is on screen,
   // so the morph never reveals half-loaded images. Skips the roster panels

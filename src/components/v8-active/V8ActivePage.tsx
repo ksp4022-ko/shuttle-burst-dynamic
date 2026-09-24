@@ -1093,7 +1093,7 @@ function V8SunMeetupName({
 // call the same onPrevious/onNextEvent, which just stage a target id
 // (see switchToAdjacentMeetup in V8ActivePage) -- the actual switch fires
 // from a separate effect once that state change propagates.
-const SWIPE_THRESHOLD_PX = 40;
+const SWIPE_THRESHOLD_PX = 24;
 
 // SUN-DIAL (日輪旋轉): switching meetup turns the sun like a dial. The old
 // text rotates out around the sun's centre while the new text rotates in;
@@ -1196,19 +1196,41 @@ function V8SunMeetupSwitcher({
   hasPrevious?: boolean;
   hasNext?: boolean;
 }) {
-  const startXRef = useRef<number | null>(null);
+  // Decided while the finger moves (not only on release): a mostly
+  // horizontal move past the threshold switches once per gesture. Safari
+  // can cancel a touch mid-way (touchcancel, no touchend), so waiting for
+  // the release made swipes feel unreliable.
+  const startRef = useRef<{ x: number; y: number; fired: boolean } | null>(null);
 
   const handleTouchStart = (event: TouchEvent) => {
-    startXRef.current = event.touches[0]?.clientX ?? 0;
+    const touch = event.touches[0];
+    startRef.current = touch ? { x: touch.clientX, y: touch.clientY, fired: false } : null;
+  };
+
+  const trySwipe = (x: number, y: number) => {
+    const start = startRef.current;
+    if (!start || start.fired) return;
+    const dx = x - start.x;
+    const dy = y - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    start.fired = true;
+    if (dx > 0) onPreviousEvent();
+    else onNextEvent();
+  };
+
+  const handleTouchMove = (event: TouchEvent) => {
+    const touch = event.touches[0];
+    if (touch) trySwipe(touch.clientX, touch.clientY);
   };
 
   const handleTouchEnd = (event: TouchEvent) => {
-    if (startXRef.current === null) return;
-    const endX = event.changedTouches[0]?.clientX ?? startXRef.current;
-    const delta = endX - startXRef.current;
-    if (delta > SWIPE_THRESHOLD_PX) onPreviousEvent();
-    else if (delta < -SWIPE_THRESHOLD_PX) onNextEvent();
-    startXRef.current = null;
+    const touch = event.changedTouches[0];
+    if (touch) trySwipe(touch.clientX, touch.clientY);
+    startRef.current = null;
+  };
+
+  const handleTouchCancel = () => {
+    startRef.current = null;
   };
 
   return (
@@ -1216,7 +1238,9 @@ function V8SunMeetupSwitcher({
       <div
         className="v8-sun-swipe-zone"
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         aria-hidden="true"
       />
       {controls.show ? (
@@ -2233,9 +2257,12 @@ export function V8ActiveStyles() {
          content (z-index default, painted first in DOM order) so it
          doesn't block taps on the date/name/note text or badges layered
          on top of it. */
+      /* Reaches a little past the sun's rim so a swipe that starts just
+         outside it still counts. */
       .v8-sun-swipe-zone {
         position: absolute;
-        inset: 0;
+        inset: -12%;
+        border-radius: 50%;
         touch-action: pan-y;
       }
 
@@ -2721,13 +2748,22 @@ export function V8ActiveStyles() {
       }
       /* End of the meetup list: a small turn that springs back. */
       .v8-sun-dial-clip.is-bump {
-        animation: v8-dial-bump 320ms cubic-bezier(.3, 1.6, .5, 1);
+        animation: v8-dial-bump 360ms ease-out;
       }
 
+      /* The clouds only show values; let a swipe starting on one reach the
+         sun's swipe zone underneath. */
+      .v8-sun-info-scattered {
+        pointer-events: none;
+      }
+
+      /* A sideways "no" shake -- deliberately not a rotation, so it can't
+         be mistaken for an actual switch. */
       @keyframes v8-dial-bump {
-        0% { transform: rotate(0deg); }
-        40% { transform: rotate(calc(var(--bump-dir, 1) * 8deg)); }
-        100% { transform: rotate(0deg); }
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(calc(var(--bump-dir, 1) * 7px)); }
+        45% { transform: translateX(calc(var(--bump-dir, 1) * -5px)); }
+        70% { transform: translateX(calc(var(--bump-dir, 1) * 3px)); }
       }
 
       .v8-sun-dots {
