@@ -157,6 +157,10 @@ export function V8ActivePage({
   // pendingAction check reads React state, so two taps inside the same frame
   // could both pass it; this ref closes that gap.
   const actionLockRef = useRef(false);
+  // Which of THIS page's own submits is in flight. flow.pendingAction is
+  // shared with meetup switching (switchMeetup marks itself as a "signup"),
+  // so 送出中 must not be derived from it.
+  const [ownSubmit, setOwnSubmit] = useState<"cta" | "helper" | null>(null);
   // Page-level feedback classes: is-feedback pauses the CTA drum while a
   // stamp animation plays; is-shaking is the ±2px 畫面輕震 after 請假 lands.
   const [feedbackActive, setFeedbackActive] = useState(false);
@@ -257,27 +261,26 @@ export function V8ActivePage({
     feedbackTimersRef.current = timers;
   };
 
-  const withActionLock = async (work: () => Promise<void>) => {
+  const withActionLock = async (kind: "cta" | "helper", work: () => Promise<void>) => {
     if (actionLockRef.current) return;
     actionLockRef.current = true;
+    setOwnSubmit(kind);
     try {
       await work();
     } finally {
       actionLockRef.current = false;
+      setOwnSubmit(null);
     }
   };
 
   if (!selectedEvent || !roster) return null;
 
   const busy = Boolean(pendingAction);
-  // The CTA shows 送出中 only for its own actions (not 代報/代退, whose
-  // modal buttons show it, and not meetup switching).
-  const ctaPending = Boolean(
-    pendingAction && !helperMode && ["signup", "fixed-leave", "fixed-return", "cancel-temp"].includes(pendingAction.type),
-  );
+  // 送出中 only for the CTA's own submit -- a meetup switch just disables it.
+  const ctaPending = ownSubmit === "cta";
 
   const runAction = (action: "fixed-leave" | "fixed-return" | "cancel-temp") =>
-    withActionLock(async () => {
+    withActionLock("cta", async () => {
       if (!identity || !lineAuthToken) return;
       const { signupId, name } = identity;
       if (action === "fixed-return") returnFeedbackRef.current = { signupId, name };
@@ -314,7 +317,9 @@ export function V8ActivePage({
   };
 
   const switchToAdjacentMeetup = (direction: -1 | 1) => {
-    if (events.length <= 1 || pendingAction) return;
+    // No switching while one of this page's submits is in flight, so its
+    // result can only ever land on the meetup it was sent for.
+    if (events.length <= 1 || pendingAction || actionLockRef.current) return;
     const currentIndex = Math.max(0, events.findIndex((event) => event.id === selectedEventId));
     const nextIndex = (currentIndex + direction + events.length) % events.length;
     const nextEvent = events[nextIndex];
@@ -323,7 +328,7 @@ export function V8ActivePage({
   };
   const canSwitchMeetup = events.length > 1;
 
-  const submitTigerSignup = () => withActionLock(async () => {
+  const submitTigerSignup = () => withActionLock("cta", async () => {
     if (!lineAuthToken || !lineIdentity?.profileComplete) return;
     if (!(identity?.signupType === "temp" && identity.status === "unregistered")) return;
     const submittedName = lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName;
@@ -341,7 +346,7 @@ export function V8ActivePage({
     if (result.ok) await refreshCancellableTempSignups();
   });
 
-  const submitHelperSignup = () => withActionLock(async () => {
+  const submitHelperSignup = () => withActionLock("helper", async () => {
     if (!lineAuthToken) return;
     const name = helperName.trim();
     const result = await flow.submitSignup(helperName, lineAuthToken);
@@ -364,7 +369,7 @@ export function V8ActivePage({
   // use-current-identity.ts), not authentication, so a permission check
   // against it right now would just be security theater. Recorded here so
   // the field is designed before it's needed, not bolted on later.
-  const cancelForSomeoneElse = (person: AlphaSignup) => withActionLock(async () => {
+  const cancelForSomeoneElse = (person: AlphaSignup) => withActionLock("helper", async () => {
     if (!lineAuthToken) return;
     const ok = await flow.runIdentityAction("cancel-temp", { id: person.id, name: person.name }, lineAuthToken);
     // On failure keep the modal and the selection so the admin can retry.
@@ -460,6 +465,7 @@ export function V8ActivePage({
       className={[
         "v8-active",
         entering ? "is-entering" : "",
+        ownSubmit ? "is-submitting" : "",
         helperMode ? "is-modal-open" : "",
         feedbackActive ? "is-feedback" : "",
         shaking ? "is-shaking" : "",
@@ -633,7 +639,7 @@ export function V8ActivePage({
                     disabled={!helperName.trim() || busy}
                     onClick={() => void submitHelperSignup()}
                   >
-                    {busy ? <V8SendingLabel /> : "確認報名"}
+                    {ownSubmit === "helper" ? <V8SendingLabel /> : "確認報名"}
                   </button>
                   <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
                     取消
@@ -696,7 +702,7 @@ export function V8ActivePage({
                       disabled={busy}
                       onClick={() => void cancelForSomeoneElse(selectedCancelPerson)}
                     >
-                      {busy ? <V8SendingLabel /> : `確認取消 ${selectedCancelPerson.name}`}
+                      {ownSubmit === "helper" ? <V8SendingLabel /> : `確認取消 ${selectedCancelPerson.name}`}
                     </button>
                   ) : null}
                   <button
@@ -2442,6 +2448,16 @@ export function V8ActiveStyles() {
         to { opacity: 1; scale: 1; }
       }
 
+      /* While a submit is in flight the meetup can't be switched. */
+      .v8-active.is-submitting .v8-sun-swipe-zone {
+        pointer-events: none;
+      }
+
+      .v8-active.is-submitting .v8-sun-switch-arrow {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
       .v8-active.is-feedback .v8-scroll-cta .v8-cta-interaction {
         animation: none;
       }
@@ -2575,6 +2591,14 @@ export function V8ActiveStyles() {
       .v8-scroll-cta:disabled,
       .v8-scroll-helper-btn:disabled,
       .v8-scroll-forget:disabled {
+        opacity: 0.55;
+      }
+
+      /* The buttons carry their own tuned inline opacity, which wins over the
+         rule above -- dim the artwork inside instead (the 送出中 chip on the
+         CTA stays fully visible). */
+      .v8-scroll-cta:disabled .v8-cta-interaction,
+      .v8-scroll-helper-btn:disabled > img {
         opacity: 0.55;
       }
 
