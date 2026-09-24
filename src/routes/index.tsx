@@ -438,6 +438,28 @@ export function Index() {
   // Opening is one screen too (Active locks via V8ListBuoys).
   useV8PageLock(isV8Route && !v8MeetupConfirmed);
 
+  // Image retry for flaky mobile networks: on iPhone 4G a dropped connection
+  // fails every image in flight at once (broken "?" icons) and nothing ever
+  // retried them. Retries up to 3 times with growing delays; the query
+  // string also bypasses a cached copy that may be truncated.
+  useEffect(() => {
+    if (!isV8Route) return;
+    const onImageError = (event: Event) => {
+      const image = event.target;
+      if (!(image instanceof HTMLImageElement)) return;
+      const tries = Number(image.dataset["v8Retry"] || 0);
+      const src = image.getAttribute("src");
+      if (tries >= 3 || !src || src.startsWith("data:")) return;
+      image.dataset["v8Retry"] = String(tries + 1);
+      const base = src.replace(/[?&]v8r=\d+$/, "");
+      window.setTimeout(() => {
+        image.src = `${base}${base.includes("?") ? "&" : "?"}v8r=${tries + 1}`;
+      }, 700 * (tries + 1));
+    };
+    document.addEventListener("error", onImageError, true);
+    return () => document.removeEventListener("error", onImageError, true);
+  }, [isV8Route]);
+
   // ENTER-MORPH: warm the Active page's own art while Opening is on screen,
   // so the morph never reveals half-loaded images. Skips the roster panels
   // that are off by default.
