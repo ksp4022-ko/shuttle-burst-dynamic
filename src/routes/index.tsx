@@ -441,21 +441,37 @@ export function Index() {
   // ENTER-MORPH: warm the Active page's own art while Opening is on screen,
   // so the morph never reveals half-loaded images. Skips the roster panels
   // that are off by default.
+  // Waits until Opening's own images have all finished (so it never competes
+  // with them on a slow connection) and only downloads into the HTTP cache
+  // (fetch, no image decode) to keep memory low on iPhone.
   useEffect(() => {
     if (!isV8Route || !v8HeroPickerStage || !v8OpenReady) return;
-    const timer = window.setTimeout(() => {
+    let cancelled = false;
+    let timer = 0;
+    const startedAt = Date.now();
+    const warm = () => {
+      if (cancelled) return;
+      const pending = Array.from(document.images).some((image) => !image.complete);
+      if (pending && Date.now() - startedAt < 15000) {
+        timer = window.setTimeout(warm, 600);
+        return;
+      }
       const assets = buildV8ActiveAssets(import.meta.env.BASE_URL) as Record<string, unknown>;
-      Object.entries(assets).forEach(([key, src]) => {
-        if (typeof src !== "string" || key.startsWith("rosterV2") || key === "rosterFrame") return;
-        const image = new Image();
-        image.src = src;
+      const urls = Object.entries(assets)
+        .filter(([key, src]) => typeof src === "string" && !key.startsWith("rosterV2") && key !== "rosterFrame")
+        .map(([, src]) => src as string);
+      ["list-buoy-wave-band-v1.webp", "list-buoy-header-leave-v1.webp", "list-buoy-header-main-v1.webp", "list-buoy-header-wait-v1.webp"].forEach((file) =>
+        urls.push(`${import.meta.env.BASE_URL}v8-preview/active/${file}`),
+      );
+      urls.forEach((url) => {
+        void fetch(url, { priority: "low" } as RequestInit).catch(() => undefined);
       });
-      ["list-buoy-wave-band-v1.webp", "list-buoy-header-leave-v1.webp", "list-buoy-header-main-v1.webp", "list-buoy-header-wait-v1.webp"].forEach((file) => {
-        const image = new Image();
-        image.src = `${import.meta.env.BASE_URL}v8-preview/active/${file}`;
-      });
-    }, 1200);
-    return () => window.clearTimeout(timer);
+    };
+    timer = window.setTimeout(warm, 1200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [isV8Route, v8HeroPickerStage, v8OpenReady]);
   const legacyActiveStage = (active || rotating) && !v8HeroStage;
   const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls, openMotionPreviewLab);
