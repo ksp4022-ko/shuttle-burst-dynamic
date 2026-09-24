@@ -34,13 +34,18 @@ export function V8SunDateStretchText({
     const fit = () => {
       if (frame) window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
-        const boxRect = box.getBoundingClientRect();
-        const textRect = measureNode.getBoundingClientRect();
-        if (boxRect.width <= 0 || boxRect.height <= 0 || textRect.width <= 0 || textRect.height <= 0) return;
+        // Layout sizes, not getBoundingClientRect: the sun can be mid-rotation
+        // (SUN-DIAL) when this runs, and a rotated bounding box would give a
+        // wrong ratio (the date then overflows its box).
+        const boxWidth = box.offsetWidth;
+        const boxHeight = box.offsetHeight;
+        const textWidth = measureNode.offsetWidth;
+        const textHeight = measureNode.offsetHeight;
+        if (boxWidth <= 0 || boxHeight <= 0 || textWidth <= 0 || textHeight <= 0) return;
 
         setScale({
-          x: boxRect.width / textRect.width,
-          y: boxRect.height / textRect.height,
+          x: boxWidth / textWidth,
+          y: boxHeight / textHeight,
         });
       });
     };
