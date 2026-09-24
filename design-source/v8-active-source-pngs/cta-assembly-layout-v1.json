@@ -1,0 +1,96 @@
+{
+  "_note": "所有座標以總成原圖像素為準（1536×1024），x,y 為左上角；每張圖放在總成容器內的對應位置即可對齊",
+  "assembly": {
+    "width": 1536,
+    "height": 1024
+  },
+  "stack_bottom_to_top": [
+    "cta-assembly-base-v1-source.png",
+    "helper-signup",
+    "helper-cancel",
+    "bill",
+    "main（依狀態換圖）",
+    "cta-assembly-front-v1-source.png"
+  ],
+  "base": {
+    "file": "cta-assembly-base-v1-source.png",
+    "x": 0,
+    "y": 0,
+    "w": 1536,
+    "h": 1024
+  },
+  "front": {
+    "file": "cta-assembly-front-v1-source.png",
+    "x": 678,
+    "y": 162,
+    "w": 175,
+    "h": 809
+  },
+  "main": {
+    "x": 356,
+    "y": 171,
+    "w": 838,
+    "h": 368,
+    "states": {
+      "應戰": "cta-plaque-temp-signup-v2-source.png",
+      "告假": "cta-plaque-leave-v2-source.png",
+      "歸陣": "cta-plaque-return-v2-source.png",
+      "退陣": "cta-plaque-temp-cancel-v2-source.png"
+    },
+    "blank": "cta-plaque-blank-v1-source.png",
+    "glowMask": "cta-plaque-main-glowmask-v1.png（流光外框改依這張算，不要用底板本身的透明邊）",
+    "hitArea": [
+      330,
+      170,
+      880,
+      350
+    ],
+    "texts": {
+      "應戰": "cta-text-temp-signup-v2-source.png",
+      "告假": "cta-text-leave-v2-source.png",
+      "歸陣": "cta-text-return-v2-source.png",
+      "退陣": "cta-text-temp-cancel-v2-source.png"
+    },
+    "_textNote": "文字圖與底板同尺寸，可直接疊在 blank 上；或直接用 states 的完整圖"
+  },
+  "helperSignup": {
+    "file": "cta-plaque-helper-signup-v3-source.png",
+    "x": 85,
+    "y": 520,
+    "w": 506,
+    "h": 219,
+    "hitArea": [
+      70,
+      525,
+      535,
+      225
+    ]
+  },
+  "helperCancel": {
+    "file": "cta-plaque-helper-cancel-v3-source.png",
+    "x": 948,
+    "y": 525,
+    "w": 508,
+    "h": 215,
+    "hitArea": [
+      930,
+      525,
+      535,
+      225
+    ]
+  },
+  "bill": {
+    "file": "cta-plaque-bill-v2-source.png",
+    "x": 468,
+    "y": 703,
+    "w": 604,
+    "h": 234,
+    "hitArea": [
+      470,
+      750,
+      600,
+      215
+    ]
+  },
+  "_hitAreaFormat": "[x, y, width, height]，比按鈕稍大，彼此不重疊"
+}

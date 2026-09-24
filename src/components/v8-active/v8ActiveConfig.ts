@@ -92,6 +92,51 @@ export const v8ActiveCtaPlaqueFiles = {
   helperCancel: "cta-plaque-helper-cancel-v2.webp",
 } as const;
 
+// CTA-ASSEMBLY (2026-09-25): the identity scroll's buttons as one assembly
+// (see V8CtaAssembly.tsx). The main plaque is the blank panel plus one text
+// layer per state (blank + text is pixel-identical to the designer's
+// full cta-plaque-*-v2 state images, and lets only the text crossfade).
+// Display exports are the sources at 0.625x (assembly 1536 -> 960 wide).
+// The v1/v2 plaques above stay until the assembly is accepted.
+export const v8CtaAssemblyFiles = {
+  base: "cta-assembly-base-v1.webp",
+  front: "cta-assembly-front-v1.webp",
+  mainBlank: "cta-plaque-blank-v1.webp",
+  textSeasonLeave: "cta-text-leave-v2.webp",
+  textSeasonReturn: "cta-text-return-v2.webp",
+  textTempSignup: "cta-text-temp-signup-v2.webp",
+  textTempCancel: "cta-text-temp-cancel-v2.webp",
+  helperSignup: "cta-plaque-helper-signup-v3.webp",
+  helperCancel: "cta-plaque-helper-cancel-v3.webp",
+  bill: "cta-plaque-bill-v2.webp",
+} as const;
+
+export type V8CtaAssemblyRect = { x: number; y: number; w: number; h: number };
+
+// Straight from design-source/v8-active-source-pngs/cta-assembly-layout-v1.json
+// (px in the 1536x1024 assembly; hit areas are a bit larger than the art
+// and never overlap).
+export const v8CtaAssemblyLayout = {
+  width: 1536,
+  height: 1024,
+  front: { x: 678, y: 162, w: 175, h: 809 },
+  main: { art: { x: 356, y: 171, w: 838, h: 368 }, hit: { x: 330, y: 170, w: 880, h: 350 } },
+  helperSignup: { art: { x: 85, y: 520, w: 506, h: 219 }, hit: { x: 70, y: 525, w: 535, h: 225 } },
+  helperCancel: { art: { x: 948, y: 525, w: 508, h: 215 }, hit: { x: 930, y: 525, w: 535, h: 225 } },
+  bill: { art: { x: 468, y: 703, w: 604, h: 234 }, hit: { x: 470, y: 750, w: 600, h: 215 } },
+} as const;
+
+// Whole-assembly placement only (X/Y % of the tiger-scroll box, same
+// convention as the identity elements) -- no per-plaque controls.
+export type V8CtaAssemblyControls = {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  zIndex: number;
+};
+
 // 上限 (capacity) -- a 4th sun-side cloud badge, same template family as
 // ballType/tempFee/courtCount but added later (2026-09-10) so it's kept as
 // its own standalone control group (V8ActiveCapacityBadgeControls below)
@@ -228,6 +273,18 @@ export function buildV8ActiveAssets(baseUrl: string) {
     sunSwitchArrowPrev: `${statusAssetBase}/${v8ActiveSunSwitchArrowFiles.prev}`,
     sunSwitchArrowNext: `${statusAssetBase}/${v8ActiveSunSwitchArrowFiles.next}`,
     sunTitleKangxuan: `${statusAssetBase}/${v8ActiveSunTitleFiles.kangxuan}`,
+    ctaAssembly: {
+      base: `${activeBase}/${v8CtaAssemblyFiles.base}`,
+      front: `${activeBase}/${v8CtaAssemblyFiles.front}`,
+      mainBlank: `${activeBase}/${v8CtaAssemblyFiles.mainBlank}`,
+      textSeasonLeave: `${activeBase}/${v8CtaAssemblyFiles.textSeasonLeave}`,
+      textSeasonReturn: `${activeBase}/${v8CtaAssemblyFiles.textSeasonReturn}`,
+      textTempSignup: `${activeBase}/${v8CtaAssemblyFiles.textTempSignup}`,
+      textTempCancel: `${activeBase}/${v8CtaAssemblyFiles.textTempCancel}`,
+      helperSignup: `${activeBase}/${v8CtaAssemblyFiles.helperSignup}`,
+      helperCancel: `${activeBase}/${v8CtaAssemblyFiles.helperCancel}`,
+      bill: `${activeBase}/${v8CtaAssemblyFiles.bill}`,
+    },
   };
 }
 
