@@ -6,13 +6,18 @@ import { useEffect } from "react";
 // because Opening unmounts right as Active mounts -- the lock must not drop
 // in between.
 //
-// 2026-09-24: the lock is done by cancelling page touchmoves only. An
-// earlier version also forced html/body to overflow:hidden + height:100dvh;
-// right after it shipped, the Opening page on iPhone Safari showed most of its
-// images missing (suspected cause, not confirmed), so html/body layout is no
-// longer touched (only overscroll).
+// Pins the page to the top with html/body overflow:hidden + height:100dvh
+// (plus cancelling page touchmoves). A touch-only variant was tried on
+// 2026-09-24 and reverted: Safari's scroll restoration (reload / opening from
+// LINE) could leave the page scrolled down with no way back up. (The missing
+// images seen that day turned out to be dropped mobile connections -- see the
+// image retry in routes/index.tsx.)
 let lockCount = 0;
-const LOCKED_PROPS: [string, string][] = [["overscroll-behavior", "none"]];
+const LOCKED_PROPS: [string, string][] = [
+  ["overflow", "hidden"],
+  ["overscroll-behavior", "none"],
+  ["height", "100dvh"],
+];
 const saved = new Map<string, string>();
 
 function touchCanMove(target: EventTarget | null) {
@@ -32,6 +37,17 @@ function onTouchMove(event: TouchEvent) {
   if (!touchCanMove(event.target)) event.preventDefault();
 }
 
+// Anything that still scrolls the root (scroll restoration, focus jumps)
+// gets pulled back to the top -- except while typing, so the iPhone
+// keyboard can move the page as it needs to.
+function onScroll() {
+  const active = document.activeElement;
+  if (active && active.matches("input, textarea, select")) return;
+  if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+}
+
+let savedScrollRestoration: ScrollRestoration | null = null;
+
 function lock() {
   for (const [tag, el] of [["html", document.documentElement], ["body", document.body]] as const) {
     for (const [prop, value] of LOCKED_PROPS) {
@@ -40,8 +56,13 @@ function lock() {
     }
   }
   document.documentElement.classList.add("v8-page-locked");
+  if ("scrollRestoration" in history) {
+    savedScrollRestoration = history.scrollRestoration;
+    history.scrollRestoration = "manual";
+  }
   window.scrollTo(0, 0);
   document.addEventListener("touchmove", onTouchMove, { passive: false });
+  window.addEventListener("scroll", onScroll, { passive: true });
 }
 
 function unlock() {
@@ -54,6 +75,8 @@ function unlock() {
   }
   document.documentElement.classList.remove("v8-page-locked");
   document.removeEventListener("touchmove", onTouchMove);
+  window.removeEventListener("scroll", onScroll);
+  if (savedScrollRestoration && "scrollRestoration" in history) history.scrollRestoration = savedScrollRestoration;
 }
 
 export function useV8PageLock(active = true) {
