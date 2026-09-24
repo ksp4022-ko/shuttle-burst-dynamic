@@ -85,11 +85,33 @@ export function V8ListBuoys({
   const timers = useRef<number[]>([]);
   const idleTimer = useRef<number | undefined>(undefined);
 
-  // Warm the panel art (the largest file here) so the first expand isn't blank.
-  useEffect(() => {
-    const image = new Image();
-    image.src = `${assetBase}${v8ActiveListBuoyFiles.panel}`;
+  // The panel art (the largest file here, ~450KB) is not fetched on mount:
+  // it loads a few seconds after Active settles, or as soon as a header is
+  // touched. If a header is tapped before it's ready, the expand waits for it
+  // (at most 1.5s) so the panel never rises blank.
+  const panelReadyRef = useRef(false);
+  const panelPromiseRef = useRef<Promise<void> | null>(null);
+  const expandWaitingRef = useRef(false);
+  const ensurePanelArt = useCallback(() => {
+    if (!panelPromiseRef.current) {
+      panelPromiseRef.current = new Promise<void>((resolve) => {
+        const image = new Image();
+        const done = () => {
+          panelReadyRef.current = true;
+          resolve();
+        };
+        image.onload = done;
+        image.onerror = done;
+        image.src = `${assetBase}${v8ActiveListBuoyFiles.panel}`;
+      });
+    }
+    return panelPromiseRef.current;
   }, [assetBase]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void ensurePanelArt(), 3000);
+    return () => window.clearTimeout(timer);
+  }, [ensurePanelArt]);
 
   const clearTimers = () => {
     timers.current.forEach((timer) => window.clearTimeout(timer));
@@ -152,10 +174,19 @@ export function V8ListBuoys({
   }, [phase, forceExpanded]);
 
   const expand = (key: ListKey | null) => {
-    if (phase !== "collapsed") return;
-    clearTimers();
-    setFlashList(key);
-    setPhase("expanding");
+    if (phase !== "collapsed" || expandWaitingRef.current) return;
+    const open = () => {
+      expandWaitingRef.current = false;
+      clearTimers();
+      setFlashList(key);
+      setPhase("expanding");
+    };
+    if (panelReadyRef.current) {
+      open();
+      return;
+    }
+    expandWaitingRef.current = true;
+    void Promise.race([ensurePanelArt(), new Promise((resolve) => window.setTimeout(resolve, 1500))]).then(open);
   };
 
   // Runs after the panel mounts, so its final rect can be measured.
@@ -226,6 +257,7 @@ export function V8ListBuoys({
               type="button"
               className={"v8-list-header" + (headersHidden ? " is-hidden" : "")}
               aria-label={HEADER_LABELS[key]}
+              onPointerDown={() => void ensurePanelArt()}
               onClick={() => expand(key)}
               style={{
                 left: `${header.x}%`,

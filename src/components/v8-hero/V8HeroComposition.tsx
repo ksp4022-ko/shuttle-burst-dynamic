@@ -144,7 +144,11 @@ const preloadHeroImages = (sources: string[], prioritySources: string[] = []) =>
 // trimming what actually gets preloaded (see requiredAssetEntries below and
 // the extraPreloadSrcs filtering at each call site) rather than relying on
 // a longer timeout alone.
-const ASSET_PRELOAD_TIMEOUT_MS = 9000;
+// 2026-09-25: 9000 -> 5000. The long blanks seen on iPhone turned out to be
+// the page-lock layout (fixed in useV8PageLock), and failed images now retry
+// on their own (routes/index.tsx), so a 9s invisible canvas mostly just read
+// as "stuck".
+const ASSET_PRELOAD_TIMEOUT_MS = 5000;
 const preloadHeroImagesWithTimeout = (sources: string[], prioritySources: string[] = []) =>
   Promise.race([
     preloadHeroImages(sources, prioritySources),

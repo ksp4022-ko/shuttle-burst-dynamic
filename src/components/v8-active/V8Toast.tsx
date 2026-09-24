@@ -57,8 +57,11 @@ export function V8Toast({
   const [visibleNotice, setVisibleNotice] = useState("");
   const assetBase = `${import.meta.env.BASE_URL}v8-toast/`;
 
+  // Deferred so the two wave images (~520KB) don't compete with the page's
+  // first paint; still well before a typical first toast.
   useEffect(() => {
-    preloadToastWaveAssets(assetBase);
+    const timer = window.setTimeout(() => preloadToastWaveAssets(assetBase), 4000);
+    return () => window.clearTimeout(timer);
   }, [assetBase]);
 
   useEffect(() => {
