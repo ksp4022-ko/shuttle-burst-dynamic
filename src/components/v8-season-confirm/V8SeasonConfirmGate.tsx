@@ -176,6 +176,21 @@ function formatMonthDay(value?: string | null) {
   return `${Number(match[1])}/${Number(match[2])}`;
 }
 
+function inferSeasonRange(name?: string | null) {
+  const match = name?.match(/(\d{4}).*?第?\s*([1-4])\s*季/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const quarter = Number(match[2]);
+  const startMonth = (quarter - 1) * 3 + 1;
+  const endMonth = quarter * 3;
+  const endDay = new Date(Date.UTC(year, endMonth, 0)).getUTCDate();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return {
+    startDate: `${year}-${pad(startMonth)}-01`,
+    endDate: `${year}-${pad(endMonth)}-${pad(endDay)}`,
+  };
+}
+
 function money(value?: number | null) {
   return typeof value === "number" && value > 0 ? `${value.toLocaleString("zh-TW")} 元` : null;
 }
@@ -421,15 +436,19 @@ function V8SeasonConfirmPage({
   const perEventFee =
     info.perEventSeasonFee ??
     (info.seasonFee && info.eventCount ? Math.round(info.seasonFee / info.eventCount) : null);
-  const seasonStart = formatSeasonDate(info.targetSeason?.startDate);
-  const seasonEnd = formatSeasonDate(info.targetSeason?.endDate);
-  const firstMeetDate = formatMonthDay(info.targetSeason?.startDate);
+  const inferredSeasonRange = inferSeasonRange(info.targetSeason?.name);
+  const seasonStartDate = info.targetSeason?.startDate || inferredSeasonRange?.startDate;
+  const seasonEndDate = info.targetSeason?.endDate || inferredSeasonRange?.endDate;
+  const seasonStart = formatSeasonDate(seasonStartDate);
+  const seasonEnd = formatSeasonDate(seasonEndDate);
+  const firstMeetDate = formatMonthDay(seasonStartDate);
+  const paymentDateText = firstMeetDate ? `${firstMeetDate} 首次開打時` : "首次開打時";
   const courtCount = info.courtCount || 2;
   const hours = info.hours || 2;
   const seasonInfoText = `期間：${seasonStart && seasonEnd ? `${seasonStart}～${seasonEnd}` : "依公告"}
 時間：每週四 22:00～24:00
 用球：${info.ballType || "MS-101"}
-季打費請於 ${firstMeetDate || "首次開打"} 首次開打時繳交，使用 LINE Pay 付款。
+季打費請於 ${paymentDateText}繳交，使用 LINE Pay 付款。
 本季不預收冷氣費，視天氣及現場需求加開。`;
   const addCourtRulesText = `基本場地：${courtCount} 場 ${hours} 小時，上限 15 人
 16～18 人：加開 1 場 1 小時
