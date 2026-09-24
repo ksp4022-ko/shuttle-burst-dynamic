@@ -10,6 +10,8 @@ import {
   type RefObject,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
+import { buildV8ActiveAssets } from "@/components/v8-active/v8ActiveConfig";
 import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepage/HomepageSheets";
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
@@ -387,6 +389,11 @@ export function Index() {
   const [countdownKey, setCountdownKey] = useState(0);
   const [rosterVisible, setRosterVisible] = useState(false);
   const [v8MeetupConfirmed, setV8MeetupConfirmed] = useState(false);
+  // ENTER-MORPH: true only while the staged Active entrance plays after a
+  // 進入戰局 tap (never on reload / direct link / LINE return).
+  const [v8Entering, setV8Entering] = useState(false);
+  const v8MorphBusyRef = useRef(false);
+  const v8ViewTransitionRef = useRef<{ skipTransition?: () => void } | null>(null);
   const [v8IntroBlocking, setV8IntroBlocking] = useState(Boolean(v8IntroSiteId));
   const [v8IntroReplaySignal, setV8IntroReplaySignal] = useState(0);
   const replayTimersRef = useRef<number[]>([]);
@@ -420,6 +427,26 @@ export function Index() {
   // or the canvas would render twice and this section would leave a blank
   // full-viewport gap above the Active page's content.
   const v8HeroPickerStage = v8HeroStage && !v8MeetupConfirmed;
+
+  // ENTER-MORPH: warm the Active page's own art while Opening is on screen,
+  // so the morph never reveals half-loaded images. Skips the roster panels
+  // that are off by default.
+  useEffect(() => {
+    if (!isV8Route || !v8HeroPickerStage || !v8OpenReady) return;
+    const timer = window.setTimeout(() => {
+      const assets = buildV8ActiveAssets(import.meta.env.BASE_URL) as Record<string, unknown>;
+      Object.entries(assets).forEach(([key, src]) => {
+        if (typeof src !== "string" || key.startsWith("rosterV2") || key === "rosterFrame") return;
+        const image = new Image();
+        image.src = src;
+      });
+      ["list-buoy-wave-band-v1.webp", "list-buoy-header-leave-v1.webp", "list-buoy-header-main-v1.webp", "list-buoy-header-wait-v1.webp"].forEach((file) => {
+        const image = new Image();
+        image.src = `${import.meta.env.BASE_URL}v8-preview/active/${file}`;
+      });
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [isV8Route, v8HeroPickerStage, v8OpenReady]);
   const legacyActiveStage = (active || rotating) && !v8HeroStage;
   const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls, openMotionPreviewLab);
   const openSunControls = buildV8OpeningSunControls(openTuningControls);
@@ -617,19 +644,68 @@ export function Index() {
     ],
   );
 
+  // Opening -> Active stays one state switch on one route. Where the View
+  // Transitions API exists (iOS 18+), the switch runs inside
+  // document.startViewTransition: step 1 (plaque press) starts on tap, the
+  // morph 120ms later (sun moves, ink circle reveals Active from the button
+  // centre). Without it -- or with reduced motion -- the switch is direct;
+  // the staged entrance still plays unless motion is reduced.
+  const enterV8Active = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        const confirm = () => {
+          setV8MeetupConfirmed(true);
+          if (!reducedMotion) setV8Entering(true);
+        };
+        const doc = document as Document & {
+          startViewTransition?: (update: () => void) => { finished: Promise<void>; skipTransition?: () => void };
+        };
+        if (reducedMotion || typeof doc.startViewTransition !== "function") {
+          confirm();
+          resolve();
+          return;
+        }
+        const html = document.documentElement;
+        const rect = confirmMeetupButtonRef.current?.getBoundingClientRect();
+        if (rect) {
+          html.style.setProperty("--v8-morph-x", `${Math.round(rect.left + rect.width / 2)}px`);
+          html.style.setProperty("--v8-morph-y", `${Math.round(rect.top + rect.height / 2)}px`);
+        }
+        html.classList.add("v8-morph-launch");
+        window.setTimeout(() => {
+          html.classList.add("v8-morphing");
+          const transition = doc.startViewTransition!(() => flushSync(confirm));
+          v8ViewTransitionRef.current = transition;
+          void transition.finished.finally(() => {
+            html.classList.remove("v8-morphing", "v8-morph-launch");
+            v8ViewTransitionRef.current = null;
+          });
+          resolve();
+        }, 120);
+      }),
+    [],
+  );
+
   const confirmV8MeetupSelection = useCallback(async () => {
-    if (flow.pendingAction) return;
+    if (flow.pendingAction || v8MorphBusyRef.current) return;
     const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
     if (!targetId) return;
+    v8MorphBusyRef.current = true;
     markPreviewInteraction();
     setCountdownRemaining(null);
-    setV8MeetupConfirmed(true);
+    try {
+      await enterV8Active();
+    } finally {
+      v8MorphBusyRef.current = false;
+    }
     if (targetId === flow.selectedEventId) {
       flow.setPendingSwitchEventId("");
       return;
     }
     await flow.switchMeetup();
   }, [
+    enterV8Active,
     flow.pendingAction,
     flow.pendingSwitchEventId,
     flow.selectedEventId,
@@ -637,6 +713,22 @@ export function Index() {
     flow.switchMeetup,
     markPreviewInteraction,
   ]);
+
+  // The staged entrance lasts ~1.7s; any tap during it jumps to the end.
+  useEffect(() => {
+    if (!v8Entering) return;
+    const finish = () => {
+      v8ViewTransitionRef.current?.skipTransition?.();
+      setV8Entering(false);
+    };
+    const timer = window.setTimeout(() => setV8Entering(false), 1700);
+    const arm = window.setTimeout(() => window.addEventListener("pointerdown", finish, { capture: true, once: true }), 50);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(arm);
+      window.removeEventListener("pointerdown", finish, { capture: true });
+    };
+  }, [v8Entering]);
 
   useEffect(() => {
     if (!preview || flow.pendingSwitchEventId || !flow.selectedEventId) return;
@@ -1352,7 +1444,7 @@ export function Index() {
               hasMultipleEvents={flow.events.length > 1}
               confirmed={v8MeetupConfirmed}
               confirmButtonRef={confirmMeetupButtonRef}
-              confirmDisabled={Boolean(flow.pendingAction) || !previewPickedEvent}
+              confirmDisabled={Boolean(flow.pendingAction) || !previewPickedEvent || v8Entering}
               onPreviousEvent={canSwitchMeetup ? () => selectAdjacentV8Meetup(-1) : undefined}
               onNextEvent={canSwitchMeetup ? () => selectAdjacentV8Meetup(1) : undefined}
               onConfirm={() => void confirmV8MeetupSelection()}
@@ -1578,7 +1670,7 @@ export function Index() {
       )}
 
       {isV8Route && v8MeetupConfirmed ? (
-        <V8ActivePage flow={flow} onBeforeLineLogin={rememberV8LineLoginReturn} />
+        <V8ActivePage flow={flow} onBeforeLineLogin={rememberV8LineLoginReturn} entering={v8Entering} />
       ) : null}
 
       {!isV8Route && (

@@ -13,6 +13,7 @@ import {
   type V8HeroControls,
 } from "./v8HeroConfig";
 import { V8CtaGlowOutline, V8CtaGlowOutlineStyles } from "@/components/v8-active/V8CtaGlowOutline";
+import { V8EnterMorphStyles } from "./V8EnterMorphStyles";
 
 type V8HeroCompositionProps = {
   // Only used pre-confirm (the meetup picker) -- optional so callers that
@@ -488,6 +489,7 @@ export function V8HeroComposition({
     <section className="sd-v8-hero-composition" aria-label="V8 聚會選擇" style={rootStyle}>
       <V8HeroAmbientStyles />
       <V8CtaGlowOutlineStyles />
+      <V8EnterMorphStyles />
       <div style={stageShellStyle}>
         <div data-v8-hero-stage="" style={stageAspectRatio ? { ...stageStyle, aspectRatio: stageAspectRatio } : stageStyle}>
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
@@ -495,6 +497,7 @@ export function V8HeroComposition({
             <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
             <DecorLayer src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
             <div
+              data-v8-sun=""
               style={
                 {
                   position: "absolute",
@@ -695,6 +698,7 @@ export function V8HeroComposition({
             ) : null}
             {controls.scrollShow ? (
               <div
+                className="v8-hero-scroll"
                 aria-hidden={false}
                 style={{
                   position: "absolute",
@@ -736,6 +740,7 @@ export function V8HeroComposition({
             ) : null}
             {controls.tigerScrollShow ? (
               <div
+                className="v8-hero-scroll"
                 aria-hidden={false}
                 style={{
                   position: "absolute",
@@ -838,6 +843,7 @@ export function V8HeroComposition({
                   disabled={confirmDisabled}
                   onClick={onConfirm}
                   className="v8-hero-enter-battle-cta"
+                  data-v8-enter-cta=""
                   style={{
                     position: "absolute",
                     left: `${controls.ctaX}%`,
