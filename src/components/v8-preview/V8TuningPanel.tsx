@@ -562,6 +562,36 @@ export function V8TuningPanel({
             </button>
           </>
         ) : null}
+        {selectedTarget === "ACTIVE LIST PANEL" ? (
+          <>
+            <label style={inlineSelectLabelStyle}>
+              TEXT COLOR
+              <input
+                type="color"
+                value={controls.activeListBuoyPanelTextColor}
+                onChange={(event) => update("activeListBuoyPanelTextColor", event.currentTarget.value)}
+                style={compactSelectStyle}
+              />
+            </label>
+            <label style={inlineSelectLabelStyle}>
+              FONT
+              <select
+                value={controls.activeListBuoyPanelFontFamily}
+                onChange={(event) => update("activeListBuoyPanelFontFamily", event.currentTarget.value)}
+                style={compactSelectStyle}
+              >
+                {v8ActiveRosterFontOptions.map((option) => (
+                  <option key={option.label} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" onClick={() => update("activeListBuoyPanelBold", !controls.activeListBuoyPanelBold)} style={smallButtonStyle}>
+              {controls.activeListBuoyPanelBold ? "Bold ON" : "Bold OFF"}
+            </button>
+          </>
+        ) : null}
         {selectedTarget === "ACTIVE ROSTER V2 A1" ? (
           <>
             <label style={inlineSelectLabelStyle}>

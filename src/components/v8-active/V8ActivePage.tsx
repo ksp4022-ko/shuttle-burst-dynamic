@@ -7,9 +7,11 @@ import { type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
+  activeListBuoyTargets,
   activeTargetOrder,
   buildV8ActiveCapacityBadgeControls,
   buildV8ActiveEmaTextsControls,
+  buildV8ActiveListBuoysControls,
   buildV8ActiveHeroOverrides,
   buildV8ActiveIdentityCardControls,
   buildV8ActiveInfoCardsControls,
@@ -51,6 +53,7 @@ import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { V8Toast } from "./V8Toast";
 import { V8HeightGuides } from "./V8HeightGuides";
+import { V8ListBuoys } from "./V8ListBuoys";
 import { V8SunDateStretchText } from "./V8SunDateStretchText";
 import { type V8CtaGlowOutlineKey } from "./v8CtaGlowOutlines";
 import { V8CtaGlowOutline } from "./V8CtaGlowOutline";
@@ -384,6 +387,10 @@ export function V8ActivePage({
   const rosterV2Controls = buildV8ActiveRosterV2Controls(tuningControls);
   const switchArrowControls = buildV8ActiveSwitchArrowsControls(tuningControls);
   const emaTextsControls = buildV8ActiveEmaTextsControls(tuningControls);
+  const listBuoysControls = buildV8ActiveListBuoysControls(tuningControls);
+  // Real ACTIVE page only: the list-buoy targets are appended here rather
+  // than to the shared activeTargetOrder, so /v8/preview is unchanged.
+  const activeTuningTargets = [...activeTargetOrder, ...activeListBuoyTargets];
 
   // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
   // URLs handed to sunContent/infoCardsContent/rosterListsContent below,
@@ -731,7 +738,7 @@ export function V8ActivePage({
         <V8TuningPanel
           controls={tuningControls}
           setControls={setTuningControls}
-          targetOrder={activeTargetOrder}
+          targetOrder={activeTuningTargets}
           selectedTarget={tuningTarget}
           onSelectTarget={setTuningTarget}
           motionPreviewLab={motionPreviewLab}
@@ -764,6 +771,15 @@ export function V8ActivePage({
           ×
         </button>
       ) : null}
+      <V8ListBuoys
+        assetBase={`${import.meta.env.BASE_URL}v8-preview/active/`}
+        controls={listBuoysControls}
+        confirmed={rosterConfirmed}
+        leave={rosterLeave}
+        waiting={rosterWaiting}
+        ownSignupId={identity?.signupId || null}
+        forceExpanded={tuningOpen && tuningTarget === "ACTIVE LIST PANEL"}
+      />
       <V8Toast notice={flow.notice} motionMode={flow.motionMode} setNotice={flow.setNotice} />
     </div>
   );
