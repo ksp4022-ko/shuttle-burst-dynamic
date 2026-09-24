@@ -2327,18 +2327,18 @@ export const controlRanges = {
   activeListBuoyPanelZIndex: { label: "名單面板 Z-Index", min: 0, max: 40 },
   activeListBuoyPanelFontSize: { label: "名單文字 Font Size", min: 8, max: 28 },
   activeListBuoyPanelLineHeight: { label: "名單文字 Line Height", min: 1, max: 2.4, step: 0.05 },
-  openSunDotsX: { label: "OPEN 場次金點 X %", min: -20, max: 120 },
-  openSunDotsY: { label: "OPEN 場次金點 Y %", min: -20, max: 140 },
-  openSunDotsScale: { label: "OPEN 場次金點 Scale", min: 0.3, max: 3, step: 0.01 },
-  openSunDotsRotation: { label: "OPEN 場次金點 Rotation", min: -180, max: 180 },
-  openSunDotsOpacity: { label: "OPEN 場次金點 Opacity", min: 0, max: 100 },
-  openSunDotsZIndex: { label: "OPEN 場次金點 Z-Index", min: 0, max: 40 },
-  activeSunDotsX: { label: "ACTIVE 場次金點 X %", min: -20, max: 120 },
-  activeSunDotsY: { label: "ACTIVE 場次金點 Y %", min: -20, max: 140 },
-  activeSunDotsScale: { label: "ACTIVE 場次金點 Scale", min: 0.3, max: 3, step: 0.01 },
-  activeSunDotsRotation: { label: "ACTIVE 場次金點 Rotation", min: -180, max: 180 },
-  activeSunDotsOpacity: { label: "ACTIVE 場次金點 Opacity", min: 0, max: 100 },
-  activeSunDotsZIndex: { label: "ACTIVE 場次金點 Z-Index", min: 0, max: 40 },
+  openSunDotsX: { label: "OPEN 場次指示 X %", min: -20, max: 120 },
+  openSunDotsY: { label: "OPEN 場次指示 Y %", min: -20, max: 140 },
+  openSunDotsScale: { label: "OPEN 場次指示 Scale", min: 0.3, max: 3, step: 0.01 },
+  openSunDotsRotation: { label: "OPEN 場次指示 Rotation", min: -180, max: 180 },
+  openSunDotsOpacity: { label: "OPEN 場次指示 Opacity", min: 0, max: 100 },
+  openSunDotsZIndex: { label: "OPEN 場次指示 Z-Index", min: 0, max: 40 },
+  activeSunDotsX: { label: "ACTIVE 場次指示 X %", min: -20, max: 120 },
+  activeSunDotsY: { label: "ACTIVE 場次指示 Y %", min: -20, max: 140 },
+  activeSunDotsScale: { label: "ACTIVE 場次指示 Scale", min: 0.3, max: 3, step: 0.01 },
+  activeSunDotsRotation: { label: "ACTIVE 場次指示 Rotation", min: -180, max: 180 },
+  activeSunDotsOpacity: { label: "ACTIVE 場次指示 Opacity", min: 0, max: 100 },
+  activeSunDotsZIndex: { label: "ACTIVE 場次指示 Z-Index", min: 0, max: 40 },
   activeRosterV2A1FontSize: { label: "三名單v2 A1 Font Size", min: 8, max: 24 },
   activeRosterV2A1LineHeight: { label: "三名單v2 A1 Line Height", min: 1, max: 2.4, step: 0.05 },
   activeRosterV2A1LeaveX: { label: "三名單v2 A1 季打請假 X", min: -40, max: 40 },
@@ -2847,10 +2847,10 @@ Wave Band: X ${Math.round(controls.activeListBuoyWaveX)}, Y ${Math.round(control
 備取名單標頭: X ${controls.activeListBuoyHeaderWaitX.toFixed(1)}, Y ${controls.activeListBuoyHeaderWaitY.toFixed(1)}, Scale ${controls.activeListBuoyHeaderWaitScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyHeaderWaitRotation)}, Opacity ${Math.round(controls.activeListBuoyHeaderWaitOpacity)}, Z ${Math.round(controls.activeListBuoyHeaderWaitZIndex)}
 Panel: X ${Math.round(controls.activeListBuoyPanelX)}, Y ${Math.round(controls.activeListBuoyPanelY)}, Scale ${controls.activeListBuoyPanelScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyPanelRotation)}, Opacity ${Math.round(controls.activeListBuoyPanelOpacity)}, Z ${Math.round(controls.activeListBuoyPanelZIndex)}, Font ${Math.round(controls.activeListBuoyPanelFontSize)}, Line Height ${controls.activeListBuoyPanelLineHeight.toFixed(2)}, Text Color ${controls.activeListBuoyPanelTextColor}, Font Family ${controls.activeListBuoyPanelFontFamily || "(default)"}, Bold ${controls.activeListBuoyPanelBold ? "ON" : "OFF"}
 
-ACTIVE SUN DOTS (紅日場次金點)
+ACTIVE SUN DOTS (紅日場次指示)
 X ${Math.round(controls.activeSunDotsX)}, Y ${Math.round(controls.activeSunDotsY)}, Scale ${controls.activeSunDotsScale.toFixed(2)}, Rotation ${Math.round(controls.activeSunDotsRotation)}, Opacity ${Math.round(controls.activeSunDotsOpacity)}, Z ${Math.round(controls.activeSunDotsZIndex)}
 
-OPEN SUN DOTS (紅日場次金點)
+OPEN SUN DOTS (紅日場次指示)
 X ${Math.round(controls.openSunDotsX)}, Y ${Math.round(controls.openSunDotsY)}, Scale ${controls.openSunDotsScale.toFixed(2)}, Rotation ${Math.round(controls.openSunDotsRotation)}, Opacity ${Math.round(controls.openSunDotsOpacity)}, Z ${Math.round(controls.openSunDotsZIndex)}
 
 ACTIVE SWITCH ARROW (切換聚會 <>)

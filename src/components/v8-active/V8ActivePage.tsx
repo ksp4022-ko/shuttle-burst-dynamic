@@ -177,6 +177,7 @@ export function V8ActivePage({
   const [displayEventId, setDisplayEventId] = useState(selectedEventId);
   const lastDialAtRef = useRef(0);
   const [listCollapseSignal, setListCollapseSignal] = useState(0);
+  const [dialBump, setDialBump] = useState<{ n: number; dir: 1 | -1 } | undefined>(undefined);
   // Two-step cancel (select, then a separate confirm button) -- the old
   // single-tap-to-cancel design had no undo/confirm step at all, so a
   // mis-tap directly cancelled someone's signup with no chance to back
@@ -343,7 +344,13 @@ export function V8ActivePage({
     const currentIndex = Math.max(0, events.findIndex((event) => event.id === selectedEventId));
     // No wrap-around: the first / last meetup disables that arrow.
     const nextEvent = events[currentIndex + direction];
-    if (!nextEvent || nextEvent.id === selectedEventId) return;
+    if (!nextEvent) {
+      // Already at the first / last meetup: spring back and say so.
+      setDialBump((current) => ({ n: (current?.n ?? 0) + 1, dir: direction }));
+      flow.setNotice(direction > 0 ? "已是最後一場" : "已是第一場");
+      return;
+    }
+    if (nextEvent.id === selectedEventId) return;
     lastDialAtRef.current = Date.now();
     setDisplayEventId(nextEvent.id);
     setListCollapseSignal((signal) => signal + 1);
@@ -518,6 +525,7 @@ export function V8ActivePage({
             hasPrevious={displayIndex > 0}
             hasNext={displayIndex < events.length - 1}
             dotsControls={sunDotsControls}
+            bump={dialBump}
             eventDate={displayEvent.eventDate}
             eventName={displayEvent.name}
             eventNote={displayEvent.eventNote}
@@ -1137,7 +1145,8 @@ function V8DialValue({ value, order }: { value: string; order: number }) {
   return <span className={phase === "idle" ? "v8-dial-value" : `v8-dial-value is-${phase}`}>{shown}</span>;
 }
 
-// Gold dots under the sun: how many meetups, and which one is shown.
+// Meetup indicator under the sun, as text "3 / 13" (a row of 13 dots was
+// too wide for the sun).
 function V8ActiveSunDots({ count, index, controls }: { count: number; index: number; controls: V8SunDotsControls }) {
   if (count <= 1) return null;
   return (
@@ -1152,9 +1161,7 @@ function V8ActiveSunDots({ count, index, controls }: { count: number; index: num
         transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
       }}
     >
-      {Array.from({ length: count }, (_, dot) => (
-        <span key={dot} className={dot === index ? "is-current" : undefined} />
-      ))}
+      {index + 1} / {count}
     </div>
   );
 }
@@ -1199,8 +1206,8 @@ function V8SunMeetupSwitcher({
     if (startXRef.current === null) return;
     const endX = event.changedTouches[0]?.clientX ?? startXRef.current;
     const delta = endX - startXRef.current;
-    if (delta > SWIPE_THRESHOLD_PX && hasPrevious) onPreviousEvent();
-    else if (delta < -SWIPE_THRESHOLD_PX && hasNext) onNextEvent();
+    if (delta > SWIPE_THRESHOLD_PX) onPreviousEvent();
+    else if (delta < -SWIPE_THRESHOLD_PX) onNextEvent();
     startXRef.current = null;
   };
 
@@ -1216,9 +1223,9 @@ function V8SunMeetupSwitcher({
         <>
           <button
             type="button"
-            className="v8-sun-switch-arrow is-prev"
+            className={hasPrevious ? "v8-sun-switch-arrow is-prev" : "v8-sun-switch-arrow is-prev is-end"}
             style={switchArrowStyle(controls.prev)}
-            disabled={!hasPrevious}
+            aria-disabled={!hasPrevious}
             onClick={onPreviousEvent}
             aria-label="上一場聚會"
           >
@@ -1230,9 +1237,9 @@ function V8SunMeetupSwitcher({
           </button>
           <button
             type="button"
-            className="v8-sun-switch-arrow is-next"
+            className={hasNext ? "v8-sun-switch-arrow is-next" : "v8-sun-switch-arrow is-next is-end"}
             style={switchArrowStyle(controls.next)}
-            disabled={!hasNext}
+            aria-disabled={!hasNext}
             onClick={onNextEvent}
             aria-label="下一場聚會"
           >
@@ -1291,6 +1298,7 @@ export function V8ActiveSunContent({
   hasPrevious,
   hasNext,
   dotsControls,
+  bump,
 }: {
   assets: {
     sunBadgeBallType: string;
@@ -1331,6 +1339,8 @@ export function V8ActiveSunContent({
   hasPrevious?: boolean;
   hasNext?: boolean;
   dotsControls?: V8SunDotsControls;
+  // Bumped when a switch hits the first/last meetup (spring-back turn).
+  bump?: { n: number; dir: 1 | -1 } | undefined;
 }) {
   // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label per the
   // user's exact spec (courtCount:2, hours:3 -> "2場/3hr") -- courtCount
@@ -1385,7 +1395,11 @@ export function V8ActiveSunContent({
       ) : null}
       {/* Clipped to the sun's circle only while the dial turns, so the
           tuned text positions are untouched the rest of the time. */}
-      <div className={dialing ? "v8-sun-dial-clip is-dialing" : "v8-sun-dial-clip"}>
+      <div
+        key={`clip-${bump?.n ?? 0}`}
+        className={["v8-sun-dial-clip", dialing ? "is-dialing" : "", bump ? "is-bump" : ""].filter(Boolean).join(" ")}
+        style={{ "--bump-dir": bump?.dir ?? 1 } as CSSProperties}
+      >
         {dial?.outgoing ? (
           <div className="v8-sun-dial-group is-out" style={dirStyle} aria-hidden="true">
             {renderMessages(dial.outgoing)}
@@ -2687,28 +2701,6 @@ export function V8ActiveStyles() {
         to { opacity: 1; transform: translateY(0); }
       }
 
-      .v8-sun-dots {
-        position: absolute;
-        display: flex;
-        gap: 5px;
-        align-items: center;
-        pointer-events: none;
-      }
-
-      .v8-sun-dots span {
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        background: rgba(255, 224, 150, 0.55);
-        transition: transform 300ms ease-out, background 300ms ease-out;
-      }
-
-      .v8-sun-dots span.is-current {
-        background: #ffe9a3;
-        transform: scale(1.5);
-        box-shadow: 0 0 6px rgba(255, 207, 107, 0.9);
-      }
-
       /* Arrows: 44x44 touch target around the 34px art; dim at first/last. */
       .v8-sun-switch-arrow {
         position: absolute;
@@ -2724,10 +2716,30 @@ export function V8ActiveStyles() {
         transform: translate(-50%, -50%);
       }
 
-      .v8-sun-switch-arrow:disabled {
+      .v8-sun-switch-arrow.is-end .v8-switch-arrow-visual {
         opacity: 0.3;
-        pointer-events: none;
       }
+      /* End of the meetup list: a small turn that springs back. */
+      .v8-sun-dial-clip.is-bump {
+        animation: v8-dial-bump 320ms cubic-bezier(.3, 1.6, .5, 1);
+      }
+
+      @keyframes v8-dial-bump {
+        0% { transform: rotate(0deg); }
+        40% { transform: rotate(calc(var(--bump-dir, 1) * 8deg)); }
+        100% { transform: rotate(0deg); }
+      }
+
+      .v8-sun-dots {
+        position: absolute;
+        pointer-events: none;
+        white-space: nowrap;
+        font: 700 12px/1 var(--font-sans, system-ui, sans-serif);
+        letter-spacing: 0.06em;
+        color: #ffe9a3;
+        text-shadow: 0 1px 2px rgba(80, 20, 5, 0.65);
+      }
+
 
       @media (prefers-reduced-motion: reduce) {
         .v8-sun-dial-ring {
