@@ -7,8 +7,11 @@ import { type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import {
+  activeCtaAssemblyReplacedTargets,
+  activeCtaAssemblyTarget,
   activeListBuoyTargets,
   activeTargetOrder,
+  buildV8ActiveCtaAssemblyControls,
   buildV8ActiveCapacityBadgeControls,
   buildV8ActiveEmaTextsControls,
   buildV8ActiveListBuoysControls,
@@ -49,8 +52,10 @@ import {
   type V8ActiveSunMessagesControls,
   type V8ActiveSwitchArrowLayerControls,
   type V8ActiveSwitchArrowsControls,
+  type V8CtaAssemblyControls,
   type V8SunDotsControls,
 } from "./v8ActiveConfig";
+import { V8CtaAssembly, V8CtaAssemblyStyles, type V8CtaAssemblyAssets } from "./V8CtaAssembly";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { V8Toast } from "./V8Toast";
@@ -431,7 +436,16 @@ export function V8ActivePage({
   const listBuoysControls = buildV8ActiveListBuoysControls(tuningControls);
   // Real ACTIVE page only: the list-buoy targets are appended here rather
   // than to the shared activeTargetOrder, so /v8/preview is unchanged.
-  const activeTuningTargets: PreviewTargetId[] = [...activeTargetOrder, ...activeListBuoyTargets, "ACTIVE SUN DOTS"];
+  // CTA-ASSEMBLY: the one assembly target takes the CTA's slot; 代報/代退's
+  // own targets are dropped (real ACTIVE only).
+  const activeTuningTargets: PreviewTargetId[] = [
+    ...activeTargetOrder.flatMap((target) =>
+      target === "ACTIVE IDENTITY CTA" ? [activeCtaAssemblyTarget] : activeCtaAssemblyReplacedTargets.includes(target) ? [] : [target],
+    ),
+    ...activeListBuoyTargets,
+    "ACTIVE SUN DOTS",
+  ];
+  const ctaAssemblyControls = buildV8ActiveCtaAssemblyControls(tuningControls);
   const sunDotsControls = buildV8SunDotsControls(tuningControls, "active");
 
   // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
@@ -463,7 +477,17 @@ export function V8ActivePage({
     parseV8MeetupDisplay(selectedEvent.name).displayName === "康軒" ? assets.sunTitleKangxuan : null,
     identity ? statusStampAsset(identity, assets) : null,
     identity ? identityTagAsset(identity, assets) : null,
-    identity ? primaryActionAsset(identity, assets) : null,
+    ...(identity
+      ? [
+          assets.ctaAssembly.base,
+          assets.ctaAssembly.front,
+          assets.ctaAssembly.mainBlank,
+          assemblyTextAsset(identity, assets.ctaAssembly),
+          assets.ctaAssembly.helperSignup,
+          assets.ctaAssembly.helperCancel,
+          assets.ctaAssembly.bill,
+        ]
+      : []),
   ].filter((src): src is string => Boolean(src));
 
   const displayNameForFixedRosterPerson = (person: AlphaSignup) => {
@@ -515,6 +539,7 @@ export function V8ActivePage({
       onPointerDownCapture={captureRipplePoint}
     >
       <V8ActiveStyles />
+      <V8CtaAssemblyStyles />
 
       <V8HeroComposition
         confirmed
@@ -557,6 +582,7 @@ export function V8ActivePage({
               busy={busy}
               pendingLabel={pendingAction?.label}
               ctaPending={ctaPending}
+              assembly={{ controls: ctaAssemblyControls, assets: assets.ctaAssembly }}
               onStatusFeedback={handleStatusFeedback}
               onPrimaryAction={handlePrimaryAction}
               onForget={beginIdentityCorrection}
@@ -1515,6 +1541,21 @@ function primaryActionAsset(identity: CurrentIdentity, assets: V8IdentityAssets)
   return identity.status === "unregistered" ? assets.ctaTempSignup : assets.ctaTempCancel;
 }
 
+// CTA-ASSEMBLY: same mapping, picking the main plaque's text layer.
+function assemblyTextAsset(identity: CurrentIdentity, assets: V8CtaAssemblyAssets) {
+  if (identity.signupType === "fixed") {
+    return identity.status === "leave" ? assets.textSeasonReturn : assets.textSeasonLeave;
+  }
+  return identity.status === "unregistered" ? assets.textTempSignup : assets.textTempCancel;
+}
+
+// Both texts this identity type can show (for warming the other one).
+function assemblyTextPair(identity: CurrentIdentity, assets: V8CtaAssemblyAssets) {
+  return identity.signupType === "fixed"
+    ? [assets.textSeasonLeave, assets.textSeasonReturn]
+    : [assets.textTempSignup, assets.textTempCancel];
+}
+
 // Same mapping as primaryActionAsset, but returning the matching
 // v8CtaGlowOutlines key instead of the image URL -- kept as a separate
 // function (not derived from the asset URL string) so the two can't drift
@@ -1724,6 +1765,7 @@ export function V8IdentityScrollContent({
   busy,
   pendingLabel,
   ctaPending = false,
+  assembly,
   onStatusFeedback,
   onPrimaryAction,
   onForget,
@@ -1737,6 +1779,9 @@ export function V8IdentityScrollContent({
   pendingLabel: string | undefined;
   // Optional so /v8/preview's mock scroll keeps working unchanged.
   ctaPending?: boolean;
+  // CTA-ASSEMBLY (real ACTIVE only): render the button assembly instead of
+  // the separate CTA / 代報 / 代退 plaques. /v8/preview doesn't pass it.
+  assembly?: { controls: V8CtaAssemblyControls; assets: V8CtaAssemblyAssets };
   onStatusFeedback?: (status: CurrentIdentity["status"]) => void;
   onPrimaryAction: () => void;
   onForget: () => void;
@@ -1816,45 +1861,65 @@ export function V8IdentityScrollContent({
       <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
         <img src={identityTagAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
-      <button
-        type="button"
-        className={ctaClassName}
-        style={identityVisualStyle(controls.cta)}
-        disabled={busy}
-        onClick={handlePrimaryClick}
-        onPointerDown={startPressFeedback}
-        aria-label={busy ? pendingLabel : primaryActionLabel(identity)}
-      >
-        <span className="v8-cta-interaction">
-          <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
-          <V8CtaGlowOutline outlineKey={primaryActionOutlineKey(identity)} />
-        </span>
-        {ctaPending ? (
-          <span className="v8-cta-sending">
-            <V8SendingLabel />
-          </span>
-        ) : null}
-      </button>
-      <button
-        type="button"
-        className="v8-scroll-helper-btn"
-        style={identityVisualStyle(controls.helperSignup)}
-        disabled={busy}
-        onClick={onHelperSignup}
-        aria-label="幫人報名"
-      >
-        <img src={assets.ctaHelperSignup} alt="" aria-hidden="true" draggable={false} />
-      </button>
-      <button
-        type="button"
-        className="v8-scroll-helper-btn"
-        style={identityVisualStyle(controls.helperCancel)}
-        disabled={busy}
-        onClick={onHelperCancel}
-        aria-label="幫人取消"
-      >
-        <img src={assets.ctaHelperCancel} alt="" aria-hidden="true" draggable={false} />
-      </button>
+      {assembly ? (
+        <V8CtaAssembly
+          controls={assembly.controls}
+          assets={assembly.assets}
+          mainText={assemblyTextAsset(identity, assembly.assets)}
+          warmTexts={assemblyTextPair(identity, assembly.assets).filter((src) => src !== assemblyTextAsset(identity, assembly.assets))}
+          mainLabel={busy ? pendingLabel || primaryActionLabel(identity) : primaryActionLabel(identity)}
+          // 季打 on the waitlist still maps to 告假, but the backend rejects
+          // a waitlisted leave -- shown disabled until that's fixed there.
+          mainDisabled={busy || (identity.signupType === "fixed" && identity.status === "waiting")}
+          helpersDisabled={busy}
+          pending={ctaPending ? <V8SendingLabel /> : null}
+          onPrimary={handlePrimaryClick}
+          onHelperSignup={onHelperSignup}
+          onHelperCancel={onHelperCancel}
+        />
+      ) : (
+        <>
+          <button
+            type="button"
+            className={ctaClassName}
+            style={identityVisualStyle(controls.cta)}
+            disabled={busy}
+            onClick={handlePrimaryClick}
+            onPointerDown={startPressFeedback}
+            aria-label={busy ? pendingLabel : primaryActionLabel(identity)}
+          >
+            <span className="v8-cta-interaction">
+              <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
+              <V8CtaGlowOutline outlineKey={primaryActionOutlineKey(identity)} />
+            </span>
+            {ctaPending ? (
+              <span className="v8-cta-sending">
+                <V8SendingLabel />
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            className="v8-scroll-helper-btn"
+            style={identityVisualStyle(controls.helperSignup)}
+            disabled={busy}
+            onClick={onHelperSignup}
+            aria-label="幫人報名"
+          >
+            <img src={assets.ctaHelperSignup} alt="" aria-hidden="true" draggable={false} />
+          </button>
+          <button
+            type="button"
+            className="v8-scroll-helper-btn"
+            style={identityVisualStyle(controls.helperCancel)}
+            disabled={busy}
+            onClick={onHelperCancel}
+            aria-label="幫人取消"
+          >
+            <img src={assets.ctaHelperCancel} alt="" aria-hidden="true" draggable={false} />
+          </button>
+        </>
+      )}
       <button
         type="button"
         className="v8-scroll-forget"

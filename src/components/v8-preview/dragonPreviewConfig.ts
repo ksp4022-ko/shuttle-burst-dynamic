@@ -1,6 +1,7 @@
 import { v8ActiveBackgroundFadeOverrides, v8ActiveSunMessagesDefaults } from "@/components/v8-active/v8ActiveConfig";
 import type {
   V8ActiveListBuoysControls,
+  V8CtaAssemblyControls,
   V8SunDotsControls,
   V8ActiveCapacityBadgeControls,
   V8ActiveEmaTextsControls,
@@ -598,6 +599,13 @@ export type PreviewControls = {
   activeSunDotsRotation: number;
   activeSunDotsOpacity: number;
   activeSunDotsZIndex: number;
+  // CTA-ASSEMBLY (real ACTIVE only): the whole button assembly.
+  activeCtaAssemblyX: number;
+  activeCtaAssemblyY: number;
+  activeCtaAssemblyScale: number;
+  activeCtaAssemblyRotation: number;
+  activeCtaAssemblyOpacity: number;
+  activeCtaAssemblyZIndex: number;
   // Sun-embedded meetup-switch arrows (<>), added 2026-09-11 -- one shared
   // Show toggle + each arrow (prev/next) independently gets the full
   // baseline control set, per docs/V8_COMPONENT_CONTROL_BASELINE.md.
@@ -688,6 +696,7 @@ export type PreviewTargetId =
   | "ACTIVE LIST HEADER WAIT"
   | "ACTIVE LIST PANEL"
   | "ACTIVE SUN DOTS"
+  | "ACTIVE CTA ASSEMBLY"
   | "OPEN SUN DOTS"
   | "ACTIVE SWITCH ARROW PREV"
   | "ACTIVE SWITCH ARROW NEXT";
@@ -1214,12 +1223,15 @@ export const previewDefaults: PreviewControls = {
   activeIdentityHelperCancelRotation: 0,
   activeIdentityHelperCancelOpacity: 55,
   activeIdentityHelperCancelZIndex: 1,
-  activeIdentityForgetX: 41,
-  activeIdentityForgetY: 79,
+  // CTA-ASSEMBLY (2026-09-25): moved from under the old buttons onto the
+  // scroll paper, just right of / below the name (the 正取 stamp holds the
+  // lower-right corner itself).
+  activeIdentityForgetX: 52,
+  activeIdentityForgetY: 47,
   activeIdentityForgetScale: 1,
   activeIdentityForgetRotation: 0,
   activeIdentityForgetOpacity: 100,
-  activeIdentityForgetZIndex: 1,
+  activeIdentityForgetZIndex: 42,
   activeIdentityForgetFontSize: 10,
   activeIdentityForgetMaxWidth: 70,
   activeIdentityForgetLetterSpacing: 0,
@@ -1360,6 +1372,12 @@ export const previewDefaults: PreviewControls = {
   activeSunDotsRotation: 0,
   activeSunDotsOpacity: 100,
   activeSunDotsZIndex: 6,
+  activeCtaAssemblyX: 42,
+  activeCtaAssemblyY: 66,
+  activeCtaAssemblyScale: 1,
+  activeCtaAssemblyRotation: 0,
+  activeCtaAssemblyOpacity: 100,
+  activeCtaAssemblyZIndex: 1,
   // Sun-embedded meetup-switch arrows (2026-09-11) -- positioned inside the
   // red sun circle per the user's request, prev on the left / next on the
   // right, sharing one Show toggle.
@@ -1816,6 +1834,15 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunDotsOpacity",
     "activeSunDotsZIndex",
   ],
+  "ACTIVE CTA ASSEMBLY": [
+    "activeIdentityShow",
+    "activeCtaAssemblyX",
+    "activeCtaAssemblyY",
+    "activeCtaAssemblyScale",
+    "activeCtaAssemblyRotation",
+    "activeCtaAssemblyOpacity",
+    "activeCtaAssemblyZIndex",
+  ],
   "ACTIVE ROSTER LISTS": [
     "activeRosterListsShow",
     "activeRosterListsX",
@@ -1908,6 +1935,7 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE IDENTITY HELPER SIGNUP": "activeIdentityShow",
   "ACTIVE IDENTITY HELPER CANCEL": "activeIdentityShow",
   "ACTIVE IDENTITY FORGET": "activeIdentityShow",
+  "ACTIVE CTA ASSEMBLY": "activeIdentityShow",
   "ACTIVE INFO ROPE": "activeInfoRopeShow",
   "ACTIVE INFO REGISTERED": "activeInfoRegisteredShow",
   "ACTIVE INFO NEEDED": "activeInfoNeededShow",
@@ -2339,6 +2367,12 @@ export const controlRanges = {
   activeSunDotsRotation: { label: "ACTIVE 場次指示 Rotation", min: -180, max: 180 },
   activeSunDotsOpacity: { label: "ACTIVE 場次指示 Opacity", min: 0, max: 100 },
   activeSunDotsZIndex: { label: "ACTIVE 場次指示 Z-Index", min: 0, max: 40 },
+  activeCtaAssemblyX: { label: "按鍵組 X %", min: -30, max: 130, step: 0.5 },
+  activeCtaAssemblyY: { label: "按鍵組 Y %", min: -30, max: 160, step: 0.5 },
+  activeCtaAssemblyScale: { label: "按鍵組 Scale", min: 0.4, max: 2, step: 0.01 },
+  activeCtaAssemblyRotation: { label: "按鍵組 Rotation", min: -30, max: 30 },
+  activeCtaAssemblyOpacity: { label: "按鍵組 Opacity", min: 0, max: 100 },
+  activeCtaAssemblyZIndex: { label: "按鍵組 Z-Index", min: 0, max: 60 },
   activeRosterV2A1FontSize: { label: "三名單v2 A1 Font Size", min: 8, max: 24 },
   activeRosterV2A1LineHeight: { label: "三名單v2 A1 Line Height", min: 1, max: 2.4, step: 0.05 },
   activeRosterV2A1LeaveX: { label: "三名單v2 A1 季打請假 X", min: -40, max: 40 },
@@ -2802,6 +2836,9 @@ Show: ${controls.activeIdentityShow ? "ON" : "OFF"}
 代報 (helper signup): X ${Math.round(controls.activeIdentityHelperSignupX)}, Y ${Math.round(controls.activeIdentityHelperSignupY)}, Scale ${controls.activeIdentityHelperSignupScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityHelperSignupRotation)}, Opacity ${Math.round(controls.activeIdentityHelperSignupOpacity)}, Z ${Math.round(controls.activeIdentityHelperSignupZIndex)}
 代退 (helper cancel): X ${Math.round(controls.activeIdentityHelperCancelX)}, Y ${Math.round(controls.activeIdentityHelperCancelY)}, Scale ${controls.activeIdentityHelperCancelScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityHelperCancelRotation)}, Opacity ${Math.round(controls.activeIdentityHelperCancelOpacity)}, Z ${Math.round(controls.activeIdentityHelperCancelZIndex)}
 不是我 (forget): X ${Math.round(controls.activeIdentityForgetX)}, Y ${Math.round(controls.activeIdentityForgetY)}, Scale ${controls.activeIdentityForgetScale.toFixed(2)}, Rotation ${Math.round(controls.activeIdentityForgetRotation)}, Opacity ${Math.round(controls.activeIdentityForgetOpacity)}, Z ${Math.round(controls.activeIdentityForgetZIndex)}, Font ${Math.round(controls.activeIdentityForgetFontSize)}, Max Width ${Math.round(controls.activeIdentityForgetMaxWidth)}, Letter Spacing ${controls.activeIdentityForgetLetterSpacing.toFixed(1)}, Line Height ${controls.activeIdentityForgetLineHeight.toFixed(2)}, Align ${controls.activeIdentityForgetTextAlign}, Weight ${Math.round(controls.activeIdentityForgetFontWeight)}
+
+ACTIVE CTA ASSEMBLY (按鍵組)
+X ${controls.activeCtaAssemblyX.toFixed(1)}, Y ${controls.activeCtaAssemblyY.toFixed(1)}, Scale ${controls.activeCtaAssemblyScale.toFixed(2)}, Rotation ${Math.round(controls.activeCtaAssemblyRotation)}, Opacity ${Math.round(controls.activeCtaAssemblyOpacity)}, Z ${Math.round(controls.activeCtaAssemblyZIndex)}
 
 ACTIVE SUN BADGE CAPACITY (上限)
 Show: ${controls.activeSunBadgeCapacityShow ? "ON" : "OFF"}
@@ -3466,6 +3503,27 @@ export const activeListBuoyTargets: PreviewTargetId[] = [
   "ACTIVE LIST HEADER WAIT",
   "ACTIVE LIST PANEL",
 ];
+
+// CTA-ASSEMBLY: on the real ACTIVE page this one target replaces the
+// separate CTA / 代報 / 代退 targets (see V8ActivePage's activeTuningTargets);
+// /v8/preview keeps its old per-button targets.
+export const activeCtaAssemblyTarget: PreviewTargetId = "ACTIVE CTA ASSEMBLY";
+export const activeCtaAssemblyReplacedTargets: PreviewTargetId[] = [
+  "ACTIVE IDENTITY CTA",
+  "ACTIVE IDENTITY HELPER SIGNUP",
+  "ACTIVE IDENTITY HELPER CANCEL",
+];
+
+export function buildV8ActiveCtaAssemblyControls(controls: PreviewControls): V8CtaAssemblyControls {
+  return {
+    x: controls.activeCtaAssemblyX,
+    y: controls.activeCtaAssemblyY,
+    scale: controls.activeCtaAssemblyScale,
+    rotation: controls.activeCtaAssemblyRotation,
+    opacity: controls.activeCtaAssemblyOpacity,
+    zIndex: controls.activeCtaAssemblyZIndex,
+  };
+}
 
 // SUN-DIAL gold dots, one control set per page (Opening / Active).
 export function buildV8SunDotsControls(controls: PreviewControls, scope: "open" | "active"): V8SunDotsControls {
