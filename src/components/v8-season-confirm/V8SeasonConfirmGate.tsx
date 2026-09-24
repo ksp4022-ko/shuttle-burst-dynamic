@@ -445,28 +445,6 @@ function V8SeasonConfirmPage({
   const paymentDateText = firstMeetDate ? `${firstMeetDate} 首次開打時` : "首次開打時";
   const courtCount = info.courtCount || 2;
   const hours = info.hours || 2;
-  const seasonInfoText = `期間：${seasonStart && seasonEnd ? `${seasonStart}～${seasonEnd}` : "依公告"}
-時間：每週四 22:00～24:00
-用球：${info.ballType || "MS-101"}
-季打費請於 ${paymentDateText}繳交，使用 LINE Pay 付款。
-本季不預收冷氣費，視天氣及現場需求加開。`;
-  const addCourtRulesText = `基本場地：${courtCount} 場 ${hours} 小時，上限 15 人
-16～18 人：加開 1 場 1 小時
-19～22 人：加開 1 場 2 小時`;
-  const leaveRulesText = `季打請假沒有次數限制，但必須在聚會當天 13:00 前，於系統完成請假，才算有效請假。${
-    perEventFee ? `\n有效請假以下一季抵扣約 ${perEventFee} 元／次計算。` : ""
-  }
-不方便操作，請在 LINE 聯絡 @管理員（柯Sammy）。`;
-  const lineLoginHelpText = `原季打球友請選「${renewLabel}」或「這季休息」；新球友請選「申請加入」。
-1. 按下你的回覆選項。
-2. 出現 LINE 登入畫面後，請按最下方「使用 LINE 應用程式登入」。
-3. LINE 開啟後按「同意」。
-4. 登入完成後會自動回到本頁。
-5. 看到「你已登記」才算完成。
-若顯示的 LINE 帳號不是本人，請按「不是你？更換 LINE 帳號」。
-若登入沒有反應，請從瀏覽器選單改用 Safari 或 Chrome 開啟，再重新登入。`;
-  const proxyHelpText = `可以使用自己的 LINE 幫球友代報名。
-若之後要取消代報，必須使用原本代報時的同一個 LINE 帳號操作，其他 LINE 帳號無法代退。`;
   const sceneBase = `${import.meta.env.BASE_URL}v8-preview/display/`;
 
   return (
@@ -496,58 +474,92 @@ function V8SeasonConfirmPage({
         ) : null}
 
         {phase !== "preparing" ? (
-          <section className="v8sc-card">
-            <dl className="v8sc-info">
-              <div>
-                <dt>聚會場地</dt>
-                <dd>{courtCount} 場 {hours} 小時</dd>
-                <dd className="v8sc-sub">基本上限 15 人</dd>
+          <>
+            <section className="v8sc-card v8sc-summary-card">
+              <dl className="v8sc-info">
+                <div>
+                  <dt>聚會場地</dt>
+                  <dd>{courtCount} 場 {hours} 小時</dd>
+                  <dd className="v8sc-sub">基本上限 15 人</dd>
+                </div>
+                <div>
+                  <dt>季打費用</dt>
+                  <dd>{money(info.seasonFee) || "待公布"}</dd>
+                  {money(info.seasonFee) && perEventFee ? (
+                    <dd className="v8sc-sub">{info.eventCount ? `${info.eventCount} 次，` : ""}約 {perEventFee} 元／次</dd>
+                  ) : null}
+                </div>
+                <div>
+                  <dt>臨打費用</dt>
+                  <dd>{money(info.tempFee) ? `${money(info.tempFee)}／次` : "依聚會公告"}</dd>
+                  <dd className="v8sc-sub">16 人起依規則加場</dd>
+                </div>
+                <div>
+                  <dt>目前回覆</dt>
+                  <dd>{memberCount} 人</dd>
+                  <dd className="v8sc-sub">截止前可修改</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section className="v8sc-card v8sc-topic v8sc-topic-season">
+              <header className="v8sc-topic-head"><span>01</span><h2>本季資訊</h2></header>
+              <dl className="v8sc-detail-list">
+                <div><dt>期間</dt><dd>{seasonStart && seasonEnd ? `${seasonStart}～${seasonEnd}` : "依公告"}</dd></div>
+                <div><dt>時間</dt><dd>每週四 22:00～24:00</dd></div>
+                <div><dt>用球</dt><dd>{info.ballType || "MS-101"}</dd></div>
+              </dl>
+              <div className="v8sc-callout"><strong>季打費繳交</strong><span>{paymentDateText}繳交，使用 LINE Pay 付款。</span></div>
+              <p className="v8sc-topic-note">本季不預收冷氣費，視天氣及現場需求加開。</p>
+            </section>
+
+            <section className="v8sc-card v8sc-topic v8sc-topic-court">
+              <header className="v8sc-topic-head"><span>02</span><h2>加場規則</h2></header>
+              <div className="v8sc-rule-list">
+                <div><strong>基本場地</strong><span>{courtCount} 場 {hours} 小時，上限 15 人</span></div>
+                <div><strong>16～18 人</strong><span>加開 1 場 1 小時</span></div>
+                <div><strong>19～22 人</strong><span>加開 1 場 2 小時</span></div>
               </div>
-              <div>
-                <dt>季打費用</dt>
-                <dd>{money(info.seasonFee) || "待公布"}</dd>
-                {money(info.seasonFee) && perEventFee ? (
-                  <dd className="v8sc-sub">{info.eventCount ? `${info.eventCount} 次，` : ""}約 {perEventFee} 元／次</dd>
-                ) : null}
+            </section>
+
+            <section className="v8sc-card v8sc-topic v8sc-topic-leave">
+              <header className="v8sc-topic-head"><span>03</span><h2>季打請假與退費</h2></header>
+              <p className="v8sc-topic-lead">季打請假沒有次數限制。</p>
+              <ul className="v8sc-check-list">
+                <li><strong>有效期限</strong><span>聚會當天 13:00 前，必須在系統完成請假。</span></li>
+                {perEventFee ? <li><strong>下季抵扣</strong><span>有效請假約 {perEventFee} 元／次。</span></li> : null}
+                <li><strong>需要協助</strong><span>請在 LINE 聯絡 @管理員（柯Sammy）。</span></li>
+              </ul>
+            </section>
+
+            <section className="v8sc-card v8sc-topic v8sc-topic-line">
+              <header className="v8sc-topic-head"><span>04</span><h2>LINE 登入與回覆方式</h2></header>
+              <p className="v8sc-topic-lead">原季打球友請選「{renewLabel}」或「這季休息」；新球友請選「申請加入」。</p>
+              <ol className="v8sc-step-list">
+                <li><span>1</span><p>按下你的回覆選項。</p></li>
+                <li><span>2</span><p>在 LINE 登入畫面最下方，按「使用 LINE 應用程式登入」。</p></li>
+                <li><span>3</span><p>LINE 開啟後按「同意」。</p></li>
+                <li><span>4</span><p>回到本頁，看到「你已登記」才算完成。</p></li>
+              </ol>
+              <div className="v8sc-help-box">
+                <p>帳號不是本人：按「不是你？更換 LINE 帳號」。</p>
+                <p>按下沒有反應：改用 Safari 或 Chrome 開啟後重試。</p>
               </div>
-              <div>
-                <dt>臨打費用</dt>
-                <dd>{money(info.tempFee) ? `${money(info.tempFee)}／次` : "依聚會公告"}</dd>
-                <dd className="v8sc-sub">16 人起依規則加場</dd>
-              </div>
-              <div>
-                <dt>目前回覆</dt>
-                <dd>{memberCount} 人</dd>
-                <dd className="v8sc-sub">截止前可修改</dd>
-              </div>
-            </dl>
-            <div className="v8sc-block">
-              <h2>本季資訊</h2>
-              <p>{seasonInfoText}</p>
-            </div>
-            <div className="v8sc-block">
-              <h2>加場規則</h2>
-              <p>{addCourtRulesText}</p>
-            </div>
-            <div className="v8sc-block">
-              <h2>季打請假與退費</h2>
-              <p>{leaveRulesText}</p>
-            </div>
-            <div className="v8sc-block">
-              <h2>LINE 登入與回覆方式</h2>
-              <p>{lineLoginHelpText}</p>
-            </div>
-            <div className="v8sc-block">
-              <h2>代報、代退說明</h2>
-              <p>{proxyHelpText}</p>
-            </div>
+            </section>
+
+            <section className="v8sc-card v8sc-topic v8sc-topic-proxy">
+              <header className="v8sc-topic-head"><span>05</span><h2>代報、代退說明</h2></header>
+              <p className="v8sc-topic-lead">可以使用自己的 LINE 幫球友代報名。</p>
+              <div className="v8sc-warning-box"><strong>取消限制</strong><span>代退必須使用原本代報時的同一個 LINE 帳號，其他帳號無法取消。</span></div>
+            </section>
+
             {info.publicNote ? (
-              <div className="v8sc-block">
-                <h2>備註</h2>
+              <section className="v8sc-card v8sc-topic v8sc-topic-note-card">
+                <header className="v8sc-topic-head"><span>!</span><h2>備註</h2></header>
                 <p>{info.publicNote}</p>
-              </div>
+              </section>
             ) : null}
-          </section>
+          </>
         ) : null}
 
         {loggedIn && me && myIntent ? (
@@ -774,13 +786,46 @@ const CSS = `
 .v8sc-banner strong{font-size:19px;color:#7a2a12}
 .v8sc-banner span{font-size:14px;color:#5c3a22}
 .v8sc-info{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.v8sc-info div{background:rgba(226,199,149,.28);border-radius:10px;padding:8px 10px}
-.v8sc-info dt{font-size:12px;color:#6b4a2e}
-.v8sc-info dd{margin:2px 0 0;font-size:17px;font-weight:700}
-.v8sc-info dd.v8sc-sub{margin-top:1px;font-size:12px;font-weight:600;color:#7a2a12}
-.v8sc-block{margin-top:14px}
-.v8sc-block h2{margin:0 0 4px;font-size:14px;color:#7a2a12}
-.v8sc-block p{margin:0;font-size:15px;line-height:1.6;white-space:pre-line;overflow-wrap:anywhere}
+.v8sc-info div{min-width:0;background:rgba(226,199,149,.3);border-radius:12px;padding:11px 12px}
+.v8sc-info dt{font-size:13px;color:#6b4a2e}
+.v8sc-info dd{margin:3px 0 0;font-size:19px;line-height:1.25;font-weight:800;overflow-wrap:anywhere}
+.v8sc-info dd.v8sc-sub{margin-top:3px;font-size:13px;line-height:1.35;font-weight:700;color:#7a2a12}
+.v8sc-topic{--topic-accent:#8e2c14;--topic-soft:rgba(142,44,20,.08);padding:18px;border-left:5px solid var(--topic-accent);background:rgba(255,251,241,.95)}
+.v8sc-topic-season{--topic-accent:#a33b24;--topic-soft:rgba(163,59,36,.09)}
+.v8sc-topic-court{--topic-accent:#a76b0c;--topic-soft:rgba(184,126,28,.11)}
+.v8sc-topic-leave{--topic-accent:#27705f;--topic-soft:rgba(39,112,95,.1)}
+.v8sc-topic-line{--topic-accent:#238247;--topic-soft:rgba(35,130,71,.1)}
+.v8sc-topic-proxy{--topic-accent:#5d4c8a;--topic-soft:rgba(93,76,138,.1)}
+.v8sc-topic-note-card{--topic-accent:#6b4a2e;--topic-soft:rgba(107,74,46,.08)}
+.v8sc-topic-head{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.v8sc-topic-head>span{width:34px;height:30px;flex:0 0 34px;border-radius:9px;display:grid;place-items:center;background:var(--topic-accent);color:#fffaf0;font-size:13px;font-weight:800}
+.v8sc-topic-head h2{margin:0;color:var(--topic-accent);font-size:20px;line-height:1.25;font-weight:800}
+.v8sc-topic p{font-size:16px;line-height:1.75;overflow-wrap:anywhere}
+.v8sc-detail-list{margin:0;display:grid;gap:8px}
+.v8sc-detail-list div{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:start;gap:10px;padding:9px 11px;border-radius:10px;background:var(--topic-soft)}
+.v8sc-detail-list dt{font-size:14px;line-height:1.6;font-weight:700;color:#76553a}
+.v8sc-detail-list dd{margin:0;font-size:16px;line-height:1.6;font-weight:700;color:#20150d;overflow-wrap:anywhere}
+.v8sc-callout,.v8sc-warning-box{display:flex;flex-direction:column;gap:4px;margin-top:12px;padding:12px 13px;border-radius:11px;background:var(--topic-soft)}
+.v8sc-callout strong,.v8sc-warning-box strong{font-size:14px;color:var(--topic-accent)}
+.v8sc-callout span,.v8sc-warning-box span{font-size:16px;line-height:1.65;font-weight:650;overflow-wrap:anywhere}
+.v8sc-topic-note,.v8sc-topic-lead{margin:12px 0 0}
+.v8sc-topic-lead{font-weight:700;color:#2d2118}
+.v8sc-topic-note{padding-top:10px;border-top:1px solid color-mix(in srgb,var(--topic-accent) 22%,transparent);color:#584433}
+.v8sc-rule-list{display:grid;gap:9px}
+.v8sc-rule-list div{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:center;padding:11px 12px;border-radius:11px;background:var(--topic-soft)}
+.v8sc-rule-list strong{font-size:15px;color:var(--topic-accent)}
+.v8sc-rule-list span{font-size:16px;line-height:1.55;font-weight:700}
+.v8sc-check-list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
+.v8sc-check-list li{display:flex;flex-direction:column;gap:3px;padding:11px 12px;border-radius:11px;background:var(--topic-soft)}
+.v8sc-check-list strong{font-size:14px;color:var(--topic-accent)}
+.v8sc-check-list span{font-size:16px;line-height:1.65}
+.v8sc-step-list{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px}
+.v8sc-step-list li{display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px;align-items:start}
+.v8sc-step-list li>span{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--topic-accent);color:#fff;font-size:15px;font-weight:800}
+.v8sc-step-list p{margin:1px 0 0;padding:3px 0;font-size:16px;line-height:1.65}
+.v8sc-help-box{display:grid;gap:7px;margin-top:14px;padding:12px 13px;border:1px solid color-mix(in srgb,var(--topic-accent) 30%,transparent);border-radius:11px;background:rgba(255,255,255,.64)}
+.v8sc-help-box p{margin:0;font-size:15px;line-height:1.65}
+.v8sc-warning-box{border:1px solid color-mix(in srgb,var(--topic-accent) 30%,transparent)}
 .v8sc-mine{text-align:center}
 .v8sc-mine-label{margin:0;font-size:13px;color:#6b4a2e}
 .v8sc-mine-value{margin:4px 0 0;font-size:21px;font-weight:800;color:#7a2a12}
@@ -817,4 +862,13 @@ const CSS = `
 .v8sc-notice{margin:0;text-align:center;font-size:14px;font-weight:600;color:#2f6b2a}
 .v8sc-error{margin:0;text-align:center;font-size:14px;font-weight:600;color:#a3321a}
 .v8sc-foot{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:#6b4a2e;margin-top:6px}
+@media (max-width:390px){
+  .v8sc-root{padding-inline:12px}
+  .v8sc-card{padding:15px}
+  .v8sc-topic{padding:17px 15px}
+  .v8sc-topic-head h2{font-size:19px}
+  .v8sc-info{gap:8px}
+  .v8sc-info div{padding:10px}
+  .v8sc-info dd{font-size:18px}
+}
 `;
