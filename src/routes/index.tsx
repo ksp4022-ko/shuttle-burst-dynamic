@@ -27,6 +27,7 @@ import { V8TuningPanel } from "@/components/v8-preview/V8TuningPanel";
 import {
   buildV8OpeningHeroOverrides,
   buildV8OpeningSunControls,
+  buildV8SunDotsControls,
   loadSavedControls,
   motionPreviewLabDefaults,
   previewDefaults,
@@ -66,7 +67,7 @@ const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
 const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
 const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
 const V8_LINE_LOGIN_RETURN_STORAGE_KEY = "shuttle-v8-line-login-return-v1";
-const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN MOTION", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE", "OPEN TIGER 1", "OPEN TIGER 2", "OPEN TIGER 3", "OPEN TIGER RACKET", "OPEN CTA", "OPEN COUNTDOWN"];
+const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN MOTION", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE", "OPEN TIGER 1", "OPEN TIGER 2", "OPEN TIGER 3", "OPEN TIGER RACKET", "OPEN CTA", "OPEN COUNTDOWN", "OPEN SUN DOTS"];
 
 function isV8BrowserPath(pathname: string) {
   return pathname.split("/").filter(Boolean).includes("v8");
@@ -393,6 +394,7 @@ export function Index() {
   // 進入戰局 tap (never on reload / direct link / LINE return).
   const [v8Entering, setV8Entering] = useState(false);
   const v8MorphBusyRef = useRef(false);
+  const openDialAtRef = useRef(0);
   const v8ViewTransitionRef = useRef<{ skipTransition?: () => void } | null>(null);
   const [v8IntroBlocking, setV8IntroBlocking] = useState(Boolean(v8IntroSiteId));
   const [v8IntroReplaySignal, setV8IntroReplaySignal] = useState(0);
@@ -623,14 +625,17 @@ export function Index() {
   const selectAdjacentV8Meetup = useCallback(
     (direction: -1 | 1) => {
       if (flow.events.length <= 1 || flow.pendingAction) return;
+      // SUN-DIAL: ignore new switches while the sun is still turning.
+      if (Date.now() - openDialAtRef.current < 760) return;
       const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
       const currentIndex = Math.max(
         0,
         flow.events.findIndex((event) => event.id === targetId),
       );
-      const nextIndex = (currentIndex + direction + flow.events.length) % flow.events.length;
-      const nextEvent = flow.events[nextIndex];
+      // No wrap-around: the first / last meetup disables that arrow.
+      const nextEvent = flow.events[currentIndex + direction];
       if (!nextEvent) return;
+      openDialAtRef.current = Date.now();
       flow.setPendingSwitchEventId(nextEvent.id);
       markPreviewInteraction();
     },
@@ -1460,6 +1465,9 @@ export function Index() {
                   canSwitchMeetup={canSwitchMeetup}
                   onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
                   onNextEvent={() => selectAdjacentV8Meetup(1)}
+                  eventIndex={Math.max(0, flow.events.findIndex((item) => item.id === previewPickedEvent?.id))}
+                  eventCount={flow.events.length}
+                  dotsControls={buildV8SunDotsControls(openTuningControls, "open")}
                 />
               }
             />

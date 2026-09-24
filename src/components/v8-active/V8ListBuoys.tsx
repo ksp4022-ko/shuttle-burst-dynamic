@@ -92,6 +92,7 @@ export function V8ListBuoys({
   waiting,
   ownSignupId,
   forceExpanded = false,
+  collapseSignal = 0,
 }: {
   assetBase: string;
   controls: V8ActiveListBuoysControls;
@@ -101,6 +102,8 @@ export function V8ListBuoys({
   ownSignupId: string | null;
   // Held open while the tuning panel edits the panel itself.
   forceExpanded?: boolean;
+  // Bumped on every meetup switch (SUN-DIAL): an open panel closes first.
+  collapseSignal?: number;
 }) {
   usePageLock();
   const [phase, setPhase] = useState<Phase>("collapsed");
@@ -207,6 +210,11 @@ export function V8ListBuoys({
     if (!forceExpanded && phase === "expanded") setIdleKey((key) => key + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forceExpanded]);
+
+  useEffect(() => {
+    if (collapseSignal && phase === "expanded") collapse();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collapseSignal]);
 
   const keepOpen = () => setIdleKey((key) => key + 1);
 

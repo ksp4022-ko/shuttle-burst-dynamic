@@ -12,6 +12,7 @@ import {
   buildV8ActiveCapacityBadgeControls,
   buildV8ActiveEmaTextsControls,
   buildV8ActiveListBuoysControls,
+  buildV8SunDotsControls,
   buildV8ActiveHeroOverrides,
   buildV8ActiveIdentityCardControls,
   buildV8ActiveInfoCardsControls,
@@ -48,6 +49,7 @@ import {
   type V8ActiveSunMessagesControls,
   type V8ActiveSwitchArrowLayerControls,
   type V8ActiveSwitchArrowsControls,
+  type V8SunDotsControls,
 } from "./v8ActiveConfig";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
@@ -169,6 +171,12 @@ export function V8ActivePage({
   // 消假's result (back to 正取, or 候補第 N 位) is only known once the
   // refreshed roster arrives -- set before the request, read by an effect.
   const returnFeedbackRef = useRef<{ signupId: string; name: string } | null>(null);
+  // SUN-DIAL: the sun turns to the target meetup immediately (event info is
+  // already in the loaded list); roster-backed parts follow once the switch
+  // lands. Reverts if the switch fails.
+  const [displayEventId, setDisplayEventId] = useState(selectedEventId);
+  const lastDialAtRef = useRef(0);
+  const [listCollapseSignal, setListCollapseSignal] = useState(0);
   // Two-step cancel (select, then a separate confirm button) -- the old
   // single-tap-to-cancel design had no undo/confirm step at all, so a
   // mis-tap directly cancelled someone's signup with no chance to back
@@ -247,6 +255,16 @@ export function V8ActivePage({
 
   useEffect(() => () => feedbackTimersRef.current.forEach((timer) => window.clearTimeout(timer)), []);
 
+  useEffect(() => {
+    setDisplayEventId(selectedEventId);
+  }, [selectedEventId]);
+
+  useEffect(() => {
+    // A finished switch that didn't land (network error): turn back.
+    if (!pendingAction && !flow.pendingSwitchEventId && displayEventId !== selectedEventId) setDisplayEventId(selectedEventId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAction]);
+
   // Called by the scroll when its own status stamp changes (after the API
   // result is in): pause the drum for the animation, and for 請假 shake the
   // canvas once the stamp has landed (160ms fade + 420ms stamp).
@@ -320,13 +338,20 @@ export function V8ActivePage({
     // No switching while one of this page's submits is in flight, so its
     // result can only ever land on the meetup it was sent for.
     if (events.length <= 1 || pendingAction || actionLockRef.current) return;
+    // Ignore new switches while the dial is still turning.
+    if (Date.now() - lastDialAtRef.current < SUN_DIAL_BUSY_MS) return;
     const currentIndex = Math.max(0, events.findIndex((event) => event.id === selectedEventId));
-    const nextIndex = (currentIndex + direction + events.length) % events.length;
-    const nextEvent = events[nextIndex];
+    // No wrap-around: the first / last meetup disables that arrow.
+    const nextEvent = events[currentIndex + direction];
     if (!nextEvent || nextEvent.id === selectedEventId) return;
+    lastDialAtRef.current = Date.now();
+    setDisplayEventId(nextEvent.id);
+    setListCollapseSignal((signal) => signal + 1);
     flow.setPendingSwitchEventId(nextEvent.id);
   };
   const canSwitchMeetup = events.length > 1;
+  const displayEvent = events.find((event) => event.id === displayEventId) || selectedEvent;
+  const displayIndex = Math.max(0, events.findIndex((event) => event.id === displayEvent.id));
 
   const submitTigerSignup = () => withActionLock("cta", async () => {
     if (!lineAuthToken || !lineIdentity?.profileComplete) return;
@@ -399,7 +424,8 @@ export function V8ActivePage({
   const listBuoysControls = buildV8ActiveListBuoysControls(tuningControls);
   // Real ACTIVE page only: the list-buoy targets are appended here rather
   // than to the shared activeTargetOrder, so /v8/preview is unchanged.
-  const activeTuningTargets = [...activeTargetOrder, ...activeListBuoyTargets];
+  const activeTuningTargets: PreviewTargetId[] = [...activeTargetOrder, ...activeListBuoyTargets, "ACTIVE SUN DOTS"];
+  const sunDotsControls = buildV8SunDotsControls(tuningControls, "active");
 
   // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
   // URLs handed to sunContent/infoCardsContent/rosterListsContent below,
@@ -486,14 +512,20 @@ export function V8ActivePage({
         sunContent={
           <V8ActiveSunContent
             assets={assets}
-            eventDate={selectedEvent.eventDate}
-            eventName={selectedEvent.name}
-            eventNote={selectedEvent.eventNote}
-            courtCount={selectedEvent.courtCount}
-            hours={selectedEvent.hours}
-            ballType={selectedEvent.ballType}
-            tempFee={selectedEvent.tempFee}
-            capacity={selectedEvent.maxPeople}
+            eventKey={displayEvent.id}
+            eventIndex={displayIndex}
+            eventCount={events.length}
+            hasPrevious={displayIndex > 0}
+            hasNext={displayIndex < events.length - 1}
+            dotsControls={sunDotsControls}
+            eventDate={displayEvent.eventDate}
+            eventName={displayEvent.name}
+            eventNote={displayEvent.eventNote}
+            courtCount={displayEvent.courtCount}
+            hours={displayEvent.hours}
+            ballType={displayEvent.ballType}
+            tempFee={displayEvent.tempFee}
+            capacity={displayEvent.maxPeople}
             badgeControls={sunBadgeControls}
             capacityBadgeControls={capacityBadgeControls}
             messageControls={sunMessageControls}
@@ -792,6 +824,7 @@ export function V8ActivePage({
         waiting={rosterWaiting}
         ownSignupId={identity?.signupId || null}
         forceExpanded={tuningOpen && tuningTarget === "ACTIVE LIST PANEL"}
+        collapseSignal={listCollapseSignal}
       />
       <V8Toast notice={flow.notice} motionMode={flow.motionMode} setNotice={flow.setNotice} />
     </div>
@@ -826,6 +859,7 @@ function V8SunInfoBadge({
   shadowControls,
   textOffsetX = 0,
   textOffsetY = 0,
+  dialOrder = 0,
 }: {
   src: string;
   label: string;
@@ -833,6 +867,8 @@ function V8SunInfoBadge({
   shadowControls?: V8ActiveSunBadgeShadowControls;
   textOffsetX?: number;
   textOffsetY?: number;
+  // SUN-DIAL stagger slot for this cloud's value swap.
+  dialOrder?: number;
 }) {
   return (
     <span className="v8-sun-info-badge">
@@ -841,7 +877,7 @@ function V8SunInfoBadge({
       {/* textOffsetX/Y (px) is a free nudge on top of textInset's safe-area
           default -- not clamped to it, per the user's request. */}
       <em style={{ ...textInset, transform: `translate(${textOffsetX}px, ${textOffsetY}px)` } as CSSProperties}>
-        {label}
+        <V8DialValue value={label} order={dialOrder} />
       </em>
     </span>
   );
@@ -897,6 +933,7 @@ function V8SunInfoBadgeScattered({
         shadowControls={controls}
         textOffsetX={controls.textOffsetX}
         textOffsetY={controls.textOffsetY}
+        dialOrder={enter?.order ?? 0}
       />
     </div>
   );
@@ -936,6 +973,7 @@ function V8CapacityBadge({
         src={src}
         label={label}
         textInset={BADGE_TEXT_INSETS.capacity}
+        dialOrder={2}
         shadowControls={controls}
         textOffsetX={controls.textOffsetX}
         textOffsetY={controls.textOffsetY}
@@ -1049,6 +1087,78 @@ function V8SunMeetupName({
 // from a separate effect once that state change propagates.
 const SWIPE_THRESHOLD_PX = 40;
 
+// SUN-DIAL (日輪旋轉): switching meetup turns the sun like a dial. The old
+// text rotates out around the sun's centre while the new text rotates in;
+// a faint texture turns underneath and a gold highlight sweeps the rim.
+// Active only -- the Opening sun has its own copy (V8OpeningSunContent).
+export const SUN_DIAL_BUSY_MS = 760;
+const SUN_DIAL_CLEAR_MS = 900;
+
+type SunDialText = { key: string; date: string; displayName: string; timeLabel: string; note: string };
+type SunDialState = { n: number; dir: 1 | -1; outgoing: SunDialText | null };
+
+// dir: +1 = a later meetup (clockwise), -1 = an earlier one.
+function useActiveSunDial(text: SunDialText, order: string) {
+  const previousRef = useRef({ text, order });
+  const [dial, setDial] = useState<SunDialState | null>(null);
+  useEffect(() => {
+    const previous = previousRef.current;
+    previousRef.current = { text, order };
+    if (previous.text.key === text.key) return;
+    const dir: 1 | -1 = order >= previous.order ? 1 : -1;
+    setDial((current) => ({ n: (current?.n ?? 0) + 1, dir, outgoing: previous.text }));
+    const timer = window.setTimeout(() => setDial((current) => (current ? { ...current, outgoing: null } : current)), SUN_DIAL_CLEAR_MS);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text.key]);
+  return dial;
+}
+
+// Cloud values follow the dial 380ms later, staggered 60ms apart: the old
+// value blurs out upward (160ms), then the new one rises in (260ms).
+function V8DialValue({ value, order }: { value: string; order: number }) {
+  const [shown, setShown] = useState(value);
+  const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
+  const shownRef = useRef(value);
+  useEffect(() => {
+    if (value === shownRef.current) return;
+    const start = 380 + order * 60;
+    const timers = [
+      window.setTimeout(() => setPhase("out"), start),
+      window.setTimeout(() => {
+        shownRef.current = value;
+        setShown(value);
+        setPhase("in");
+      }, start + 160),
+      window.setTimeout(() => setPhase("idle"), start + 160 + 260),
+    ];
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [value, order]);
+  return <span className={phase === "idle" ? "v8-dial-value" : `v8-dial-value is-${phase}`}>{shown}</span>;
+}
+
+// Gold dots under the sun: how many meetups, and which one is shown.
+function V8ActiveSunDots({ count, index, controls }: { count: number; index: number; controls: V8SunDotsControls }) {
+  if (count <= 1) return null;
+  return (
+    <div
+      className="v8-sun-dots"
+      aria-label={`第 ${index + 1} 場，共 ${count} 場`}
+      style={{
+        left: `${controls.x}%`,
+        top: `${controls.y}%`,
+        opacity: controls.opacity / 100,
+        zIndex: controls.zIndex,
+        transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
+      }}
+    >
+      {Array.from({ length: count }, (_, dot) => (
+        <span key={dot} className={dot === index ? "is-current" : undefined} />
+      ))}
+    </div>
+  );
+}
+
 // Per docs/V8_COMPONENT_CONTROL_BASELINE.md -- X/Y % of the sun's own box,
 // translate(-50%,-50%)-centered on that point, same convention as
 // V8SunMessage/V8SunInfoBadgeScattered's centered variant. Added
@@ -1069,11 +1179,15 @@ function V8SunMeetupSwitcher({
   controls,
   onPreviousEvent,
   onNextEvent,
+  hasPrevious = true,
+  hasNext = true,
 }: {
   assets: { sunSwitchArrowPrev: string; sunSwitchArrowNext: string };
   controls: V8ActiveSwitchArrowsControls;
   onPreviousEvent: () => void;
   onNextEvent: () => void;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
 }) {
   const startXRef = useRef<number | null>(null);
 
@@ -1085,8 +1199,8 @@ function V8SunMeetupSwitcher({
     if (startXRef.current === null) return;
     const endX = event.changedTouches[0]?.clientX ?? startXRef.current;
     const delta = endX - startXRef.current;
-    if (delta > SWIPE_THRESHOLD_PX) onPreviousEvent();
-    else if (delta < -SWIPE_THRESHOLD_PX) onNextEvent();
+    if (delta > SWIPE_THRESHOLD_PX && hasPrevious) onPreviousEvent();
+    else if (delta < -SWIPE_THRESHOLD_PX && hasNext) onNextEvent();
     startXRef.current = null;
   };
 
@@ -1104,6 +1218,7 @@ function V8SunMeetupSwitcher({
             type="button"
             className="v8-sun-switch-arrow is-prev"
             style={switchArrowStyle(controls.prev)}
+            disabled={!hasPrevious}
             onClick={onPreviousEvent}
             aria-label="上一場聚會"
           >
@@ -1117,6 +1232,7 @@ function V8SunMeetupSwitcher({
             type="button"
             className="v8-sun-switch-arrow is-next"
             style={switchArrowStyle(controls.next)}
+            disabled={!hasNext}
             onClick={onNextEvent}
             aria-label="下一場聚會"
           >
@@ -1169,6 +1285,12 @@ export function V8ActiveSunContent({
   switchArrowControls,
   onPreviousEvent,
   onNextEvent,
+  eventKey,
+  eventIndex,
+  eventCount,
+  hasPrevious,
+  hasNext,
+  dotsControls,
 }: {
   assets: {
     sunBadgeBallType: string;
@@ -1202,41 +1324,77 @@ export function V8ActiveSunContent({
   // get no switcher UI at all, instead of a non-functional one.
   onPreviousEvent?: () => void;
   onNextEvent?: () => void;
+  // SUN-DIAL -- all optional so /v8/preview's mock sun is unchanged.
+  eventKey?: string;
+  eventIndex?: number;
+  eventCount?: number;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
+  dotsControls?: V8SunDotsControls;
 }) {
   // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label per the
   // user's exact spec (courtCount:2, hours:3 -> "2場/3hr") -- courtCount
   // alone if hours isn't set, rather than showing a dangling "/undefinedhr".
   const courtTimeLabel = courtCount ? (hours ? `${courtCount}場/${hours}hr` : `${courtCount}場`) : null;
   const meetupDisplay = parseV8MeetupDisplay(eventName);
+  const dialText: SunDialText = {
+    key: eventKey || `${eventDate}|${eventName}`,
+    date: formatV8MeetupDate(eventDate),
+    displayName: meetupDisplay.displayName,
+    timeLabel: meetupDisplay.timeLabel,
+    note: eventNote || "",
+  };
+  const dial = useActiveSunDial(dialText, `${eventDate}|${eventKey || ""}`);
+  const dialing = Boolean(dial?.outgoing);
+  const dirStyle = { "--dial-dir": dial?.dir ?? 1 } as CSSProperties;
+
+  const renderMessages = (text: SunDialText) => (
+    <div
+      className="v8-sun-message-safe-box"
+      style={
+        {
+          width: `${messageControls.safeBox.width}%`,
+          height: `${messageControls.safeBox.height}%`,
+        } as CSSProperties
+      }
+    >
+      {messageControls.safeBox.showHelperBox ? <span className="v8-sun-message-safe-helper" aria-hidden="true" /> : null}
+      <V8SunDateStretchText text={text.date} controls={messageControls.date} showHelperBox={messageControls.safeBox.showHelperBox} />
+      <V8SunMeetupName displayName={text.displayName} kangxuanSrc={assets.sunTitleKangxuan} controls={messageControls.name} />
+      <V8SunMessage text={text.timeLabel} controls={messageControls.time} />
+      <V8SunMessage text={text.note} controls={messageControls.note} />
+    </div>
+  );
 
   return (
     <>
+      {dialing ? (
+        <>
+          <span key={`texture-${dial?.n}`} className="v8-sun-dial-texture" style={dirStyle} aria-hidden="true" />
+          <span key={`ring-${dial?.n}`} className="v8-sun-dial-ring" style={dirStyle} aria-hidden="true" />
+        </>
+      ) : null}
       {onPreviousEvent && onNextEvent ? (
         <V8SunMeetupSwitcher
           assets={assets}
           controls={switchArrowControls}
           onPreviousEvent={onPreviousEvent}
           onNextEvent={onNextEvent}
+          hasPrevious={hasPrevious ?? true}
+          hasNext={hasNext ?? true}
         />
       ) : null}
-      <div
-        className="v8-sun-message-safe-box"
-        style={
-          {
-            width: `${messageControls.safeBox.width}%`,
-            height: `${messageControls.safeBox.height}%`,
-          } as CSSProperties
-        }
-      >
-        {messageControls.safeBox.showHelperBox ? <span className="v8-sun-message-safe-helper" aria-hidden="true" /> : null}
-        <V8SunDateStretchText
-          text={formatV8MeetupDate(eventDate)}
-          controls={messageControls.date}
-          showHelperBox={messageControls.safeBox.showHelperBox}
-        />
-        <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} controls={messageControls.name} />
-        <V8SunMessage text={meetupDisplay.timeLabel} controls={messageControls.time} />
-        <V8SunMessage text={eventNote || ""} controls={messageControls.note} />
+      {/* Clipped to the sun's circle only while the dial turns, so the
+          tuned text positions are untouched the rest of the time. */}
+      <div className={dialing ? "v8-sun-dial-clip is-dialing" : "v8-sun-dial-clip"}>
+        {dial?.outgoing ? (
+          <div className="v8-sun-dial-group is-out" style={dirStyle} aria-hidden="true">
+            {renderMessages(dial.outgoing)}
+          </div>
+        ) : null}
+        <div key={dial?.n ?? 0} className={dial ? "v8-sun-dial-group is-in" : "v8-sun-dial-group"} style={dirStyle}>
+          {renderMessages(dialText)}
+        </div>
       </div>
       {ballType ? (
         <V8SunInfoBadgeScattered
@@ -1265,6 +1423,9 @@ export function V8ActiveSunContent({
       ) : null}
       {typeof capacity === "number" ? (
         <V8CapacityBadge src={assets.sunBadgeCapacity} label={`${capacity}人`} controls={capacityBadgeControls} />
+      ) : null}
+      {dotsControls && typeof eventCount === "number" && typeof eventIndex === "number" ? (
+        <V8ActiveSunDots count={eventCount} index={eventIndex} controls={dotsControls} />
       ) : null}
     </>
   );
@@ -1548,7 +1709,8 @@ export function V8IdentityScrollContent({
   useEffect(() => {
     const previous = previousStampRef.current;
     previousStampRef.current = { signupId: identity.signupId, status: identity.status };
-    if (previous.signupId !== identity.signupId || previous.status === identity.status) return;
+    // Only when the status differs (same signup, or after a meetup switch).
+    if (previous.status === identity.status) return;
     const outgoingSrc = statusStampAsset({ ...identity, status: previous.status }, assets);
     setStampAnimation((current) => ({ key: (current?.key ?? 0) + 1, status: identity.status, outgoingSrc }));
     onStatusFeedback?.(identity.status);
@@ -2446,6 +2608,169 @@ export function V8ActiveStyles() {
       @keyframes v8-header-pop {
         from { opacity: 0; scale: 0.6; }
         to { opacity: 1; scale: 1; }
+      }
+
+      /* SUN-DIAL (日輪旋轉) */
+      .v8-sun-dial-clip {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .v8-sun-dial-clip.is-dialing {
+        border-radius: 50%;
+        overflow: hidden;
+      }
+
+      .v8-sun-dial-group {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 50%;
+      }
+
+      .v8-sun-dial-group.is-out {
+        animation: v8-dial-out 340ms ease-in both;
+      }
+
+      .v8-sun-dial-group.is-in {
+        animation: v8-dial-in 480ms cubic-bezier(.2, .8, .3, 1) 260ms both;
+      }
+
+      @keyframes v8-dial-out {
+        from { transform: rotate(0deg); opacity: 1; }
+        to { transform: rotate(calc(var(--dial-dir, 1) * 70deg)); opacity: 0; }
+      }
+
+      @keyframes v8-dial-in {
+        0% { transform: rotate(calc(var(--dial-dir, 1) * -70deg)); opacity: 0; }
+        80% { transform: rotate(calc(var(--dial-dir, 1) * 4deg)); opacity: 1; }
+        100% { transform: rotate(0deg); opacity: 1; }
+      }
+
+      /* The sun itself is a flat disc; this faint texture only shows while
+         it turns, so the rotation reads without changing the idle look. */
+      .v8-sun-dial-texture {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        pointer-events: none;
+        background: repeating-conic-gradient(from 0deg, rgba(255, 214, 160, 0) 0deg 9deg, rgba(255, 214, 160, 0.28) 9deg 11deg);
+        -webkit-mask-image: radial-gradient(circle, transparent 18%, #000 45%, #000 70%, transparent 71%);
+        mask-image: radial-gradient(circle, transparent 18%, #000 45%, #000 70%, transparent 71%);
+        animation: v8-dial-texture 700ms cubic-bezier(.6, 0, .25, 1) both;
+      }
+
+      @keyframes v8-dial-texture {
+        0% { transform: rotate(0deg); opacity: 0; }
+        20% { opacity: 1; }
+        75% { opacity: 1; }
+        100% { transform: rotate(calc(var(--dial-dir, 1) * 120deg)); opacity: 0; }
+      }
+
+      .v8-sun-dial-ring {
+        position: absolute;
+        inset: 3%;
+        border-radius: 50%;
+        pointer-events: none;
+        background: conic-gradient(from 0deg, rgba(255, 214, 120, 0) 0deg 290deg, rgba(255, 214, 120, 0.9) 335deg, #fff3c4 352deg, rgba(255, 214, 120, 0) 360deg);
+        -webkit-mask-image: radial-gradient(circle, transparent calc(50% - 4px), #000 calc(50% - 3px), #000 calc(50% - 1px), transparent 50%);
+        mask-image: radial-gradient(circle, transparent calc(50% - 4px), #000 calc(50% - 3px), #000 calc(50% - 1px), transparent 50%);
+        animation: v8-dial-ring 900ms cubic-bezier(.4, 0, .2, 1) both;
+      }
+
+      @keyframes v8-dial-ring {
+        0% { transform: rotate(0deg); opacity: 0; }
+        15% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { transform: rotate(calc(var(--dial-dir, 1) * 300deg)); opacity: 0; }
+      }
+
+      .v8-dial-value {
+        display: inline-block;
+      }
+
+      .v8-dial-value.is-out {
+        animation: v8-dial-value-out 160ms ease-in both;
+      }
+
+      .v8-dial-value.is-in {
+        animation: v8-dial-value-in 260ms ease-out both;
+      }
+
+      @keyframes v8-dial-value-out {
+        from { opacity: 1; filter: blur(0); transform: translateY(0); }
+        to { opacity: 0; filter: blur(4px); transform: translateY(-40%); }
+      }
+
+      @keyframes v8-dial-value-in {
+        from { opacity: 0; transform: translateY(40%); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .v8-sun-dots {
+        position: absolute;
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        pointer-events: none;
+      }
+
+      .v8-sun-dots span {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: rgba(255, 224, 150, 0.55);
+        transition: transform 300ms ease-out, background 300ms ease-out;
+      }
+
+      .v8-sun-dots span.is-current {
+        background: #ffe9a3;
+        transform: scale(1.5);
+        box-shadow: 0 0 6px rgba(255, 207, 107, 0.9);
+      }
+
+      /* Arrows: 44x44 touch target around the 34px art; dim at first/last. */
+      .v8-sun-switch-arrow {
+        position: absolute;
+      }
+
+      .v8-sun-switch-arrow::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 44px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+      }
+
+      .v8-sun-switch-arrow:disabled {
+        opacity: 0.3;
+        pointer-events: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .v8-sun-dial-texture,
+        .v8-sun-dial-ring {
+          display: none;
+        }
+
+        .v8-sun-dial-group.is-out {
+          animation: v8-dial-fade-out 200ms linear both;
+        }
+
+        .v8-sun-dial-group.is-in {
+          animation: v8-dial-fade-in 200ms linear both;
+        }
+
+        .v8-dial-value.is-out,
+        .v8-dial-value.is-in {
+          animation-duration: 200ms;
+          filter: none;
+        }
+
+        @keyframes v8-dial-fade-out { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes v8-dial-fade-in { from { opacity: 0; } to { opacity: 1; } }
       }
 
       /* While a submit is in flight the meetup can't be switched. */
