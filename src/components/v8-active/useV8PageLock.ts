@@ -5,12 +5,14 @@ import { useEffect } from "react";
 // lists, modals, the tuning panel) and on form controls. Reference-counted,
 // because Opening unmounts right as Active mounts -- the lock must not drop
 // in between.
+//
+// 2026-09-24: the lock is done by cancelling page touchmoves only. An
+// earlier version also forced html/body to overflow:hidden + height:100dvh;
+// right after it shipped, the Opening page on iPhone Safari showed most of its
+// images missing (suspected cause, not confirmed), so html/body layout is no
+// longer touched (only overscroll).
 let lockCount = 0;
-const LOCKED_PROPS: [string, string][] = [
-  ["overflow", "hidden"],
-  ["overscroll-behavior", "none"],
-  ["height", "100dvh"],
-];
+const LOCKED_PROPS: [string, string][] = [["overscroll-behavior", "none"]];
 const saved = new Map<string, string>();
 
 function touchCanMove(target: EventTarget | null) {
