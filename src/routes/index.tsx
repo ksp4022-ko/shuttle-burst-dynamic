@@ -12,6 +12,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import { buildV8ActiveAssets } from "@/components/v8-active/v8ActiveConfig";
+import { V8Toast } from "@/components/v8-active/V8Toast";
 import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepage/HomepageSheets";
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
@@ -395,6 +396,10 @@ export function Index() {
   const [v8Entering, setV8Entering] = useState(false);
   const v8MorphBusyRef = useRef(false);
   const openDialAtRef = useRef(0);
+  // SUN-DIAL end-of-list feedback on the Opening sun (own toast state, so
+  // no other flow notice starts showing on Opening).
+  const [openDialBump, setOpenDialBump] = useState<{ n: number; dir: 1 | -1 } | undefined>(undefined);
+  const [openDialHint, setOpenDialHint] = useState("");
   const v8ViewTransitionRef = useRef<{ skipTransition?: () => void } | null>(null);
   const [v8IntroBlocking, setV8IntroBlocking] = useState(Boolean(v8IntroSiteId));
   const [v8IntroReplaySignal, setV8IntroReplaySignal] = useState(0);
@@ -634,7 +639,11 @@ export function Index() {
       );
       // No wrap-around: the first / last meetup disables that arrow.
       const nextEvent = flow.events[currentIndex + direction];
-      if (!nextEvent) return;
+      if (!nextEvent) {
+        setOpenDialBump((current) => ({ n: (current?.n ?? 0) + 1, dir: direction }));
+        setOpenDialHint(direction > 0 ? "已是最後一場" : "已是第一場");
+        return;
+      }
       openDialAtRef.current = Date.now();
       flow.setPendingSwitchEventId(nextEvent.id);
       markPreviewInteraction();
@@ -1468,6 +1477,7 @@ export function Index() {
                   eventIndex={Math.max(0, flow.events.findIndex((item) => item.id === previewPickedEvent?.id))}
                   eventCount={flow.events.length}
                   dotsControls={buildV8SunDotsControls(openTuningControls, "open")}
+                  bump={openDialBump}
                 />
               }
             />
@@ -1676,6 +1686,10 @@ export function Index() {
           onRefresh={() => flow.refresh()}
         />
       )}
+
+      {isV8Route && !v8MeetupConfirmed ? (
+        <V8Toast notice={openDialHint} motionMode={flow.motionMode} setNotice={setOpenDialHint} />
+      ) : null}
 
       {isV8Route && v8MeetupConfirmed ? (
         <V8ActivePage flow={flow} onBeforeLineLogin={rememberV8LineLoginReturn} entering={v8Entering} />

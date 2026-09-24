@@ -300,9 +300,7 @@ function V8OpeningSunDots({ count, index, controls }: { count: number; index: nu
         transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
       }}
     >
-      {Array.from({ length: count }, (_, dot) => (
-        <span key={dot} className={dot === index ? "is-current" : undefined} />
-      ))}
+      {index + 1} / {count}
     </div>
   );
 }
@@ -332,8 +330,8 @@ function V8OpeningSunSwitcher({
     if (startXRef.current === null) return;
     const endX = event.changedTouches[0]?.clientX ?? startXRef.current;
     const delta = endX - startXRef.current;
-    if (delta > SWIPE_THRESHOLD_PX && hasPrevious) onPreviousEvent();
-    else if (delta < -SWIPE_THRESHOLD_PX && hasNext) onNextEvent();
+    if (delta > SWIPE_THRESHOLD_PX) onPreviousEvent();
+    else if (delta < -SWIPE_THRESHOLD_PX) onNextEvent();
     startXRef.current = null;
   };
 
@@ -342,14 +340,14 @@ function V8OpeningSunSwitcher({
       <div className="v8-opening-sun-swipe-zone" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} aria-hidden="true" />
       {controls.show ? (
         <>
-          <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.prev)} disabled={!hasPrevious} onClick={onPreviousEvent} aria-label="上一場聚會">
+          <button type="button" className={hasPrevious ? "v8-opening-sun-switch-arrow" : "v8-opening-sun-switch-arrow is-end"} style={switchArrowStyle(controls.prev)} aria-disabled={!hasPrevious} onClick={onPreviousEvent} aria-label="上一場聚會">
             <span className="v8-opening-switch-arrow-visual is-prev">
               <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-main" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
             </span>
           </button>
-          <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.next)} disabled={!hasNext} onClick={onNextEvent} aria-label="下一場聚會">
+          <button type="button" className={hasNext ? "v8-opening-sun-switch-arrow" : "v8-opening-sun-switch-arrow is-end"} style={switchArrowStyle(controls.next)} aria-disabled={!hasNext} onClick={onNextEvent} aria-label="下一場聚會">
             <span className="v8-opening-switch-arrow-visual is-next">
               <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
@@ -378,6 +376,7 @@ export function V8OpeningSunContent({
   eventIndex,
   eventCount,
   dotsControls,
+  bump,
 }: {
   event: AlphaEvent | null | undefined;
   controls?: V8OpeningSunControls;
@@ -389,6 +388,8 @@ export function V8OpeningSunContent({
   eventIndex?: number;
   eventCount?: number;
   dotsControls?: V8SunDotsControls;
+  // Bumped when a switch hits the first/last meetup (spring-back turn).
+  bump?: { n: number; dir: 1 | -1 } | undefined;
 }) {
   const assets = useMemo(() => buildV8OpeningSunAssets(import.meta.env.BASE_URL), []);
   const eventDisplay = event ? parseV8MeetupDisplay(event.name) : null;
@@ -443,7 +444,11 @@ export function V8OpeningSunContent({
         />
       ) : null}
       {/* Clipped to the sun's circle only while the dial turns. */}
-      <div className={dialing ? "v8-opening-sun-dial-clip is-dialing" : "v8-opening-sun-dial-clip"}>
+      <div
+        key={`clip-${bump?.n ?? 0}`}
+        className={["v8-opening-sun-dial-clip", dialing ? "is-dialing" : "", bump ? "is-bump" : ""].filter(Boolean).join(" ")}
+        style={{ "--bump-dir": bump?.dir ?? 1 } as CSSProperties}
+      >
         {dial?.outgoing ? (
           <div className="v8-opening-sun-dial-group is-out" style={dirStyle} aria-hidden="true">
             {renderMessages(dial.outgoing)}
@@ -542,28 +547,6 @@ export function V8OpeningSunStyles() {
         100% { transform: rotate(calc(var(--dial-dir, 1) * 300deg)); opacity: 0; }
       }
 
-      .v8-opening-sun-dots {
-        position: absolute;
-        display: flex;
-        gap: 5px;
-        align-items: center;
-        pointer-events: none;
-      }
-
-      .v8-opening-sun-dots span {
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        background: rgba(255, 224, 150, 0.55);
-        transition: transform 300ms ease-out, background 300ms ease-out;
-      }
-
-      .v8-opening-sun-dots span.is-current {
-        background: #ffe9a3;
-        transform: scale(1.5);
-        box-shadow: 0 0 6px rgba(255, 207, 107, 0.9);
-      }
-
       .v8-opening-sun-switch-arrow::after {
         content: "";
         position: absolute;
@@ -574,10 +557,31 @@ export function V8OpeningSunStyles() {
         transform: translate(-50%, -50%);
       }
 
-      .v8-opening-sun-switch-arrow:disabled {
+      .v8-opening-sun-switch-arrow.is-end .v8-opening-switch-arrow-visual {
         opacity: 0.3;
-        pointer-events: none;
       }
+
+      /* End of the meetup list: a small turn that springs back. */
+      .v8-opening-sun-dial-clip.is-bump {
+        animation: v8-opening-dial-bump 320ms cubic-bezier(.3, 1.6, .5, 1);
+      }
+
+      @keyframes v8-opening-dial-bump {
+        0% { transform: rotate(0deg); }
+        40% { transform: rotate(calc(var(--bump-dir, 1) * 8deg)); }
+        100% { transform: rotate(0deg); }
+      }
+
+      .v8-opening-sun-dots {
+        position: absolute;
+        pointer-events: none;
+        white-space: nowrap;
+        font: 700 12px/1 var(--font-sans, system-ui, sans-serif);
+        letter-spacing: 0.06em;
+        color: #ffe9a3;
+        text-shadow: 0 1px 2px rgba(80, 20, 5, 0.65);
+      }
+
 
       @media (prefers-reduced-motion: reduce) {
         .v8-opening-sun-dial-ring {

@@ -20,10 +20,12 @@ type NoticeTone = "success" | "error";
 // substring) keeps API error messages such as "這筆報名已取消" from being
 // read as a success.
 const SUCCESS_NOTICE_MARKERS = ["已完成報名", "已請假", "已消假", "已取消報名", "已取消", "已代報", "已代退"];
+// Single-line notices that are not errors.
+const NEUTRAL_NOTICES = new Set(["已切換聚會", "已是第一場", "已是最後一場"]);
 let toastWaveAssetsPreloaded = false;
 
 function noticeTone(message: string): NoticeTone {
-  return message === "已切換聚會" || splitSuccessNotice(message) ? "success" : "error";
+  return NEUTRAL_NOTICES.has(message) || splitSuccessNotice(message) ? "success" : "error";
 }
 
 function splitSuccessNotice(message: string): { name: string; status: string } | null {
