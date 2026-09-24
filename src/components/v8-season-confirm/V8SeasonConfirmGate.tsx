@@ -404,6 +404,16 @@ function V8SeasonConfirmPage({
   const perEventFee =
     info.perEventSeasonFee ??
     (info.seasonFee && info.eventCount ? Math.round(info.seasonFee / info.eventCount) : null);
+  const addCourtRulesText = `人數達 17～18 人時，視場地狀況加開 1 場 1 小時；人數達 19～21 人時，視場地狀況加開 1 場 2 小時。
+若只有 16 人，原則上第 16 位先候補，不直接加場。
+加場成本以場租 350 元／小時計算，不套用原場租折扣；用球依實際狀況預估。`;
+  const leaveRulesText = `${info.leaveRulesText || "請在「週四 下午3點」前請假，方便協調場地與候補。"}${
+    perEventFee ? `\n有效請假每次以下季抵扣約 ${perEventFee} 元計算。` : ""
+  }
+超過時間才請假，可能無法列入抵扣；若有特殊狀況請直接聯繫管理員。`;
+  const lineLoginHelpText = `請用自己的 LINE 登入並選擇回覆，系統會用 LINE 身分綁定你的季打資料。
+如果畫面下方顯示的 LINE 不是你，請點「不是你？更換 LINE 帳號」後重新登入。
+若你的名字已被其他 LINE 認領，或名單內找不到你，請聯繫管理員處理。`;
   const sceneBase = `${import.meta.env.BASE_URL}v8-preview/display/`;
 
   return (
@@ -455,12 +465,18 @@ function V8SeasonConfirmPage({
                 </dd>
               </div>
             </dl>
-            {info.leaveRulesText ? (
-              <div className="v8sc-block">
-                <h2>請假規則</h2>
-                <p>{info.leaveRulesText}</p>
-              </div>
-            ) : null}
+            <div className="v8sc-block">
+              <h2>加場與臨打規則</h2>
+              <p>{addCourtRulesText}</p>
+            </div>
+            <div className="v8sc-block">
+              <h2>請假規則</h2>
+              <p>{leaveRulesText}</p>
+            </div>
+            <div className="v8sc-block">
+              <h2>LINE 登入說明</h2>
+              <p>{lineLoginHelpText}</p>
+            </div>
             {info.publicNote ? (
               <div className="v8sc-block">
                 <h2>備註</h2>
