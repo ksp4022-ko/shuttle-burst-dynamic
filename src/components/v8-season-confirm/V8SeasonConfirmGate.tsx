@@ -163,6 +163,19 @@ function formatDeadline(value?: string | null) {
   return `${get("month")}/${get("day")}（${weekday}）${get("hour")}:${get("minute")}`;
 }
 
+function formatSeasonDate(value?: string | null) {
+  if (!value) return "";
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[1]}/${match[2]}/${match[3]}` : "";
+}
+
+function formatMonthDay(value?: string | null) {
+  if (!value) return "";
+  const match = value.match(/^\d{4}-(\d{2})-(\d{2})/);
+  if (!match) return "";
+  return `${Number(match[1])}/${Number(match[2])}`;
+}
+
 function money(value?: number | null) {
   return typeof value === "number" && value > 0 ? `${value.toLocaleString("zh-TW")} 元` : null;
 }
@@ -223,6 +236,7 @@ function V8SeasonConfirmPage({
   const [pickIntent, setPickIntent] = useState<"renew" | "decline">("renew");
   const [options, setOptions] = useState<V8SeasonClaimOption[] | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [applicantName, setApplicantName] = useState("");
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -274,7 +288,10 @@ function V8SeasonConfirmPage({
   }, [token, siteId]);
 
   const submit = useCallback(
-    async (intent: V8SeasonIntentKind, extra: { memberId?: string; applicantName?: string } = {}) => {
+    async (
+      intent: V8SeasonIntentKind,
+      extra: { memberId?: string; applicantName?: string; displayName?: string } = {},
+    ) => {
       if (!token) return;
       setBusy(true);
       setError("");
@@ -285,6 +302,7 @@ function V8SeasonConfirmPage({
         setStep("home");
         setEditing(false);
         setSelectedMemberId("");
+        setDisplayName("");
         setNotice("已送出，截止前都可以修改。");
         await Promise.all([loadMe(), refreshInfo()]);
       } catch (submitError) {
@@ -299,10 +317,17 @@ function V8SeasonConfirmPage({
   );
 
   const openPicker = useCallback(
-    async (intent: "renew" | "decline") => {
+    async (intent: "renew" | "decline", current: V8SeasonConfirmMe | null = me) => {
       if (!token) return;
       setPickIntent(intent);
-      setSelectedMemberId("");
+      setSelectedMemberId(current?.claim?.inSourceRoster ? current.claim.memberId : "");
+      setDisplayName(
+        identity?.confirmedName ||
+          current?.claim?.memberName ||
+          identity?.displayName ||
+          identity?.lineDisplayName ||
+          "",
+      );
       setStep("pick");
       setError("");
       setNotice("");
@@ -313,7 +338,7 @@ function V8SeasonConfirmPage({
         setError(errorMessage(loadError));
       }
     },
-    [token, siteId],
+    [identity, me, token, siteId],
   );
 
   const openApply = useCallback(() => {
@@ -334,11 +359,7 @@ function V8SeasonConfirmPage({
         openApply();
         return;
       }
-      if (current?.claim?.inSourceRoster) {
-        void submit(intent, { memberId: current.claim.memberId });
-        return;
-      }
-      void openPicker(intent);
+      void openPicker(intent, current);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [loggedIn, openApply, openPicker, submit],
@@ -397,23 +418,36 @@ function V8SeasonConfirmPage({
   const deadline = formatDeadline(info.deadlineAt);
   // 目前季打人數 = renewals + approved applications (older Workers only send renewCount).
   const memberCount = Number(info.seasonMemberCount ?? info.renewCount ?? 0);
-  const remaining =
-    typeof info.capacityLimit === "number" && info.capacityLimit > 0
-      ? Math.max(0, info.capacityLimit - memberCount)
-      : null;
   const perEventFee =
     info.perEventSeasonFee ??
     (info.seasonFee && info.eventCount ? Math.round(info.seasonFee / info.eventCount) : null);
-  const addCourtRulesText = `人數達 17～18 人時，視場地狀況加開 1 場 1 小時；人數達 19～21 人時，視場地狀況加開 1 場 2 小時。
-若只有 16 人，原則上第 16 位先候補，不直接加場。
-加場成本以場租 350 元／小時計算，不套用原場租折扣；用球依實際狀況預估。`;
-  const leaveRulesText = `${info.leaveRulesText || "請在「週四 下午3點」前請假，方便協調場地與候補。"}${
-    perEventFee ? `\n有效請假每次以下季抵扣約 ${perEventFee} 元計算。` : ""
+  const seasonStart = formatSeasonDate(info.targetSeason?.startDate);
+  const seasonEnd = formatSeasonDate(info.targetSeason?.endDate);
+  const firstMeetDate = formatMonthDay(info.targetSeason?.startDate);
+  const courtCount = info.courtCount || 2;
+  const hours = info.hours || 2;
+  const seasonInfoText = `期間：${seasonStart && seasonEnd ? `${seasonStart}～${seasonEnd}` : "依公告"}
+時間：每週四 22:00～24:00
+用球：${info.ballType || "MS-101"}
+季打費請於 ${firstMeetDate || "首次開打"} 首次開打時繳交，使用 LINE Pay 付款。
+本季不預收冷氣費，視天氣及現場需求加開。`;
+  const addCourtRulesText = `基本場地：${courtCount} 場 ${hours} 小時，上限 15 人
+16～18 人：加開 1 場 1 小時
+19～22 人：加開 1 場 2 小時`;
+  const leaveRulesText = `季打請假沒有次數限制，但必須在聚會當天 13:00 前，於系統完成請假，才算有效請假。${
+    perEventFee ? `\n有效請假以下一季抵扣約 ${perEventFee} 元／次計算。` : ""
   }
-超過時間才請假，可能無法列入抵扣；若有特殊狀況請直接聯繫管理員。`;
-  const lineLoginHelpText = `請用自己的 LINE 登入並選擇回覆，系統會用 LINE 身分綁定你的季打資料。
-如果畫面下方顯示的 LINE 不是你，請點「不是你？更換 LINE 帳號」後重新登入。
-若你的名字已被其他 LINE 認領，或名單內找不到你，請聯繫管理員處理。`;
+不方便操作，請在 LINE 聯絡 @管理員（柯Sammy）。`;
+  const lineLoginHelpText = `原季打球友請選「${renewLabel}」或「這季休息」；新球友請選「申請加入」。
+1. 按下你的回覆選項。
+2. 出現 LINE 登入畫面後，請按最下方「使用 LINE 應用程式登入」。
+3. LINE 開啟後按「同意」。
+4. 登入完成後會自動回到本頁。
+5. 看到「你已登記」才算完成。
+若顯示的 LINE 帳號不是本人，請按「不是你？更換 LINE 帳號」。
+若登入沒有反應，請從瀏覽器選單改用 Safari 或 Chrome 開啟，再重新登入。`;
+  const proxyHelpText = `可以使用自己的 LINE 幫球友代報名。
+若之後要取消代報，必須使用原本代報時的同一個 LINE 帳號操作，其他 LINE 帳號無法代退。`;
   const sceneBase = `${import.meta.env.BASE_URL}v8-preview/display/`;
 
   return (
@@ -446,36 +480,47 @@ function V8SeasonConfirmPage({
           <section className="v8sc-card">
             <dl className="v8sc-info">
               <div>
-                <dt>聚會次數</dt>
-                <dd>{info.eventCount ? `${info.eventCount} 次` : "待公布"}</dd>
+                <dt>聚會場地</dt>
+                <dd>{courtCount} 場 {hours} 小時</dd>
+                <dd className="v8sc-sub">基本上限 15 人</dd>
               </div>
               <div>
                 <dt>季打費用</dt>
                 <dd>{money(info.seasonFee) || "待公布"}</dd>
-                {money(info.seasonFee) && perEventFee ? <dd className="v8sc-sub">約 {perEventFee} 元／次</dd> : null}
+                {money(info.seasonFee) && perEventFee ? (
+                  <dd className="v8sc-sub">{info.eventCount ? `${info.eventCount} 次，` : ""}約 {perEventFee} 元／次</dd>
+                ) : null}
               </div>
               <div>
                 <dt>臨打費用</dt>
                 <dd>{money(info.tempFee) ? `${money(info.tempFee)}／次` : "依聚會公告"}</dd>
+                <dd className="v8sc-sub">16 人起依規則加場</dd>
               </div>
               <div>
-                <dt>目前季打人數</dt>
-                <dd>
-                  {memberCount} 人{remaining !== null ? `（剩 ${remaining} 位）` : ""}
-                </dd>
+                <dt>目前回覆</dt>
+                <dd>{memberCount} 人</dd>
+                <dd className="v8sc-sub">截止前可修改</dd>
               </div>
             </dl>
             <div className="v8sc-block">
-              <h2>加場與臨打規則</h2>
+              <h2>本季資訊</h2>
+              <p>{seasonInfoText}</p>
+            </div>
+            <div className="v8sc-block">
+              <h2>加場規則</h2>
               <p>{addCourtRulesText}</p>
             </div>
             <div className="v8sc-block">
-              <h2>請假規則</h2>
+              <h2>季打請假與退費</h2>
               <p>{leaveRulesText}</p>
             </div>
             <div className="v8sc-block">
-              <h2>LINE 登入說明</h2>
+              <h2>LINE 登入與回覆方式</h2>
               <p>{lineLoginHelpText}</p>
+            </div>
+            <div className="v8sc-block">
+              <h2>代報、代退說明</h2>
+              <p>{proxyHelpText}</p>
             </div>
             {info.publicNote ? (
               <div className="v8sc-block">
@@ -491,7 +536,7 @@ function V8SeasonConfirmPage({
             <p className="v8sc-mine-label">你已登記</p>
             <p className="v8sc-mine-value">
               {intentLabel[myIntent.intent]}
-              <span>（{myIntent.memberName || myIntent.applicantName || identity?.displayName}）</span>
+              <span>（{identity?.confirmedName || myIntent.memberName || myIntent.applicantName || identity?.displayName}）</span>
             </p>
             {myIntent.enteredBy === "admin" ? <p className="v8sc-tag">由管理員登記</p> : null}
             {myIntent.intent === "apply" ? (
@@ -551,9 +596,10 @@ function V8SeasonConfirmPage({
         {phase === "open" && step === "pick" ? (
           <section className="v8sc-card">
             <h2 className="v8sc-step-title">
-              你是 {sourceLabel} 季打的哪一位？
+              確認季打身分與稱呼
               <span>送出「{intentLabel[pickIntent]}」</span>
             </h2>
+            <p className="v8sc-hint">請選擇你在 {sourceLabel} 季打名單中的名字，再確認球友稱呼。</p>
             <p className="v8sc-warn">選錯名字會影響你的報名與請假權限。</p>
             {me?.claim && !me.claim.inSourceRoster ? (
               <p className="v8sc-warn">你的 LINE 目前認領「{me.claim.memberName}」，送出後會改為所選的名字。</p>
@@ -577,6 +623,16 @@ function V8SeasonConfirmPage({
               </div>
             )}
             <p className="v8sc-hint">名字已被認領但確定是你本人，請聯繫管理員。</p>
+            <label className="v8sc-field v8sc-claim-name">
+              <span>球友稱呼</span>
+              <input
+                value={displayName}
+                maxLength={40}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="大家平常怎麼叫你"
+              />
+            </label>
+            <p className="v8sc-hint">這只會修改畫面顯示稱呼，不會改動季打成員主檔。</p>
             <div className="v8sc-row">
               <button type="button" className="v8sc-btn-secondary" disabled={busy} onClick={() => setStep("home")}>
                 返回
@@ -584,8 +640,8 @@ function V8SeasonConfirmPage({
               <button
                 type="button"
                 className="v8sc-btn-primary"
-                disabled={!selectedMemberId || busy}
-                onClick={() => void submit(pickIntent, { memberId: selectedMemberId })}
+                disabled={!selectedMemberId || !displayName.trim() || busy}
+                onClick={() => void submit(pickIntent, { memberId: selectedMemberId, displayName: displayName.trim() })}
               >
                 {busy ? "送出中…" : "確認送出"}
               </button>
@@ -737,6 +793,7 @@ const CSS = `
 .v8sc-btn-primary:disabled,.v8sc-btn-secondary:disabled{opacity:.5;cursor:default}
 .v8sc-link{background:none;border:0;padding:6px;margin:4px auto 0;display:block;color:#7a2a12;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
 .v8sc-field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#6b4a2e}
+.v8sc-claim-name{margin-top:12px}
 .v8sc-field input{min-height:46px;border-radius:10px;border:1px solid rgba(122,42,18,.35);background:#fff;padding:0 12px;font:inherit;font-size:16px;color:#20150d}
 .v8sc-notice{margin:0;text-align:center;font-size:14px;font-weight:600;color:#2f6b2a}
 .v8sc-error{margin:0;text-align:center;font-size:14px;font-weight:600;color:#a3321a}

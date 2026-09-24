@@ -95,9 +95,9 @@ export async function confirmV8LineProfile(
 
 export async function resetV8LineProfile(
   token: string,
-  input: { revokeSessions?: boolean } = {},
-): Promise<{ identity: V8LineIdentity; sessionRevoked: boolean }> {
-  return alphaFetch<{ identity: V8LineIdentity; sessionRevoked: boolean }>("/auth/profile/reset", {
+  input: { revokeSessions?: boolean; resetSeasonConfirm?: boolean; siteId?: string } = {},
+): Promise<{ identity: V8LineIdentity; sessionRevoked: boolean; seasonConfirmReset?: boolean }> {
+  return alphaFetch<{ identity: V8LineIdentity; sessionRevoked: boolean; seasonConfirmReset?: boolean }>("/auth/profile/reset", {
     method: "POST",
     headers: { authorization: `Bearer ${token}` },
     body: JSON.stringify(input),
