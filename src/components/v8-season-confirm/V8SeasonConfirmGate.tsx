@@ -509,7 +509,7 @@ function V8SeasonConfirmPage({
                 <div><dt>時間</dt><dd>每週四 22:00～24:00</dd></div>
                 <div><dt>用球</dt><dd>{info.ballType || "MS-101"}</dd></div>
               </dl>
-              <div className="v8sc-callout"><strong>季打費繳交</strong><span>{paymentDateText}繳交，使用 LINE Pay 付款。</span></div>
+              <div className="v8sc-callout"><strong>季打費繳交</strong><span>{paymentDateText}繳交，可使用 LINE Pay 付款。</span></div>
               <p className="v8sc-topic-note">本季不預收冷氣費，視天氣及現場需求加開。</p>
             </section>
 
@@ -575,7 +575,7 @@ function V8SeasonConfirmPage({
             ) : null}
             {phase === "open" && !applyLocked && !editing && step === "home" ? (
               <button type="button" className="v8sc-link" onClick={() => { setEditing(true); setNotice(""); setError(""); }}>
-                修改回覆
+                修改回覆／重領季打身分／修改稱呼
               </button>
             ) : null}
             {applyLocked && phase === "open" ? <p className="v8sc-hint">如需變更請聯繫管理員。</p> : null}
