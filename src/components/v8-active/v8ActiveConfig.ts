@@ -151,6 +151,16 @@ export type V8ActiveListBuoysControls = {
   };
 };
 
+// SUN-DIAL gold dots (meetup N of M) -- X/Y % of the sun's own box.
+export type V8SunDotsControls = {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  zIndex: number;
+};
+
 export const v8ActiveListBuoyFiles = {
   waveBand: "list-buoy-wave-band-v1.webp",
   headerLeave: "list-buoy-header-leave-v1.webp",

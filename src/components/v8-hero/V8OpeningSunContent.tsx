@@ -1,4 +1,5 @@
-import { useMemo, useRef, type CSSProperties, type TouchEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
+import type { V8SunDotsControls } from "@/components/v8-active/v8ActiveConfig";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V8SunDateStretchText } from "@/components/v8-active/V8SunDateStretchText";
@@ -261,16 +262,65 @@ function switchArrowStyle(c: SwitchArrowConfig): CSSProperties {
 }
 
 // Copied from V8SunMeetupSwitcher in V8ActivePage.tsx.
+// SUN-DIAL (日輪旋轉), Opening's own copy (Active has its own in
+// V8ActivePage.tsx): switching meetup turns the sun -- old text rotates out
+// around the centre, new text rotates in, a faint texture turns and a gold
+// highlight sweeps the rim. Opening animates the sun only.
+const OPENING_SUN_DIAL_CLEAR_MS = 900;
+
+type OpeningDialText = { key: string; date: string; displayName: string; timeLabel: string; note: string };
+
+function useOpeningSunDial(text: OpeningDialText, order: string) {
+  const previousRef = useRef({ text, order });
+  const [dial, setDial] = useState<{ n: number; dir: 1 | -1; outgoing: OpeningDialText | null } | null>(null);
+  useEffect(() => {
+    const previous = previousRef.current;
+    previousRef.current = { text, order };
+    if (!previous.text.key || !text.key || previous.text.key === text.key) return;
+    const dir: 1 | -1 = order >= previous.order ? 1 : -1;
+    setDial((current) => ({ n: (current?.n ?? 0) + 1, dir, outgoing: previous.text }));
+    const timer = window.setTimeout(() => setDial((current) => (current ? { ...current, outgoing: null } : current)), OPENING_SUN_DIAL_CLEAR_MS);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text.key]);
+  return dial;
+}
+
+function V8OpeningSunDots({ count, index, controls }: { count: number; index: number; controls: V8SunDotsControls }) {
+  if (count <= 1) return null;
+  return (
+    <div
+      className="v8-opening-sun-dots"
+      aria-label={`第 ${index + 1} 場，共 ${count} 場`}
+      style={{
+        left: `${controls.x}%`,
+        top: `${controls.y}%`,
+        opacity: controls.opacity / 100,
+        zIndex: controls.zIndex,
+        transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
+      }}
+    >
+      {Array.from({ length: count }, (_, dot) => (
+        <span key={dot} className={dot === index ? "is-current" : undefined} />
+      ))}
+    </div>
+  );
+}
+
 function V8OpeningSunSwitcher({
   assets,
   controls,
   onPreviousEvent,
   onNextEvent,
+  hasPrevious,
+  hasNext,
 }: {
   assets: { sunSwitchArrowPrev: string; sunSwitchArrowNext: string };
   controls: SwitchArrowControls;
   onPreviousEvent: () => void;
   onNextEvent: () => void;
+  hasPrevious: boolean;
+  hasNext: boolean;
 }) {
   const startXRef = useRef<number | null>(null);
 
@@ -282,8 +332,8 @@ function V8OpeningSunSwitcher({
     if (startXRef.current === null) return;
     const endX = event.changedTouches[0]?.clientX ?? startXRef.current;
     const delta = endX - startXRef.current;
-    if (delta > SWIPE_THRESHOLD_PX) onPreviousEvent();
-    else if (delta < -SWIPE_THRESHOLD_PX) onNextEvent();
+    if (delta > SWIPE_THRESHOLD_PX && hasPrevious) onPreviousEvent();
+    else if (delta < -SWIPE_THRESHOLD_PX && hasNext) onNextEvent();
     startXRef.current = null;
   };
 
@@ -292,14 +342,14 @@ function V8OpeningSunSwitcher({
       <div className="v8-opening-sun-swipe-zone" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} aria-hidden="true" />
       {controls.show ? (
         <>
-          <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.prev)} onClick={onPreviousEvent} aria-label="上一場聚會">
+          <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.prev)} disabled={!hasPrevious} onClick={onPreviousEvent} aria-label="上一場聚會">
             <span className="v8-opening-switch-arrow-visual is-prev">
               <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-main" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
             </span>
           </button>
-          <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.next)} onClick={onNextEvent} aria-label="下一場聚會">
+          <button type="button" className="v8-opening-sun-switch-arrow" style={switchArrowStyle(controls.next)} disabled={!hasNext} onClick={onNextEvent} aria-label="下一場聚會">
             <span className="v8-opening-switch-arrow-visual is-next">
               <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
@@ -325,37 +375,84 @@ export function V8OpeningSunContent({
   onPreviousEvent,
   onNextEvent,
   canSwitchMeetup = true,
+  eventIndex,
+  eventCount,
+  dotsControls,
 }: {
   event: AlphaEvent | null | undefined;
   controls?: V8OpeningSunControls;
   onPreviousEvent: () => void;
   onNextEvent: () => void;
   canSwitchMeetup?: boolean;
+  // SUN-DIAL: position in the meetup list, for the gold dots and the
+  // first/last arrow state.
+  eventIndex?: number;
+  eventCount?: number;
+  dotsControls?: V8SunDotsControls;
 }) {
   const assets = useMemo(() => buildV8OpeningSunAssets(import.meta.env.BASE_URL), []);
+  const eventDisplay = event ? parseV8MeetupDisplay(event.name) : null;
+  const dialText: OpeningDialText = {
+    key: event?.id || "",
+    date: event ? formatV8MeetupDate(event.eventDate) : "",
+    displayName: eventDisplay?.displayName || "",
+    timeLabel: eventDisplay?.timeLabel || "",
+    note: event?.eventNote || "",
+  };
+  const dial = useOpeningSunDial(dialText, `${event?.eventDate || ""}|${event?.id || ""}`);
   if (!event) return null;
+  const dialing = Boolean(dial?.outgoing);
+  const dirStyle = { "--dial-dir": dial?.dir ?? 1 } as CSSProperties;
+  const hasPrevious = typeof eventIndex === "number" ? eventIndex > 0 : true;
+  const hasNext = typeof eventIndex === "number" && typeof eventCount === "number" ? eventIndex < eventCount - 1 : true;
+
+  const renderMessages = (text: OpeningDialText) => (
+    <div className="v8-opening-sun-message-safe-box" style={{ width: `${controls.safeBox.width}%`, height: `${controls.safeBox.height}%` }}>
+      {controls.safeBox.showHelperBox ? <span className="v8-opening-sun-message-safe-helper" aria-hidden="true" /> : null}
+      <V8SunDateStretchText
+        text={text.date}
+        controls={controls.messages.date}
+        showHelperBox={controls.safeBox.showHelperBox}
+        className="v8-opening-sun-date-fit-box"
+      />
+      <V8SunMeetupName displayName={text.displayName} kangxuanSrc={assets.sunTitleKangxuan} config={controls.messages.name} />
+      <V8SunMessage text={text.timeLabel} config={controls.messages.time} />
+      <V8SunMessage text={text.note} config={controls.messages.note} />
+    </div>
+  );
 
   // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label, same as
   // Active's own courtTimeLabel logic.
   const courtTimeLabel = event.courtCount ? (event.hours ? `${event.courtCount}場/${event.hours}hr` : `${event.courtCount}場`) : null;
-  const meetupDisplay = parseV8MeetupDisplay(event.name);
 
   return (
     <>
-      {canSwitchMeetup ? (
-        <V8OpeningSunSwitcher assets={assets} controls={controls.switchArrows} onPreviousEvent={onPreviousEvent} onNextEvent={onNextEvent} />
+      {dialing ? (
+        <>
+          <span key={`texture-${dial?.n}`} className="v8-opening-sun-dial-texture" style={dirStyle} aria-hidden="true" />
+          <span key={`ring-${dial?.n}`} className="v8-opening-sun-dial-ring" style={dirStyle} aria-hidden="true" />
+        </>
       ) : null}
-      <div className="v8-opening-sun-message-safe-box" style={{ width: `${controls.safeBox.width}%`, height: `${controls.safeBox.height}%` }}>
-        {controls.safeBox.showHelperBox ? <span className="v8-opening-sun-message-safe-helper" aria-hidden="true" /> : null}
-        <V8SunDateStretchText
-          text={formatV8MeetupDate(event.eventDate)}
-          controls={controls.messages.date}
-          showHelperBox={controls.safeBox.showHelperBox}
-          className="v8-opening-sun-date-fit-box"
+      {canSwitchMeetup ? (
+        <V8OpeningSunSwitcher
+          assets={assets}
+          controls={controls.switchArrows}
+          onPreviousEvent={onPreviousEvent}
+          onNextEvent={onNextEvent}
+          hasPrevious={hasPrevious}
+          hasNext={hasNext}
         />
-        <V8SunMeetupName displayName={meetupDisplay.displayName} kangxuanSrc={assets.sunTitleKangxuan} config={controls.messages.name} />
-        <V8SunMessage text={meetupDisplay.timeLabel} config={controls.messages.time} />
-        <V8SunMessage text={event.eventNote || ""} config={controls.messages.note} />
+      ) : null}
+      {/* Clipped to the sun's circle only while the dial turns. */}
+      <div className={dialing ? "v8-opening-sun-dial-clip is-dialing" : "v8-opening-sun-dial-clip"}>
+        {dial?.outgoing ? (
+          <div className="v8-opening-sun-dial-group is-out" style={dirStyle} aria-hidden="true">
+            {renderMessages(dial.outgoing)}
+          </div>
+        ) : null}
+        <div key={dial?.n ?? 0} className={dial ? "v8-opening-sun-dial-group is-in" : "v8-opening-sun-dial-group"} style={dirStyle}>
+          {renderMessages(dialText)}
+        </div>
       </div>
       {SHOW_INFO_BADGES && event.ballType ? (
         <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={event.ballType} config={BALL_TYPE_BADGE} textInset={BADGE_TEXT_INSETS.ballType} />
@@ -372,6 +469,9 @@ export function V8OpeningSunContent({
         <V8SunInfoBadgeScattered src={assets.sunBadgeCourtCount} label={courtTimeLabel} config={COURT_COUNT_BADGE} textInset={BADGE_TEXT_INSETS.courtCount} />
       ) : null}
       {SHOW_INFO_BADGES && typeof event.maxPeople === "number" ? <V8CapacityBadge src={assets.sunBadgeCapacity} label={`${event.maxPeople}人`} /> : null}
+      {dotsControls && typeof eventCount === "number" && typeof eventIndex === "number" ? (
+        <V8OpeningSunDots count={eventCount} index={eventIndex} controls={dotsControls} />
+      ) : null}
     </>
   );
 }
@@ -385,6 +485,134 @@ export function V8OpeningSunStyles() {
       .v8-opening-sun-info-scattered {
         position: absolute;
         width: max-content;
+      }
+
+      /* SUN-DIAL (日輪旋轉) */
+      .v8-opening-sun-dial-clip {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .v8-opening-sun-dial-clip.is-dialing {
+        border-radius: 50%;
+        overflow: hidden;
+      }
+
+      .v8-opening-sun-dial-group {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 50%;
+      }
+
+      .v8-opening-sun-dial-group.is-out {
+        animation: v8-opening-dial-out 340ms ease-in both;
+      }
+
+      .v8-opening-sun-dial-group.is-in {
+        animation: v8-opening-dial-in 480ms cubic-bezier(.2, .8, .3, 1) 260ms both;
+      }
+
+      @keyframes v8-opening-dial-out {
+        from { transform: rotate(0deg); opacity: 1; }
+        to { transform: rotate(calc(var(--dial-dir, 1) * 70deg)); opacity: 0; }
+      }
+
+      @keyframes v8-opening-dial-in {
+        0% { transform: rotate(calc(var(--dial-dir, 1) * -70deg)); opacity: 0; }
+        80% { transform: rotate(calc(var(--dial-dir, 1) * 4deg)); opacity: 1; }
+        100% { transform: rotate(0deg); opacity: 1; }
+      }
+
+      .v8-opening-sun-dial-texture {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        pointer-events: none;
+        background: repeating-conic-gradient(from 0deg, rgba(255, 214, 160, 0) 0deg 9deg, rgba(255, 214, 160, 0.28) 9deg 11deg);
+        -webkit-mask-image: radial-gradient(circle, transparent 18%, #000 45%, #000 70%, transparent 71%);
+        mask-image: radial-gradient(circle, transparent 18%, #000 45%, #000 70%, transparent 71%);
+        animation: v8-opening-dial-texture 700ms cubic-bezier(.6, 0, .25, 1) both;
+      }
+
+      @keyframes v8-opening-dial-texture {
+        0% { transform: rotate(0deg); opacity: 0; }
+        20% { opacity: 1; }
+        75% { opacity: 1; }
+        100% { transform: rotate(calc(var(--dial-dir, 1) * 120deg)); opacity: 0; }
+      }
+
+      .v8-opening-sun-dial-ring {
+        position: absolute;
+        inset: 3%;
+        border-radius: 50%;
+        pointer-events: none;
+        background: conic-gradient(from 0deg, rgba(255, 214, 120, 0) 0deg 290deg, rgba(255, 214, 120, 0.9) 335deg, #fff3c4 352deg, rgba(255, 214, 120, 0) 360deg);
+        -webkit-mask-image: radial-gradient(circle, transparent calc(50% - 4px), #000 calc(50% - 3px), #000 calc(50% - 1px), transparent 50%);
+        mask-image: radial-gradient(circle, transparent calc(50% - 4px), #000 calc(50% - 3px), #000 calc(50% - 1px), transparent 50%);
+        animation: v8-opening-dial-ring 900ms cubic-bezier(.4, 0, .2, 1) both;
+      }
+
+      @keyframes v8-opening-dial-ring {
+        0% { transform: rotate(0deg); opacity: 0; }
+        15% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { transform: rotate(calc(var(--dial-dir, 1) * 300deg)); opacity: 0; }
+      }
+
+      .v8-opening-sun-dots {
+        position: absolute;
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        pointer-events: none;
+      }
+
+      .v8-opening-sun-dots span {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: rgba(255, 224, 150, 0.55);
+        transition: transform 300ms ease-out, background 300ms ease-out;
+      }
+
+      .v8-opening-sun-dots span.is-current {
+        background: #ffe9a3;
+        transform: scale(1.5);
+        box-shadow: 0 0 6px rgba(255, 207, 107, 0.9);
+      }
+
+      .v8-opening-sun-switch-arrow::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 44px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+      }
+
+      .v8-opening-sun-switch-arrow:disabled {
+        opacity: 0.3;
+        pointer-events: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .v8-opening-sun-dial-texture,
+        .v8-opening-sun-dial-ring {
+          display: none;
+        }
+
+        .v8-opening-sun-dial-group.is-out {
+          animation: v8-opening-dial-fade-out 200ms linear both;
+        }
+
+        .v8-opening-sun-dial-group.is-in {
+          animation: v8-opening-dial-fade-in 200ms linear both;
+        }
+
+        @keyframes v8-opening-dial-fade-out { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes v8-opening-dial-fade-in { from { opacity: 0; } to { opacity: 1; } }
       }
 
       .v8-opening-sun-message-safe-box {

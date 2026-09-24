@@ -1,6 +1,7 @@
 import { v8ActiveBackgroundFadeOverrides, v8ActiveSunMessagesDefaults } from "@/components/v8-active/v8ActiveConfig";
 import type {
   V8ActiveListBuoysControls,
+  V8SunDotsControls,
   V8ActiveCapacityBadgeControls,
   V8ActiveEmaTextsControls,
   V8ActiveIdentityCardControls,
@@ -583,6 +584,20 @@ export type PreviewControls = {
   activeListBuoyPanelTextColor: string;
   activeListBuoyPanelFontFamily: string;
   activeListBuoyPanelBold: boolean;
+  // SUN-DIAL (2026-09-24): row of gold dots on the sun (which meetup of how
+  // many), X/Y % of the sun box. See V8ActivePage / V8OpeningSunContent.
+  openSunDotsX: number;
+  openSunDotsY: number;
+  openSunDotsScale: number;
+  openSunDotsRotation: number;
+  openSunDotsOpacity: number;
+  openSunDotsZIndex: number;
+  activeSunDotsX: number;
+  activeSunDotsY: number;
+  activeSunDotsScale: number;
+  activeSunDotsRotation: number;
+  activeSunDotsOpacity: number;
+  activeSunDotsZIndex: number;
   // Sun-embedded meetup-switch arrows (<>), added 2026-09-11 -- one shared
   // Show toggle + each arrow (prev/next) independently gets the full
   // baseline control set, per docs/V8_COMPONENT_CONTROL_BASELINE.md.
@@ -672,6 +687,8 @@ export type PreviewTargetId =
   | "ACTIVE LIST HEADER MAIN"
   | "ACTIVE LIST HEADER WAIT"
   | "ACTIVE LIST PANEL"
+  | "ACTIVE SUN DOTS"
+  | "OPEN SUN DOTS"
   | "ACTIVE SWITCH ARROW PREV"
   | "ACTIVE SWITCH ARROW NEXT";
 
@@ -1331,6 +1348,18 @@ export const previewDefaults: PreviewControls = {
   activeListBuoyPanelTextColor: "#5a2f0e",
   activeListBuoyPanelFontFamily: "",
   activeListBuoyPanelBold: true,
+  openSunDotsX: 50,
+  openSunDotsY: 90,
+  openSunDotsScale: 1,
+  openSunDotsRotation: 0,
+  openSunDotsOpacity: 100,
+  openSunDotsZIndex: 6,
+  activeSunDotsX: 50,
+  activeSunDotsY: 90,
+  activeSunDotsScale: 1,
+  activeSunDotsRotation: 0,
+  activeSunDotsOpacity: 100,
+  activeSunDotsZIndex: 6,
   // Sun-embedded meetup-switch arrows (2026-09-11) -- positioned inside the
   // red sun circle per the user's request, prev on the left / next on the
   // right, sharing one Show toggle.
@@ -1770,6 +1799,22 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeListBuoyPanelTextColor",
     "activeListBuoyPanelFontFamily",
     "activeListBuoyPanelBold",
+  ],
+  "OPEN SUN DOTS": [
+    "openSunDotsX",
+    "openSunDotsY",
+    "openSunDotsScale",
+    "openSunDotsRotation",
+    "openSunDotsOpacity",
+    "openSunDotsZIndex",
+  ],
+  "ACTIVE SUN DOTS": [
+    "activeSunDotsX",
+    "activeSunDotsY",
+    "activeSunDotsScale",
+    "activeSunDotsRotation",
+    "activeSunDotsOpacity",
+    "activeSunDotsZIndex",
   ],
   "ACTIVE ROSTER LISTS": [
     "activeRosterListsShow",
@@ -2282,6 +2327,18 @@ export const controlRanges = {
   activeListBuoyPanelZIndex: { label: "名單面板 Z-Index", min: 0, max: 40 },
   activeListBuoyPanelFontSize: { label: "名單文字 Font Size", min: 8, max: 28 },
   activeListBuoyPanelLineHeight: { label: "名單文字 Line Height", min: 1, max: 2.4, step: 0.05 },
+  openSunDotsX: { label: "OPEN 場次金點 X %", min: -20, max: 120 },
+  openSunDotsY: { label: "OPEN 場次金點 Y %", min: -20, max: 140 },
+  openSunDotsScale: { label: "OPEN 場次金點 Scale", min: 0.3, max: 3, step: 0.01 },
+  openSunDotsRotation: { label: "OPEN 場次金點 Rotation", min: -180, max: 180 },
+  openSunDotsOpacity: { label: "OPEN 場次金點 Opacity", min: 0, max: 100 },
+  openSunDotsZIndex: { label: "OPEN 場次金點 Z-Index", min: 0, max: 40 },
+  activeSunDotsX: { label: "ACTIVE 場次金點 X %", min: -20, max: 120 },
+  activeSunDotsY: { label: "ACTIVE 場次金點 Y %", min: -20, max: 140 },
+  activeSunDotsScale: { label: "ACTIVE 場次金點 Scale", min: 0.3, max: 3, step: 0.01 },
+  activeSunDotsRotation: { label: "ACTIVE 場次金點 Rotation", min: -180, max: 180 },
+  activeSunDotsOpacity: { label: "ACTIVE 場次金點 Opacity", min: 0, max: 100 },
+  activeSunDotsZIndex: { label: "ACTIVE 場次金點 Z-Index", min: 0, max: 40 },
   activeRosterV2A1FontSize: { label: "三名單v2 A1 Font Size", min: 8, max: 24 },
   activeRosterV2A1LineHeight: { label: "三名單v2 A1 Line Height", min: 1, max: 2.4, step: 0.05 },
   activeRosterV2A1LeaveX: { label: "三名單v2 A1 季打請假 X", min: -40, max: 40 },
@@ -2789,6 +2846,12 @@ Wave Band: X ${Math.round(controls.activeListBuoyWaveX)}, Y ${Math.round(control
 正取名單標頭: X ${controls.activeListBuoyHeaderMainX.toFixed(1)}, Y ${controls.activeListBuoyHeaderMainY.toFixed(1)}, Scale ${controls.activeListBuoyHeaderMainScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyHeaderMainRotation)}, Opacity ${Math.round(controls.activeListBuoyHeaderMainOpacity)}, Z ${Math.round(controls.activeListBuoyHeaderMainZIndex)}
 備取名單標頭: X ${controls.activeListBuoyHeaderWaitX.toFixed(1)}, Y ${controls.activeListBuoyHeaderWaitY.toFixed(1)}, Scale ${controls.activeListBuoyHeaderWaitScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyHeaderWaitRotation)}, Opacity ${Math.round(controls.activeListBuoyHeaderWaitOpacity)}, Z ${Math.round(controls.activeListBuoyHeaderWaitZIndex)}
 Panel: X ${Math.round(controls.activeListBuoyPanelX)}, Y ${Math.round(controls.activeListBuoyPanelY)}, Scale ${controls.activeListBuoyPanelScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyPanelRotation)}, Opacity ${Math.round(controls.activeListBuoyPanelOpacity)}, Z ${Math.round(controls.activeListBuoyPanelZIndex)}, Font ${Math.round(controls.activeListBuoyPanelFontSize)}, Line Height ${controls.activeListBuoyPanelLineHeight.toFixed(2)}, Text Color ${controls.activeListBuoyPanelTextColor}, Font Family ${controls.activeListBuoyPanelFontFamily || "(default)"}, Bold ${controls.activeListBuoyPanelBold ? "ON" : "OFF"}
+
+ACTIVE SUN DOTS (紅日場次金點)
+X ${Math.round(controls.activeSunDotsX)}, Y ${Math.round(controls.activeSunDotsY)}, Scale ${controls.activeSunDotsScale.toFixed(2)}, Rotation ${Math.round(controls.activeSunDotsRotation)}, Opacity ${Math.round(controls.activeSunDotsOpacity)}, Z ${Math.round(controls.activeSunDotsZIndex)}
+
+OPEN SUN DOTS (紅日場次金點)
+X ${Math.round(controls.openSunDotsX)}, Y ${Math.round(controls.openSunDotsY)}, Scale ${controls.openSunDotsScale.toFixed(2)}, Rotation ${Math.round(controls.openSunDotsRotation)}, Opacity ${Math.round(controls.openSunDotsOpacity)}, Z ${Math.round(controls.openSunDotsZIndex)}
 
 ACTIVE SWITCH ARROW (切換聚會 <>)
 Show: ${controls.activeSwitchArrowShow ? "ON" : "OFF"}
@@ -3403,6 +3466,28 @@ export const activeListBuoyTargets: PreviewTargetId[] = [
   "ACTIVE LIST HEADER WAIT",
   "ACTIVE LIST PANEL",
 ];
+
+// SUN-DIAL gold dots, one control set per page (Opening / Active).
+export function buildV8SunDotsControls(controls: PreviewControls, scope: "open" | "active"): V8SunDotsControls {
+  if (scope === "open") {
+    return {
+      x: controls.openSunDotsX,
+      y: controls.openSunDotsY,
+      scale: controls.openSunDotsScale,
+      rotation: controls.openSunDotsRotation,
+      opacity: controls.openSunDotsOpacity,
+      zIndex: controls.openSunDotsZIndex,
+    };
+  }
+  return {
+    x: controls.activeSunDotsX,
+    y: controls.activeSunDotsY,
+    scale: controls.activeSunDotsScale,
+    rotation: controls.activeSunDotsRotation,
+    opacity: controls.activeSunDotsOpacity,
+    zIndex: controls.activeSunDotsZIndex,
+  };
+}
 
 export function buildV8ActiveListBuoysControls(controls: PreviewControls): V8ActiveListBuoysControls {
   const header = (prefix: "Leave" | "Main" | "Wait") => ({
