@@ -50,6 +50,7 @@ import {
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { V8Toast } from "./V8Toast";
+import { V8HeightGuides } from "./V8HeightGuides";
 import { V8SunDateStretchText } from "./V8SunDateStretchText";
 import { type V8CtaGlowOutlineKey } from "./v8CtaGlowOutlines";
 import { V8CtaGlowOutline } from "./V8CtaGlowOutline";
@@ -144,6 +145,7 @@ export function V8ActivePage({
   });
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
+  const [heightGuides, setHeightGuides] = useState(false);
   // Two-step cancel (select, then a separate confirm button) -- the old
   // single-tap-to-cancel design had no undo/confirm step at all, so a
   // mis-tap directly cancelled someone's signup with no chance to back
@@ -372,7 +374,7 @@ export function V8ActivePage({
 
   return (
     <div
-      className="v8-active"
+      className={helperMode ? "v8-active is-modal-open" : "v8-active"}
       data-identity={identity ? "known" : "unknown"}
       onPointerDownCapture={captureRipplePoint}
     >
@@ -654,8 +656,11 @@ export function V8ActivePage({
           motionPreviewLab={motionPreviewLab}
           onMotionPreviewLabChange={setMotionPreviewLab}
           controlsScope="active"
+          heightGuidesEnabled={heightGuides}
+          onHeightGuidesChange={setHeightGuides}
         />
       ) : null}
+      {heightGuides ? <V8HeightGuides /> : null}
       {tuningOpen ? (
         <button
           type="button"
@@ -1389,24 +1394,21 @@ export function V8IdentityScrollContent({
   onHelperSignup: () => void;
   onHelperCancel: () => void;
 }) {
+  // Press feedback (CTA-DRUM): a one-shot 280ms knock that overrides the
+  // idle drum. Timed instead of tied to pointerup so a quick tap still
+  // plays the whole 1 -> 0.93 -> 1 curve.
   const [ctaPressed, setCtaPressed] = useState(false);
-  const [ctaRebounding, setCtaRebounding] = useState(false);
-  const previousBusyRef = useRef(busy);
-  const ctaActionArmedRef = useRef(false);
+  const pressTimerRef = useRef<number | undefined>(undefined);
 
-  useEffect(() => {
-    const wasBusy = previousBusyRef.current;
-    previousBusyRef.current = busy;
-    if (wasBusy || !busy) return;
-    if (!ctaActionArmedRef.current) return;
-    ctaActionArmedRef.current = false;
-    setCtaRebounding(true);
-    const timer = window.setTimeout(() => setCtaRebounding(false), 220);
-    return () => window.clearTimeout(timer);
-  }, [busy]);
+  useEffect(() => () => window.clearTimeout(pressTimerRef.current), []);
+
+  const startPressFeedback = () => {
+    window.clearTimeout(pressTimerRef.current);
+    setCtaPressed(true);
+    pressTimerRef.current = window.setTimeout(() => setCtaPressed(false), 280);
+  };
 
   const handlePrimaryClick = () => {
-    ctaActionArmedRef.current = true;
     onPrimaryAction();
   };
 
@@ -1417,7 +1419,6 @@ export function V8IdentityScrollContent({
     "v8-scroll-cta",
     "v8-scroll-cta-img",
     ctaPressed ? "is-pressed" : "",
-    ctaRebounding ? "is-rebounding" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -1441,11 +1442,7 @@ export function V8IdentityScrollContent({
         style={identityVisualStyle(controls.cta)}
         disabled={busy}
         onClick={handlePrimaryClick}
-        onPointerDown={() => setCtaPressed(true)}
-        onPointerUp={() => setCtaPressed(false)}
-        onPointerLeave={() => setCtaPressed(false)}
-        onPointerCancel={() => setCtaPressed(false)}
-        onBlur={() => setCtaPressed(false)}
+        onPointerDown={startPressFeedback}
         aria-label={busy ? pendingLabel : primaryActionLabel(identity)}
       >
         <span className="v8-cta-interaction">
@@ -2167,8 +2164,8 @@ export function V8ActiveStyles() {
         display: block;
         width: max-content;
         height: max-content;
-        animation: v8-cta-idle-rhythm 5000ms linear infinite;
-        transform-origin: center;
+        animation: v8-cta-drum-knock 3.6s ease-out infinite;
+        transform-origin: 50% 50%;
       }
 
       /* Laser-engraved glow-run reminder (V8CtaGlowOutline) -- sized to
@@ -2212,13 +2209,14 @@ export function V8ActiveStyles() {
       }
 
       .v8-scroll-cta.is-pressed .v8-cta-interaction {
-        animation: none;
-        transform: translateY(2px) scale(0.91);
-        transition: transform 90ms ease-out;
+        animation: v8-cta-press 280ms ease-out both;
       }
 
-      .v8-scroll-cta.is-rebounding .v8-cta-interaction {
-        animation: v8-cta-rebound 200ms cubic-bezier(.2, .9, .2, 1);
+      /* Drum pauses while the CTA is disabled (sending) or a helper modal
+         is open; it restarts from rest once that ends. */
+      .v8-scroll-cta:disabled .v8-cta-interaction,
+      .v8-active.is-modal-open .v8-scroll-cta .v8-cta-interaction {
+        animation: none;
       }
 
       .v8-scroll-cta:disabled,
@@ -2367,53 +2365,43 @@ export function V8ActiveStyles() {
         }
       }
 
-      @keyframes v8-cta-idle-rhythm {
+      /* CTA-DRUM: idle "war drum knock" (replaced the old sway). */
+      @keyframes v8-cta-drum-knock {
         0%,
-        30%,
-        32% {
-          transform: translateX(0) rotate(0deg) scale(1);
-        }
-        35% {
-          transform: translateX(-5px) rotate(-1.2deg) scale(1);
-        }
-        38% {
-          transform: translateX(5px) rotate(1.2deg) scale(1);
-        }
-        39% {
-          transform: translateX(0) rotate(0deg) scale(1);
-        }
-        41% {
-          transform: translateX(-2px) rotate(-0.7deg) scale(1);
-        }
-        43% {
-          transform: translateX(3px) rotate(0.9deg) scale(1);
-        }
-        45% {
-          transform: translateX(-3px) rotate(-1deg) scale(1);
-        }
-        47% {
-          transform: translateX(2px) rotate(0.7deg) scale(1);
-        }
-        49% {
-          transform: translateX(-1px) rotate(-0.4deg) scale(1);
-        }
-        50%,
+        78%,
         100% {
-          transform: translateX(0) rotate(0deg) scale(1);
+          transform: scale(1);
+        }
+        82% {
+          transform: scale(1.07);
+        }
+        86% {
+          transform: scale(0.99);
+        }
+        90% {
+          transform: scale(1.05);
+        }
+        95% {
+          transform: scale(1);
         }
       }
 
-      @keyframes v8-cta-rebound {
+      /* Press feedback: overrides the drum for one 280ms knock. */
+      @keyframes v8-cta-press {
         0% {
-          transform: translateY(2px) scale(0.91);
+          transform: scale(1);
+          filter: brightness(1);
         }
-        55% {
-          transform: translateY(-1px) scale(1.045);
+        35% {
+          transform: scale(0.93);
+          filter: brightness(1.2);
         }
         100% {
-          transform: translateY(0) scale(1);
+          transform: scale(1);
+          filter: brightness(1);
         }
       }
+
 
       @media (prefers-reduced-motion: reduce) {
         .v8-switch-arrow-main,
@@ -2424,7 +2412,8 @@ export function V8ActiveStyles() {
 
         .v8-scroll-cta.is-pressed .v8-cta-interaction {
           transform: none;
-          filter: brightness(0.92);
+          filter: brightness(1.2);
+          transition: filter 240ms ease-out;
         }
       }
 

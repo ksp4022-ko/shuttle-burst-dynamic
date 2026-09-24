@@ -489,7 +489,7 @@ export function V8HeroComposition({
       <V8HeroAmbientStyles />
       <V8CtaGlowOutlineStyles />
       <div style={stageShellStyle}>
-        <div style={stageAspectRatio ? { ...stageStyle, aspectRatio: stageAspectRatio } : stageStyle}>
+        <div data-v8-hero-stage="" style={stageAspectRatio ? { ...stageStyle, aspectRatio: stageAspectRatio } : stageStyle}>
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
             <div style={paperStyle} />
             <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
