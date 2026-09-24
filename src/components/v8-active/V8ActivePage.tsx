@@ -1277,6 +1277,7 @@ export function V8ActiveSunContent({
 // and meeting-status into one label.
 function statusStampAsset(identity: CurrentIdentity, assets: V8IdentityAssets) {
   if (identity.status === "leave") return assets.statusStampLeave;
+  if (identity.status === "unregistered") return assets.statusStampUnregistered;
   return identity.status === "waiting" ? assets.statusStampWaiting : assets.statusStampConfirmed;
 }
 
@@ -1319,6 +1320,7 @@ type V8IdentityAssets = {
   statusStampConfirmed: string;
   statusStampWaiting: string;
   statusStampLeave: string;
+  statusStampUnregistered: string;
   identityTagSeason: string;
   identityTagTemp: string;
   ctaSeasonLeave: string;
@@ -1541,7 +1543,6 @@ export function V8IdentityScrollContent({
     const previous = previousStampRef.current;
     previousStampRef.current = { signupId: identity.signupId, status: identity.status };
     if (previous.signupId !== identity.signupId || previous.status === identity.status) return;
-    if (previous.status === "unregistered" || identity.status === "unregistered") return;
     const outgoingSrc = statusStampAsset({ ...identity, status: previous.status }, assets);
     setStampAnimation((current) => ({ key: (current?.key ?? 0) + 1, status: identity.status, outgoingSrc }));
     onStatusFeedback?.(identity.status);
@@ -1588,23 +1589,17 @@ export function V8IdentityScrollContent({
         style={identityVisualStyle(controls.statusMark)}
         aria-label={`本次狀態：${status}`}
       >
-        {identity.status === "unregistered" ? (
-          <span>{status}</span>
-        ) : (
-          <>
-            {stampAnimation?.outgoingSrc ? (
-              <img className="v8-stamp-out" src={stampAnimation.outgoingSrc} alt="" aria-hidden="true" draggable={false} />
-            ) : null}
-            <img
-              key={stampAnimation?.key ?? 0}
-              className={stampAnimation ? `v8-stamp-in is-${stampAnimation.status}` : undefined}
-              src={statusStampAsset(identity, assets)}
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-            />
-          </>
-        )}
+        {stampAnimation?.outgoingSrc ? (
+          <img className="v8-stamp-out" src={stampAnimation.outgoingSrc} alt="" aria-hidden="true" draggable={false} />
+        ) : null}
+        <img
+          key={stampAnimation?.key ?? 0}
+          className={stampAnimation ? `v8-stamp-in is-${stampAnimation.status}` : undefined}
+          src={statusStampAsset(identity, assets)}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
       </div>
       <V8IdentityFitName text={identity.name} controls={controls.name} />
       <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
