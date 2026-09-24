@@ -66,6 +66,8 @@ export const v8ActiveStatusStampFiles = {
   confirmed: "status-stamp-confirmed-v1.webp",
   waiting: "status-stamp-waiting-v1.webp",
   leave: "status-stamp-leave-v1.webp",
+  // Grey 未報 stamp (2026-09-24) replaces the old CSS text circle.
+  unregistered: "status-stamp-unregistered-v1.webp",
 } as const;
 
 export const v8ActiveIdentityTagFiles = {
@@ -84,8 +86,10 @@ export const v8ActiveCtaPlaqueFiles = {
   seasonReturn: "cta-plaque-return-v1.webp",
   tempCancel: "cta-plaque-temp-cancel-v1.webp",
   tempSignup: "cta-plaque-temp-signup-v1.webp",
-  helperSignup: "cta-plaque-helper-v1.webp",
-  helperCancel: "cta-plaque-helper-leave-v1.webp",
+  // v2 set (2026-09-24): compact cartouches drawn to match the 帳單 button
+  // (cta-plaque-bill-v1.webp, wired once the bill feature ships).
+  helperSignup: "cta-plaque-helper-signup-v2.webp",
+  helperCancel: "cta-plaque-helper-cancel-v2.webp",
 } as const;
 
 // 上限 (capacity) -- a 4th sun-side cloud badge, same template family as
@@ -193,6 +197,7 @@ export function buildV8ActiveAssets(baseUrl: string) {
     statusStampConfirmed: `${activeBase}/${v8ActiveStatusStampFiles.confirmed}`,
     statusStampWaiting: `${activeBase}/${v8ActiveStatusStampFiles.waiting}`,
     statusStampLeave: `${activeBase}/${v8ActiveStatusStampFiles.leave}`,
+    statusStampUnregistered: `${activeBase}/${v8ActiveStatusStampFiles.unregistered}`,
     identityTagSeason: `${statusAssetBase}/${v8ActiveIdentityTagFiles.season}`,
     identityTagTemp: `${statusAssetBase}/${v8ActiveIdentityTagFiles.temp}`,
     ctaSeasonLeave: `${activeBase}/${v8ActiveCtaPlaqueFiles.seasonLeave}`,
