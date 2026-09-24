@@ -395,17 +395,29 @@ function V8SeasonConfirmPage({
   const inSource = Boolean(me?.claim?.inSourceRoster);
   const showButtons = phase === "open" && step === "home" && (!loggedIn || (!!me && (!myIntent || editing) && !applyLocked));
   const deadline = formatDeadline(info.deadlineAt);
+  // 目前季打人數 = renewals + approved applications (older Workers only send renewCount).
+  const memberCount = Number(info.seasonMemberCount ?? info.renewCount ?? 0);
   const remaining =
     typeof info.capacityLimit === "number" && info.capacityLimit > 0
-      ? Math.max(0, info.capacityLimit - Number(info.renewCount || 0))
+      ? Math.max(0, info.capacityLimit - memberCount)
       : null;
+  const perEventFee =
+    info.perEventSeasonFee ??
+    (info.seasonFee && info.eventCount ? Math.round(info.seasonFee / info.eventCount) : null);
+  const sceneBase = `${import.meta.env.BASE_URL}v8-preview/display/`;
 
   return (
     <div className="v8sc-root">
       <style>{CSS}</style>
+      <div className="v8sc-scene" aria-hidden="true">
+        <img className="v8sc-scene-cloud-a" src={`${sceneBase}ukiyoe-cloud-v1-display.webp`} alt="" draggable={false} />
+        <img className="v8sc-scene-mountain" src={`${sceneBase}ukiyoe-mountain-v1-display.webp`} alt="" draggable={false} />
+        <img className="v8sc-scene-cloud-b" src={`${sceneBase}ukiyoe-cloud-v1-display.webp`} alt="" draggable={false} />
+        <img className="v8sc-scene-wave-back" src={`${sceneBase}ukiyoe-back-wave-v1-display.webp`} alt="" draggable={false} />
+        <img className="v8sc-scene-wave-mid" src={`${sceneBase}ukiyoe-mid-wave-v1-display.webp`} alt="" draggable={false} />
+      </div>
       <main className="v8sc-sheet">
         <header className="v8sc-head">
-          <div className="v8sc-sun" aria-hidden="true" />
           <h1 className="v8sc-title">
             <span>{siteLabel} {targetLabel}</span>
             <span>季打人員確認</span>
@@ -430,15 +442,16 @@ function V8SeasonConfirmPage({
               <div>
                 <dt>季打費用</dt>
                 <dd>{money(info.seasonFee) || "待公布"}</dd>
+                {money(info.seasonFee) && perEventFee ? <dd className="v8sc-sub">約 {perEventFee} 元／次</dd> : null}
               </div>
               <div>
                 <dt>臨打費用</dt>
                 <dd>{money(info.tempFee) ? `${money(info.tempFee)}／次` : "依聚會公告"}</dd>
               </div>
               <div>
-                <dt>目前續打</dt>
+                <dt>目前季打人數</dt>
                 <dd>
-                  {Number(info.renewCount || 0)} 人{remaining !== null ? `（剩 ${remaining} 位）` : ""}
+                  {memberCount} 人{remaining !== null ? `（剩 ${remaining} 位）` : ""}
                 </dd>
               </div>
             </dl>
@@ -653,9 +666,15 @@ function ChoiceButton({
 const CSS = `
 .v8sc-root{min-height:100vh;min-height:100dvh;background:linear-gradient(135deg,#f4e8cf 0%,#e2c795 54%,#f2dfb8 100%) fixed;color:#20150d;font-family:var(--font-sans,system-ui,sans-serif);display:flex;justify-content:center;padding:28px 16px 40px;box-sizing:border-box}
 .v8sc-root *{box-sizing:border-box}
-.v8sc-sheet{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px}
-.v8sc-head{text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:4px}
-.v8sc-sun{width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 38% 36%,#e2583a 0%,#b8321b 62%,#7a2a12 100%);box-shadow:0 0 0 6px rgba(184,50,27,.12)}
+.v8sc-sheet{position:relative;z-index:1;width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px}
+.v8sc-head{text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:18px}
+.v8sc-scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.v8sc-scene img{position:absolute;display:block;height:auto;user-select:none}
+.v8sc-scene-cloud-a{left:-20%;top:-2%;width:min(64vw,380px);opacity:.3}
+.v8sc-scene-mountain{right:-14%;top:4%;width:min(56vw,360px);opacity:.2}
+.v8sc-scene-cloud-b{right:-24%;top:38%;width:min(52vw,320px);opacity:.2;transform:scaleX(-1)}
+.v8sc-scene-wave-back{left:-12%;bottom:-6%;width:min(124vw,760px);opacity:.28}
+.v8sc-scene-wave-mid{right:-16%;bottom:-3%;width:min(62vw,380px);opacity:.3}
 .v8sc-title{margin:0;display:flex;flex-direction:column;gap:2px;font-size:25px;line-height:1.3;font-weight:800;letter-spacing:.04em}
 .v8sc-title span:last-child{font-size:21px;font-weight:700;color:#7a2a12}
 .v8sc-deadline{margin:0;font-size:14px;font-weight:600;color:#5c3a22}
@@ -667,6 +686,7 @@ const CSS = `
 .v8sc-info div{background:rgba(226,199,149,.28);border-radius:10px;padding:8px 10px}
 .v8sc-info dt{font-size:12px;color:#6b4a2e}
 .v8sc-info dd{margin:2px 0 0;font-size:17px;font-weight:700}
+.v8sc-info dd.v8sc-sub{margin-top:1px;font-size:12px;font-weight:600;color:#7a2a12}
 .v8sc-block{margin-top:14px}
 .v8sc-block h2{margin:0 0 4px;font-size:14px;color:#7a2a12}
 .v8sc-block p{margin:0;font-size:15px;line-height:1.6;white-space:pre-line;overflow-wrap:anywhere}
