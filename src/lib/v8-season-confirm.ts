@@ -21,7 +21,9 @@ export type V8SeasonConfirmInfo = {
   eventCount?: number | null;
   seasonFee?: number | null;
   tempFee?: number | null;
+  perEventSeasonFee?: number | null;
   renewCount?: number;
+  seasonMemberCount?: number;
 };
 
 export type V8SeasonIntent = {
