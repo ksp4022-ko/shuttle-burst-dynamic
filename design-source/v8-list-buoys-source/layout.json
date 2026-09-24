@@ -1,0 +1,92 @@
+{
+  "_note": "座標以名單元件原圖像素為準（1448×1086）",
+  "component": {
+    "width": 1448,
+    "height": 1086
+  },
+  "headers": {
+    "leave": {
+      "file": "header-leave.png",
+      "center": [
+        266.5,
+        540
+      ],
+      "size": [
+        295,
+        122
+      ]
+    },
+    "main": {
+      "file": "header-main.png",
+      "center": [
+        723,
+        453
+      ],
+      "size": [
+        448,
+        148
+      ]
+    },
+    "wait": {
+      "file": "header-wait.png",
+      "center": [
+        1193,
+        556.5
+      ],
+      "size": [
+        308,
+        115
+      ]
+    }
+  },
+  "listAreas": {
+    "leave": [
+      110,
+      594,
+      282,
+      224
+    ],
+    "main": [
+      462,
+      516,
+      536,
+      362
+    ],
+    "wait": [
+      1036,
+      603,
+      308,
+      202
+    ]
+  },
+  "_listAreasFormat": "[x, y, width, height]",
+  "waveBand": {
+    "file": "wave-band.png",
+    "sourceRows": [
+      800,
+      1086
+    ],
+    "size": [
+      1448,
+      286
+    ]
+  },
+  "collapsedHeaders_viewportPercent": {
+    "_format": "centerX 為螢幕寬 %, centerY 為距海浪帶上緣的帶高 %, width 為螢幕寬 %",
+    "leave": {
+      "centerX": 17.6,
+      "centerY": 44,
+      "width": 20.4
+    },
+    "main": {
+      "centerX": 50.2,
+      "centerY": 37,
+      "width": 30.9
+    },
+    "wait": {
+      "centerX": 83.3,
+      "centerY": 45,
+      "width": 21.3
+    }
+  }
+}

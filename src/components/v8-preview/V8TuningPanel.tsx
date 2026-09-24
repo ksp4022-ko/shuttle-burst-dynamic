@@ -95,6 +95,8 @@ export function V8TuningPanel({
   onModeChange,
   highlightEnabled = true,
   onHighlightChange,
+  heightGuidesEnabled = false,
+  onHeightGuidesChange,
   motionPreviewLab,
   onMotionPreviewLabChange,
   controlsScope,
@@ -109,6 +111,9 @@ export function V8TuningPanel({
   onModeChange?: (mode: PreviewMode) => void;
   highlightEnabled?: boolean;
   onHighlightChange?: (enabled: boolean) => void;
+  // Height reference lines (real ACTIVE page only; transient, not saved).
+  heightGuidesEnabled?: boolean;
+  onHeightGuidesChange?: (enabled: boolean) => void;
   // Red Sun Motion Lab preview (single-effect isolate / play-pause / reset)
   // -- transient UI state, deliberately NOT part of PreviewControls (see
   // MotionPreviewLabState in dragonPreviewConfig.ts). Optional + falls back
@@ -668,6 +673,11 @@ export function V8TuningPanel({
             {onHighlightChange ? (
               <button type="button" onClick={() => onHighlightChange(!highlightEnabled)} style={smallButtonStyle}>
                 {highlightEnabled ? "Highlight ON" : "Highlight OFF"}
+              </button>
+            ) : null}
+            {onHeightGuidesChange ? (
+              <button type="button" onClick={() => onHeightGuidesChange(!heightGuidesEnabled)} style={smallButtonStyle}>
+                {heightGuidesEnabled ? "高度線 ON" : "高度線 OFF"}
               </button>
             ) : null}
             <button type="button" onClick={() => setDockPosition((current) => (current === "top" ? "bottom" : "top"))} style={smallButtonStyle}>

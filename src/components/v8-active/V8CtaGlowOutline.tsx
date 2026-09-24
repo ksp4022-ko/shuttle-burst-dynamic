@@ -88,8 +88,8 @@ export function V8CtaGlowOutlineStyles() {
         display: block;
         width: max-content;
         height: max-content;
-        animation: v8-cta-idle-rhythm 5000ms linear infinite;
-        transform-origin: center;
+        animation: v8-cta-drum-knock 3.6s ease-out infinite;
+        transform-origin: 50% 50%;
       }
 
       .v8-cta-glow-svg {
@@ -115,44 +115,55 @@ export function V8CtaGlowOutlineStyles() {
         filter: drop-shadow(0 0 3px #ffffff) drop-shadow(0 0 8px #ffffff) drop-shadow(0 0 14px #fff6d9);
       }
 
-      @keyframes v8-cta-idle-rhythm {
+      /* CTA-DRUM: idle "war drum knock" (replaced the old sway). */
+      @keyframes v8-cta-drum-knock {
         0%,
-        30%,
-        32% {
-          transform: translateX(0) rotate(0deg) scale(1);
-        }
-        35% {
-          transform: translateX(-5px) rotate(-1.2deg) scale(1);
-        }
-        38% {
-          transform: translateX(5px) rotate(1.2deg) scale(1);
-        }
-        39% {
-          transform: translateX(0) rotate(0deg) scale(1);
-        }
-        41% {
-          transform: translateX(-2px) rotate(-0.7deg) scale(1);
-        }
-        43% {
-          transform: translateX(3px) rotate(0.9deg) scale(1);
-        }
-        45% {
-          transform: translateX(-3px) rotate(-1deg) scale(1);
-        }
-        47% {
-          transform: translateX(2px) rotate(0.7deg) scale(1);
-        }
-        49% {
-          transform: translateX(-1px) rotate(-0.4deg) scale(1);
-        }
-        50%,
+        78%,
         100% {
-          transform: translateX(0) rotate(0deg) scale(1);
+          transform: scale(1);
+        }
+        82% {
+          transform: scale(1.07);
+        }
+        86% {
+          transform: scale(0.99);
+        }
+        90% {
+          transform: scale(1.05);
+        }
+        95% {
+          transform: scale(1);
         }
       }
 
+      /* Press feedback: overrides the drum for one 280ms knock. */
+      @keyframes v8-cta-press {
+        0% {
+          transform: scale(1);
+          filter: brightness(1);
+        }
+        35% {
+          transform: scale(0.93);
+          filter: brightness(1.2);
+        }
+        100% {
+          transform: scale(1);
+          filter: brightness(1);
+        }
+      }
+
+      /* OPEN 進入戰局: pause the drum while disabled, quick knock on press. */
+      button:disabled > .v8-cta-interaction {
+        animation: none;
+      }
+
+      button:not(:disabled):active > .v8-cta-interaction {
+        animation: v8-cta-press 280ms ease-out both;
+      }
+
       @media (prefers-reduced-motion: reduce) {
-        .v8-cta-interaction {
+        .v8-cta-interaction,
+        button:not(:disabled):active > .v8-cta-interaction {
           animation: none;
         }
       }
