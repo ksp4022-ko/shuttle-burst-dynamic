@@ -14,21 +14,24 @@ const TOAST_WAVE_FOAM_ASSET = "toast-wave-foam-display.webp";
 
 type NoticeTone = "success" | "error";
 
-const SUCCESS_NOTICE_MARKERS = ["已切換聚會", "已完成報名", "已請假", "已消假", "已取消報名"];
+// A success notice is "<name> <status>", where status starts with one of
+// these markers and may carry a detail after it (e.g. "已請假，名額已釋出",
+// "已代報，正取第 3 位"). Matching on the space-separated status (not a bare
+// substring) keeps API error messages such as "這筆報名已取消" from being
+// read as a success.
+const SUCCESS_NOTICE_MARKERS = ["已完成報名", "已請假", "已消假", "已取消報名", "已取消", "已代報", "已代退"];
 let toastWaveAssetsPreloaded = false;
 
 function noticeTone(message: string): NoticeTone {
-  return SUCCESS_NOTICE_MARKERS.some((marker) => message.includes(marker)) ? "success" : "error";
+  return message === "已切換聚會" || splitSuccessNotice(message) ? "success" : "error";
 }
 
 function splitSuccessNotice(message: string): { name: string; status: string } | null {
-  for (const marker of SUCCESS_NOTICE_MARKERS) {
-    const suffix = ` ${marker}`;
-    if (message.endsWith(suffix)) {
-      return { name: message.slice(0, -suffix.length), status: marker };
-    }
-  }
-  return null;
+  const splitAt = message.lastIndexOf(" 已");
+  if (splitAt <= 0) return null;
+  const status = message.slice(splitAt + 1);
+  if (!SUCCESS_NOTICE_MARKERS.some((marker) => status.startsWith(marker))) return null;
+  return { name: message.slice(0, splitAt), status };
 }
 
 function preloadToastWaveAssets(assetBase: string) {

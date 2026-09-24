@@ -300,7 +300,11 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   ]);
 
   const submitSignup = useCallback(
-    async (name: string, token?: string, options: { selfSignup?: boolean } = {}): Promise<{ ok: boolean; signupId?: string }> => {
+    async (
+      name: string,
+      token?: string,
+      options: { selfSignup?: boolean } = {},
+    ): Promise<{ ok: boolean; signupId?: string; status?: string; position?: number }> => {
       const trimmed = name.trim();
       if (!trimmed || !selectedEventId || pendingAction) return { ok: false };
       setPendingAction({ type: "signup", label: "報名中" });
@@ -310,7 +314,9 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
         await loadRoster(selectedEventId, { silent: true });
         setLastChangedId(trimmed);
         setNotice(`${trimmed} 已完成報名`);
-        return { ok: true, signupId: result.signupId };
+        // status/position straight from the API (V8 代報 toast); older
+        // callers only read ok/signupId.
+        return { ok: true, signupId: result.signupId, status: result.status, position: result.position };
       } catch (reason) {
         setNotice(reason instanceof Error ? reason.message : "報名失敗。");
         return { ok: false };

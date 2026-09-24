@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type {
   V8ActiveEmaTextControls,
   V8ActiveEmaTextsControls,
@@ -173,9 +173,72 @@ function InfoCardStatusLayer({
           } as CSSProperties
         }
       >
-        {count}
+        <V8FlipCount value={count} />
       </span>
     </div>
+  );
+}
+
+// SCROLL-FEEDBACK 木牌翻牌: when a count changes (after the API call and
+// roster refresh -- never optimistically) the number flips out on the X axis
+// (160ms), swaps, then flips back in (420ms) with a brief gold glow. The
+// first render and unchanged values never animate.
+const FLIP_OUT_MS = 160;
+const FLIP_IN_MS = 420;
+
+function V8FlipCount({ value }: { value: number }) {
+  const [shown, setShown] = useState(value);
+  const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
+  const shownRef = useRef(value);
+  useEffect(() => {
+    if (value === shownRef.current) return;
+    setPhase("out");
+    const swap = window.setTimeout(() => {
+      shownRef.current = value;
+      setShown(value);
+      setPhase("in");
+    }, FLIP_OUT_MS);
+    const done = window.setTimeout(() => setPhase("idle"), FLIP_OUT_MS + FLIP_IN_MS);
+    return () => {
+      window.clearTimeout(swap);
+      window.clearTimeout(done);
+    };
+  }, [value]);
+  return (
+    <span className={phase === "idle" ? "v8-flip-count" : `v8-flip-count is-${phase}`}>{shown}</span>
+  );
+}
+
+function V8FlipCountStyles() {
+  return (
+    <style>{`
+      .v8-flip-count {
+        display: inline-block;
+        transform-origin: 50% 50%;
+        backface-visibility: hidden;
+      }
+      .v8-flip-count.is-out {
+        animation: v8-flip-out ${FLIP_OUT_MS}ms ease-in both;
+      }
+      .v8-flip-count.is-in {
+        animation: v8-flip-in ${FLIP_IN_MS}ms ease-out both;
+      }
+      @keyframes v8-flip-out {
+        from { transform: perspective(240px) rotateX(0deg); }
+        to { transform: perspective(240px) rotateX(90deg); }
+      }
+      @keyframes v8-flip-in {
+        0% { transform: perspective(240px) rotateX(-90deg); text-shadow: 0 0 10px #ffcf6b; }
+        55% { text-shadow: 0 0 12px #ffcf6b, 0 0 4px #ffe9a3; }
+        100% { transform: perspective(240px) rotateX(0deg); text-shadow: none; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .v8-flip-count.is-out { animation: v8-flip-fade-out ${FLIP_OUT_MS}ms linear both; }
+        .v8-flip-count.is-in { animation: v8-flip-fade-in 240ms linear both; }
+        @keyframes v8-flip-fade-out { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes v8-flip-fade-in { from { opacity: 0; } to { opacity: 1; } }
+      }
+    `}</style>
   );
 }
 
@@ -210,6 +273,7 @@ export function V8ActiveInfoCards({
   const showWaitlist = controls.waitlist.show && counts.needed === 0 && counts.waiting > 0;
   return (
     <>
+      <V8FlipCountStyles />
       {/* infoRope's source art is a wide horizontal curve (see
           v8ActiveConfig.ts), rotated 90deg by default to hang vertically --
           baseWidth here is that pre-rotation width, i.e. the rope's visual
