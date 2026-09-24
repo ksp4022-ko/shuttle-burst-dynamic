@@ -6,18 +6,14 @@ import { useEffect } from "react";
 // because Opening unmounts right as Active mounts -- the lock must not drop
 // in between.
 //
-// Pins the page to the top with html/body overflow:hidden + height:100dvh
-// (plus cancelling page touchmoves). A touch-only variant was tried on
-// 2026-09-24 and reverted: Safari's scroll restoration (reload / opening from
-// LINE) could leave the page scrolled down with no way back up. (The missing
-// images seen that day turned out to be dropped mobile connections -- see the
-// image retry in routes/index.tsx.)
+// The lock cancels page touchmoves and pins the scroll position (manual
+// scroll restoration + snap back to the top), and deliberately does NOT set
+// html/body overflow:hidden / height:100dvh. On iPhone Safari that layout
+// lock, applied from page load, lined up 3 out of 3 times with most images
+// staying blank even on a fast connection (2026-09-24 test timeline); the
+// touch-only variant rendered fine. Exact WebKit cause unconfirmed.
 let lockCount = 0;
-const LOCKED_PROPS: [string, string][] = [
-  ["overflow", "hidden"],
-  ["overscroll-behavior", "none"],
-  ["height", "100dvh"],
-];
+const LOCKED_PROPS: [string, string][] = [["overscroll-behavior", "none"]];
 const saved = new Map<string, string>();
 
 function touchCanMove(target: EventTarget | null) {
