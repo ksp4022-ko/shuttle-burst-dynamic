@@ -21,6 +21,9 @@ export type V8SeasonConfirmInfo = {
   eventCount?: number | null;
   seasonFee?: number | null;
   tempFee?: number | null;
+  ballType?: string | null;
+  courtCount?: number | null;
+  hours?: number | null;
   perEventSeasonFee?: number | null;
   renewCount?: number;
   seasonMemberCount?: number;
@@ -80,7 +83,7 @@ export async function fetchV8SeasonClaimOptions(token: string, siteId: string) {
 export function submitV8SeasonIntent(
   token: string,
   siteId: string,
-  body: { intent: V8SeasonIntentKind; memberId?: string; applicantName?: string },
+  body: { intent: V8SeasonIntentKind; memberId?: string; applicantName?: string; displayName?: string },
 ) {
   return alphaFetch<{ intent: V8SeasonIntent; identity: V8LineIdentity; claimNew: boolean }>(
     sitePath(siteId, "/intent"),

@@ -21,6 +21,7 @@ import {
 import { v8ActiveRosterFontOptions } from "@/components/v8-active/v8ActiveConfig";
 import { resetV8LineProfile } from "@/lib/v8-line-auth";
 import { clearV8LineAuthStorage, loadV8LineToken } from "@/lib/v8-line-auth-storage";
+import { configuredSiteId } from "@/lib/database-alpha";
 
 type DockPosition = "top" | "bottom";
 type HudOpacityMode = "normal" | "ghost";
@@ -135,7 +136,8 @@ export function V8TuningPanel({
   const [hudOpacity, setHudOpacity] = useState<HudOpacityMode>("normal");
   const [stepMode, setStepMode] = useState<StepMode>("Normal");
   const [moreOpen, setMoreOpen] = useState(false);
-  const [lineAuthResetStatus, setLineAuthResetStatus] = useState<"idle" | "cleared">("idle");
+  const [lineAuthResetStatus, setLineAuthResetStatus] = useState<"idle" | "busy" | "cleared" | "error">("idle");
+  const [lineAuthResetMessage, setLineAuthResetMessage] = useState("");
   const [internalMotionPreviewLab, setInternalMotionPreviewLab] = useState<MotionPreviewLabState>(motionPreviewLabDefaults);
   const effectiveMotionPreviewLab = motionPreviewLab ?? internalMotionPreviewLab;
   const setMotionPreviewLab = onMotionPreviewLabChange ?? setInternalMotionPreviewLab;
@@ -188,22 +190,57 @@ export function V8TuningPanel({
     copyFeedbackTimer.current = window.setTimeout(() => setCopyStatus("idle"), 1700);
   };
 
-  const clearLineAuthForTesting = async () => {
+  const simulateFirstLineUse = async () => {
     const token = loadV8LineToken();
-    if (token) {
-      try {
-        await resetV8LineProfile(token, { revokeSessions: true });
-      } catch {
-        // Still clear browser storage so the testing control can recover
-        // from an expired local token.
-      }
+    if (!token) {
+      setLineAuthResetStatus("error");
+      setLineAuthResetMessage("目前沒有 LINE 登入，無法清除後端認領與本季回覆。");
+      return;
     }
-    clearV8LineAuthStorage();
-    setLineAuthResetStatus("cleared");
-    if (lineAuthResetTimer.current) window.clearTimeout(lineAuthResetTimer.current);
-    lineAuthResetTimer.current = window.setTimeout(() => {
-      window.location.reload();
-    }, 350);
+    if (!window.confirm("模擬第一次登入會清除你目前的季打認領與本季回覆，確定繼續？")) return;
+
+    setLineAuthResetStatus("busy");
+    setLineAuthResetMessage("正在清除認領、季打回覆與登入狀態…");
+    try {
+      await resetV8LineProfile(token, {
+        revokeSessions: true,
+        resetSeasonConfirm: true,
+        siteId: configuredSiteId(),
+      });
+      clearV8LineAuthStorage();
+      try {
+        window.sessionStorage.clear();
+      } catch {
+        // Session storage is optional; the server reset already succeeded.
+      }
+      setLineAuthResetStatus("cleared");
+      setLineAuthResetMessage("已清除，可重新測試第一次登入。");
+      if (lineAuthResetTimer.current) window.clearTimeout(lineAuthResetTimer.current);
+      lineAuthResetTimer.current = window.setTimeout(() => {
+        window.location.reload();
+      }, 900);
+    } catch (error) {
+      setLineAuthResetStatus("error");
+      setLineAuthResetMessage(error instanceof Error ? error.message : "模擬第一次登入失敗");
+    }
+  };
+
+  const clearViewTestRecords = () => {
+    if (!window.confirm("清除控制台、Intro 與畫面測試紀錄？LINE 登入、認領及季打回覆會保留。")) return;
+    clearSavedControls();
+    try {
+      for (const key of ["shuttle-handoff-timing-lab", "shuttle_home_tutorial_v1_seen", "shuttle-v8-line-login-return-v1"]) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Storage unavailable -- continue with the in-memory reload.
+    }
+    try {
+      window.sessionStorage.clear();
+    } catch {
+      // Session storage unavailable -- nothing else to clear.
+    }
+    window.location.reload();
   };
 
   const clampPanelTop = (nextTop: number) => {
@@ -732,44 +769,50 @@ export function V8TuningPanel({
             >
               Reset All
             </button>
-            <button type="button" onClick={() => void clearLineAuthForTesting()} style={resetButtonStyle}>
-              {lineAuthResetStatus === "cleared" ? "LINE 已重置" : "重置 LINE 測試"}
+            <button
+              type="button"
+              disabled={lineAuthResetStatus === "busy"}
+              onClick={() => void simulateFirstLineUse()}
+              style={resetButtonStyle}
+            >
+              {lineAuthResetStatus === "busy"
+                ? "重置中…"
+                : lineAuthResetStatus === "cleared"
+                  ? "已可測試第一次登入"
+                  : "模擬第一次登入"}
             </button>
           </div>
+          {lineAuthResetMessage ? (
+            <p style={{ ...lineResetStatusStyle, color: lineAuthResetStatus === "error" ? "#ffd0ca" : "#e9f8de" }}>
+              {lineAuthResetMessage}
+            </p>
+          ) : null}
           {controlsScope === "open" ? (
-            // Local-only testing tools for repeat login/first-visit tests: they
-            // never call the server, unlike 重置 LINE 測試 above (which also
-            // clears the server-side name claim).
+            // These two controls are intentionally local-only. The first-use
+            // reset above is the only action that changes server identity or
+            // the current user's season-confirm response.
             <div style={resetBarStyle}>
               <button
                 type="button"
                 onClick={() => {
                   clearV8LineAuthStorage();
-                  window.location.reload();
-                }}
-                style={resetButtonStyle}
-              >
-                遺忘 LINE 登入
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!window.confirm("清空本機所有紀錄？（LINE 登入、控制台設定、Intro 播放紀錄等，不影響伺服器資料）")) return;
-                  try {
-                    window.localStorage.clear();
-                  } catch {
-                    // storage unavailable -- nothing to clear
-                  }
                   try {
                     window.sessionStorage.clear();
                   } catch {
-                    // storage unavailable -- nothing to clear
+                    // Session storage unavailable -- reload still signs out locally.
                   }
                   window.location.reload();
                 }}
                 style={resetButtonStyle}
               >
-                清空本機紀錄
+                只登出 LINE
+              </button>
+              <button
+                type="button"
+                onClick={clearViewTestRecords}
+                style={resetButtonStyle}
+              >
+                清除畫面測試紀錄
               </button>
             </div>
           ) : null}
@@ -778,6 +821,13 @@ export function V8TuningPanel({
     </section>
   );
 }
+
+const lineResetStatusStyle: CSSProperties = {
+  margin: "6px 4px 0",
+  fontSize: 12,
+  lineHeight: 1.45,
+  textAlign: "center",
+};
 
 const panelStyle: CSSProperties = {
   position: "fixed",
