@@ -119,9 +119,13 @@ function V8HelperDialogWave() {
 export function V8ActivePage({
   flow,
   onBeforeLineLogin,
+  entering = false,
 }: {
   flow: HomepageFlow;
   onBeforeLineLogin?: () => void;
+  // ENTER-MORPH: true only right after 進入戰局 (not on reload / direct
+  // link / LINE return) -- plays the staged entrance, see routes/index.tsx.
+  entering?: boolean;
 }) {
   const { roster, selectedEvent, pendingAction, selectedEventId, confirmed, waiting, events } = flow;
   const {
@@ -455,6 +459,7 @@ export function V8ActivePage({
     <div
       className={[
         "v8-active",
+        entering ? "is-entering" : "",
         helperMode ? "is-modal-open" : "",
         feedbackActive ? "is-feedback" : "",
         shaking ? "is-shaking" : "",
@@ -471,6 +476,7 @@ export function V8ActivePage({
         controlOverrides={heroOverrides}
         stageAspectRatio={v8ActiveStageAspectRatio}
         extraPreloadSrcs={extraPreloadSrcs}
+        revealImmediately={entering}
         sunContent={
           <V8ActiveSunContent
             assets={assets}
@@ -771,6 +777,7 @@ export function V8ActivePage({
           ×
         </button>
       ) : null}
+      {entering ? <span className="v8-ink-ring" aria-hidden="true" /> : null}
       <V8ListBuoys
         assetBase={`${import.meta.env.BASE_URL}v8-preview/active/`}
         controls={listBuoysControls}
@@ -841,23 +848,35 @@ function V8SunInfoBadge({
 // doesn't shift anything by default. scale/rotation apply to the whole
 // badge (image + text) via the wrapper's transform; fontSize is
 // independent of scale so text can be retuned without resizing the artwork.
+// ENTER-MORPH cloud fly-in: which side each cloud drifts in from and its
+// place in the 90ms stagger.
+type CloudEnter = { from: "left" | "right"; order: number };
+
+function cloudEnterStyle(enter: CloudEnter | undefined) {
+  return enter ? { "--enter-dx": enter.from === "right" ? "55px" : "-55px", "--enter-order": enter.order } : {};
+}
+
 function V8SunInfoBadgeScattered({
   src,
   label,
   controls,
   textInset,
+  enter,
 }: {
   src: string;
   label: string;
   controls: V8ActiveSunBadgeControls;
   textInset: (typeof BADGE_TEXT_INSETS)[keyof typeof BADGE_TEXT_INSETS];
+  enter?: CloudEnter;
 }) {
   if (!controls.show) return null;
   return (
     <div
       className="v8-sun-info-scattered"
+      data-enter={enter ? enter.from : undefined}
       style={
         {
+          ...cloudEnterStyle(enter),
           left: `${controls.x}%`,
           top: `${controls.y}%`,
           fontSize: controls.fontSize,
@@ -894,8 +913,10 @@ function V8CapacityBadge({
   return (
     <div
       className="v8-sun-info-scattered"
+      data-enter="left"
       style={
         {
+          ...cloudEnterStyle({ from: "left", order: 2 }),
           left: `${controls.x}%`,
           top: `${controls.y}%`,
           fontSize: controls.fontSize,
@@ -1216,6 +1237,7 @@ export function V8ActiveSunContent({
           src={assets.sunBadgeBallType}
           label={ballType}
           controls={badgeControls.ballType}
+          enter={{ from: "right", order: 0 }}
           textInset={BADGE_TEXT_INSETS.ballType}
         />
       ) : null}
@@ -1223,6 +1245,7 @@ export function V8ActiveSunContent({
         src={assets.sunBadgeTempFee}
         label={`$${Number(tempFee || 0)}`}
         controls={badgeControls.tempFee}
+        enter={{ from: "left", order: 3 }}
         textInset={BADGE_TEXT_INSETS.tempFee}
       />
       {courtTimeLabel ? (
@@ -1230,6 +1253,7 @@ export function V8ActiveSunContent({
           src={assets.sunBadgeCourtCount}
           label={courtTimeLabel}
           controls={badgeControls.courtCount}
+          enter={{ from: "right", order: 1 }}
           textInset={BADGE_TEXT_INSETS.courtCount}
         />
       ) : null}
@@ -2346,6 +2370,81 @@ export function V8ActiveStyles() {
         25% { transform: translateX(-2px); }
         50% { transform: translateX(2px); }
         75% { transform: translateX(-1px); }
+      }
+
+      /* ENTER-MORPH staged entrance (only right after 進入戰局). Delays are
+         relative to the state switch, which lands 120ms after the tap.
+         fill-mode backwards: each element returns to its own tuned values
+         (inline opacity/transform) once its animation ends. */
+      .v8-ink-ring {
+        position: fixed;
+        left: var(--v8-morph-x, 50%);
+        top: var(--v8-morph-y, 60%);
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        box-shadow: 0 0 0 16px rgba(21, 40, 80, 0.35);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 55;
+        animation: v8-ink-ring 850ms cubic-bezier(.5, 0, .3, 1) 30ms both;
+      }
+
+      @keyframes v8-ink-ring {
+        from { width: 0; height: 0; opacity: 1; }
+        to { width: 280vmax; height: 280vmax; opacity: 0; }
+      }
+
+      .v8-active.is-entering .v8-sun-info-scattered[data-enter] {
+        animation: v8-cloud-in 560ms cubic-bezier(.2, .7, .2, 1) backwards;
+        animation-delay: calc(580ms + var(--enter-order, 0) * 90ms);
+      }
+
+      @keyframes v8-cloud-in {
+        from { opacity: 0; translate: var(--enter-dx, 0) 0; filter: blur(6px); }
+        to { opacity: 1; translate: 0 0; filter: blur(0); }
+      }
+
+      .v8-active.is-entering .v8-ema-plaque {
+        animation: v8-plaque-drop 760ms ease-out 760ms backwards;
+      }
+
+      @keyframes v8-plaque-drop {
+        0% { opacity: 0; translate: 0 -35%; rotate: -5deg; }
+        55% { opacity: 1; translate: 0 2%; rotate: 2.5deg; }
+        80% { translate: 0 0; rotate: -1.2deg; }
+        100% { translate: 0 0; rotate: 0deg; }
+      }
+
+      .v8-active.is-entering .v8-hero-scroll {
+        animation: v8-scroll-unroll 650ms cubic-bezier(.3, .6, .2, 1) 930ms backwards;
+      }
+
+      @keyframes v8-scroll-unroll {
+        from { clip-path: inset(0 0 100% 0); }
+        to { clip-path: inset(0); }
+      }
+
+      .v8-active.is-entering .v8-list-wave {
+        animation: v8-wave-rise 480ms cubic-bezier(.2, .7, .2, 1) 1180ms backwards;
+      }
+
+      @keyframes v8-wave-rise {
+        from { translate: 0 100%; }
+        to { translate: 0 0; }
+      }
+
+      .v8-active.is-entering .v8-list-header {
+        animation: v8-header-pop 300ms ease-out backwards;
+      }
+
+      .v8-active.is-entering .v8-list-header:nth-child(2) { animation-delay: 1480ms; }
+      .v8-active.is-entering .v8-list-header:nth-child(3) { animation-delay: 1560ms; }
+      .v8-active.is-entering .v8-list-header:nth-child(4) { animation-delay: 1640ms; }
+
+      @keyframes v8-header-pop {
+        from { opacity: 0; scale: 0.6; }
+        to { opacity: 1; scale: 1; }
       }
 
       .v8-active.is-feedback .v8-scroll-cta .v8-cta-interaction {

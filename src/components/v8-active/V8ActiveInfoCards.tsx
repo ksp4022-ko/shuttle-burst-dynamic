@@ -138,6 +138,7 @@ function InfoCardStatusLayer({
   if (!controls.show) return null;
   return (
     <div
+      className="v8-ema-plaque"
       style={
         {
           position: "absolute",
