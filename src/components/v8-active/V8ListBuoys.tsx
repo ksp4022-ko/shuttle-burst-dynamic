@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { v8ActiveListBuoyFiles, type V8ActiveListBuoyLayerControls, type V8ActiveListBuoysControls } from "./v8ActiveConfig";
 import type { V8ActiveRosterPerson } from "./V8ActiveRosterLists";
+import { useV8PageLock } from "./useV8PageLock";
 
 // LIST-BUOYS (名單浮標): the three rosters live in a panel that rises from a
 // wave band at the bottom of the screen instead of sitting in the canvas.
@@ -53,37 +54,6 @@ function layerTransform(layer: V8ActiveListBuoyLayerControls) {
   return `translate(calc(-50% + ${layer.x}px), ${layer.y}px) rotate(${layer.rotation}deg)`;
 }
 
-// Lets touch scrolling through only where something can actually scroll
-// (name lists, modals, the tuning panel) or where a control needs the drag.
-function touchCanMove(target: EventTarget | null) {
-  let node = target instanceof Element ? target : null;
-  if (node?.closest("input, textarea, select")) return true;
-  while (node && node !== document.body) {
-    const style = window.getComputedStyle(node);
-    const scrollsY = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1;
-    const scrollsX = /(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 1;
-    if (scrollsY || scrollsX) return true;
-    node = node.parentElement;
-  }
-  return false;
-}
-
-function usePageLock() {
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.add("v8-page-locked");
-    window.scrollTo(0, 0);
-    const onTouchMove = (event: TouchEvent) => {
-      if (!touchCanMove(event.target)) event.preventDefault();
-    };
-    document.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => {
-      root.classList.remove("v8-page-locked");
-      document.removeEventListener("touchmove", onTouchMove);
-    };
-  }, []);
-}
-
 export function V8ListBuoys({
   assetBase,
   controls,
@@ -105,7 +75,7 @@ export function V8ListBuoys({
   // Bumped on every meetup switch (SUN-DIAL): an open panel closes first.
   collapseSignal?: number;
 }) {
-  usePageLock();
+  useV8PageLock();
   const [phase, setPhase] = useState<Phase>("collapsed");
   const [flashList, setFlashList] = useState<ListKey | null>(null);
   const [idleKey, setIdleKey] = useState(0);
@@ -358,13 +328,6 @@ function V8ListNames({ listKey, people, ownSignupId }: { listKey: ListKey; peopl
 function V8ListBuoysStyles() {
   return (
     <style>{`
-      html.v8-page-locked,
-      html.v8-page-locked body {
-        overflow: hidden;
-        overscroll-behavior: none;
-        height: 100dvh;
-      }
-
       .v8-list-wave {
         position: fixed;
         left: 50%;
