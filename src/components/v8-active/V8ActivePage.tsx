@@ -146,6 +146,18 @@ export function V8ActivePage({
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
   const [heightGuides, setHeightGuides] = useState(false);
+  // SCROLL-FEEDBACK: one action in flight at a time. flow's own
+  // pendingAction check reads React state, so two taps inside the same frame
+  // could both pass it; this ref closes that gap.
+  const actionLockRef = useRef(false);
+  // Page-level feedback classes: is-feedback pauses the CTA drum while a
+  // stamp animation plays; is-shaking is the ±2px 畫面輕震 after 請假 lands.
+  const [feedbackActive, setFeedbackActive] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const feedbackTimersRef = useRef<number[]>([]);
+  // 消假's result (back to 正取, or 候補第 N 位) is only known once the
+  // refreshed roster arrives -- set before the request, read by an effect.
+  const returnFeedbackRef = useRef<{ signupId: string; name: string } | null>(null);
   // Two-step cancel (select, then a separate confirm button) -- the old
   // single-tap-to-cancel design had no undo/confirm step at all, so a
   // mis-tap directly cancelled someone's signup with no chance to back
@@ -208,15 +220,68 @@ export function V8ActivePage({
   const tempConfirmedCandidates = tempCandidates.filter((person) => person.status === "confirmed");
   const tempWaitingCandidates = tempCandidates.filter((person) => person.status === "waiting");
 
+  useEffect(() => {
+    const pending = returnFeedbackRef.current;
+    if (!pending || !identity || identity.signupId !== pending.signupId || identity.status === "leave") return;
+    returnFeedbackRef.current = null;
+    if (identity.status === "waiting") {
+      // Position read from the refreshed (API) waitlist order, not computed.
+      const index = waiting.findIndex((person) => person.id === pending.signupId);
+      flow.setNotice(index >= 0 ? `${pending.name} 已消假，候補第 ${index + 1} 位` : `${pending.name} 已消假，排入候補`);
+    } else if (identity.status === "confirmed") {
+      flow.setNotice(`${pending.name} 已消假，回到正取`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity?.signupId, identity?.status, waiting]);
+
+  useEffect(() => () => feedbackTimersRef.current.forEach((timer) => window.clearTimeout(timer)), []);
+
+  // Called by the scroll when its own status stamp changes (after the API
+  // result is in): pause the drum for the animation, and for 請假 shake the
+  // canvas once the stamp has landed (160ms fade + 420ms stamp).
+  const handleStatusFeedback = (status: CurrentIdentity["status"]) => {
+    feedbackTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    setFeedbackActive(true);
+    const timers = [window.setTimeout(() => setFeedbackActive(false), 760)];
+    if (status === "leave") {
+      timers.push(window.setTimeout(() => setShaking(true), 580));
+      timers.push(window.setTimeout(() => setShaking(false), 760));
+    }
+    feedbackTimersRef.current = timers;
+  };
+
+  const withActionLock = async (work: () => Promise<void>) => {
+    if (actionLockRef.current) return;
+    actionLockRef.current = true;
+    try {
+      await work();
+    } finally {
+      actionLockRef.current = false;
+    }
+  };
+
   if (!selectedEvent || !roster) return null;
 
   const busy = Boolean(pendingAction);
+  // The CTA shows 送出中 only for its own actions (not 代報/代退, whose
+  // modal buttons show it, and not meetup switching).
+  const ctaPending = Boolean(
+    pendingAction && !helperMode && ["signup", "fixed-leave", "fixed-return", "cancel-temp"].includes(pendingAction.type),
+  );
 
-  const runAction = async (action: "fixed-leave" | "fixed-return" | "cancel-temp") => {
-    if (!identity || !lineAuthToken) return;
-    const ok = await flow.runIdentityAction(action, { id: identity.signupId, name: identity.name }, lineAuthToken);
-    if (ok) await refreshCancellableTempSignups();
-  };
+  const runAction = (action: "fixed-leave" | "fixed-return" | "cancel-temp") =>
+    withActionLock(async () => {
+      if (!identity || !lineAuthToken) return;
+      const { signupId, name } = identity;
+      if (action === "fixed-return") returnFeedbackRef.current = { signupId, name };
+      const ok = await flow.runIdentityAction(action, { id: signupId, name }, lineAuthToken);
+      if (!ok) {
+        returnFeedbackRef.current = null;
+        return;
+      }
+      if (action === "fixed-leave") flow.setNotice(`${name} 已請假，名額已釋出`);
+      await refreshCancellableTempSignups();
+    });
 
   const beginIdentityCorrection = () => {
     if (!lineIdentity?.profileComplete || busy) return;
@@ -251,7 +316,7 @@ export function V8ActivePage({
   };
   const canSwitchMeetup = events.length > 1;
 
-  const submitTigerSignup = async () => {
+  const submitTigerSignup = () => withActionLock(async () => {
     if (!lineAuthToken || !lineIdentity?.profileComplete) return;
     if (!(identity?.signupType === "temp" && identity.status === "unregistered")) return;
     const submittedName = lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName;
@@ -267,17 +332,22 @@ export function V8ActivePage({
       lineIdentity.identityType === "temp" ? { selfSignup: true } : {},
     );
     if (result.ok) await refreshCancellableTempSignups();
-  };
+  });
 
-  const submitHelperSignup = async () => {
+  const submitHelperSignup = () => withActionLock(async () => {
     if (!lineAuthToken) return;
+    const name = helperName.trim();
     const result = await flow.submitSignup(helperName, lineAuthToken);
     if (result.ok) {
+      // 正取／候補第 N 位 straight from the API response.
+      if (result.position) {
+        flow.setNotice(`${name} 已代報，${result.status === "confirmed" ? "正取" : "候補"}第 ${result.position} 位`);
+      }
       setHelperName("");
       setHelperMode(null);
       await refreshCancellableTempSignups();
     }
-  };
+  });
 
   // NOTE (data design, not yet wired to the backend): when real LINE
   // identity lands, this is where an "initiated by <identity.name>" field
@@ -287,15 +357,17 @@ export function V8ActivePage({
   // use-current-identity.ts), not authentication, so a permission check
   // against it right now would just be security theater. Recorded here so
   // the field is designed before it's needed, not bolted on later.
-  const cancelForSomeoneElse = async (person: AlphaSignup) => {
+  const cancelForSomeoneElse = (person: AlphaSignup) => withActionLock(async () => {
     if (!lineAuthToken) return;
     const ok = await flow.runIdentityAction("cancel-temp", { id: person.id, name: person.name }, lineAuthToken);
-    setSelectedCancelPerson(null);
+    // On failure keep the modal and the selection so the admin can retry.
     if (ok) {
+      flow.setNotice(`${person.name} 已代退`);
+      setSelectedCancelPerson(null);
       setHelperMode(null);
       await refreshCancellableTempSignups();
     }
-  };
+  });
 
   // Built from the SAME shared functions the /v8/preview console uses (see
   // dragonPreviewConfig.ts) -- this page's own hidden tuning panel (below)
@@ -374,7 +446,14 @@ export function V8ActivePage({
 
   return (
     <div
-      className={helperMode ? "v8-active is-modal-open" : "v8-active"}
+      className={[
+        "v8-active",
+        helperMode ? "is-modal-open" : "",
+        feedbackActive ? "is-feedback" : "",
+        shaking ? "is-shaking" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-identity={identity ? "known" : "unknown"}
       onPointerDownCapture={captureRipplePoint}
     >
@@ -412,6 +491,8 @@ export function V8ActivePage({
               controls={identityCardControls}
               busy={busy}
               pendingLabel={pendingAction?.label}
+              ctaPending={ctaPending}
+              onStatusFeedback={handleStatusFeedback}
               onPrimaryAction={handlePrimaryAction}
               onForget={beginIdentityCorrection}
               onHelperSignup={() => setHelperMode("signup")}
@@ -539,7 +620,7 @@ export function V8ActivePage({
                     disabled={!helperName.trim() || busy}
                     onClick={() => void submitHelperSignup()}
                   >
-                    {busy ? "報名中" : "確認報名"}
+                    {busy ? <V8SendingLabel /> : "確認報名"}
                   </button>
                   <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
                     取消
@@ -602,7 +683,7 @@ export function V8ActivePage({
                       disabled={busy}
                       onClick={() => void cancelForSomeoneElse(selectedCancelPerson)}
                     >
-                      {busy ? "取消中" : `確認取消 ${selectedCancelPerson.name}`}
+                      {busy ? <V8SendingLabel /> : `確認取消 ${selectedCancelPerson.name}`}
                     </button>
                   ) : null}
                   <button
@@ -1269,6 +1350,16 @@ const NAME_SHADOW_LAYERS = [
   { x: 0, y: 9, blur: 10, color: "rgba(0,0,0,0.18)" },
 ] as const;
 
+// Spinner + 送出中, shared by the CTA overlay and the 代報/代退 confirm buttons.
+function V8SendingLabel() {
+  return (
+    <span className="v8-sending-label">
+      <span className="v8-sending-spinner" aria-hidden="true" />
+      送出中
+    </span>
+  );
+}
+
 function V8IdentityFitName({ text, controls }: { text: string; controls: V8ActiveIdentityNameControls }) {
   // 2026-09-11 (2nd revision): measuring via SVG getBBox() (the previous
   // approach) came back "失敗" -- the name rendered as completely blank on
@@ -1299,6 +1390,7 @@ function V8IdentityFitName({ text, controls }: { text: string; controls: V8Activ
 
   return (
     <div
+      className="v8-scroll-name"
       style={
         {
           position: "absolute",
@@ -1379,6 +1471,8 @@ export function V8IdentityScrollContent({
   controls,
   busy,
   pendingLabel,
+  ctaPending = false,
+  onStatusFeedback,
   onPrimaryAction,
   onForget,
   onHelperSignup,
@@ -1389,11 +1483,35 @@ export function V8IdentityScrollContent({
   controls: V8ActiveIdentityCardControls;
   busy: boolean;
   pendingLabel: string | undefined;
+  // Optional so /v8/preview's mock scroll keeps working unchanged.
+  ctaPending?: boolean;
+  onStatusFeedback?: (status: CurrentIdentity["status"]) => void;
   onPrimaryAction: () => void;
   onForget: () => void;
   onHelperSignup: () => void;
   onHelperCancel: () => void;
 }) {
+  // SCROLL-FEEDBACK stamp: when THIS signup's status changes (same signupId,
+  // i.e. not a meetup switch or first load), the old stamp fades out (160ms)
+  // and the new one is stamped down (420ms). Driven purely by the refreshed
+  // roster, so it only ever plays after the API result is in.
+  const previousStampRef = useRef({ signupId: identity.signupId, status: identity.status });
+  const [stampAnimation, setStampAnimation] = useState<{ key: number; status: CurrentIdentity["status"]; outgoingSrc: string | null } | null>(null);
+  useEffect(() => {
+    const previous = previousStampRef.current;
+    previousStampRef.current = { signupId: identity.signupId, status: identity.status };
+    if (previous.signupId !== identity.signupId || previous.status === identity.status) return;
+    if (previous.status === "unregistered" || identity.status === "unregistered") return;
+    const outgoingSrc = statusStampAsset({ ...identity, status: previous.status }, assets);
+    setStampAnimation((current) => ({ key: (current?.key ?? 0) + 1, status: identity.status, outgoingSrc }));
+    onStatusFeedback?.(identity.status);
+    const clearOutgoing = window.setTimeout(() => {
+      setStampAnimation((current) => (current ? { ...current, outgoingSrc: null } : current));
+    }, 200);
+    return () => window.clearTimeout(clearOutgoing);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity.signupId, identity.status]);
+
   // Press feedback (CTA-DRUM): a one-shot 280ms knock that overrides the
   // idle drum. Timed instead of tied to pointerup so a quick tap still
   // plays the whole 1 -> 0.93 -> 1 curve.
@@ -1424,13 +1542,29 @@ export function V8IdentityScrollContent({
     .join(" ");
 
   return (
-    <div className="v8-scroll-identity">
+    <div className={identity.status === "leave" ? "v8-scroll-identity is-on-leave" : "v8-scroll-identity"}>
       <div
         className={"v8-scroll-status-mark" + (identity.status === "unregistered" ? " is-unregistered" : "")}
         style={identityVisualStyle(controls.statusMark)}
         aria-label={`本次狀態：${status}`}
       >
-        {identity.status === "unregistered" ? <span>{status}</span> : <img src={statusStampAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />}
+        {identity.status === "unregistered" ? (
+          <span>{status}</span>
+        ) : (
+          <>
+            {stampAnimation?.outgoingSrc ? (
+              <img className="v8-stamp-out" src={stampAnimation.outgoingSrc} alt="" aria-hidden="true" draggable={false} />
+            ) : null}
+            <img
+              key={stampAnimation?.key ?? 0}
+              className={stampAnimation ? `v8-stamp-in is-${stampAnimation.status}` : undefined}
+              src={statusStampAsset(identity, assets)}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
+          </>
+        )}
       </div>
       <V8IdentityFitName text={identity.name} controls={controls.name} />
       <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
@@ -1449,6 +1583,11 @@ export function V8IdentityScrollContent({
           <img src={primaryActionAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
           <V8CtaGlowOutline outlineKey={primaryActionOutlineKey(identity)} />
         </span>
+        {ctaPending ? (
+          <span className="v8-cta-sending">
+            <V8SendingLabel />
+          </span>
+        ) : null}
       </button>
       <button
         type="button"
@@ -2136,6 +2275,110 @@ export function V8ActiveStyles() {
         display: block;
         height: 28px;
         width: auto;
+        grid-area: 1 / 1;
+      }
+
+      /* SCROLL-FEEDBACK: old stamp fades, new stamp is pressed down. The
+         rotation is relative to the stamp's own tuned angle. */
+      .v8-stamp-out {
+        animation: v8-stamp-out 160ms ease-out both;
+      }
+
+      .v8-stamp-in {
+        animation: v8-stamp-in-flat 420ms cubic-bezier(.5, 0, .6, 1) 160ms both;
+      }
+
+      .v8-stamp-in.is-leave {
+        animation-name: v8-stamp-in-tilted;
+      }
+
+      @keyframes v8-stamp-out {
+        from { opacity: 1; }
+        to { opacity: 0; }
+      }
+
+      @keyframes v8-stamp-in-tilted {
+        0% { opacity: 0; transform: scale(2.3) rotate(-12deg); }
+        25% { opacity: 1; }
+        62% { opacity: 1; transform: scale(0.9) rotate(0deg); }
+        100% { opacity: 1; transform: scale(1) rotate(0deg); }
+      }
+
+      @keyframes v8-stamp-in-flat {
+        0% { opacity: 0; transform: scale(2.3); }
+        25% { opacity: 1; }
+        62% { opacity: 1; transform: scale(0.9); }
+        100% { opacity: 1; transform: scale(1); }
+      }
+
+      /* 請假: the name dims (filter, so the tuned opacity is kept). */
+      .v8-scroll-name {
+        transition: filter 400ms ease-out;
+      }
+
+      .v8-scroll-identity.is-on-leave .v8-scroll-name {
+        filter: opacity(0.55);
+      }
+
+      /* 畫面輕震 after the 請假 stamp lands. */
+      .v8-active.is-shaking .sd-v8-hero-composition {
+        animation: v8-screen-shake 180ms ease-out;
+      }
+
+      @keyframes v8-screen-shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-2px); }
+        50% { transform: translateX(2px); }
+        75% { transform: translateX(-1px); }
+      }
+
+      .v8-active.is-feedback .v8-scroll-cta .v8-cta-interaction {
+        animation: none;
+      }
+
+      .v8-cta-sending {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: rgba(32, 21, 13, 0.78);
+        color: #fff7e8;
+        font-size: 11px;
+        font-weight: 800;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+
+      .v8-sending-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .v8-sending-spinner {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        animation: v8-sending-spin 700ms linear infinite;
+      }
+
+      @keyframes v8-sending-spin {
+        to { transform: rotate(360deg); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .v8-stamp-in,
+        .v8-stamp-in.is-leave {
+          animation: v8-stamp-out 240ms ease-out reverse both;
+        }
+
+        .v8-active.is-shaking .sd-v8-hero-composition {
+          animation: none;
+        }
       }
 
       .v8-scroll-status-mark.is-unregistered span {
