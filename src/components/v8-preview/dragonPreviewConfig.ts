@@ -1,5 +1,6 @@
 import { v8ActiveBackgroundFadeOverrides, v8ActiveSunMessagesDefaults } from "@/components/v8-active/v8ActiveConfig";
 import type {
+  V8ActiveListBuoysControls,
   V8ActiveCapacityBadgeControls,
   V8ActiveEmaTextsControls,
   V8ActiveIdentityCardControls,
@@ -544,6 +545,44 @@ export type PreviewControls = {
   activeRosterV2B2Rotation: number;
   activeRosterV2B2Opacity: number;
   activeRosterV2B2ZIndex: number;
+  // LIST-BUOYS (名單浮標, 2026-09-24): bottom wave band + three floating
+  // headers + the expandable three-list panel. Defaults come from the
+  // handoff's layout.json. See V8ListBuoys.tsx.
+  activeListBuoyWaveX: number;
+  activeListBuoyWaveY: number;
+  activeListBuoyWaveScale: number;
+  activeListBuoyWaveRotation: number;
+  activeListBuoyWaveOpacity: number;
+  activeListBuoyWaveZIndex: number;
+  activeListBuoyHeaderLeaveX: number;
+  activeListBuoyHeaderLeaveY: number;
+  activeListBuoyHeaderLeaveScale: number;
+  activeListBuoyHeaderLeaveRotation: number;
+  activeListBuoyHeaderLeaveOpacity: number;
+  activeListBuoyHeaderLeaveZIndex: number;
+  activeListBuoyHeaderMainX: number;
+  activeListBuoyHeaderMainY: number;
+  activeListBuoyHeaderMainScale: number;
+  activeListBuoyHeaderMainRotation: number;
+  activeListBuoyHeaderMainOpacity: number;
+  activeListBuoyHeaderMainZIndex: number;
+  activeListBuoyHeaderWaitX: number;
+  activeListBuoyHeaderWaitY: number;
+  activeListBuoyHeaderWaitScale: number;
+  activeListBuoyHeaderWaitRotation: number;
+  activeListBuoyHeaderWaitOpacity: number;
+  activeListBuoyHeaderWaitZIndex: number;
+  activeListBuoyPanelX: number;
+  activeListBuoyPanelY: number;
+  activeListBuoyPanelScale: number;
+  activeListBuoyPanelRotation: number;
+  activeListBuoyPanelOpacity: number;
+  activeListBuoyPanelZIndex: number;
+  activeListBuoyPanelFontSize: number;
+  activeListBuoyPanelLineHeight: number;
+  activeListBuoyPanelTextColor: string;
+  activeListBuoyPanelFontFamily: string;
+  activeListBuoyPanelBold: boolean;
   // Sun-embedded meetup-switch arrows (<>), added 2026-09-11 -- one shared
   // Show toggle + each arrow (prev/next) independently gets the full
   // baseline control set, per docs/V8_COMPONENT_CONTROL_BASELINE.md.
@@ -628,6 +667,11 @@ export type PreviewTargetId =
   | "ACTIVE ROSTER V2 A1"
   | "ACTIVE ROSTER V2 B1"
   | "ACTIVE ROSTER V2 B2"
+  | "ACTIVE LIST WAVE BAND"
+  | "ACTIVE LIST HEADER LEAVE"
+  | "ACTIVE LIST HEADER MAIN"
+  | "ACTIVE LIST HEADER WAIT"
+  | "ACTIVE LIST PANEL"
   | "ACTIVE SWITCH ARROW PREV"
   | "ACTIVE SWITCH ARROW NEXT";
 
@@ -1216,7 +1260,8 @@ export const previewDefaults: PreviewControls = {
   // A1 placed at the SAME x/y/scale/rotation as the current roster panel
   // (v8ActiveRosterListsDefaults) per the user's explicit request. B1/B2
   // start bottom-left, per the user's own "我自行調整" (they'll fine-tune).
-  activeRosterV2A1Show: true,
+  // LIST-BUOYS replaces this in-canvas panel (Q6): kept, default OFF.
+  activeRosterV2A1Show: false,
   activeRosterV2A1X: 50,
   activeRosterV2A1Y: 82,
   activeRosterV2A1Scale: 1.15,
@@ -1251,6 +1296,41 @@ export const previewDefaults: PreviewControls = {
   activeRosterV2B2Rotation: -9,
   activeRosterV2B2Opacity: 99,
   activeRosterV2B2ZIndex: 19,
+  activeListBuoyWaveX: 0,
+  activeListBuoyWaveY: 0,
+  activeListBuoyWaveScale: 1,
+  activeListBuoyWaveRotation: 0,
+  activeListBuoyWaveOpacity: 100,
+  activeListBuoyWaveZIndex: 20,
+  activeListBuoyHeaderLeaveX: 17.6,
+  activeListBuoyHeaderLeaveY: 44,
+  activeListBuoyHeaderLeaveScale: 1,
+  activeListBuoyHeaderLeaveRotation: 0,
+  activeListBuoyHeaderLeaveOpacity: 100,
+  activeListBuoyHeaderLeaveZIndex: 21,
+  activeListBuoyHeaderMainX: 50.2,
+  activeListBuoyHeaderMainY: 37,
+  activeListBuoyHeaderMainScale: 1,
+  activeListBuoyHeaderMainRotation: 0,
+  activeListBuoyHeaderMainOpacity: 100,
+  activeListBuoyHeaderMainZIndex: 21,
+  activeListBuoyHeaderWaitX: 83.3,
+  activeListBuoyHeaderWaitY: 45,
+  activeListBuoyHeaderWaitScale: 1,
+  activeListBuoyHeaderWaitRotation: 0,
+  activeListBuoyHeaderWaitOpacity: 100,
+  activeListBuoyHeaderWaitZIndex: 21,
+  activeListBuoyPanelX: 0,
+  activeListBuoyPanelY: 0,
+  activeListBuoyPanelScale: 1,
+  activeListBuoyPanelRotation: 0,
+  activeListBuoyPanelOpacity: 100,
+  activeListBuoyPanelZIndex: 24,
+  activeListBuoyPanelFontSize: 14,
+  activeListBuoyPanelLineHeight: 1.35,
+  activeListBuoyPanelTextColor: "#5a2f0e",
+  activeListBuoyPanelFontFamily: "",
+  activeListBuoyPanelBold: true,
   // Sun-embedded meetup-switch arrows (2026-09-11) -- positioned inside the
   // red sun circle per the user's request, prev on the left / next on the
   // right, sharing one Show toggle.
@@ -1645,6 +1725,51 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRosterV2B2Rotation",
     "activeRosterV2B2Opacity",
     "activeRosterV2B2ZIndex",
+  ],
+  "ACTIVE LIST WAVE BAND": [
+    "activeListBuoyWaveX",
+    "activeListBuoyWaveY",
+    "activeListBuoyWaveScale",
+    "activeListBuoyWaveRotation",
+    "activeListBuoyWaveOpacity",
+    "activeListBuoyWaveZIndex",
+  ],
+  "ACTIVE LIST HEADER LEAVE": [
+    "activeListBuoyHeaderLeaveX",
+    "activeListBuoyHeaderLeaveY",
+    "activeListBuoyHeaderLeaveScale",
+    "activeListBuoyHeaderLeaveRotation",
+    "activeListBuoyHeaderLeaveOpacity",
+    "activeListBuoyHeaderLeaveZIndex",
+  ],
+  "ACTIVE LIST HEADER MAIN": [
+    "activeListBuoyHeaderMainX",
+    "activeListBuoyHeaderMainY",
+    "activeListBuoyHeaderMainScale",
+    "activeListBuoyHeaderMainRotation",
+    "activeListBuoyHeaderMainOpacity",
+    "activeListBuoyHeaderMainZIndex",
+  ],
+  "ACTIVE LIST HEADER WAIT": [
+    "activeListBuoyHeaderWaitX",
+    "activeListBuoyHeaderWaitY",
+    "activeListBuoyHeaderWaitScale",
+    "activeListBuoyHeaderWaitRotation",
+    "activeListBuoyHeaderWaitOpacity",
+    "activeListBuoyHeaderWaitZIndex",
+  ],
+  "ACTIVE LIST PANEL": [
+    "activeListBuoyPanelX",
+    "activeListBuoyPanelY",
+    "activeListBuoyPanelScale",
+    "activeListBuoyPanelRotation",
+    "activeListBuoyPanelOpacity",
+    "activeListBuoyPanelZIndex",
+    "activeListBuoyPanelFontSize",
+    "activeListBuoyPanelLineHeight",
+    "activeListBuoyPanelTextColor",
+    "activeListBuoyPanelFontFamily",
+    "activeListBuoyPanelBold",
   ],
   "ACTIVE ROSTER LISTS": [
     "activeRosterListsShow",
@@ -2125,6 +2250,38 @@ export const controlRanges = {
   activeRosterV2B2Rotation: { label: "三名單v2 B2 Rotation", min: -180, max: 180 },
   activeRosterV2B2Opacity: { label: "三名單v2 B2 Opacity", min: 0, max: 100 },
   activeRosterV2B2ZIndex: { label: "三名單v2 B2 Z-Index", min: 0, max: 40 },
+  activeListBuoyWaveX: { label: "海浪帶 X px", min: -120, max: 120 },
+  activeListBuoyWaveY: { label: "海浪帶 Y px（往上為負）", min: -200, max: 120 },
+  activeListBuoyWaveScale: { label: "海浪帶 Scale", min: 0.5, max: 2, step: 0.01 },
+  activeListBuoyWaveRotation: { label: "海浪帶 Rotation", min: -20, max: 20 },
+  activeListBuoyWaveOpacity: { label: "海浪帶 Opacity", min: 0, max: 100 },
+  activeListBuoyWaveZIndex: { label: "海浪帶 Z-Index", min: 0, max: 40 },
+  activeListBuoyHeaderLeaveX: { label: "季打請假標頭 X %", min: -10, max: 110 },
+  activeListBuoyHeaderLeaveY: { label: "季打請假標頭 Y %（海浪帶高度）", min: -100, max: 120 },
+  activeListBuoyHeaderLeaveScale: { label: "季打請假標頭 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeListBuoyHeaderLeaveRotation: { label: "季打請假標頭 Rotation", min: -45, max: 45 },
+  activeListBuoyHeaderLeaveOpacity: { label: "季打請假標頭 Opacity", min: 0, max: 100 },
+  activeListBuoyHeaderLeaveZIndex: { label: "季打請假標頭 Z-Index", min: 0, max: 40 },
+  activeListBuoyHeaderMainX: { label: "正取名單標頭 X %", min: -10, max: 110 },
+  activeListBuoyHeaderMainY: { label: "正取名單標頭 Y %（海浪帶高度）", min: -100, max: 120 },
+  activeListBuoyHeaderMainScale: { label: "正取名單標頭 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeListBuoyHeaderMainRotation: { label: "正取名單標頭 Rotation", min: -45, max: 45 },
+  activeListBuoyHeaderMainOpacity: { label: "正取名單標頭 Opacity", min: 0, max: 100 },
+  activeListBuoyHeaderMainZIndex: { label: "正取名單標頭 Z-Index", min: 0, max: 40 },
+  activeListBuoyHeaderWaitX: { label: "備取名單標頭 X %", min: -10, max: 110 },
+  activeListBuoyHeaderWaitY: { label: "備取名單標頭 Y %（海浪帶高度）", min: -100, max: 120 },
+  activeListBuoyHeaderWaitScale: { label: "備取名單標頭 Scale", min: 0.3, max: 2.5, step: 0.01 },
+  activeListBuoyHeaderWaitRotation: { label: "備取名單標頭 Rotation", min: -45, max: 45 },
+  activeListBuoyHeaderWaitOpacity: { label: "備取名單標頭 Opacity", min: 0, max: 100 },
+  activeListBuoyHeaderWaitZIndex: { label: "備取名單標頭 Z-Index", min: 0, max: 40 },
+  activeListBuoyPanelX: { label: "名單面板 X px", min: -120, max: 120 },
+  activeListBuoyPanelY: { label: "名單面板 Y px（往上為負）", min: -300, max: 120 },
+  activeListBuoyPanelScale: { label: "名單面板 Scale", min: 0.5, max: 2, step: 0.01 },
+  activeListBuoyPanelRotation: { label: "名單面板 Rotation", min: -20, max: 20 },
+  activeListBuoyPanelOpacity: { label: "名單面板 Opacity", min: 0, max: 100 },
+  activeListBuoyPanelZIndex: { label: "名單面板 Z-Index", min: 0, max: 40 },
+  activeListBuoyPanelFontSize: { label: "名單文字 Font Size", min: 8, max: 28 },
+  activeListBuoyPanelLineHeight: { label: "名單文字 Line Height", min: 1, max: 2.4, step: 0.05 },
   activeRosterV2A1FontSize: { label: "三名單v2 A1 Font Size", min: 8, max: 24 },
   activeRosterV2A1LineHeight: { label: "三名單v2 A1 Line Height", min: 1, max: 2.4, step: 0.05 },
   activeRosterV2A1LeaveX: { label: "三名單v2 A1 季打請假 X", min: -40, max: 40 },
@@ -2625,6 +2782,13 @@ ACTIVE ROSTER V2 (三名單v2)
 A1: Show ${controls.activeRosterV2A1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2A1X)}, Y ${Math.round(controls.activeRosterV2A1Y)}, Scale ${controls.activeRosterV2A1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2A1Rotation)}, Opacity ${Math.round(controls.activeRosterV2A1Opacity)}, Z ${Math.round(controls.activeRosterV2A1ZIndex)}, Font ${Math.round(controls.activeRosterV2A1FontSize)}, Line Height ${controls.activeRosterV2A1LineHeight.toFixed(2)}, Text Color ${controls.activeRosterV2A1TextColor}, Font Family ${controls.activeRosterV2A1FontFamily || "(default)"}, Bold ${controls.activeRosterV2A1Bold ? "ON" : "OFF"}, 季打請假 Offset ${Math.round(controls.activeRosterV2A1LeaveX)}/${Math.round(controls.activeRosterV2A1LeaveY)}, 正取名單 Offset ${Math.round(controls.activeRosterV2A1ConfirmedX)}/${Math.round(controls.activeRosterV2A1ConfirmedY)}, 備取名單 Offset ${Math.round(controls.activeRosterV2A1WaitingX)}/${Math.round(controls.activeRosterV2A1WaitingY)}
 B1: Show ${controls.activeRosterV2B1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B1X)}, Y ${Math.round(controls.activeRosterV2B1Y)}, Scale ${controls.activeRosterV2B1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B1Rotation)}, Opacity ${Math.round(controls.activeRosterV2B1Opacity)}, Z ${Math.round(controls.activeRosterV2B1ZIndex)}
 B2: Show ${controls.activeRosterV2B2Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B2X)}, Y ${Math.round(controls.activeRosterV2B2Y)}, Scale ${controls.activeRosterV2B2Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B2Rotation)}, Opacity ${Math.round(controls.activeRosterV2B2Opacity)}, Z ${Math.round(controls.activeRosterV2B2ZIndex)}
+
+ACTIVE LIST BUOYS (名單浮標)
+Wave Band: X ${Math.round(controls.activeListBuoyWaveX)}, Y ${Math.round(controls.activeListBuoyWaveY)}, Scale ${controls.activeListBuoyWaveScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyWaveRotation)}, Opacity ${Math.round(controls.activeListBuoyWaveOpacity)}, Z ${Math.round(controls.activeListBuoyWaveZIndex)}
+季打請假標頭: X ${controls.activeListBuoyHeaderLeaveX.toFixed(1)}, Y ${controls.activeListBuoyHeaderLeaveY.toFixed(1)}, Scale ${controls.activeListBuoyHeaderLeaveScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyHeaderLeaveRotation)}, Opacity ${Math.round(controls.activeListBuoyHeaderLeaveOpacity)}, Z ${Math.round(controls.activeListBuoyHeaderLeaveZIndex)}
+正取名單標頭: X ${controls.activeListBuoyHeaderMainX.toFixed(1)}, Y ${controls.activeListBuoyHeaderMainY.toFixed(1)}, Scale ${controls.activeListBuoyHeaderMainScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyHeaderMainRotation)}, Opacity ${Math.round(controls.activeListBuoyHeaderMainOpacity)}, Z ${Math.round(controls.activeListBuoyHeaderMainZIndex)}
+備取名單標頭: X ${controls.activeListBuoyHeaderWaitX.toFixed(1)}, Y ${controls.activeListBuoyHeaderWaitY.toFixed(1)}, Scale ${controls.activeListBuoyHeaderWaitScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyHeaderWaitRotation)}, Opacity ${Math.round(controls.activeListBuoyHeaderWaitOpacity)}, Z ${Math.round(controls.activeListBuoyHeaderWaitZIndex)}
+Panel: X ${Math.round(controls.activeListBuoyPanelX)}, Y ${Math.round(controls.activeListBuoyPanelY)}, Scale ${controls.activeListBuoyPanelScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyPanelRotation)}, Opacity ${Math.round(controls.activeListBuoyPanelOpacity)}, Z ${Math.round(controls.activeListBuoyPanelZIndex)}, Font ${Math.round(controls.activeListBuoyPanelFontSize)}, Line Height ${controls.activeListBuoyPanelLineHeight.toFixed(2)}, Text Color ${controls.activeListBuoyPanelTextColor}, Font Family ${controls.activeListBuoyPanelFontFamily || "(default)"}, Bold ${controls.activeListBuoyPanelBold ? "ON" : "OFF"}
 
 ACTIVE SWITCH ARROW (切換聚會 <>)
 Show: ${controls.activeSwitchArrowShow ? "ON" : "OFF"}
@@ -3225,6 +3389,52 @@ export function buildV8ActiveIdentityCardControls(controls: PreviewControls): V8
       lineHeight: controls.activeIdentityForgetLineHeight,
       textAlign: controls.activeIdentityForgetTextAlign,
       fontWeight: controls.activeIdentityForgetFontWeight,
+    },
+  };
+}
+
+// LIST-BUOYS targets are appended only by the real ACTIVE page (see
+// V8ActivePage's targetOrder) -- not part of activeTargetOrder, so the
+// /v8/preview console is unchanged.
+export const activeListBuoyTargets: PreviewTargetId[] = [
+  "ACTIVE LIST WAVE BAND",
+  "ACTIVE LIST HEADER LEAVE",
+  "ACTIVE LIST HEADER MAIN",
+  "ACTIVE LIST HEADER WAIT",
+  "ACTIVE LIST PANEL",
+];
+
+export function buildV8ActiveListBuoysControls(controls: PreviewControls): V8ActiveListBuoysControls {
+  const header = (prefix: "Leave" | "Main" | "Wait") => ({
+    x: controls[`activeListBuoyHeader${prefix}X`],
+    y: controls[`activeListBuoyHeader${prefix}Y`],
+    scale: controls[`activeListBuoyHeader${prefix}Scale`],
+    rotation: controls[`activeListBuoyHeader${prefix}Rotation`],
+    opacity: controls[`activeListBuoyHeader${prefix}Opacity`],
+    zIndex: controls[`activeListBuoyHeader${prefix}ZIndex`],
+  });
+  return {
+    wave: {
+      x: controls.activeListBuoyWaveX,
+      y: controls.activeListBuoyWaveY,
+      scale: controls.activeListBuoyWaveScale,
+      rotation: controls.activeListBuoyWaveRotation,
+      opacity: controls.activeListBuoyWaveOpacity,
+      zIndex: controls.activeListBuoyWaveZIndex,
+    },
+    headers: { leave: header("Leave"), main: header("Main"), wait: header("Wait") },
+    panel: {
+      x: controls.activeListBuoyPanelX,
+      y: controls.activeListBuoyPanelY,
+      scale: controls.activeListBuoyPanelScale,
+      rotation: controls.activeListBuoyPanelRotation,
+      opacity: controls.activeListBuoyPanelOpacity,
+      zIndex: controls.activeListBuoyPanelZIndex,
+      fontSize: controls.activeListBuoyPanelFontSize,
+      lineHeight: controls.activeListBuoyPanelLineHeight,
+      textColor: controls.activeListBuoyPanelTextColor,
+      fontFamily: controls.activeListBuoyPanelFontFamily,
+      bold: controls.activeListBuoyPanelBold,
     },
   };
 }

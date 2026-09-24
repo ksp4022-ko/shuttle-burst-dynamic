@@ -119,6 +119,42 @@ export const v8ActiveRopeOrnamentFiles = {
 // (RGB, no alpha), unlike every other roster/plaque asset in this library
 // (all RGBA/transparent) -- it will render as a white rectangle, not blend
 // into the page, until re-exported with a transparent background.
+// LIST-BUOYS (名單浮標): bottom wave band + floating headers + expandable
+// three-list panel. Positions are relative to the wave band / panel, see
+// V8ListBuoys.tsx.
+export type V8ActiveListBuoyLayerControls = {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+  zIndex: number;
+};
+
+export type V8ActiveListBuoysControls = {
+  wave: V8ActiveListBuoyLayerControls;
+  headers: {
+    leave: V8ActiveListBuoyLayerControls;
+    main: V8ActiveListBuoyLayerControls;
+    wait: V8ActiveListBuoyLayerControls;
+  };
+  panel: V8ActiveListBuoyLayerControls & {
+    fontSize: number;
+    lineHeight: number;
+    textColor: string;
+    fontFamily: string;
+    bold: boolean;
+  };
+};
+
+export const v8ActiveListBuoyFiles = {
+  waveBand: "list-buoy-wave-band-v1.webp",
+  headerLeave: "list-buoy-header-leave-v1.webp",
+  headerMain: "list-buoy-header-main-v1.webp",
+  headerWait: "list-buoy-header-wait-v1.webp",
+  panel: "list-buoy-body-1448-v1.webp",
+} as const;
+
 export const v8ActiveRosterV2Files = {
   a1: "dragon-triple-list-v2-a1-v1.webp",
   b1: "dragon-triple-list-v2-b1-v1.webp",
