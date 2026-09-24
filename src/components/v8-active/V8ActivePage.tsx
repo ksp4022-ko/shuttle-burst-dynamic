@@ -1370,7 +1370,6 @@ export function V8ActiveSunContent({
     <>
       {dialing ? (
         <>
-          <span key={`texture-${dial?.n}`} className="v8-sun-dial-texture" style={dirStyle} aria-hidden="true" />
           <span key={`ring-${dial?.n}`} className="v8-sun-dial-ring" style={dirStyle} aria-hidden="true" />
         </>
       ) : null}
@@ -2647,25 +2646,6 @@ export function V8ActiveStyles() {
         100% { transform: rotate(0deg); opacity: 1; }
       }
 
-      /* The sun itself is a flat disc; this faint texture only shows while
-         it turns, so the rotation reads without changing the idle look. */
-      .v8-sun-dial-texture {
-        position: absolute;
-        inset: 0;
-        border-radius: 50%;
-        pointer-events: none;
-        background: repeating-conic-gradient(from 0deg, rgba(255, 214, 160, 0) 0deg 9deg, rgba(255, 214, 160, 0.28) 9deg 11deg);
-        -webkit-mask-image: radial-gradient(circle, transparent 18%, #000 45%, #000 70%, transparent 71%);
-        mask-image: radial-gradient(circle, transparent 18%, #000 45%, #000 70%, transparent 71%);
-        animation: v8-dial-texture 700ms cubic-bezier(.6, 0, .25, 1) both;
-      }
-
-      @keyframes v8-dial-texture {
-        0% { transform: rotate(0deg); opacity: 0; }
-        20% { opacity: 1; }
-        75% { opacity: 1; }
-        100% { transform: rotate(calc(var(--dial-dir, 1) * 120deg)); opacity: 0; }
-      }
 
       .v8-sun-dial-ring {
         position: absolute;
@@ -2750,7 +2730,6 @@ export function V8ActiveStyles() {
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .v8-sun-dial-texture,
         .v8-sun-dial-ring {
           display: none;
         }
