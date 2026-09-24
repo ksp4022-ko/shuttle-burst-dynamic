@@ -14,6 +14,7 @@ import { flushSync } from "react-dom";
 import { buildV8ActiveAssets } from "@/components/v8-active/v8ActiveConfig";
 import { V8Toast } from "@/components/v8-active/V8Toast";
 import { useV8PageLock } from "@/components/v8-active/useV8PageLock";
+import { V8ImageDebug } from "@/components/v8-active/V8ImageDebug";
 import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepage/HomepageSheets";
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
@@ -397,6 +398,8 @@ export function Index() {
   const [v8Entering, setV8Entering] = useState(false);
   const v8MorphBusyRef = useRef(false);
   const openDialAtRef = useRef(0);
+  // ?v8debug=1: on-page image timing panel (iPhone has no Web Inspector here).
+  const [v8ImageDebug] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("v8debug") === "1");
   // SUN-DIAL end-of-list feedback on the Opening sun (own toast state, so
   // no other flow notice starts showing on Opening).
   const [openDialBump, setOpenDialBump] = useState<{ n: number; dir: 1 | -1 } | undefined>(undefined);
@@ -1727,6 +1730,8 @@ export function Index() {
           onRefresh={() => flow.refresh()}
         />
       )}
+
+      {isV8Route && v8ImageDebug ? <V8ImageDebug /> : null}
 
       {isV8Route && !v8MeetupConfirmed ? (
         <V8Toast notice={openDialHint} motionMode={flow.motionMode} setNotice={setOpenDialHint} />
