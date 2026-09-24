@@ -458,6 +458,12 @@ export function V8ActivePage({
     rosterV2Controls.a1.show ? assets.rosterV2A1 : null,
     rosterV2Controls.b1.show ? assets.rosterV2B1 : null,
     rosterV2Controls.b2.show ? assets.rosterV2B2 : null,
+    // First-screen art outside the hero's own list: the sun title and this
+    // identity's current stamp / tag / CTA (only the current ones).
+    parseV8MeetupDisplay(selectedEvent.name).displayName === "康軒" ? assets.sunTitleKangxuan : null,
+    identity ? statusStampAsset(identity, assets) : null,
+    identity ? identityTagAsset(identity, assets) : null,
+    identity ? primaryActionAsset(identity, assets) : null,
   ].filter((src): src is string => Boolean(src));
 
   const displayNameForFixedRosterPerson = (person: AlphaSignup) => {

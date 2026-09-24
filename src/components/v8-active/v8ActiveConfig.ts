@@ -183,7 +183,9 @@ export const v8ActiveSunSwitchArrowFiles = {
 } as const;
 
 export const v8ActiveSunTitleFiles = {
-  kangxuan: "v8-kangxuan-calligraphy-ivory-square-v1.webp",
+  // 640px display export (v1 was 1600px, 497KB, ~9.8MB decoded, for a
+  // title shown at ~160 CSS px).
+  kangxuan: "v8-kangxuan-calligraphy-ivory-square-v2-640.webp",
 } as const;
 
 export function buildV8ActiveAssets(baseUrl: string) {

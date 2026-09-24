@@ -29,7 +29,7 @@ function buildV8OpeningSunAssets(baseUrl: string) {
     sunBadgeCapacity: `${activeBase}/sun-info-badge-capacity-v1.webp`,
     sunSwitchArrowPrev: `${statusAssetBase}/v8-switch-meetup-prev-display.webp`,
     sunSwitchArrowNext: `${statusAssetBase}/v8-switch-meetup-next-display.webp`,
-    sunTitleKangxuan: `${statusAssetBase}/v8-kangxuan-calligraphy-ivory-square-v1.webp`,
+    sunTitleKangxuan: `${statusAssetBase}/v8-kangxuan-calligraphy-ivory-square-v2-640.webp`,
   };
 }
 
