@@ -2517,6 +2517,7 @@ export function V8ActiveStyles() {
         max-width: 360px;
         max-height: calc(100svh - max(32px, env(safe-area-inset-top)) - max(32px, env(safe-area-inset-bottom)));
         overflow-y: auto;
+        overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
         border-radius: 20px;
@@ -3625,6 +3626,7 @@ export function V8ActiveStyles() {
         gap: 6px;
         max-height: min(38svh, 260px);
         overflow-y: auto;
+        overscroll-behavior: contain;
         padding-right: 2px;
       }
 
