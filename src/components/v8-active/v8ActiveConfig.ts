@@ -98,10 +98,13 @@ export const v8ActiveCtaPlaqueFiles = {
 // full cta-plaque-*-v2 state images, and lets only the text crossfade).
 // Display exports are the sources at 0.625x (assembly 1536 -> 960 wide).
 // The v1/v2 plaques above stay until the assembly is accepted.
+// cta-plaque-blank-v2 (2026-09-25) is v1 cut along the gold frame's outer
+// edge like 代報 v3 -- v1 was a rectangle carrying the base's blue/gold
+// remnants, which showed as hard straight edges on the phone.
 export const v8CtaAssemblyFiles = {
   base: "cta-assembly-base-v1.webp",
   front: "cta-assembly-front-v1.webp",
-  mainBlank: "cta-plaque-blank-v1.webp",
+  mainBlank: "cta-plaque-blank-v2.webp",
   textSeasonLeave: "cta-text-leave-v2.webp",
   textSeasonReturn: "cta-text-return-v2.webp",
   textTempSignup: "cta-text-temp-signup-v2.webp",
