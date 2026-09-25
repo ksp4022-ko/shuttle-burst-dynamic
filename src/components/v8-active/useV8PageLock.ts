@@ -16,21 +16,49 @@ let lockCount = 0;
 const LOCKED_PROPS: [string, string][] = [["overscroll-behavior", "none"]];
 const saved = new Map<string, string>();
 
-function touchCanMove(target: EventTarget | null) {
+// A touchmove is let through only if some scroller under the finger can
+// still move in that direction. A list already at its end would otherwise
+// hand the scroll on to the page (iPhone scroll chaining), which shifted
+// the whole page after scrolling 代退's name list.
+function touchCanMove(target: EventTarget | null, dx: number, dy: number) {
   let node = target instanceof Element ? target : null;
   if (node?.closest("input, textarea, select")) return true;
   while (node && node !== document.body) {
     const style = window.getComputedStyle(node);
     const scrollsY = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1;
     const scrollsX = /(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 1;
-    if (scrollsY || scrollsX) return true;
+    // Finger moving up (dy < 0) scrolls content down, and vice versa.
+    if (scrollsY && ((dy < 0 && node.scrollTop + node.clientHeight < node.scrollHeight - 1) || (dy > 0 && node.scrollTop > 0))) {
+      return true;
+    }
+    if (scrollsX && ((dx < 0 && node.scrollLeft + node.clientWidth < node.scrollWidth - 1) || (dx > 0 && node.scrollLeft > 0))) {
+      return true;
+    }
     node = node.parentElement;
   }
   return false;
 }
 
+let lastTouch: { x: number; y: number } | null = null;
+
+function onTouchStart(event: TouchEvent) {
+  const touch = event.touches[0];
+  lastTouch = touch ? { x: touch.clientX, y: touch.clientY } : null;
+}
+
 function onTouchMove(event: TouchEvent) {
-  if (!touchCanMove(event.target)) event.preventDefault();
+  const touch = event.touches[0];
+  if (!touch) return;
+  const dx = lastTouch ? touch.clientX - lastTouch.x : 0;
+  const dy = lastTouch ? touch.clientY - lastTouch.y : 0;
+  lastTouch = { x: touch.clientX, y: touch.clientY };
+  if (!touchCanMove(event.target, dx, dy)) event.preventDefault();
+}
+
+// Whatever a gesture did, the page itself should end up back at the top.
+function onTouchEnd() {
+  lastTouch = null;
+  snapSoon();
 }
 
 // Anything that still scrolls the root (scroll restoration, focus jumps)
@@ -82,7 +110,9 @@ function lock() {
     history.scrollRestoration = "manual";
   }
   window.scrollTo(0, 0);
+  document.addEventListener("touchstart", onTouchStart, { passive: true });
   document.addEventListener("touchmove", onTouchMove, { passive: false });
+  document.addEventListener("touchend", onTouchEnd, { passive: true });
   window.addEventListener("scroll", onScroll, { passive: true });
   document.addEventListener("focusout", onFocusOut);
   window.visualViewport?.addEventListener("resize", snapSoon);
@@ -97,7 +127,10 @@ function unlock() {
     }
   }
   document.documentElement.classList.remove("v8-page-locked");
+  document.removeEventListener("touchstart", onTouchStart);
   document.removeEventListener("touchmove", onTouchMove);
+  document.removeEventListener("touchend", onTouchEnd);
+  lastTouch = null;
   window.removeEventListener("scroll", onScroll);
   document.removeEventListener("focusout", onFocusOut);
   window.visualViewport?.removeEventListener("resize", snapSoon);
