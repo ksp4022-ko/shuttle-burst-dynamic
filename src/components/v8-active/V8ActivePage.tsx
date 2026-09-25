@@ -10,6 +10,7 @@ import {
   activeCtaAssemblyReplacedTargets,
   activeCtaAssemblyTarget,
   activeListBuoyTargets,
+  activeSeasonAttendanceTarget,
   activeTargetOrder,
   buildV8ActiveCtaAssemblyControls,
   buildV8ActiveCapacityBadgeControls,
@@ -22,6 +23,7 @@ import {
   buildV8ActiveRopeOrnamentsControls,
   buildV8ActiveRosterListsControls,
   buildV8ActiveRosterV2Controls,
+  buildV8ActiveSeasonAttendanceControls,
   buildV8ActiveSunBadgesControls,
   buildV8ActiveSunMessagesControls,
   buildV8ActiveSwitchArrowsControls,
@@ -43,6 +45,7 @@ import {
   type V8ActiveEmaTextsControls,
   type V8ActiveIdentityCardControls,
   type V8ActiveIdentityNameControls,
+  type V8ActiveIdentityTextControls,
   type V8ActiveIdentityVisualControls,
   type V8ActiveRopeOrnamentsControls,
   type V8ActiveSunBadgeControls,
@@ -56,6 +59,9 @@ import {
   type V8SunDotsControls,
 } from "./v8ActiveConfig";
 import { V8CtaAssembly, V8CtaAssemblyStyles, type V8CtaAssemblyAssets } from "./V8CtaAssembly";
+import { V8SeasonAttendance } from "./V8SeasonAttendance";
+import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
+import type { V8SeasonProgress } from "@/lib/database-alpha";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { V8Toast } from "./V8Toast";
@@ -156,6 +162,14 @@ export function V8ActivePage({
     lineIdentity: effectiveLineIdentity,
     lineAuthToken,
     eventId: selectedEventId,
+  });
+  // 本季出席: fail-soft, never gates the page (see use-v8-season-progress).
+  const { progress: seasonProgress, refresh: refreshSeasonProgress } = useV8SeasonProgress({
+    token: lineAuthToken,
+    eventId: selectedEvent?.id,
+    seasonId: selectedEvent?.seasonId,
+    groupId: selectedEvent?.groupId,
+    isFixed: identity?.signupType === "fixed",
   });
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
@@ -315,6 +329,7 @@ export function V8ActivePage({
       }
       // A waitlisted 季打 held no 正取 slot, so nothing was released.
       if (action === "fixed-leave") flow.setNotice(status === "waiting" ? `${name} 已請假，退出候補` : `${name} 已請假，名額已釋出`);
+      if (action !== "cancel-temp") refreshSeasonProgress();
       await refreshCancellableTempSignups();
     });
 
@@ -441,12 +456,13 @@ export function V8ActivePage({
   // own targets are dropped (real ACTIVE only).
   const activeTuningTargets: PreviewTargetId[] = [
     ...activeTargetOrder.flatMap((target) =>
-      target === "ACTIVE IDENTITY CTA" ? [activeCtaAssemblyTarget] : activeCtaAssemblyReplacedTargets.includes(target) ? [] : [target],
+      target === "ACTIVE IDENTITY CTA" ? [activeCtaAssemblyTarget, activeSeasonAttendanceTarget] : activeCtaAssemblyReplacedTargets.includes(target) ? [] : [target],
     ),
     ...activeListBuoyTargets,
     "ACTIVE SUN DOTS",
   ];
   const ctaAssemblyControls = buildV8ActiveCtaAssemblyControls(tuningControls);
+  const seasonAttendanceControls = buildV8ActiveSeasonAttendanceControls(tuningControls);
   const sunDotsControls = buildV8SunDotsControls(tuningControls, "active");
 
   // See V8HeroComposition's extraPreloadSrcs comment -- these are the same
@@ -584,6 +600,7 @@ export function V8ActivePage({
               pendingLabel={pendingAction?.label}
               ctaPending={ctaPending}
               assembly={{ controls: ctaAssemblyControls, assets: assets.ctaAssembly }}
+              seasonAttendance={seasonProgress ? { progress: seasonProgress, controls: seasonAttendanceControls } : undefined}
               onStatusFeedback={handleStatusFeedback}
               onPrimaryAction={handlePrimaryAction}
               onForget={beginIdentityCorrection}
@@ -1768,6 +1785,7 @@ export function V8IdentityScrollContent({
   pendingLabel,
   ctaPending = false,
   assembly,
+  seasonAttendance,
   onStatusFeedback,
   onPrimaryAction,
   onForget,
@@ -1784,6 +1802,10 @@ export function V8IdentityScrollContent({
   // CTA-ASSEMBLY (real ACTIVE only): render the button assembly instead of
   // the separate CTA / 代報 / 代退 plaques. /v8/preview doesn't pass it.
   assembly?: { controls: V8CtaAssemblyControls; assets: V8CtaAssemblyAssets };
+  // 本季出席 (real ACTIVE only, 季打 only) -- /v8/preview doesn't pass it.
+  seasonAttendance?:
+    | { progress: Extract<V8SeasonProgress, { eligible: true }>; controls: V8ActiveIdentityTextControls }
+    | undefined;
   onStatusFeedback?: (status: CurrentIdentity["status"]) => void;
   onPrimaryAction: () => void;
   onForget: () => void;
@@ -1863,6 +1885,9 @@ export function V8IdentityScrollContent({
       <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
         <img src={identityTagAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
+      {seasonAttendance && identity.signupType === "fixed" ? (
+        <V8SeasonAttendance progress={seasonAttendance.progress} controls={seasonAttendance.controls} />
+      ) : null}
       {assembly ? (
         <V8CtaAssembly
           controls={assembly.controls}

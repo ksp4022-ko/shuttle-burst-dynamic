@@ -6,6 +6,7 @@ import type {
   V8ActiveCapacityBadgeControls,
   V8ActiveEmaTextsControls,
   V8ActiveIdentityCardControls,
+  V8ActiveIdentityTextControls,
   V8ActiveInfoCardsControls,
   V8ActiveRopeOrnamentsControls,
   V8ActiveRosterListsControls,
@@ -606,6 +607,18 @@ export type PreviewControls = {
   activeCtaAssemblyRotation: number;
   activeCtaAssemblyOpacity: number;
   activeCtaAssemblyZIndex: number;
+  activeSeasonAttendanceX: number;
+  activeSeasonAttendanceY: number;
+  activeSeasonAttendanceScale: number;
+  activeSeasonAttendanceRotation: number;
+  activeSeasonAttendanceOpacity: number;
+  activeSeasonAttendanceZIndex: number;
+  activeSeasonAttendanceFontSize: number;
+  activeSeasonAttendanceMaxWidth: number;
+  activeSeasonAttendanceLetterSpacing: number;
+  activeSeasonAttendanceLineHeight: number;
+  activeSeasonAttendanceTextAlign: "left" | "center" | "right";
+  activeSeasonAttendanceFontWeight: number;
   // Sun-embedded meetup-switch arrows (<>), added 2026-09-11 -- one shared
   // Show toggle + each arrow (prev/next) independently gets the full
   // baseline control set, per docs/V8_COMPONENT_CONTROL_BASELINE.md.
@@ -697,6 +710,7 @@ export type PreviewTargetId =
   | "ACTIVE LIST PANEL"
   | "ACTIVE SUN DOTS"
   | "ACTIVE CTA ASSEMBLY"
+  | "ACTIVE SEASON ATTENDANCE"
   | "OPEN SUN DOTS"
   | "ACTIVE SWITCH ARROW PREV"
   | "ACTIVE SWITCH ARROW NEXT";
@@ -1378,6 +1392,19 @@ export const previewDefaults: PreviewControls = {
   activeCtaAssemblyRotation: 0,
   activeCtaAssemblyOpacity: 100,
   activeCtaAssemblyZIndex: 1,
+  // 本季出席 (real ACTIVE only), between the status mark and the assembly.
+  activeSeasonAttendanceX: 42,
+  activeSeasonAttendanceY: 53.5,
+  activeSeasonAttendanceScale: 1,
+  activeSeasonAttendanceRotation: 0,
+  activeSeasonAttendanceOpacity: 100,
+  activeSeasonAttendanceZIndex: 30,
+  activeSeasonAttendanceFontSize: 7.5,
+  activeSeasonAttendanceMaxWidth: 84,
+  activeSeasonAttendanceLetterSpacing: 0,
+  activeSeasonAttendanceLineHeight: 1.1,
+  activeSeasonAttendanceTextAlign: "center",
+  activeSeasonAttendanceFontWeight: 700,
   // Sun-embedded meetup-switch arrows (2026-09-11) -- positioned inside the
   // red sun circle per the user's request, prev on the left / next on the
   // right, sharing one Show toggle.
@@ -1843,6 +1870,21 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeCtaAssemblyOpacity",
     "activeCtaAssemblyZIndex",
   ],
+  "ACTIVE SEASON ATTENDANCE": [
+    "activeIdentityShow",
+    "activeSeasonAttendanceX",
+    "activeSeasonAttendanceY",
+    "activeSeasonAttendanceScale",
+    "activeSeasonAttendanceRotation",
+    "activeSeasonAttendanceOpacity",
+    "activeSeasonAttendanceZIndex",
+    "activeSeasonAttendanceFontSize",
+    "activeSeasonAttendanceMaxWidth",
+    "activeSeasonAttendanceLetterSpacing",
+    "activeSeasonAttendanceLineHeight",
+    "activeSeasonAttendanceTextAlign",
+    "activeSeasonAttendanceFontWeight",
+  ],
   "ACTIVE ROSTER LISTS": [
     "activeRosterListsShow",
     "activeRosterListsX",
@@ -1936,6 +1978,7 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE IDENTITY HELPER CANCEL": "activeIdentityShow",
   "ACTIVE IDENTITY FORGET": "activeIdentityShow",
   "ACTIVE CTA ASSEMBLY": "activeIdentityShow",
+  "ACTIVE SEASON ATTENDANCE": "activeIdentityShow",
   "ACTIVE INFO ROPE": "activeInfoRopeShow",
   "ACTIVE INFO REGISTERED": "activeInfoRegisteredShow",
   "ACTIVE INFO NEEDED": "activeInfoNeededShow",
@@ -2373,6 +2416,17 @@ export const controlRanges = {
   activeCtaAssemblyRotation: { label: "按鍵組 Rotation", min: -30, max: 30 },
   activeCtaAssemblyOpacity: { label: "按鍵組 Opacity", min: 0, max: 100 },
   activeCtaAssemblyZIndex: { label: "按鍵組 Z-Index", min: 0, max: 60 },
+  activeSeasonAttendanceX: { label: "本季出席 X %", min: -30, max: 130, step: 0.5 },
+  activeSeasonAttendanceY: { label: "本季出席 Y %", min: -30, max: 160, step: 0.5 },
+  activeSeasonAttendanceScale: { label: "本季出席 Scale", min: 0.4, max: 2.5, step: 0.01 },
+  activeSeasonAttendanceRotation: { label: "本季出席 Rotation", min: -30, max: 30 },
+  activeSeasonAttendanceOpacity: { label: "本季出席 Opacity", min: 0, max: 100 },
+  activeSeasonAttendanceZIndex: { label: "本季出席 Z-Index", min: 0, max: 60 },
+  activeSeasonAttendanceFontSize: { label: "本季出席 Font Size", min: 6, max: 18, step: 0.5 },
+  activeSeasonAttendanceMaxWidth: { label: "本季出席 Max Width", min: 50, max: 180 },
+  activeSeasonAttendanceLetterSpacing: { label: "本季出席 Letter Spacing", min: -2, max: 4, step: 0.1 },
+  activeSeasonAttendanceLineHeight: { label: "本季出席 Line Height", min: 0.8, max: 2, step: 0.05 },
+  activeSeasonAttendanceFontWeight: { label: "本季出席 Font Weight", min: 400, max: 900, step: 100 },
   activeRosterV2A1FontSize: { label: "三名單v2 A1 Font Size", min: 8, max: 24 },
   activeRosterV2A1LineHeight: { label: "三名單v2 A1 Line Height", min: 1, max: 2.4, step: 0.05 },
   activeRosterV2A1LeaveX: { label: "三名單v2 A1 季打請假 X", min: -40, max: 40 },
@@ -2839,6 +2893,9 @@ Show: ${controls.activeIdentityShow ? "ON" : "OFF"}
 
 ACTIVE CTA ASSEMBLY (按鍵組)
 X ${controls.activeCtaAssemblyX.toFixed(1)}, Y ${controls.activeCtaAssemblyY.toFixed(1)}, Scale ${controls.activeCtaAssemblyScale.toFixed(2)}, Rotation ${Math.round(controls.activeCtaAssemblyRotation)}, Opacity ${Math.round(controls.activeCtaAssemblyOpacity)}, Z ${Math.round(controls.activeCtaAssemblyZIndex)}
+
+ACTIVE SEASON ATTENDANCE (本季出席)
+X ${controls.activeSeasonAttendanceX.toFixed(1)}, Y ${controls.activeSeasonAttendanceY.toFixed(1)}, Scale ${controls.activeSeasonAttendanceScale.toFixed(2)}, Rotation ${Math.round(controls.activeSeasonAttendanceRotation)}, Opacity ${Math.round(controls.activeSeasonAttendanceOpacity)}, Z ${Math.round(controls.activeSeasonAttendanceZIndex)}, Font ${controls.activeSeasonAttendanceFontSize}, Max Width ${Math.round(controls.activeSeasonAttendanceMaxWidth)}, Letter Spacing ${controls.activeSeasonAttendanceLetterSpacing}, Line Height ${controls.activeSeasonAttendanceLineHeight}, Align ${controls.activeSeasonAttendanceTextAlign}, Weight ${controls.activeSeasonAttendanceFontWeight}
 
 ACTIVE SUN BADGE CAPACITY (上限)
 Show: ${controls.activeSunBadgeCapacityShow ? "ON" : "OFF"}
@@ -3513,6 +3570,27 @@ export const activeCtaAssemblyReplacedTargets: PreviewTargetId[] = [
   "ACTIVE IDENTITY HELPER SIGNUP",
   "ACTIVE IDENTITY HELPER CANCEL",
 ];
+
+// 本季出席: real ACTIVE only, like the assembly -- not in activeTargetOrder,
+// so /v8/preview never lists it.
+export const activeSeasonAttendanceTarget: PreviewTargetId = "ACTIVE SEASON ATTENDANCE";
+
+export function buildV8ActiveSeasonAttendanceControls(controls: PreviewControls): V8ActiveIdentityTextControls {
+  return {
+    x: controls.activeSeasonAttendanceX,
+    y: controls.activeSeasonAttendanceY,
+    scale: controls.activeSeasonAttendanceScale,
+    rotation: controls.activeSeasonAttendanceRotation,
+    opacity: controls.activeSeasonAttendanceOpacity,
+    zIndex: controls.activeSeasonAttendanceZIndex,
+    fontSize: controls.activeSeasonAttendanceFontSize,
+    maxWidth: controls.activeSeasonAttendanceMaxWidth,
+    letterSpacing: controls.activeSeasonAttendanceLetterSpacing,
+    lineHeight: controls.activeSeasonAttendanceLineHeight,
+    textAlign: controls.activeSeasonAttendanceTextAlign,
+    fontWeight: controls.activeSeasonAttendanceFontWeight,
+  };
+}
 
 export function buildV8ActiveCtaAssemblyControls(controls: PreviewControls): V8CtaAssemblyControls {
   return {
