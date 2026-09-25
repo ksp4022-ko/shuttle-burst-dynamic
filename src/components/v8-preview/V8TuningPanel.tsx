@@ -701,6 +701,22 @@ export function V8TuningPanel({
             </select>
           </label>
         ) : null}
+        {selectedTarget === "ACTIVE SEASON ATTENDANCE" ? (
+          <label style={inlineSelectLabelStyle}>
+            ALIGN
+            <select
+              value={controls.activeSeasonAttendanceTextAlign}
+              onChange={(event) =>
+                update("activeSeasonAttendanceTextAlign", event.currentTarget.value as PreviewControls["activeSeasonAttendanceTextAlign"])
+              }
+              style={compactSelectStyle}
+            >
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </label>
+        ) : null}
         {selectedTarget === "ACTIVE IDENTITY FORGET" ? (
           <label style={inlineSelectLabelStyle}>
             ALIGN

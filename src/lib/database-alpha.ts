@@ -34,6 +34,30 @@ export type AlphaSignup = {
   participantLineIdentityId?: string | null;
 };
 
+// 本季出席 (season progress) -- a playful 季打 season tracker, not
+// attendance. See getV8SeasonProgress in the badminton-signup Worker.
+export type V8SeasonProgressState = "normal" | "leave" | "future" | "today";
+
+export type V8SeasonProgressEvent = {
+  eventId: string;
+  date: string;
+  name: string;
+  state: V8SeasonProgressState;
+  onLeave: boolean;
+};
+
+export type V8SeasonProgress =
+  | { eligible: false }
+  | {
+      eligible: true;
+      seasonId: string;
+      groupId: string;
+      today: string;
+      total: number;
+      count: number;
+      events: V8SeasonProgressEvent[];
+    };
+
 export type AlphaCancellableTempSignup = AlphaSignup & {
   canCancel: boolean;
   createdByMe: boolean;
@@ -269,6 +293,13 @@ export function fixedAlphaReturn(eventId: string, signupId: string, token?: stri
       body: JSON.stringify({ siteId }),
     },
   );
+}
+
+export function fetchV8SeasonProgress(token: string, eventId: string, signal?: AbortSignal) {
+  return alphaFetch<V8SeasonProgress>(`/events/${encodeURIComponent(eventId)}/me/season-progress`, {
+    headers: authHeaders(token),
+    ...(signal ? { signal } : {}),
+  });
 }
 
 export function fetchV8CancellableTempSignups(token: string, eventId: string) {
