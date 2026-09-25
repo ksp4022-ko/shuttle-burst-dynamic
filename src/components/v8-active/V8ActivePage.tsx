@@ -306,14 +306,15 @@ export function V8ActivePage({
   const runAction = (action: "fixed-leave" | "fixed-return" | "cancel-temp") =>
     withActionLock("cta", async () => {
       if (!identity || !lineAuthToken) return;
-      const { signupId, name } = identity;
+      const { signupId, name, status } = identity;
       if (action === "fixed-return") returnFeedbackRef.current = { signupId, name };
       const ok = await flow.runIdentityAction(action, { id: signupId, name }, lineAuthToken);
       if (!ok) {
         returnFeedbackRef.current = null;
         return;
       }
-      if (action === "fixed-leave") flow.setNotice(`${name} 已請假，名額已釋出`);
+      // A waitlisted 季打 held no 正取 slot, so nothing was released.
+      if (action === "fixed-leave") flow.setNotice(status === "waiting" ? `${name} 已請假，退出候補` : `${name} 已請假，名額已釋出`);
       await refreshCancellableTempSignups();
     });
 
@@ -1868,9 +1869,9 @@ export function V8IdentityScrollContent({
           mainText={assemblyTextAsset(identity, assembly.assets)}
           warmTexts={assemblyTextPair(identity, assembly.assets).filter((src) => src !== assemblyTextAsset(identity, assembly.assets))}
           mainLabel={busy ? pendingLabel || primaryActionLabel(identity) : primaryActionLabel(identity)}
-          // 季打 on the waitlist still maps to 告假, but the backend rejects
-          // a waitlisted leave -- shown disabled until that's fixed there.
-          mainDisabled={busy || (identity.signupType === "fixed" && identity.status === "waiting")}
+          // 季打 on the waitlist maps to 告假 too -- the backend's fixed
+          // leave accepts confirmed and waiting signups alike.
+          mainDisabled={busy}
           helpersDisabled={busy}
           pending={ctaPending ? <V8SendingLabel /> : null}
           onPrimary={handlePrimaryClick}
