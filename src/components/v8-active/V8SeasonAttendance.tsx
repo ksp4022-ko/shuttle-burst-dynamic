@@ -12,12 +12,13 @@ type EligibleSeasonProgress = Extract<V8SeasonProgress, { eligible: true }>;
 
 const MARK_GAP_PX = 2;
 const MAX_MARK_PX = 15;
-// 1-7 meetups fit one row; 8+ wrap to two rows instead of shrinking 13
-// marks into a single line.
-const SINGLE_ROW_MAX = 7;
+const SINGLE_ROW_MAX = 6;
+const HELPER_MAX_ROW_MARKS = 7;
 
-function markColumns(count: number) {
-  return count <= SINGLE_ROW_MAX ? count : Math.ceil(count / 2);
+function markRows<T>(items: T[]) {
+  if (items.length <= SINGLE_ROW_MAX) return [items];
+  const top = Math.floor(items.length / 2);
+  return [items.slice(0, top), items.slice(top)];
 }
 
 function formatShortDate(date: string) {
@@ -90,14 +91,14 @@ export function V8SeasonAttendance({
   if (!shown || !shown.events.length) return null;
   const { events, today } = shown;
 
-  const columns = markColumns(events.length);
-  // Sized for the widest row (7 marks) so a mark is the same size whatever
-  // the season's meetup count -- and never wider than Max Width.
+  const rows = markRows(events);
+  // Sized for the largest supported helper footprint (13 meetups = 6/7) so
+  // marks stay stable and never exceed Max Width.
   const markSize = Math.max(
     6,
     Math.min(
       MAX_MARK_PX,
-      (controls.maxWidth - MARK_GAP_PX * (SINGLE_ROW_MAX - 1)) / SINGLE_ROW_MAX,
+      (controls.maxWidth - MARK_GAP_PX * (HELPER_MAX_ROW_MARKS - 1)) / HELPER_MAX_ROW_MARKS,
     ),
   );
   const label = `本季出席 ${shown.count} / ${shown.total}`;
@@ -122,36 +123,40 @@ export function V8SeasonAttendance({
         aria-label={`${label}，${open ? "收合" : "展開"}場次明細`}
         onClick={() => setOpen((current) => !current)}
       >
-        <span
-          className="v8-season-att-label"
-          style={{
-            fontSize: `${controls.fontSize}px`,
-            letterSpacing: `${controls.letterSpacing}px`,
-            lineHeight: controls.lineHeight,
-            textAlign: controls.textAlign,
-            fontWeight: controls.fontWeight,
-          }}
-        >
-          {label}
-        </span>
+        {open ? (
+          <span
+            className="v8-season-att-label"
+            style={{
+              fontSize: `${controls.fontSize}px`,
+              letterSpacing: `${controls.letterSpacing}px`,
+              lineHeight: controls.lineHeight,
+              textAlign: controls.textAlign,
+              fontWeight: controls.fontWeight,
+            }}
+          >
+            {label}
+          </span>
+        ) : null}
         <span
           className="v8-season-marks"
           style={{
-            gridTemplateColumns: `repeat(${columns}, ${markSize}px)`,
-            gap: `${MARK_GAP_PX}px`,
             // Helper Box always reserves two rows (the 13-meetup footprint).
             minHeight: showHelper ? markSize * 2 + MARK_GAP_PX : undefined,
-            alignContent: "center",
+            gap: `${MARK_GAP_PX}px`,
           }}
           aria-hidden="true"
         >
-          {events.map((event) => (
-            <span
-              key={event.eventId}
-              className={markClassName(event, today)}
-              style={{ width: markSize, height: markSize, fontSize: markSize * 0.62 }}
-            >
-              {event.state === "leave" ? "休" : null}
+          {rows.map((row, rowIndex) => (
+            <span className="v8-season-mark-row" key={`row-${rowIndex}`}>
+              {row.map((event) => (
+                <span
+                  key={event.eventId}
+                  className={markClassName(event, today)}
+                  style={{ width: markSize, height: markSize, fontSize: markSize * 0.62 }}
+                >
+                  {event.state === "leave" ? "休" : null}
+                </span>
+              ))}
             </span>
           ))}
         </span>
@@ -215,8 +220,17 @@ function V8SeasonAttendanceStyles() {
       }
 
       .v8-season-marks {
-        display: grid;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         justify-content: center;
+      }
+
+      .v8-season-mark-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: ${MARK_GAP_PX}px;
       }
 
       .v8-season-mark {
