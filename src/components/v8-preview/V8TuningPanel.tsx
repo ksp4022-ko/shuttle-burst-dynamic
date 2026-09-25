@@ -559,6 +559,15 @@ export function V8TuningPanel({
             </div>
           </>
         ) : null}
+        {selectedTarget === "ACTIVE SEASON ATTENDANCE" ? (
+          <button
+            type="button"
+            onClick={() => update("activeSeasonAttendanceShowHelper", !controls.activeSeasonAttendanceShowHelper)}
+            style={smallButtonStyle}
+          >
+            Helper Box {controls.activeSeasonAttendanceShowHelper ? "ON" : "OFF"}
+          </button>
+        ) : null}
         {selectedTarget === "ACTIVE SUN SAFE BOX" ? (
           <button type="button" onClick={() => update("activeSunSafeBoxShowHelper", !controls.activeSunSafeBoxShowHelper)} style={smallButtonStyle}>
             Helper Box {controls.activeSunSafeBoxShowHelper ? "ON" : "OFF"}
