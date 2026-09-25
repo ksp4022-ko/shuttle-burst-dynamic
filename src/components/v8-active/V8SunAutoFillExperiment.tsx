@@ -227,6 +227,130 @@ function AutoFitText({ text, fontWeight }: { text: string; fontWeight: number })
   );
 }
 
+// NOTE only: multiline Auto-Fill. The note wraps (Chinese can break between
+// any two characters; a newline -- real or a typed "\n" -- always breaks)
+// into at most `maxLines` lines, and the WHOLE wrapped block is then
+// stretched to fill Width x Height -- never line by line. Which line count
+// is used follows the box: for each candidate the block is wrapped at
+// 1/n of its single-line width and measured, and the shape closest to the
+// box's own proportions wins, so a wider box re-wraps into fewer lines.
+const NOTE_LINE_HEIGHT = 1.15;
+const NOTE_MAX_LINES = 2;
+
+export function normalizeNoteText(text: string) {
+  return text.replace(/\\n/g, "\n").replace(/\r\n?/g, "\n");
+}
+
+function AutoFitBlock({
+  text,
+  fontWeight,
+  maxLines,
+}: {
+  text: string;
+  fontWeight: number;
+  maxLines: number;
+}) {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const measureRef = useRef<HTMLDivElement | null>(null);
+  const [fit, setFit] = useState<{ wrapWidth: number | null; x: number; y: number }>({
+    wrapWidth: null,
+    x: 1,
+    y: 1,
+  });
+  const note = normalizeNoteText(text);
+
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const measure = measureRef.current;
+    if (!box || !measure || !note) return;
+    let frame = 0;
+    const run = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const boxWidth = box.offsetWidth;
+        const boxHeight = box.offsetHeight;
+        if (boxWidth <= 0 || boxHeight <= 0) return;
+        // Natural single-line size (explicit newlines still break).
+        measure.style.maxWidth = "none";
+        const naturalWidth = measure.offsetWidth;
+        const lineHeight = measure.offsetHeight / Math.max(1, note.split("\n").length);
+        if (naturalWidth <= 0 || lineHeight <= 0) return;
+        const explicitLines = note.split("\n").length;
+        const boxRatio = boxWidth / boxHeight;
+        let best: {
+          wrapWidth: number | null;
+          width: number;
+          height: number;
+          score: number;
+        } | null = null;
+        for (let lines = explicitLines; lines <= Math.max(explicitLines, maxLines); lines += 1) {
+          const wrapWidth =
+            lines === explicitLines
+              ? null
+              : Math.ceil(naturalWidth / (lines - explicitLines + 1)) + 1;
+          measure.style.maxWidth = wrapWidth === null ? "none" : `${wrapWidth}px`;
+          const width = measure.offsetWidth;
+          const height = measure.offsetHeight;
+          const measuredLines = Math.round(height / lineHeight);
+          if (width <= 0 || height <= 0) continue;
+          if (measuredLines > Math.max(explicitLines, maxLines)) continue;
+          const score = Math.abs(Math.log(width / height / boxRatio));
+          if (!best || score < best.score) best = { wrapWidth, width, height, score };
+        }
+        measure.style.maxWidth = "none";
+        if (!best) return;
+        setFit({ wrapWidth: best.wrapWidth, x: boxWidth / best.width, y: boxHeight / best.height });
+      });
+    };
+    run();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(run) : null;
+    observer?.observe(box);
+    document.fonts?.ready.then(run).catch(() => undefined);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [note, maxLines]);
+
+  const blockStyle: CSSProperties = {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    width: "max-content",
+    fontSize: 40,
+    fontWeight,
+    lineHeight: NOTE_LINE_HEIGHT,
+    whiteSpace: "pre-wrap",
+    wordBreak: "normal",
+    overflowWrap: "anywhere",
+    textAlign: "center",
+    color: "#F3E7CF",
+  };
+
+  return (
+    <div ref={boxRef} className="v8-sun-af-fit">
+      <div
+        className="v8-sun-af-note-block"
+        style={{
+          ...blockStyle,
+          maxWidth: fit.wrapWidth === null ? "none" : `${fit.wrapWidth}px`,
+          transformOrigin: "center",
+          transform: `translate(-50%, -50%) scale(${fit.x}, ${fit.y})`,
+        }}
+      >
+        {note}
+      </div>
+      <div
+        ref={measureRef}
+        aria-hidden="true"
+        style={{ ...blockStyle, left: 0, top: 0, visibility: "hidden" }}
+      >
+        {note}
+      </div>
+    </div>
+  );
+}
+
 const BOX_LABELS: Record<SunAutoFillBoxKey, string> = {
   date: "DATE",
   time: "TIME",
@@ -266,7 +390,13 @@ export function V8SunAutoFillLayer({
               className={showGuides ? "v8-sun-af-skew is-guide" : "v8-sun-af-skew"}
               style={{ transform: `skewX(${box.skewX}deg) skewY(${box.skewY}deg)` }}
             >
-              {value ? <AutoFitText text={value} fontWeight={key === "name" ? 800 : 700} /> : null}
+              {value ? (
+                key === "note" ? (
+                  <AutoFitBlock text={value} fontWeight={700} maxLines={NOTE_MAX_LINES} />
+                ) : (
+                  <AutoFitText text={value} fontWeight={key === "name" ? 800 : 700} />
+                )
+              ) : null}
               {showGuides ? <span className="v8-sun-af-guide-label">{BOX_LABELS[key]}</span> : null}
             </div>
           </div>
