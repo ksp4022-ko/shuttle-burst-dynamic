@@ -338,8 +338,9 @@ function V8OpeningSunSwitcher({
     const dy = y - start.y;
     if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) < Math.abs(dy) * 1.2) return;
     start.fired = true;
-    if (dx > 0) onPreviousEvent();
-    else onNextEvent();
+    // Left-to-right = next meetup (the dial turns clockwise), right-to-left = previous.
+    if (dx > 0) onNextEvent();
+    else onPreviousEvent();
   };
 
   const handleTouchMove = (event: TouchEvent) => {
