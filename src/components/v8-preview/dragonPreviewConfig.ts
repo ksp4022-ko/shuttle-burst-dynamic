@@ -619,6 +619,7 @@ export type PreviewControls = {
   activeSeasonAttendanceLineHeight: number;
   activeSeasonAttendanceTextAlign: "left" | "center" | "right";
   activeSeasonAttendanceFontWeight: number;
+  activeSeasonAttendanceShowHelper: boolean;
   // Sun-embedded meetup-switch arrows (<>), added 2026-09-11 -- one shared
   // Show toggle + each arrow (prev/next) independently gets the full
   // baseline control set, per docs/V8_COMPONENT_CONTROL_BASELINE.md.
@@ -1393,18 +1394,19 @@ export const previewDefaults: PreviewControls = {
   activeCtaAssemblyOpacity: 100,
   activeCtaAssemblyZIndex: 1,
   // 本季出席 (real ACTIVE only), between the status mark and the assembly.
-  activeSeasonAttendanceX: 42,
-  activeSeasonAttendanceY: 53.5,
+  activeSeasonAttendanceX: 37,
+  activeSeasonAttendanceY: 54,
   activeSeasonAttendanceScale: 1,
   activeSeasonAttendanceRotation: 0,
   activeSeasonAttendanceOpacity: 100,
   activeSeasonAttendanceZIndex: 30,
   activeSeasonAttendanceFontSize: 7.5,
-  activeSeasonAttendanceMaxWidth: 84,
+  activeSeasonAttendanceMaxWidth: 78,
   activeSeasonAttendanceLetterSpacing: 0,
   activeSeasonAttendanceLineHeight: 1.1,
   activeSeasonAttendanceTextAlign: "center",
   activeSeasonAttendanceFontWeight: 700,
+  activeSeasonAttendanceShowHelper: false,
   // Sun-embedded meetup-switch arrows (2026-09-11) -- positioned inside the
   // red sun circle per the user's request, prev on the left / next on the
   // right, sharing one Show toggle.
@@ -1884,6 +1886,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSeasonAttendanceLineHeight",
     "activeSeasonAttendanceTextAlign",
     "activeSeasonAttendanceFontWeight",
+    "activeSeasonAttendanceShowHelper",
   ],
   "ACTIVE ROSTER LISTS": [
     "activeRosterListsShow",
@@ -2896,6 +2899,7 @@ X ${controls.activeCtaAssemblyX.toFixed(1)}, Y ${controls.activeCtaAssemblyY.toF
 
 ACTIVE SEASON ATTENDANCE (本季出席)
 X ${controls.activeSeasonAttendanceX.toFixed(1)}, Y ${controls.activeSeasonAttendanceY.toFixed(1)}, Scale ${controls.activeSeasonAttendanceScale.toFixed(2)}, Rotation ${Math.round(controls.activeSeasonAttendanceRotation)}, Opacity ${Math.round(controls.activeSeasonAttendanceOpacity)}, Z ${Math.round(controls.activeSeasonAttendanceZIndex)}, Font ${controls.activeSeasonAttendanceFontSize}, Max Width ${Math.round(controls.activeSeasonAttendanceMaxWidth)}, Letter Spacing ${controls.activeSeasonAttendanceLetterSpacing}, Line Height ${controls.activeSeasonAttendanceLineHeight}, Align ${controls.activeSeasonAttendanceTextAlign}, Weight ${controls.activeSeasonAttendanceFontWeight}
+Helper: ${controls.activeSeasonAttendanceShowHelper ? "ON" : "OFF"}
 
 ACTIVE SUN BADGE CAPACITY (上限)
 Show: ${controls.activeSunBadgeCapacityShow ? "ON" : "OFF"}

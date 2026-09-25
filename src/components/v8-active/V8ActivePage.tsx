@@ -600,7 +600,11 @@ export function V8ActivePage({
               pendingLabel={pendingAction?.label}
               ctaPending={ctaPending}
               assembly={{ controls: ctaAssemblyControls, assets: assets.ctaAssembly }}
-              seasonAttendance={seasonProgress ? { progress: seasonProgress, controls: seasonAttendanceControls } : undefined}
+              seasonAttendance={{
+                progress: seasonProgress,
+                controls: seasonAttendanceControls,
+                showHelper: tuningControls.activeSeasonAttendanceShowHelper,
+              }}
               onStatusFeedback={handleStatusFeedback}
               onPrimaryAction={handlePrimaryAction}
               onForget={beginIdentityCorrection}
@@ -1804,7 +1808,11 @@ export function V8IdentityScrollContent({
   assembly?: { controls: V8CtaAssemblyControls; assets: V8CtaAssemblyAssets };
   // 本季出席 (real ACTIVE only, 季打 only) -- /v8/preview doesn't pass it.
   seasonAttendance?:
-    | { progress: Extract<V8SeasonProgress, { eligible: true }>; controls: V8ActiveIdentityTextControls }
+    | {
+        progress: Extract<V8SeasonProgress, { eligible: true }> | null;
+        controls: V8ActiveIdentityTextControls;
+        showHelper: boolean;
+      }
     | undefined;
   onStatusFeedback?: (status: CurrentIdentity["status"]) => void;
   onPrimaryAction: () => void;
@@ -1885,8 +1893,12 @@ export function V8IdentityScrollContent({
       <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
         <img src={identityTagAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
-      {seasonAttendance && identity.signupType === "fixed" ? (
-        <V8SeasonAttendance progress={seasonAttendance.progress} controls={seasonAttendance.controls} />
+      {seasonAttendance && ((seasonAttendance.progress && identity.signupType === "fixed") || seasonAttendance.showHelper) ? (
+        <V8SeasonAttendance
+          progress={identity.signupType === "fixed" ? seasonAttendance.progress : null}
+          controls={seasonAttendance.controls}
+          showHelper={seasonAttendance.showHelper}
+        />
       ) : null}
       {assembly ? (
         <V8CtaAssembly

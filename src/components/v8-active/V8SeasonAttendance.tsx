@@ -41,22 +41,54 @@ function markClassName(event: V8SeasonProgressEvent, today: string) {
     .join(" ");
 }
 
+// Helper Box sample: the largest expected season (13 meetups) in every
+// state, so the widget can be placed before real data exists.
+function helperSample(): EligibleSeasonProgress {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" }).format(new Date());
+  const day = (offset: number) => {
+    const date = new Date(`${today}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + offset * 7);
+    return date.toISOString().slice(0, 10);
+  };
+  const events = Array.from({ length: 13 }, (_, index): V8SeasonProgressEvent => {
+    const offset = index - 5;
+    const onLeave = index === 2 || index === 9;
+    const state = onLeave ? "leave" : offset === 0 ? "today" : offset > 0 ? "future" : "normal";
+    return { eventId: `helper-${index}`, date: day(offset), name: "範圍框示意", state, onLeave };
+  });
+  const count = events.filter((event) => event.date < today && !event.onLeave).length;
+  return {
+    eligible: true,
+    seasonId: "helper",
+    groupId: "helper",
+    today,
+    total: events.length,
+    count,
+    events,
+  };
+}
+
 export function V8SeasonAttendance({
   progress,
   controls,
+  showHelper = false,
 }: {
-  progress: EligibleSeasonProgress;
+  progress: EligibleSeasonProgress | null;
   controls: V8ActiveIdentityTextControls;
+  // Helper Box (tuning only): outlines the widget's largest footprint (13
+  // meetups, two rows) and shows sample marks when there is no real data.
+  showHelper?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const { events, today } = progress;
+  const shown = progress ?? (showHelper ? helperSample() : null);
 
   // A different meetup's data (or season) starts collapsed.
   useEffect(() => {
     setOpen(false);
-  }, [progress.seasonId, progress.groupId, today]);
+  }, [shown?.seasonId, shown?.groupId, shown?.today]);
 
-  if (!events.length) return null;
+  if (!shown || !shown.events.length) return null;
+  const { events, today } = shown;
 
   const columns = markColumns(events.length);
   // Sized for the widest row (7 marks) so a mark is the same size whatever
@@ -68,7 +100,7 @@ export function V8SeasonAttendance({
       (controls.maxWidth - MARK_GAP_PX * (SINGLE_ROW_MAX - 1)) / SINGLE_ROW_MAX,
     ),
   );
-  const label = `本季出席 ${progress.count} / ${progress.total}`;
+  const label = `本季出席 ${shown.count} / ${shown.total}`;
 
   const rootStyle: CSSProperties = {
     position: "absolute",
@@ -81,7 +113,7 @@ export function V8SeasonAttendance({
   };
 
   return (
-    <div className="v8-season-att" style={rootStyle}>
+    <div className={showHelper ? "v8-season-att is-helper" : "v8-season-att"} style={rootStyle}>
       <V8SeasonAttendanceStyles />
       <button
         type="button"
@@ -107,6 +139,9 @@ export function V8SeasonAttendance({
           style={{
             gridTemplateColumns: `repeat(${columns}, ${markSize}px)`,
             gap: `${MARK_GAP_PX}px`,
+            // Helper Box always reserves two rows (the 13-meetup footprint).
+            minHeight: showHelper ? markSize * 2 + MARK_GAP_PX : undefined,
+            alignContent: "center",
           }}
           aria-hidden="true"
         >
@@ -147,6 +182,12 @@ function V8SeasonAttendanceStyles() {
       .v8-season-att {
         pointer-events: auto;
         color: #3a2a12;
+      }
+
+      .v8-season-att.is-helper {
+        outline: 1px dashed rgba(230, 0, 120, 0.9);
+        outline-offset: 1px;
+        background: rgba(230, 0, 120, 0.06);
       }
 
       .v8-season-att-toggle {
