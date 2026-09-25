@@ -36,10 +36,35 @@ function onTouchMove(event: TouchEvent) {
 // Anything that still scrolls the root (scroll restoration, focus jumps)
 // gets pulled back to the top -- except while typing, so the iPhone
 // keyboard can move the page as it needs to.
-function onScroll() {
+function isTyping() {
   const active = document.activeElement;
-  if (active && active.matches("input, textarea, select")) return;
+  return !!active && active.matches("input, textarea, select");
+}
+
+function snapToTop() {
+  if (isTyping()) return;
   if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+}
+
+function onScroll() {
+  snapToTop();
+}
+
+// After typing, iPhone Safari often leaves the page pushed up where the
+// keyboard moved it and fires no further scroll event (e.g. 代報's input
+// closes together with its dialog). So re-check when focus leaves a field
+// and whenever the visual viewport changes (keyboard hiding), then once
+// more after the keyboard's slide-down animation.
+let snapTimer: number | undefined;
+function snapSoon() {
+  snapToTop();
+  window.clearTimeout(snapTimer);
+  snapTimer = window.setTimeout(snapToTop, 350);
+}
+
+function onFocusOut() {
+  // activeElement only moves off the field after focusout has run.
+  window.setTimeout(snapSoon, 0);
 }
 
 let savedScrollRestoration: ScrollRestoration | null = null;
@@ -59,6 +84,8 @@ function lock() {
   window.scrollTo(0, 0);
   document.addEventListener("touchmove", onTouchMove, { passive: false });
   window.addEventListener("scroll", onScroll, { passive: true });
+  document.addEventListener("focusout", onFocusOut);
+  window.visualViewport?.addEventListener("resize", snapSoon);
 }
 
 function unlock() {
@@ -72,6 +99,9 @@ function unlock() {
   document.documentElement.classList.remove("v8-page-locked");
   document.removeEventListener("touchmove", onTouchMove);
   window.removeEventListener("scroll", onScroll);
+  document.removeEventListener("focusout", onFocusOut);
+  window.visualViewport?.removeEventListener("resize", snapSoon);
+  window.clearTimeout(snapTimer);
   if (savedScrollRestoration && "scrollRestoration" in history) history.scrollRestoration = savedScrollRestoration;
 }
 
