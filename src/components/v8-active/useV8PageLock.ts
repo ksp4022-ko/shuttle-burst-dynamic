@@ -71,7 +71,14 @@ function isTyping() {
 
 function snapToTop() {
   if (isTyping()) return;
-  if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+  // After the iPhone keyboard closes, scrollY can already read 0 while
+  // Safari's visual viewport is still shifted -- the page looks pushed up
+  // and taps land off target (代報's 取消). scrollTo also resets that.
+  const viewport = window.visualViewport;
+  // Only at 1x -- a pinch-zoomed viewport is shifted on purpose.
+  const viewportShifted =
+    !!viewport && viewport.scale < 1.01 && (Math.abs(viewport.offsetTop) > 0.5 || Math.abs(viewport.pageTop) > 0.5);
+  if (window.scrollY !== 0 || window.scrollX !== 0 || viewportShifted) window.scrollTo(0, 0);
 }
 
 function onScroll() {
