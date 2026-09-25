@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, Dispatch, MouseEvent, PointerEvent, SetStateAction, TouchEvent } from "react";
+import type { CSSProperties, Dispatch, MouseEvent, PointerEvent, ReactNode, SetStateAction, TouchEvent } from "react";
 import {
   clearSavedControls,
   controlRanges,
@@ -101,6 +101,7 @@ export function V8TuningPanel({
   motionPreviewLab,
   onMotionPreviewLabChange,
   controlsScope,
+  extraSection,
 }: {
   controls: PreviewControls;
   setControls: Dispatch<SetStateAction<PreviewControls>>;
@@ -128,6 +129,9 @@ export function V8TuningPanel({
   // Set by the real OPEN/ACTIVE pages: Copy and Reset All then only cover
   // that page's own fields (see ControlsScope). /v8/preview omits it.
   controlsScope?: ControlsScope;
+  // Real ACTIVE only: an extra section with its own state (the red-sun
+  // auto-fill experiment). /v8/preview never passes it.
+  extraSection?: ReactNode;
 }) {
   const [panelMinimized, setPanelMinimized] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
@@ -431,6 +435,7 @@ export function V8TuningPanel({
         </div>
       </div>
       <div style={panelBodyStyle}>
+        {extraSection}
         {selectedTarget === "OPEN TIGER 1" || selectedTarget === "OPEN TIGER 2" || selectedTarget === "OPEN TIGER 3" || selectedTarget === "OPEN TIGER RACKET" ? (
           <div style={motionLabRowStyle}>
             <span style={controlLabelStyle}>顯示哪隻</span>
