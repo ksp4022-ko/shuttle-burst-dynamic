@@ -753,7 +753,8 @@ export function V8HeroComposition({
                   width: `${58 * controls.tigerScrollScale}%`,
                   transform: `translate(-50%, -50%) rotate(${controls.tigerScrollRotation}deg)`,
                   zIndex: scrollContent ? 35 : 9,
-                  pointerEvents: scrollContent ? "auto" : "none",
+                  // Only scrollContent's own elements take touches (see below).
+                  pointerEvents: "none",
                 }}
               >
                 <img
@@ -774,12 +775,16 @@ export function V8HeroComposition({
                     confined to a small inset box. 2026-09-09's measured
                     parchment inset (44/29/30/49%) is gone -- that was only
                     ever a default starting position for the OLD nudge-based
-                    layout, not a real boundary; nothing here needs it now. */}
+                    layout, not a real boundary; nothing here needs it now.
+                    The box itself never takes touches: it sits above the
+                    sun (z 35 vs 30) and its empty top-left corner covered
+                    the sun's lower right, swallowing sun swipes. Its own
+                    elements opt back in (.v8-scroll-identity > *). */}
                 <div
                   style={{
                     position: "absolute",
                     inset: 0,
-                    pointerEvents: "auto",
+                    pointerEvents: "none",
                   }}
                 >
                   {scrollContent}
