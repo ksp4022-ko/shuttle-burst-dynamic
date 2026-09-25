@@ -56,6 +56,13 @@ import {
   type V8SunDotsControls,
 } from "./v8ActiveConfig";
 import { V8CtaAssembly, V8CtaAssemblyStyles, type V8CtaAssemblyAssets } from "./V8CtaAssembly";
+import {
+  SunAutoFillErrorBoundary,
+  V8SunAutoFillLayer,
+  V8SunAutoFillPanel,
+  useSunAutoFillExperiment,
+  type SunAutoFillConfig,
+} from "./V8SunAutoFillExperiment";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { V8Toast } from "./V8Toast";
@@ -207,6 +214,8 @@ export function V8ActivePage({
   // either entry point picks up the other's values. Tunes this page's own
   // REAL data directly, not a mock -- see buildV8Active*Controls below.
   const [tuningOpen, setTuningOpen] = useState(false);
+  // Red-sun auto-fill experiment: its own storage, never the formal controls.
+  const sunAutoFill = useSunAutoFillExperiment();
   const [tuningControls, setTuningControls] = useState<PreviewControls>(() =>
     typeof window === "undefined" ? previewDefaults : loadSavedControls(),
   );
@@ -558,6 +567,11 @@ export function V8ActivePage({
             hasNext={displayIndex < events.length - 1}
             dotsControls={sunDotsControls}
             bump={dialBump}
+            autoFill={{
+              config: sunAutoFill.config,
+              showGuides: tuningOpen,
+              onError: () => sunAutoFill.setMode("current"),
+            }}
             eventDate={displayEvent.eventDate}
             eventName={displayEvent.name}
             eventNote={displayEvent.eventNote}
@@ -831,6 +845,15 @@ export function V8ActivePage({
           controlsScope="active"
           heightGuidesEnabled={heightGuides}
           onHeightGuidesChange={setHeightGuides}
+          extraSection={
+            <V8SunAutoFillPanel
+              config={sunAutoFill.config}
+              onModeChange={sunAutoFill.setMode}
+              onLinkedChange={sunAutoFill.setLinked}
+              onBoxChange={sunAutoFill.setBoxValue}
+              onReset={sunAutoFill.reset}
+            />
+          }
         />
       ) : null}
       {heightGuides ? <V8HeightGuides /> : null}
@@ -1357,6 +1380,7 @@ export function V8ActiveSunContent({
   hasNext,
   dotsControls,
   bump,
+  autoFill,
 }: {
   assets: {
     sunBadgeBallType: string;
@@ -1399,6 +1423,9 @@ export function V8ActiveSunContent({
   dotsControls?: V8SunDotsControls;
   // Bumped when a switch hits the first/last meetup (spring-back turn).
   bump?: { n: number; dir: 1 | -1 } | undefined;
+  // Red-sun auto-fill experiment (real ACTIVE only; /v8/preview omits it,
+  // which is the same as CURRENT). COUNT is never part of it.
+  autoFill?: { config: SunAutoFillConfig; showGuides: boolean; onError: () => void } | undefined;
 }) {
   // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label per the
   // user's exact spec (courtCount:2, hours:3 -> "2場/3hr") -- courtCount
@@ -1416,13 +1443,32 @@ export function V8ActiveSunContent({
   const dialing = Boolean(dial?.outgoing);
   const dirStyle = { "--dial-dir": dial?.dir ?? 1 } as CSSProperties;
 
+  // CURRENT: formal messages only. AUTO-FILL: formal DATE/TIME/NOTE/NAME
+  // hidden, the four experiment boxes instead. COMPARE: both, formal at 35%.
+  const autoFillMode = autoFill?.config.mode ?? "current";
   const renderMessages = (text: SunDialText) => (
+    <>
+      {autoFillMode !== "autofill" ? renderFormalMessages(text) : null}
+      {autoFill && autoFillMode !== "current" ? (
+        <SunAutoFillErrorBoundary onError={autoFill.onError}>
+          <V8SunAutoFillLayer
+            config={autoFill.config}
+            showGuides={autoFill.showGuides}
+            text={{ date: text.date, time: text.timeLabel, note: text.note, name: text.displayName }}
+          />
+        </SunAutoFillErrorBoundary>
+      ) : null}
+    </>
+  );
+
+  const renderFormalMessages = (text: SunDialText) => (
     <div
       className="v8-sun-message-safe-box"
       style={
         {
           width: `${messageControls.safeBox.width}%`,
           height: `${messageControls.safeBox.height}%`,
+          ...(autoFillMode === "compare" ? { opacity: 0.35 } : null),
         } as CSSProperties
       }
     >
