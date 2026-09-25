@@ -2512,6 +2512,14 @@ export function V8ActiveStyles() {
         backdrop-filter: blur(14px);
       }
 
+      /* A dialog with a text field (代報, name confirm) sits near the top, so
+         the field stays above the iPhone keyboard and Safari has no reason
+         to push the page up. */
+      .v8-identity-gate:has(input) {
+        align-items: flex-start;
+        padding-top: max(28px, calc(env(safe-area-inset-top) + 16px));
+      }
+
       .v8-identity-gate-card {
         width: 100%;
         max-width: 360px;
