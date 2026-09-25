@@ -21,7 +21,14 @@ export const SUN_AUTOFILL_STORAGE_KEY = "v8-red-sun-autofill-experiment-v1";
 
 export type SunAutoFillMode = "current" | "autofill" | "compare";
 export type SunAutoFillBoxKey = "date" | "time" | "note" | "name";
-export type SunAutoFillBox = { x: number; y: number; width: number; height: number; skew: number };
+export type SunAutoFillBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  skewX: number;
+  skewY: number;
+};
 export type SunAutoFillConfig = {
   mode: SunAutoFillMode;
   globalSkewLinked: boolean;
@@ -34,14 +41,15 @@ export type SunAutoFillConfig = {
 export const SUN_AUTOFILL_BOX_KEYS: SunAutoFillBoxKey[] = ["date", "time", "note", "name"];
 
 // One safe starting point (% of the sun's own box): 大 ─ 小 on top,
-// 小 ─ 大 below. The -16deg skew is only a first guess.
+// 小 ─ 大 below. Experiment Preset 01: a parallelogram lean from Skew Y
+// (-18deg) with Skew X at 0, the same on all four boxes.
 export const sunAutoFillDefaults: SunAutoFillConfig = {
   mode: "current",
   globalSkewLinked: true,
-  date: { x: 34, y: 38, width: 40, height: 22, skew: -16 },
-  time: { x: 70, y: 38, width: 30, height: 12, skew: -16 },
-  note: { x: 32, y: 62, width: 30, height: 12, skew: -16 },
-  name: { x: 67, y: 62, width: 40, height: 22, skew: -16 },
+  date: { x: 34, y: 38, width: 40, height: 22, skewX: 0, skewY: -18 },
+  time: { x: 70, y: 38, width: 30, height: 12, skewX: 0, skewY: -18 },
+  note: { x: 32, y: 62, width: 30, height: 12, skewX: 0, skewY: -18 },
+  name: { x: 67, y: 62, width: 40, height: 22, skewX: 0, skewY: -18 },
 };
 
 const BOX_RANGES: Record<keyof SunAutoFillBox, { min: number; max: number; step: number }> = {
@@ -49,7 +57,8 @@ const BOX_RANGES: Record<keyof SunAutoFillBox, { min: number; max: number; step:
   y: { min: -20, max: 120, step: 0.5 },
   width: { min: 2, max: 120, step: 0.5 },
   height: { min: 2, max: 120, step: 0.5 },
-  skew: { min: -45, max: 45, step: 0.5 },
+  skewX: { min: -45, max: 45, step: 0.5 },
+  skewY: { min: -45, max: 45, step: 0.5 },
 };
 
 const MODES: SunAutoFillMode[] = ["current", "autofill", "compare"];
@@ -62,14 +71,16 @@ function readNumber(value: unknown, fallback: number, range: { min: number; max:
 function readBox(value: unknown, fallback: SunAutoFillBox): SunAutoFillBox {
   const saved =
     value && typeof value === "object"
-      ? (value as Partial<Record<keyof SunAutoFillBox, unknown>>)
+      ? (value as Partial<Record<keyof SunAutoFillBox | "skew", unknown>>)
       : {};
   return {
     x: readNumber(saved.x, fallback.x, BOX_RANGES.x),
     y: readNumber(saved.y, fallback.y, BOX_RANGES.y),
     width: readNumber(saved.width, fallback.width, BOX_RANGES.width),
     height: readNumber(saved.height, fallback.height, BOX_RANGES.height),
-    skew: readNumber(saved.skew, fallback.skew, BOX_RANGES.skew),
+    // "skew" is the pre-Skew-Y name of Skew X (saved by the first version).
+    skewX: readNumber(saved.skewX ?? saved.skew, fallback.skewX, BOX_RANGES.skewX),
+    skewY: readNumber(saved.skewY, fallback.skewY, BOX_RANGES.skewY),
   };
 }
 
@@ -124,10 +135,10 @@ export function useSunAutoFillExperiment() {
   const setBoxValue = useCallback(
     (box: SunAutoFillBoxKey, field: keyof SunAutoFillBox, value: number) => {
       setConfig((current) => {
-        // LINK SKEW: one skew for all four boxes.
-        if (field === "skew" && current.globalSkewLinked) {
+        // LINK SKEW: one Skew X and one Skew Y for all four boxes.
+        if ((field === "skewX" || field === "skewY") && current.globalSkewLinked) {
           const next = { ...current };
-          for (const key of SUN_AUTOFILL_BOX_KEYS) next[key] = { ...current[key], skew: value };
+          for (const key of SUN_AUTOFILL_BOX_KEYS) next[key] = { ...current[key], [field]: value };
           return next;
         }
         return { ...current, [box]: { ...current[box], [field]: value } };
@@ -240,7 +251,7 @@ export function V8SunAutoFillLayer({
         const value = text[key];
         if (!value && !showGuides) return null;
         return (
-          // position -> skewX -> stretched text (the text leans with its box).
+          // position -> skewX/skewY -> stretched text (the text leans with its box).
           <div
             key={key}
             className="v8-sun-af-pos"
@@ -253,7 +264,7 @@ export function V8SunAutoFillLayer({
           >
             <div
               className={showGuides ? "v8-sun-af-skew is-guide" : "v8-sun-af-skew"}
-              style={{ transform: `skewX(${box.skew}deg)` }}
+              style={{ transform: `skewX(${box.skewX}deg) skewY(${box.skewY}deg)` }}
             >
               {value ? <AutoFitText text={value} fontWeight={key === "name" ? 800 : 700} /> : null}
               {showGuides ? <span className="v8-sun-af-guide-label">{BOX_LABELS[key]}</span> : null}
@@ -338,7 +349,8 @@ const FIELD_LABELS: Record<keyof SunAutoFillBox, string> = {
   y: "Y",
   width: "Width",
   height: "Height",
-  skew: "Skew",
+  skewX: "Skew X",
+  skewY: "Skew Y",
 };
 
 const sectionStyle: CSSProperties = {
