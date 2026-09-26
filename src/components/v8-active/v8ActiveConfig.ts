@@ -299,8 +299,8 @@ export function buildV8ActiveAssets(baseUrl: string) {
 // Rough/schematic placement -- the user tunes exact values via
 // /v8/preview's ACTIVE mode afterward.
 export const v8ActiveSunOverrides: Partial<V8HeroControls> = {
-  sunX: 24,
-  sunY: 1,
+  sunX: 23,
+  sunY: 0,
   sunScale: 0.68,
   sunZIndex: 30,
 };
@@ -345,11 +345,11 @@ export type V8ActiveSunMessagesControls = {
 // the name at a similar size to the date, not shown by default is NOT
 // needed since an empty/undefined eventNote already renders nothing.
 export const v8ActiveSunMessagesDefaults: V8ActiveSunMessagesControls = {
-  safeBox: { width: 70, height: 60, showHelperBox: false },
-  date: { show: true, x: 31, y: 29, fontSize: 9, opacity: 90, width: 28, height: 12 },
-  name: { show: true, x: 61, y: 29, fontSize: 24, opacity: 100, width: 100, height: 24 },
-  time: { show: true, x: 50, y: 45, fontSize: 7, opacity: 70, width: 72, height: 12 },
-  note: { show: true, x: 50, y: 59, fontSize: 8, opacity: 88, width: 88, height: 14 },
+  safeBox: { width: 90, height: 95, showHelperBox: false },
+  date: { show: true, x: 24, y: 29, fontSize: 9, opacity: 100, width: 34, height: 24 },
+  name: { show: true, x: 70, y: 31, fontSize: 24, opacity: 100, width: 140, height: 24 },
+  time: { show: true, x: 49, y: 54, fontSize: 15, opacity: 70, width: 72, height: 12 },
+  note: { show: true, x: 48, y: 72, fontSize: 14, opacity: 100, width: 88, height: 14 },
 };
 
 export const v8ActiveSunMessageRanges: Record<
@@ -387,7 +387,7 @@ export const v8ActiveSunSafeBoxRanges: Record<
 // Confirmed via /v8/preview's ACTIVE BACKGROUND FADE slider -- how much to
 // dim the backdrop scenery layers (cloud/mountain/wave/foam/gold-ink) on
 // the real Active page. 0 = no fade.
-export const v8ActiveBackgroundFadePercent = 45;
+export const v8ActiveBackgroundFadePercent = 61;
 
 // Set directly by the user (2026-09-09), adjusted from 390/860 to 390/800.
 // Opening's own stage ratio is untouched (still 390/780 in
@@ -419,9 +419,9 @@ export const v8ActiveTigerScrollOverrides: Partial<V8HeroControls> = {
   tigerShow: false,
   tigerRacketShow: false,
   tigerScrollShow: true,
-  tigerScrollX: 77,
+  tigerScrollX: 84,
   tigerScrollY: 42,
-  tigerScrollScale: 1.74,
+  tigerScrollScale: 1.72,
   tigerScrollRotation: 0,
 };
 
@@ -454,9 +454,9 @@ export type V8ActiveInfoCardsControls = {
 // as the rope's visual LENGTH post-rotation, not its rendered width.
 export const v8ActiveInfoCardsDefaults: V8ActiveInfoCardsControls = {
   rope: { show: true, x: 30, y: 27, scale: 2.49, rotation: 9 },
-  registered: { show: true, x: 9, y: 33, scale: 1.97, rotation: 7 },
-  needed: { show: true, x: 19, y: 36, scale: 1.88, rotation: 6 },
-  waitlist: { show: true, x: 34, y: 37, scale: 1.83, rotation: -2 },
+  registered: { show: true, x: 14, y: 36, scale: 1.97, rotation: 11 },
+  needed: { show: true, x: 29, y: 38, scale: 2, rotation: 2 },
+  waitlist: { show: true, x: 31, y: 38, scale: 2, rotation: 2 },
 };
 
 export const v8ActiveInfoCardsRanges: Record<
@@ -516,7 +516,7 @@ export type V8ActiveSunBadgesControls = {
 export const v8ActiveSunBadgesDefaults: V8ActiveSunBadgesControls = {
   ballType: { show: true, x: 127, y: 26, scale: 1.53, rotation: 0, fontSize: 11, textOffsetX: -5, textOffsetY: 3, shadowX: 15, shadowY: 4, shadowScale: 1, shadowOpacity: 42, shadowBlur: 5 },
   tempFee: { show: true, x: -9, y: 92, scale: 1.59, rotation: -1, fontSize: 12, textOffsetX: -6, textOffsetY: 4, shadowX: 0, shadowY: 4, shadowScale: 1.34, shadowOpacity: 29, shadowBlur: 6 },
-  courtCount: { show: true, x: 94, y: 62, scale: 1.5, rotation: 0, fontSize: 12, textOffsetX: -2, textOffsetY: 2, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
+  courtCount: { show: true, x: 94, y: 70, scale: 1.5, rotation: 0, fontSize: 12, textOffsetX: -2, textOffsetY: 2, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
 };
 
 export const v8ActiveSunBadgesRanges: Record<
