@@ -38,6 +38,7 @@ export type HomepageHandoffTiming = {
   // as soon as data loads. Used by the V8 route, which never shows the
   // racket the intro was building up to.
   skipIntro?: boolean;
+  preferredEventId?: () => string | null | undefined;
 };
 
 const PARTICLE_ASSEMBLY_MS = 4600;
@@ -99,6 +100,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     preHoldMs: Math.max(0, Number(handoffTiming?.preHoldMs ?? DEFAULT_PRE_HOLD_MS)),
     realFadeMs: Math.max(0, Number(handoffTiming?.realFadeMs ?? DEFAULT_REAL_FADE_MS)),
     skipIntro: Boolean(handoffTiming?.skipIntro),
+    ...(handoffTiming?.preferredEventId ? { preferredEventId: handoffTiming.preferredEventId } : {}),
   };
 
   const selectedEvent = useMemo(
@@ -165,7 +167,10 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
       return false;
     }
 
-    const nextEvent = chooseNearestEvent(nextEvents);
+    const preferredEventId = handoffTimingRef.current.preferredEventId?.();
+    const nextEvent =
+      (preferredEventId ? nextEvents.find((event) => event.id === preferredEventId) : null) ||
+      chooseNearestEvent(nextEvents);
     if (!nextEvent) throw new Error("找不到最近聚會。");
 
     setSelectedEventId(nextEvent.id);
