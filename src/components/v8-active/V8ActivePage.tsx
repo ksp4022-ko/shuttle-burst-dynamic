@@ -69,6 +69,12 @@ import {
   useSunAutoFillExperiment,
   type SunAutoFillConfig,
 } from "./V8SunAutoFillExperiment";
+import {
+  V8IdentityEnvelopeLayer,
+  V8IdentityEnvelopePanel,
+  useIdentityEnvelopeExperiment,
+  type IdentityEnvelopeConfig,
+} from "./V8IdentityEnvelopeExperiment";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { V8Toast } from "./V8Toast";
@@ -230,6 +236,8 @@ export function V8ActivePage({
   const [tuningOpen, setTuningOpen] = useState(false);
   // Red-sun auto-fill experiment: its own storage, never the formal controls.
   const sunAutoFill = useSunAutoFillExperiment();
+  // Identity envelope experiment: its own storage, never the formal identity controls.
+  const identityEnvelope = useIdentityEnvelopeExperiment();
   const [tuningControls, setTuningControls] = useState<PreviewControls>(() =>
     typeof window === "undefined" ? previewDefaults : loadSavedControls(),
   );
@@ -619,6 +627,7 @@ export function V8ActivePage({
                 controls: seasonAttendanceControls,
                 showHelper: tuningControls.activeSeasonAttendanceShowHelper,
               }}
+              identityEnvelope={identityEnvelope.config}
               onStatusFeedback={handleStatusFeedback}
               onPrimaryAction={handlePrimaryAction}
               onForget={beginIdentityCorrection}
@@ -867,13 +876,23 @@ export function V8ActivePage({
           heightGuidesEnabled={heightGuides}
           onHeightGuidesChange={setHeightGuides}
           extraSection={
-            <V8SunAutoFillPanel
-              config={sunAutoFill.config}
-              onModeChange={sunAutoFill.setMode}
-              onLinkedChange={sunAutoFill.setLinked}
-              onBoxChange={sunAutoFill.setBoxValue}
-              onReset={sunAutoFill.reset}
-            />
+            <>
+              <V8SunAutoFillPanel
+                config={sunAutoFill.config}
+                onModeChange={sunAutoFill.setMode}
+                onLinkedChange={sunAutoFill.setLinked}
+                onBoxChange={sunAutoFill.setBoxValue}
+                onReset={sunAutoFill.reset}
+              />
+              <V8IdentityEnvelopePanel
+                config={identityEnvelope.config}
+                onModeChange={identityEnvelope.setMode}
+                onGlobalChange={identityEnvelope.setGlobal}
+                onBoxChange={identityEnvelope.setBoxValue}
+                onDecorationChange={identityEnvelope.setDecoration}
+                onReset={identityEnvelope.reset}
+              />
+            </>
           }
         />
       ) : null}
@@ -1836,6 +1855,7 @@ export function V8IdentityScrollContent({
   ctaPending = false,
   assembly,
   seasonAttendance,
+  identityEnvelope,
   onStatusFeedback,
   onPrimaryAction,
   onForget,
@@ -1860,6 +1880,7 @@ export function V8IdentityScrollContent({
         showHelper: boolean;
       }
     | undefined;
+  identityEnvelope?: IdentityEnvelopeConfig | undefined;
   onStatusFeedback?: (status: CurrentIdentity["status"]) => void;
   onPrimaryAction: () => void;
   onForget: () => void;
@@ -1908,6 +1929,7 @@ export function V8IdentityScrollContent({
   if (!controls.show) return null;
 
   const status = meetupStatusLabel(identity);
+  const envelopeMode = identityEnvelope?.mode ?? "current";
   const ctaClassName = [
     "v8-scroll-cta",
     "v8-scroll-cta-img",
@@ -1935,7 +1957,15 @@ export function V8IdentityScrollContent({
           draggable={false}
         />
       </div>
-      <V8IdentityFitName text={identity.name} controls={controls.name} />
+      {envelopeMode !== "autofill" ? <V8IdentityFitName text={identity.name} controls={controls.name} /> : null}
+      {identityEnvelope ? (
+        <V8IdentityEnvelopeLayer
+          name={identity.name}
+          config={identityEnvelope}
+          disabled={busy}
+          onForget={onForget}
+        />
+      ) : null}
       <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
         <img src={identityTagAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
@@ -2005,23 +2035,25 @@ export function V8IdentityScrollContent({
           </button>
         </>
       )}
-      <button
-        type="button"
-        className="v8-scroll-forget"
-        style={{
-          ...identityVisualStyle(controls.forget),
-          fontSize: controls.forget.fontSize,
-          width: controls.forget.maxWidth,
-          letterSpacing: controls.forget.letterSpacing,
-          lineHeight: controls.forget.lineHeight,
-          textAlign: controls.forget.textAlign,
-          fontWeight: controls.forget.fontWeight,
-        }}
-        disabled={busy}
-        onClick={onForget}
-      >
-        不是我
-      </button>
+      {envelopeMode !== "autofill" ? (
+        <button
+          type="button"
+          className="v8-scroll-forget"
+          style={{
+            ...identityVisualStyle(controls.forget),
+            fontSize: controls.forget.fontSize,
+            width: controls.forget.maxWidth,
+            letterSpacing: controls.forget.letterSpacing,
+            lineHeight: controls.forget.lineHeight,
+            textAlign: controls.forget.textAlign,
+            fontWeight: controls.forget.fontWeight,
+          }}
+          disabled={busy}
+          onClick={onForget}
+        >
+          不是我
+        </button>
+      ) : null}
     </div>
   );
 }
