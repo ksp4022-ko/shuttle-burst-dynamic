@@ -173,6 +173,7 @@ function AutoFitText({ text, fontWeight }: { text: string; fontWeight: number })
     const measure = measureRef.current;
     if (!box || !measure || !text) return;
     let frame = 0;
+    const timers: number[] = [];
     const fit = () => {
       if (frame) window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
@@ -184,13 +185,27 @@ function AutoFitText({ text, fontWeight }: { text: string; fontWeight: number })
         setScale({ x: boxWidth / textWidth, y: boxHeight / textHeight });
       });
     };
+    const fitAfterViewportSettles = () => {
+      fit();
+      timers.push(window.setTimeout(fit, 90));
+      timers.push(window.setTimeout(fit, 260));
+    };
     fit();
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
     observer?.observe(box);
-    document.fonts?.ready.then(fit).catch(() => undefined);
+    window.addEventListener("resize", fitAfterViewportSettles);
+    window.addEventListener("orientationchange", fitAfterViewportSettles);
+    window.addEventListener("v8:remeasure", fitAfterViewportSettles);
+    window.visualViewport?.addEventListener("resize", fitAfterViewportSettles);
+    document.fonts?.ready.then(fitAfterViewportSettles).catch(() => undefined);
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
+      timers.forEach((timer) => window.clearTimeout(timer));
       observer?.disconnect();
+      window.removeEventListener("resize", fitAfterViewportSettles);
+      window.removeEventListener("orientationchange", fitAfterViewportSettles);
+      window.removeEventListener("v8:remeasure", fitAfterViewportSettles);
+      window.visualViewport?.removeEventListener("resize", fitAfterViewportSettles);
     };
   }, [text]);
 
@@ -264,6 +279,7 @@ function AutoFitBlock({
     const measure = measureRef.current;
     if (!box || !measure || !note) return;
     let frame = 0;
+    const timers: number[] = [];
     const run = () => {
       if (frame) window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
@@ -302,13 +318,27 @@ function AutoFitBlock({
         setFit({ wrapWidth: best.wrapWidth, x: boxWidth / best.width, y: boxHeight / best.height });
       });
     };
+    const runAfterViewportSettles = () => {
+      run();
+      timers.push(window.setTimeout(run, 90));
+      timers.push(window.setTimeout(run, 260));
+    };
     run();
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(run) : null;
     observer?.observe(box);
-    document.fonts?.ready.then(run).catch(() => undefined);
+    window.addEventListener("resize", runAfterViewportSettles);
+    window.addEventListener("orientationchange", runAfterViewportSettles);
+    window.addEventListener("v8:remeasure", runAfterViewportSettles);
+    window.visualViewport?.addEventListener("resize", runAfterViewportSettles);
+    document.fonts?.ready.then(runAfterViewportSettles).catch(() => undefined);
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
+      timers.forEach((timer) => window.clearTimeout(timer));
       observer?.disconnect();
+      window.removeEventListener("resize", runAfterViewportSettles);
+      window.removeEventListener("orientationchange", runAfterViewportSettles);
+      window.removeEventListener("v8:remeasure", runAfterViewportSettles);
+      window.visualViewport?.removeEventListener("resize", runAfterViewportSettles);
     };
   }, [note, maxLines]);
 

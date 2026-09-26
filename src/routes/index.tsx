@@ -82,6 +82,190 @@ function hasV8LineAuthCallback() {
   return params.has("auth") || params.has("auth_error");
 }
 
+function isV8MobileLandscape() {
+  if (typeof window === "undefined") return false;
+  const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  const hasTouch = navigator.maxTouchPoints > 0;
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  return (hasTouch || coarsePointer) && Math.min(viewportWidth, viewportHeight) < 900 && viewportWidth > viewportHeight;
+}
+
+function emitV8Remeasure() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("resize"));
+  window.dispatchEvent(new CustomEvent("v8:remeasure"));
+}
+
+function useV8MobileLandscapeGuard(enabled: boolean) {
+  const [blocked, setBlocked] = useState(false);
+  const wasBlockedRef = useRef(false);
+
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined") {
+      setBlocked(false);
+      wasBlockedRef.current = false;
+      return;
+    }
+
+    let frame = 0;
+    const timers: number[] = [];
+
+    const update = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const nextBlocked = isV8MobileLandscape();
+        setBlocked(nextBlocked);
+        if (wasBlockedRef.current && !nextBlocked) {
+          emitV8Remeasure();
+          timers.push(window.setTimeout(emitV8Remeasure, 90));
+          timers.push(window.setTimeout(emitV8Remeasure, 260));
+        }
+        wasBlockedRef.current = nextBlocked;
+      });
+    };
+
+    const scheduleUpdate = () => {
+      update();
+      timers.push(window.setTimeout(update, 90));
+      timers.push(window.setTimeout(update, 260));
+    };
+
+    scheduleUpdate();
+    window.addEventListener("resize", scheduleUpdate);
+    window.addEventListener("orientationchange", scheduleUpdate);
+    window.visualViewport?.addEventListener("resize", scheduleUpdate);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("resize", scheduleUpdate);
+      window.removeEventListener("orientationchange", scheduleUpdate);
+      window.visualViewport?.removeEventListener("resize", scheduleUpdate);
+    };
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!blocked || typeof document === "undefined") return;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [blocked]);
+
+  return blocked;
+}
+
+function V8MobileLandscapeOverlay({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <>
+      <div
+        className="v8-mobile-landscape-guard"
+        role="dialog"
+        aria-modal="true"
+        aria-label="請將手機轉為直向使用"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onTouchMove={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+      >
+        <div className="v8-mobile-landscape-card">
+          <span className="v8-mobile-landscape-icon" aria-hidden="true">
+            <span />
+          </span>
+          <p>請將手機轉為直向使用</p>
+        </div>
+      </div>
+      <style>{`
+        .v8-mobile-landscape-guard {
+          position: fixed;
+          inset: 0;
+          z-index: 2147483000;
+          display: grid;
+          place-items: center;
+          padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+          background:
+            radial-gradient(circle at 50% 42%, rgba(246, 228, 184, 0.16), transparent 42%),
+            linear-gradient(135deg, #16120d 0%, #1f2a2d 48%, #132237 100%);
+          color: #f7efe0;
+          pointer-events: auto;
+          touch-action: none;
+          overscroll-behavior: contain;
+        }
+        .v8-mobile-landscape-card {
+          display: grid;
+          justify-items: center;
+          gap: 16px;
+          max-width: min(82vw, 360px);
+          padding: 28px 30px;
+          border: 1px solid rgba(247, 239, 224, 0.28);
+          border-radius: 18px;
+          background: rgba(20, 15, 10, 0.74);
+          box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+          text-align: center;
+        }
+        .v8-mobile-landscape-card p {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 900;
+          line-height: 1.35;
+          letter-spacing: 0.04em;
+        }
+        .v8-mobile-landscape-icon {
+          position: relative;
+          width: 58px;
+          height: 82px;
+          border: 4px solid rgba(247, 239, 224, 0.9);
+          border-radius: 14px;
+          transform: rotate(-90deg);
+          box-shadow: inset 0 0 0 2px rgba(18, 15, 12, 0.35);
+        }
+        .v8-mobile-landscape-icon::before,
+        .v8-mobile-landscape-icon::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          border-radius: 999px;
+          background: rgba(247, 239, 224, 0.88);
+        }
+        .v8-mobile-landscape-icon::before {
+          top: 6px;
+          width: 16px;
+          height: 3px;
+        }
+        .v8-mobile-landscape-icon::after {
+          bottom: 7px;
+          width: 7px;
+          height: 7px;
+        }
+        .v8-mobile-landscape-icon span {
+          position: absolute;
+          right: -20px;
+          top: 50%;
+          width: 16px;
+          height: 16px;
+          border-top: 3px solid rgba(247, 202, 112, 0.92);
+          border-right: 3px solid rgba(247, 202, 112, 0.92);
+          transform: translateY(-50%) rotate(45deg);
+        }
+      `}</style>
+    </>
+  );
+}
+
 function rememberV8LineLoginReturn() {
   if (typeof window === "undefined") return;
   try {
@@ -349,6 +533,7 @@ export function Index() {
   const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   const v8IntroSiteId =
     normalizedPathname === "/v8/kangxuan" ? "kangxuan" : normalizedPathname === "/v8/rian" ? "rian" : "";
+  const v8MobileLandscapeBlocked = useV8MobileLandscapeGuard(Boolean(v8IntroSiteId));
   const [name, setName] = useState("");
   const toastOriginRef = useRef<ToastOrigin | null>(null);
   const eventTitleRef = useRef<HTMLElement | null>(null);
@@ -1822,6 +2007,7 @@ export function Index() {
           `}</style>
         </>
       ) : null}
+      <V8MobileLandscapeOverlay show={v8MobileLandscapeBlocked} />
     </main>
   );
 }

@@ -31,6 +31,7 @@ export function V8SunDateStretchText({
     if (!box || !measureNode || !text) return;
 
     let frame = 0;
+    const timers: number[] = [];
     const fit = () => {
       if (frame) window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
@@ -49,16 +50,28 @@ export function V8SunDateStretchText({
         });
       });
     };
+    const fitAfterViewportSettles = () => {
+      fit();
+      timers.push(window.setTimeout(fit, 90));
+      timers.push(window.setTimeout(fit, 260));
+    };
 
     fit();
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
     observer?.observe(box);
-    window.addEventListener("resize", fit);
-    document.fonts?.ready.then(fit).catch(() => undefined);
+    window.addEventListener("resize", fitAfterViewportSettles);
+    window.addEventListener("orientationchange", fitAfterViewportSettles);
+    window.addEventListener("v8:remeasure", fitAfterViewportSettles);
+    window.visualViewport?.addEventListener("resize", fitAfterViewportSettles);
+    document.fonts?.ready.then(fitAfterViewportSettles).catch(() => undefined);
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
+      timers.forEach((timer) => window.clearTimeout(timer));
       observer?.disconnect();
-      window.removeEventListener("resize", fit);
+      window.removeEventListener("resize", fitAfterViewportSettles);
+      window.removeEventListener("orientationchange", fitAfterViewportSettles);
+      window.removeEventListener("v8:remeasure", fitAfterViewportSettles);
+      window.visualViewport?.removeEventListener("resize", fitAfterViewportSettles);
     };
   }, [controls.fontSize, controls.height, controls.width, text]);
 
