@@ -41,8 +41,19 @@ export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps
 
   return (
     <div className={`v8-loading-cover${phase === "fading" ? " is-fading" : ""}`} role="status" aria-live="polite">
-      <span className="v8-loading-cover-mark" aria-hidden="true" />
-      <span className="v8-loading-cover-text">載入中</span>
+      <span className="v8-loading-cover-scene">
+        <span className="v8-loading-cover-sun">
+          <img
+            className="v8-loading-cover-tiger"
+            src={`${import.meta.env.BASE_URL}v8-loading/loading-tiger-v1.webp`}
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+          />
+          <span className="v8-loading-cover-mark" aria-hidden="true" />
+        </span>
+        <span className="v8-loading-cover-text">載入中</span>
+      </span>
       <style>{`
         .v8-loading-cover {
           position: fixed;
@@ -61,6 +72,31 @@ export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps
         .v8-loading-cover.is-fading {
           opacity: 0;
           pointer-events: none;
+        }
+        /* The tiger sits left of the sun with its raised paw on it; the
+           sun + text column shifts right so the pair reads centred. */
+        .v8-loading-cover-scene {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 14px;
+          transform: translateX(40px);
+        }
+        .v8-loading-cover-sun {
+          position: relative;
+          display: flex;
+        }
+        .v8-loading-cover-tiger {
+          position: absolute;
+          right: calc(100% - 6px);
+          top: -16px;
+          width: 104px;
+          max-width: none;
+          height: auto;
+          pointer-events: none;
+          user-select: none;
+          transform-origin: 80% 100%;
+          animation: v8-loading-cover-tap 2.4s ease-in-out infinite;
         }
         .v8-loading-cover-mark {
           width: 46px;
@@ -82,7 +118,32 @@ export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps
           50% { transform: scale(1.04); opacity: 0.95; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .v8-loading-cover-mark { animation: none; }
+          /* The tiger sits left of the sun with its raised paw on it; the
+           sun + text column shifts right so the pair reads centred. */
+        .v8-loading-cover-scene {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 14px;
+          transform: translateX(40px);
+        }
+        .v8-loading-cover-sun {
+          position: relative;
+          display: flex;
+        }
+        .v8-loading-cover-tiger {
+          position: absolute;
+          right: calc(100% - 6px);
+          top: -16px;
+          width: 104px;
+          max-width: none;
+          height: auto;
+          pointer-events: none;
+          user-select: none;
+          transform-origin: 80% 100%;
+          animation: v8-loading-cover-tap 2.4s ease-in-out infinite;
+        }
+        .v8-loading-cover-mark { animation: none; }
           .v8-loading-cover { transition: none; }
         }
       `}</style>
