@@ -3313,6 +3313,19 @@ export function saveControls(controls: PreviewControls) {
   }
 }
 
+export function saveControlPatch(patch: Partial<PreviewControls>) {
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
+    const saved = raw ? (JSON.parse(raw) as Partial<PreviewControls>) : {};
+    window.localStorage.setItem(
+      PREVIEW_CONTROLS_STORAGE_KEY,
+      JSON.stringify(withoutDefaultValues({ ...saved, ...patch })),
+    );
+  } catch {
+    // Same as saveControls -- non-fatal.
+  }
+}
+
 export function saveScopedControls(controls: PreviewControls, scope: ControlsScope) {
   try {
     const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
   activeTargetOrder,
@@ -24,7 +24,7 @@ import {
   previewDefaults,
   rearClawBaseline,
   safeZoneBaseline,
-  saveControls,
+  saveControlPatch,
   tigerRacketBaseline,
   tigerRigBaseline,
 } from "./dragonPreviewConfig";
@@ -316,15 +316,24 @@ export function DragonPreview() {
   const [selectedTarget, setSelectedTarget] = useState<PreviewTargetId>("TIGER RIG");
   const [highlightEnabled, setHighlightEnabled] = useState(true);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("OPENING");
+  const lastSavedControlsRef = useRef<PreviewControls>(controls);
 
   const assets = useMemo(() => buildPreviewAssets(import.meta.env.BASE_URL), []);
   const activeAssets = useMemo(() => buildV8ActiveAssets(import.meta.env.BASE_URL), []);
   const currentTargetOrder = previewMode === "OPENING" ? openingTargetOrder : activeTargetOrder;
 
-  // Autosave -- fires on every slider/toggle change so a refresh or a
-  // backgrounded tab getting reclaimed never loses in-progress tuning.
+  // Autosave -- save only fields changed in this preview tab, then merge
+  // with the latest persisted object. This avoids an old /v8/preview tab
+  // overwriting newer REAL OPEN / ACTIVE tuning values with its stale
+  // in-memory snapshot.
   useEffect(() => {
-    saveControls(controls);
+    const previous = lastSavedControlsRef.current;
+    const patch: Partial<PreviewControls> = {};
+    for (const key of Object.keys(controls) as (keyof PreviewControls)[]) {
+      if (controls[key] !== previous[key]) (patch as Record<string, unknown>)[key] = controls[key];
+    }
+    lastSavedControlsRef.current = controls;
+    if (Object.keys(patch).length) saveControlPatch(patch);
   }, [controls]);
 
   const setPreviewModeAndTarget = (mode: PreviewMode) => {
