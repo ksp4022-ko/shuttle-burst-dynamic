@@ -30,7 +30,7 @@ function stateLabel(event: V8SeasonProgressEvent, today: string) {
   if (event.state === "leave" || event.onLeave) return "請假";
   if (event.date === today || event.state === "today") return "今天";
   if (event.state === "future") return "未到日期";
-  return "已完成";
+  return "出席";
 }
 
 function markClassName(event: V8SeasonProgressEvent, today: string) {
@@ -248,45 +248,86 @@ function V8SeasonAttendanceStyles() {
         border-radius: 50%;
         line-height: 1;
         font-weight: 800;
+        position: relative;
+        flex: 0 0 auto;
+        overflow: visible;
       }
 
-      /* 正常：朱紅實心＋金框 */
+      /* 出席：小型朱印，深朱中心＋古金雙圈 */
       .v8-season-mark.is-normal {
-        background: radial-gradient(circle at 35% 30%, #e0553c 0%, #b8321f 62%, #8f2414 100%);
-        border: 1px solid #d4a94a;
-        box-shadow: inset 0 0 0 1px rgba(255, 220, 150, 0.35);
+        background:
+          radial-gradient(circle at 34% 28%, rgba(255, 174, 120, 0.82) 0 9%, transparent 14%),
+          radial-gradient(circle at 49% 53%, #d64828 0 28%, #a92717 62%, #74180f 100%);
+        border: 1px solid #c99a3b;
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 224, 142, 0.56),
+          inset 0 0 0 2px rgba(104, 22, 12, 0.24),
+          0 0 0 0.45px rgba(86, 42, 13, 0.26);
       }
 
-      /* 請假：灰藍「休」 */
+      .v8-season-mark.is-normal::after {
+        content: "";
+        position: absolute;
+        inset: 19% 14% 14% 21%;
+        border-radius: 45% 55% 52% 48%;
+        border: 0.7px solid rgba(255, 226, 142, 0.42);
+        transform: rotate(-10deg);
+        pointer-events: none;
+      }
+
+      /* 請假：灰藍印，文字清楚但比出席安靜 */
       .v8-season-mark.is-leave {
-        background: #8e9cab;
-        border: 1px solid #6f7d8c;
-        color: #f4f6f8;
+        background:
+          radial-gradient(circle at 35% 28%, rgba(220, 231, 238, 0.55) 0 13%, transparent 20%),
+          radial-gradient(circle, #9aa9b8 0 48%, #6e7e8f 100%);
+        border: 1px solid #5f7080;
+        color: #ffffff;
+        text-shadow: 0 0.5px 0 rgba(31, 45, 58, 0.75);
+        box-shadow:
+          inset 0 0 0 1px rgba(238, 246, 250, 0.3),
+          0 0 0 0.45px rgba(58, 74, 90, 0.2);
       }
 
-      /* 未到日期：淡金空框 */
+      /* 未到日期：象牙淡金空印 */
       .v8-season-mark.is-future {
-        border: 1px solid rgba(190, 150, 70, 0.75);
-        background: rgba(255, 244, 214, 0.35);
-        opacity: 0.6;
+        border: 1px solid rgba(185, 143, 58, 0.7);
+        background:
+          radial-gradient(circle, rgba(255, 250, 229, 0.68) 0 42%, rgba(222, 184, 94, 0.18) 43% 58%, transparent 60%),
+          rgba(255, 248, 222, 0.28);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 240, 0.55);
+        opacity: 0.72;
       }
 
-      /* 今天：外圈微亮＋輕微呼吸（today + leave 保留「休」） */
+      /* 今天：保留原狀態，外加古金外圈呼吸（today + leave 保留「休」） */
       .v8-season-mark.is-today {
-        border: 1px solid #d4a94a;
-        background: radial-gradient(circle, rgba(255, 236, 180, 0.9) 0%, rgba(230, 180, 80, 0.55) 100%);
-        box-shadow: 0 0 0 1.5px rgba(232, 188, 84, 0.9), 0 0 6px 1px rgba(255, 208, 110, 0.75);
+        border-color: #d6a647;
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 228, 150, 0.5),
+          0 0 0 1.5px rgba(210, 156, 55, 0.95),
+          0 0 6px 1px rgba(255, 210, 110, 0.72);
         animation: v8-season-today-pulse 1.8s ease-in-out infinite;
       }
 
       .v8-season-mark.is-today.is-leave {
-        background: #8e9cab;
+        background:
+          radial-gradient(circle at 35% 28%, rgba(220, 231, 238, 0.55) 0 13%, transparent 20%),
+          radial-gradient(circle, #9aa9b8 0 48%, #6e7e8f 100%);
         color: #f4f6f8;
       }
 
       @keyframes v8-season-today-pulse {
-        0%, 100% { box-shadow: 0 0 0 1.5px rgba(232, 188, 84, 0.9), 0 0 4px 0 rgba(255, 208, 110, 0.55); }
-        50% { box-shadow: 0 0 0 1.5px rgba(232, 188, 84, 1), 0 0 9px 2px rgba(255, 208, 110, 0.9); }
+        0%, 100% {
+          box-shadow:
+            inset 0 0 0 1px rgba(255, 228, 150, 0.5),
+            0 0 0 1.5px rgba(210, 156, 55, 0.88),
+            0 0 4px 0 rgba(255, 208, 110, 0.5);
+        }
+        50% {
+          box-shadow:
+            inset 0 0 0 1px rgba(255, 228, 150, 0.58),
+            0 0 0 1.5px rgba(210, 156, 55, 1),
+            0 0 9px 2px rgba(255, 208, 110, 0.88);
+        }
       }
 
       @media (prefers-reduced-motion: reduce) {
