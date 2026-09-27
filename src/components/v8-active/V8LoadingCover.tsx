@@ -73,14 +73,15 @@ export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps
           opacity: 0;
           pointer-events: none;
         }
-        /* The tiger sits left of the sun with its raised paw on it; the
-           sun + text column shifts right so the pair reads centred. */
+        /* The tiger sits left of the sun, paw on it, feet level with the
+           sun's bottom edge (not the text); the sun + text column shifts
+           right so the pair reads centred. */
         .v8-loading-cover-scene {
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 14px;
-          transform: translateX(40px);
+          transform: translateX(30px);
         }
         .v8-loading-cover-sun {
           position: relative;
@@ -88,9 +89,9 @@ export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps
         }
         .v8-loading-cover-tiger {
           position: absolute;
-          right: calc(100% - 6px);
-          top: -16px;
-          width: 104px;
+          right: calc(100% - 4px);
+          bottom: 0;
+          width: 76px;
           max-width: none;
           height: auto;
           pointer-events: none;
@@ -117,33 +118,12 @@ export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps
           0%, 100% { transform: scale(0.94); opacity: 0.78; }
           50% { transform: scale(1.04); opacity: 0.95; }
         }
+        @keyframes v8-loading-cover-tap {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(-2deg) translateY(-1px); }
+        }
         @media (prefers-reduced-motion: reduce) {
-          /* The tiger sits left of the sun with its raised paw on it; the
-           sun + text column shifts right so the pair reads centred. */
-        .v8-loading-cover-scene {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 14px;
-          transform: translateX(40px);
-        }
-        .v8-loading-cover-sun {
-          position: relative;
-          display: flex;
-        }
-        .v8-loading-cover-tiger {
-          position: absolute;
-          right: calc(100% - 6px);
-          top: -16px;
-          width: 104px;
-          max-width: none;
-          height: auto;
-          pointer-events: none;
-          user-select: none;
-          transform-origin: 80% 100%;
-          animation: v8-loading-cover-tap 2.4s ease-in-out infinite;
-        }
-        .v8-loading-cover-mark { animation: none; }
+          .v8-loading-cover-mark, .v8-loading-cover-tiger { animation: none; }
           .v8-loading-cover { transition: none; }
         }
       `}</style>
