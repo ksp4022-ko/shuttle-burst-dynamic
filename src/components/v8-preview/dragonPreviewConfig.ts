@@ -2993,6 +2993,8 @@ Next: X ${Math.round(controls.activeSwitchArrowNextX)}, Y ${Math.round(controls.
 // (only fields that differ from previewDefaults), so future default
 // updates apply to every field a device has not deliberately tuned.
 export const PREVIEW_CONTROLS_STORAGE_KEY = "v8-preview-controls-v4";
+const PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY = `${PREVIEW_CONTROLS_STORAGE_KEY}:migrations`;
+const STATUS_MARK_POSITION_MIGRATION = "activeIdentityStatusMarkPositionV1";
 
 // Fields whose COORDINATE-SYSTEM MEANING changed but didn't warrant a full
 // -vN storage bump (that would discard every OTHER field the user has
@@ -3011,15 +3013,50 @@ const STALE_SAVED_CONTROL_KEYS: (keyof PreviewControls)[] = [
   "activeIdentityStatusMarkZIndex",
 ];
 
+function hasPreviewControlsMigration(name: string) {
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY);
+    const saved = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    return saved[name] === true;
+  } catch {
+    return false;
+  }
+}
+
+function markPreviewControlsMigration(name: string) {
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY);
+    const saved = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    window.localStorage.setItem(PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY, JSON.stringify({ ...saved, [name]: true }));
+  } catch {
+    // Storage unavailable -- the migration is best-effort, same as control persistence.
+  }
+}
+
+function migrateSavedControls(saved: Partial<PreviewControls>) {
+  if (hasPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION)) return saved;
+  const migrated = { ...saved };
+  for (const key of STALE_SAVED_CONTROL_KEYS) {
+    delete migrated[key];
+  }
+  markPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION);
+  try {
+    window.localStorage.setItem(PREVIEW_CONTROLS_STORAGE_KEY, JSON.stringify(migrated));
+  } catch {
+    // If this write fails, the in-memory migrated controls still load for this session.
+  }
+  return migrated;
+}
+
 export function loadSavedControls(): PreviewControls {
   try {
     const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
-    if (!raw) return previewDefaults;
-    const saved = JSON.parse(raw) as Partial<PreviewControls>;
-    for (const key of STALE_SAVED_CONTROL_KEYS) {
-      delete saved[key];
+    if (!raw) {
+      markPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION);
+      return previewDefaults;
     }
-    return { ...previewDefaults, ...saved };
+    const saved = JSON.parse(raw) as Partial<PreviewControls>;
+    return { ...previewDefaults, ...migrateSavedControls(saved) };
   } catch {
     return previewDefaults;
   }
