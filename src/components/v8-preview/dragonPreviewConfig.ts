@@ -2522,7 +2522,235 @@ export function formatScopedPreviewSettings(controls: PreviewControls, scope?: C
   return [titleHeader, ...kept].join("\n\n");
 }
 
-export const formatPreviewSettings = (controls: PreviewControls) => `V8 PREVIEW SETTINGS
+type SunAutoFillMode = "current" | "autofill" | "compare";
+type SunAutoFillBoxKey = "date" | "time" | "note" | "name";
+type SunAutoFillBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  skewX: number;
+  skewY: number;
+};
+type SunAutoFillConfig = {
+  mode: SunAutoFillMode;
+  globalSkewLinked: boolean;
+  date: SunAutoFillBox;
+  time: SunAutoFillBox;
+  note: SunAutoFillBox;
+  name: SunAutoFillBox;
+};
+
+type IdentityEnvelopeMode = "current" | "autofill" | "compare";
+type IdentityEnvelopeBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  curveDepth: number;
+  curveWidth: number;
+};
+type IdentityEnvelopeConfig = {
+  mode: IdentityEnvelopeMode;
+  overallScale: number;
+  rowGap: number;
+  name: IdentityEnvelopeBox;
+  notMe: IdentityEnvelopeBox & { sideShrink: number };
+  decoration: {
+    show: boolean;
+    length: number;
+    gap: number;
+    thickness: number;
+    spread: number;
+  };
+};
+
+type PreviewExperimentSettings = {
+  sunAutoFill: SunAutoFillConfig;
+  identityEnvelope: IdentityEnvelopeConfig;
+};
+
+const SUN_AUTOFILL_STORAGE_KEY = "v8-red-sun-autofill-experiment-v1";
+const IDENTITY_ENVELOPE_STORAGE_KEY = "v8-identity-envelope-experiment-v1";
+const SUN_AUTOFILL_BOX_KEYS: SunAutoFillBoxKey[] = ["date", "time", "note", "name"];
+const SUN_AUTOFILL_MODES: SunAutoFillMode[] = ["current", "autofill", "compare"];
+const IDENTITY_ENVELOPE_MODES: IdentityEnvelopeMode[] = ["current", "autofill", "compare"];
+
+const sunAutoFillDefaults: SunAutoFillConfig = {
+  mode: "current",
+  globalSkewLinked: true,
+  date: { x: 34, y: 38, width: 40, height: 22, skewX: 0, skewY: -18 },
+  time: { x: 70, y: 38, width: 30, height: 12, skewX: 0, skewY: -18 },
+  note: { x: 32, y: 62, width: 30, height: 12, skewX: 0, skewY: -18 },
+  name: { x: 67, y: 62, width: 40, height: 22, skewX: 0, skewY: -18 },
+};
+
+const identityEnvelopeDefaults: IdentityEnvelopeConfig = {
+  mode: "current",
+  overallScale: 1,
+  rowGap: 4,
+  name: { x: 48, y: 47, width: 92, height: 34, curveDepth: 18, curveWidth: 78 },
+  notMe: { x: 52, y: 61, width: 47, height: 15, curveDepth: 18, curveWidth: 84, sideShrink: 10 },
+  decoration: { show: true, length: 18, gap: 4, thickness: 1.8, spread: 8 },
+};
+
+const readStoredObject = (storageKey: string) => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+};
+
+const readStoredNumber = (value: unknown, fallback: number) =>
+  typeof value === "number" && Number.isFinite(value) ? value : fallback;
+
+const readStoredBoolean = (value: unknown, fallback: boolean) =>
+  typeof value === "boolean" ? value : fallback;
+
+const readSunAutoFillBox = (value: unknown, fallback: SunAutoFillBox): SunAutoFillBox => {
+  const saved = value && typeof value === "object" ? (value as Partial<Record<keyof SunAutoFillBox | "skew", unknown>>) : {};
+  return {
+    x: readStoredNumber(saved.x, fallback.x),
+    y: readStoredNumber(saved.y, fallback.y),
+    width: readStoredNumber(saved.width, fallback.width),
+    height: readStoredNumber(saved.height, fallback.height),
+    skewX: readStoredNumber(saved.skewX ?? saved.skew, fallback.skewX),
+    skewY: readStoredNumber(saved.skewY, fallback.skewY),
+  };
+};
+
+const readIdentityEnvelopeBox = (value: unknown, fallback: IdentityEnvelopeBox): IdentityEnvelopeBox => {
+  const saved = value && typeof value === "object" ? (value as Partial<Record<keyof IdentityEnvelopeBox, unknown>>) : {};
+  return {
+    x: readStoredNumber(saved.x, fallback.x),
+    y: readStoredNumber(saved.y, fallback.y),
+    width: readStoredNumber(saved.width, fallback.width),
+    height: readStoredNumber(saved.height, fallback.height),
+    curveDepth: readStoredNumber(saved.curveDepth, fallback.curveDepth),
+    curveWidth: readStoredNumber(saved.curveWidth, fallback.curveWidth),
+  };
+};
+
+const loadSunAutoFillExportConfig = (): SunAutoFillConfig => {
+  const saved = readStoredObject(SUN_AUTOFILL_STORAGE_KEY);
+  if (!saved) return sunAutoFillDefaults;
+  return {
+    mode: SUN_AUTOFILL_MODES.includes(saved["mode"] as SunAutoFillMode)
+      ? (saved["mode"] as SunAutoFillMode)
+      : sunAutoFillDefaults.mode,
+    globalSkewLinked: readStoredBoolean(saved["globalSkewLinked"], sunAutoFillDefaults.globalSkewLinked),
+    date: readSunAutoFillBox(saved["date"], sunAutoFillDefaults.date),
+    time: readSunAutoFillBox(saved["time"], sunAutoFillDefaults.time),
+    note: readSunAutoFillBox(saved["note"], sunAutoFillDefaults.note),
+    name: readSunAutoFillBox(saved["name"], sunAutoFillDefaults.name),
+  };
+};
+
+const loadIdentityEnvelopeExportConfig = (): IdentityEnvelopeConfig => {
+  const saved = readStoredObject(IDENTITY_ENVELOPE_STORAGE_KEY);
+  if (!saved) return identityEnvelopeDefaults;
+  const savedNotMe =
+    saved["notMe"] && typeof saved["notMe"] === "object"
+      ? (saved["notMe"] as Record<string, unknown>)
+      : {};
+  const savedDecoration =
+    saved["decoration"] && typeof saved["decoration"] === "object"
+      ? (saved["decoration"] as Record<string, unknown>)
+      : {};
+  return {
+    mode: IDENTITY_ENVELOPE_MODES.includes(saved["mode"] as IdentityEnvelopeMode)
+      ? (saved["mode"] as IdentityEnvelopeMode)
+      : identityEnvelopeDefaults.mode,
+    overallScale: readStoredNumber(saved["overallScale"], identityEnvelopeDefaults.overallScale),
+    rowGap: readStoredNumber(saved["rowGap"], identityEnvelopeDefaults.rowGap),
+    name: readIdentityEnvelopeBox(saved["name"], identityEnvelopeDefaults.name),
+    notMe: {
+      ...readIdentityEnvelopeBox(saved["notMe"], identityEnvelopeDefaults.notMe),
+      sideShrink: readStoredNumber(savedNotMe["sideShrink"], identityEnvelopeDefaults.notMe.sideShrink),
+    },
+    decoration: {
+      show: readStoredBoolean(savedDecoration["show"], identityEnvelopeDefaults.decoration.show),
+      length: readStoredNumber(savedDecoration["length"], identityEnvelopeDefaults.decoration.length),
+      gap: readStoredNumber(savedDecoration["gap"], identityEnvelopeDefaults.decoration.gap),
+      thickness: readStoredNumber(savedDecoration["thickness"], identityEnvelopeDefaults.decoration.thickness),
+      spread: readStoredNumber(savedDecoration["spread"], identityEnvelopeDefaults.decoration.spread),
+    },
+  };
+};
+
+function loadPreviewExperimentSettings(): PreviewExperimentSettings {
+  return {
+    sunAutoFill: loadSunAutoFillExportConfig(),
+    identityEnvelope: loadIdentityEnvelopeExportConfig(),
+  };
+}
+
+const formatMode = (mode: string) => mode === "autofill" ? "AUTO-FILL" : mode.toUpperCase();
+const formatSwitch = (value: boolean) => value ? "ON" : "OFF";
+const formatDecimal = (value: number) => value.toFixed(1);
+
+const formatSunAutoFillBox = (label: string, box: SunAutoFillBox) => `${label}
+X: ${formatDecimal(box.x)}
+Y: ${formatDecimal(box.y)}
+Width: ${formatDecimal(box.width)}
+Height: ${formatDecimal(box.height)}
+Skew X: ${formatDecimal(box.skewX)}
+Skew Y: ${formatDecimal(box.skewY)}`;
+
+const formatSunAutoFillSettings = (config: SunAutoFillConfig) => {
+  const labels: Record<SunAutoFillBoxKey, string> = {
+    date: "AUTO DATE",
+    time: "AUTO TIME",
+    note: "AUTO NOTE",
+    name: "AUTO NAME",
+  };
+  return `ACTIVE SUN AUTO-FILL EXPERIMENT
+Mode: ${formatMode(config.mode)}
+Link Skew: ${formatSwitch(config.globalSkewLinked)}
+
+${SUN_AUTOFILL_BOX_KEYS.map((key) => formatSunAutoFillBox(labels[key], config[key])).join("\n\n")}`;
+};
+
+const formatIdentityEnvelopeBox = (
+  label: string,
+  box: IdentityEnvelopeConfig["name"] | IdentityEnvelopeConfig["notMe"],
+) => {
+  const sideShrink =
+    "sideShrink" in box ? `\nSide Shrink: ${formatDecimal(box.sideShrink)}` : "";
+  return `${label}
+X: ${formatDecimal(box.x)}
+Y: ${formatDecimal(box.y)}
+Width: ${formatDecimal(box.width)}
+Height: ${formatDecimal(box.height)}
+Curve Depth: ${formatDecimal(box.curveDepth)}
+Curve Width: ${formatDecimal(box.curveWidth)}${sideShrink}`;
+};
+
+const formatIdentityEnvelopeSettings = (config: IdentityEnvelopeConfig) => `ACTIVE IDENTITY ENVELOPE EXPERIMENT
+Mode: ${formatMode(config.mode)}
+Overall Scale: ${config.overallScale.toFixed(2)}
+Row Gap: ${formatDecimal(config.rowGap)}
+
+${formatIdentityEnvelopeBox("NAME", config.name)}
+
+${formatIdentityEnvelopeBox("NOT-ME", config.notMe)}
+
+DECORATION
+Show: ${formatSwitch(config.decoration.show)}
+Length: ${formatDecimal(config.decoration.length)}
+Gap: ${formatDecimal(config.decoration.gap)}
+Thickness: ${formatDecimal(config.decoration.thickness)}
+Spread: ${formatDecimal(config.decoration.spread)}`;
+
+export const formatPreviewSettings = (
+  controls: PreviewControls,
+  experiments: PreviewExperimentSettings = loadPreviewExperimentSettings(),
+) => `V8 PREVIEW SETTINGS
 
 DRAGON RIG
 Show: ${controls.dragonShow ? "ON" : "OFF"}
@@ -2954,7 +3182,13 @@ X ${Math.round(controls.openSunDotsX)}, Y ${Math.round(controls.openSunDotsY)}, 
 ACTIVE SWITCH ARROW (切換聚會 <>)
 Show: ${controls.activeSwitchArrowShow ? "ON" : "OFF"}
 Prev: X ${Math.round(controls.activeSwitchArrowPrevX)}, Y ${Math.round(controls.activeSwitchArrowPrevY)}, Scale ${controls.activeSwitchArrowPrevScale.toFixed(2)}, Rotation ${Math.round(controls.activeSwitchArrowPrevRotation)}, Opacity ${Math.round(controls.activeSwitchArrowPrevOpacity)}, Z ${Math.round(controls.activeSwitchArrowPrevZIndex)}
-Next: X ${Math.round(controls.activeSwitchArrowNextX)}, Y ${Math.round(controls.activeSwitchArrowNextY)}, Scale ${controls.activeSwitchArrowNextScale.toFixed(2)}, Rotation ${Math.round(controls.activeSwitchArrowNextRotation)}, Opacity ${Math.round(controls.activeSwitchArrowNextOpacity)}, Z ${Math.round(controls.activeSwitchArrowNextZIndex)}`;
+Next: X ${Math.round(controls.activeSwitchArrowNextX)}, Y ${Math.round(controls.activeSwitchArrowNextY)}, Scale ${controls.activeSwitchArrowNextScale.toFixed(2)}, Rotation ${Math.round(controls.activeSwitchArrowNextRotation)}, Opacity ${Math.round(controls.activeSwitchArrowNextOpacity)}, Z ${Math.round(controls.activeSwitchArrowNextZIndex)}
+
+EXPERIMENTS / HELPERS
+
+${formatSunAutoFillSettings(experiments.sunAutoFill)}
+
+${formatIdentityEnvelopeSettings(experiments.identityEnvelope)}`;
 
 // Mid-tuning autosave -- shared between the /v8/preview console
 // (DragonPreview.tsx) and the real Active page's own embedded tuning
