@@ -1198,8 +1198,8 @@ export const previewDefaults: PreviewControls = {
   // on the name text, z-index raised above the name's (40) so it reads as
   // stamped ON TOP of the name, not hidden behind it.
   activeIdentityStatusMarkX: 51,
-  activeIdentityStatusMarkY: 53,
-  activeIdentityStatusMarkScale: 1.36,
+  activeIdentityStatusMarkY: 49,
+  activeIdentityStatusMarkScale: 1.43,
   activeIdentityStatusMarkRotation: 3,
   activeIdentityStatusMarkOpacity: 79,
   activeIdentityStatusMarkZIndex: 41,
