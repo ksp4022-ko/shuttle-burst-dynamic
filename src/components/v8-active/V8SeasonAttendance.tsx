@@ -81,7 +81,9 @@ export function V8SeasonAttendance({
   showHelper?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const shown = progress ?? (showHelper ? helperSample() : null);
+  const helperProgress = showHelper && !progress ? helperSample() : null;
+  const shown = progress ?? helperProgress;
+  const source = progress ? "api" : helperProgress ? "helper" : "none";
 
   // A different meetup's data (or season) starts collapsed.
   useEffect(() => {
@@ -114,7 +116,11 @@ export function V8SeasonAttendance({
   };
 
   return (
-    <div className={showHelper ? "v8-season-att is-helper" : "v8-season-att"} style={rootStyle}>
+    <div
+      className={showHelper ? "v8-season-att is-helper" : "v8-season-att"}
+      data-source={source}
+      style={rootStyle}
+    >
       <V8SeasonAttendanceStyles />
       <button
         type="button"

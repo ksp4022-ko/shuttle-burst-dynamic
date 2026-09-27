@@ -26,12 +26,11 @@ export function useV8SeasonProgress({
   const [refreshKey, setRefreshKey] = useState(0);
   const enabled = Boolean(token && isFixed && eventId && seasonId && groupId);
 
-  // A different season/group/identity starts empty. Switching to another
-  // meetup of the same season, or a refresh, keeps the current marks until
-  // the new answer arrives (same season = same data, no flicker).
+  // Any different event/season/group/identity starts empty. Test or ineligible
+  // events must not briefly show the previous official event's progress.
   useEffect(() => {
     setProgress(null);
-  }, [enabled, token, seasonId, groupId]);
+  }, [enabled, token, eventId, seasonId, groupId]);
 
   useEffect(() => {
     if (!enabled || !token || !eventId) return;
