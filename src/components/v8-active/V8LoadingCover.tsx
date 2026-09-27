@@ -45,7 +45,7 @@ export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps
         <span className="v8-loading-cover-sun">
           <img
             className="v8-loading-cover-tiger"
-            src={`${import.meta.env.BASE_URL}v8-loading/loading-tiger-v1.webp`}
+            src={`${import.meta.env.BASE_URL}v8-loading/loading-tiger-v2.webp`}
             alt=""
             aria-hidden="true"
             decoding="async"
