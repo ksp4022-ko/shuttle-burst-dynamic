@@ -27,8 +27,8 @@ function formatShortDate(date: string) {
 }
 
 function stateLabel(event: V8SeasonProgressEvent, today: string) {
-  if (event.date === today) return event.onLeave ? "今天・請假" : "今天";
-  if (event.state === "leave") return "請假";
+  if (event.state === "leave" || event.onLeave) return "請假";
+  if (event.date === today || event.state === "today") return "今天";
   if (event.state === "future") return "未到日期";
   return "已完成";
 }
@@ -55,7 +55,7 @@ function helperSample(): EligibleSeasonProgress {
     const offset = index - 5;
     const onLeave = index === 2 || index === 9;
     const state = onLeave ? "leave" : offset === 0 ? "today" : offset > 0 ? "future" : "normal";
-    return { eventId: `helper-${index}`, date: day(offset), name: "範圍框示意", state, onLeave };
+    return { eventId: `helper-${index}`, date: day(offset), name: "", state, onLeave };
   });
   const count = events.filter((event) => event.date < today && !event.onLeave).length;
   return {
@@ -165,11 +165,12 @@ export function V8SeasonAttendance({
         <div className="v8-season-att-panel" role="list" onClick={() => setOpen(false)}>
           {events.map((event) => (
             <div key={event.eventId} className="v8-season-att-row" role="listitem">
-              <span className={markClassName(event, today)} aria-hidden="true">
-                {event.state === "leave" ? "休" : null}
+              <span className="v8-season-att-main">
+                <span className={markClassName(event, today)} aria-hidden="true">
+                  {event.state === "leave" ? "休" : null}
+                </span>
+                <span className="v8-season-att-date">{formatShortDate(event.date)}</span>
               </span>
-              <span className="v8-season-att-date">{formatShortDate(event.date)}</span>
-              <span className="v8-season-att-name">{event.name}</span>
               <span className={`v8-season-att-state is-${event.state}`}>
                 {stateLabel(event, today)}
               </span>
@@ -308,9 +309,9 @@ function V8SeasonAttendanceStyles() {
 
       .v8-season-att-row {
         display: grid;
-        grid-template-columns: 12px 38px 1fr auto;
+        grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
-        gap: 6px;
+        gap: 12px;
         padding: 3px 0;
         border-bottom: 1px solid rgba(120, 82, 34, 0.12);
       }
@@ -325,15 +326,16 @@ function V8SeasonAttendanceStyles() {
         font-size: 7px;
       }
 
+      .v8-season-att-main {
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
+        gap: 6px;
+      }
+
       .v8-season-att-date {
         font-variant-numeric: tabular-nums;
         font-weight: 700;
-      }
-
-      .v8-season-att-name {
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
       }
 
       .v8-season-att-state {
