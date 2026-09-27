@@ -3,6 +3,11 @@ import type { V8SunDotsControls } from "@/components/v8-active/v8ActiveConfig";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V8SunDateStretchText } from "@/components/v8-active/V8SunDateStretchText";
+import {
+  SunAutoFillErrorBoundary,
+  V8SunAutoFillLayer,
+  type SunAutoFillConfig,
+} from "@/components/v8-active/V8SunAutoFillExperiment";
 
 // Standalone copy of the Active page's red-sun content module (see
 // V8ActiveSunContent and its helpers in V8ActivePage.tsx), duplicated here
@@ -52,6 +57,14 @@ const DATE_MESSAGE = { x: 24, y: 29, fontSize: 9, opacity: 100, width: 34, heigh
 const NAME_MESSAGE = { x: 70, y: 31, fontSize: 24, opacity: 100, width: 140, height: 24 };
 const TIME_MESSAGE = { x: 49, y: 54, fontSize: 15, opacity: 70, width: 72, height: 12 };
 const NOTE_MESSAGE = { x: 48, y: 72, fontSize: 14, opacity: 100, width: 88, height: 14 };
+const OPEN_SUN_AUTO_FILL_CONFIG: SunAutoFillConfig = {
+  mode: "autofill",
+  globalSkewLinked: true,
+  date: { x: 72, y: 63, width: 39, height: 32.5, skewX: -2.5, skewY: -7.5 },
+  time: { x: 32.5, y: 67.5, width: 33, height: 18, skewX: -2.5, skewY: -7.5 },
+  note: { x: 71, y: 36, width: 34, height: 25.5, skewX: -2.5, skewY: -7.5 },
+  name: { x: 29, y: 38, width: 43, height: 40, skewX: -2.5, skewY: -7.5 },
+};
 
 // Copied from previewDefaults' activeSunBadge*/activeSwitchArrow* values,
 // same 0.68 scale-ratio adjustment as the messages above.
@@ -431,13 +444,14 @@ export function V8OpeningSunContent({
     note: event?.eventNote || "",
   };
   const dial = useOpeningSunDial(dialText, `${event?.eventDate || ""}|${event?.id || ""}`);
+  const [autoFillFailed, setAutoFillFailed] = useState(false);
   if (!event) return null;
   const dialing = Boolean(dial?.outgoing);
   const dirStyle = { "--dial-dir": dial?.dir ?? 1 } as CSSProperties;
   const hasPrevious = typeof eventIndex === "number" ? eventIndex > 0 : true;
   const hasNext = typeof eventIndex === "number" && typeof eventCount === "number" ? eventIndex < eventCount - 1 : true;
 
-  const renderMessages = (text: OpeningDialText) => (
+  const renderFormalMessages = (text: OpeningDialText) => (
     <div className="v8-opening-sun-message-safe-box" style={{ width: `${controls.safeBox.width}%`, height: `${controls.safeBox.height}%` }}>
       {controls.safeBox.showHelperBox ? <span className="v8-opening-sun-message-safe-helper" aria-hidden="true" /> : null}
       <V8SunDateStretchText
@@ -451,6 +465,19 @@ export function V8OpeningSunContent({
       <V8SunMessage text={text.note} config={controls.messages.note} />
     </div>
   );
+
+  const renderMessages = (text: OpeningDialText) =>
+    autoFillFailed ? (
+      renderFormalMessages(text)
+    ) : (
+      <SunAutoFillErrorBoundary onError={() => setAutoFillFailed(true)}>
+        <V8SunAutoFillLayer
+          config={OPEN_SUN_AUTO_FILL_CONFIG}
+          showGuides={controls.safeBox.showHelperBox}
+          text={{ date: text.date, time: text.timeLabel, note: text.note, name: text.displayName }}
+        />
+      </SunAutoFillErrorBoundary>
+    );
 
   // 場地(courtCount) + 時數(hours) merged into one "X場/Yhr" label, same as
   // Active's own courtTimeLabel logic.
