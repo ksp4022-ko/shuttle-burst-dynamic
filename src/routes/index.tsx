@@ -71,8 +71,10 @@ const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
 const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
 const V8_LINE_LOGIN_RETURN_STORAGE_KEY = "shuttle-v8-line-login-return-v1";
 const V8_SELECTED_EVENT_STORAGE_VERSION = "v1";
-const V8_ORIENTATION_RELOAD_STORAGE_VERSION = "v1";
+const V8_ORIENTATION_RESTORE_STORAGE_VERSION = "v2";
 const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN MOTION", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE", "OPEN TIGER 1", "OPEN TIGER 2", "OPEN TIGER 3", "OPEN TIGER RACKET", "OPEN CTA", "OPEN COUNTDOWN", "OPEN SUN DOTS"];
+type V8OrientationRestoreView = "active" | "open";
+type V8OrientationRestoreSnapshot = { eventId: string; view: V8OrientationRestoreView };
 
 function isV8BrowserPath(pathname: string) {
   return pathname.split("/").filter(Boolean).includes("v8");
@@ -88,8 +90,8 @@ function v8SelectedEventStorageKey(siteId: string) {
   return `v8:${siteId}:selected-event:${V8_SELECTED_EVENT_STORAGE_VERSION}`;
 }
 
-function v8OrientationReloadStorageKey(siteId: string) {
-  return `v8:${siteId}:orientation-reload:${V8_ORIENTATION_RELOAD_STORAGE_VERSION}`;
+function v8OrientationRestoreStorageKey(siteId: string) {
+  return `v8:${siteId}:orientation-restore:${V8_ORIENTATION_RESTORE_STORAGE_VERSION}`;
 }
 
 function readV8SelectedEventId(siteId: string) {
@@ -105,6 +107,36 @@ function saveV8SelectedEventId(siteId: string, eventId: string) {
   if (typeof window === "undefined" || !siteId || !eventId) return;
   try {
     window.sessionStorage.setItem(v8SelectedEventStorageKey(siteId), eventId);
+  } catch {
+    // Session storage can be unavailable in private/locked contexts.
+  }
+}
+
+function readV8OrientationRestoreSnapshot(siteId: string): V8OrientationRestoreSnapshot | null {
+  if (typeof window === "undefined" || !siteId) return null;
+  const key = v8OrientationRestoreStorageKey(siteId);
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    window.sessionStorage.removeItem(key);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as Partial<V8OrientationRestoreSnapshot> | null;
+    if (!saved || typeof saved.eventId !== "string" || !saved.eventId) return null;
+    if (saved.view !== "active" && saved.view !== "open") return null;
+    return { eventId: saved.eventId, view: saved.view };
+  } catch {
+    try {
+      window.sessionStorage.removeItem(key);
+    } catch {
+      // Ignore unavailable storage.
+    }
+    return null;
+  }
+}
+
+function saveV8OrientationRestoreSnapshot(siteId: string, snapshot: V8OrientationRestoreSnapshot) {
+  if (typeof window === "undefined" || !siteId || !snapshot.eventId) return;
+  try {
+    window.sessionStorage.setItem(v8OrientationRestoreStorageKey(siteId), JSON.stringify(snapshot));
   } catch {
     // Session storage can be unavailable in private/locked contexts.
   }
@@ -130,23 +162,26 @@ function useV8MobileLandscapeGuard({
   enabled,
   siteId,
   selectedEventId,
+  view,
 }: {
   enabled: boolean;
   siteId: string;
   selectedEventId: string;
+  view: V8OrientationRestoreView;
 }) {
   const [blocked, setBlocked] = useState(false);
   const wasBlockedRef = useRef(false);
+  const reloadStartedRef = useRef(false);
 
   useEffect(() => {
     if (!enabled || !siteId || typeof window === "undefined") {
       setBlocked(false);
       wasBlockedRef.current = false;
+      reloadStartedRef.current = false;
       return;
     }
 
     let frame = 0;
-    const reloadKey = v8OrientationReloadStorageKey(siteId);
 
     const update = () => {
       if (frame) window.cancelAnimationFrame(frame);
@@ -154,21 +189,14 @@ function useV8MobileLandscapeGuard({
         const nextBlocked = isV8TouchLandscape();
         setBlocked(nextBlocked);
         if (!nextBlocked) {
-          if (wasBlockedRef.current) {
+          if (wasBlockedRef.current && !reloadStartedRef.current) {
+            reloadStartedRef.current = true;
             try {
               if (selectedEventId) saveV8SelectedEventId(siteId, selectedEventId);
-              if (window.sessionStorage.getItem(reloadKey) !== "pending") {
-                window.sessionStorage.setItem(reloadKey, "pending");
-                window.location.reload();
-              }
+              if (selectedEventId) saveV8OrientationRestoreSnapshot(siteId, { eventId: selectedEventId, view });
+              window.location.reload();
             } catch {
               window.location.reload();
-            }
-          } else {
-            try {
-              window.sessionStorage.removeItem(reloadKey);
-            } catch {
-              // Ignore unavailable storage.
             }
           }
         }
@@ -187,7 +215,7 @@ function useV8MobileLandscapeGuard({
       window.removeEventListener("orientationchange", update);
       orientationMedia?.removeEventListener?.("change", update);
     };
-  }, [enabled, selectedEventId, siteId]);
+  }, [enabled, selectedEventId, siteId, view]);
 
   useEffect(() => {
     if (!blocked || typeof document === "undefined") return;
@@ -578,6 +606,9 @@ export function Index() {
   const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   const v8IntroSiteId =
     normalizedPathname === "/v8/kangxuan" ? "kangxuan" : normalizedPathname === "/v8/rian" ? "rian" : "";
+  const [v8OrientationRestore] = useState(() =>
+    v8IntroSiteId ? readV8OrientationRestoreSnapshot(v8IntroSiteId) : null,
+  );
   const [name, setName] = useState("");
   const toastOriginRef = useRef<ToastOrigin | null>(null);
   const eventTitleRef = useRef<HTMLElement | null>(null);
@@ -649,12 +680,15 @@ export function Index() {
     preHoldMs: handoffTiming.preHold,
     realFadeMs: materializeWindowMs,
     skipIntro: isV8Route,
-    ...(v8IntroSiteId ? { preferredEventId: () => readV8SelectedEventId(v8IntroSiteId) } : {}),
+    ...(v8IntroSiteId
+      ? { preferredEventId: () => v8OrientationRestore?.eventId || readV8SelectedEventId(v8IntroSiteId) }
+      : {}),
   });
   const v8MobileLandscapeBlocked = useV8MobileLandscapeGuard({
     enabled: Boolean(v8IntroSiteId),
     siteId: v8IntroSiteId,
     selectedEventId: flow.pendingSwitchEventId || flow.selectedEventId,
+    view: v8MeetupConfirmed ? "active" : "open",
   });
   const racketSrc = `${import.meta.env.BASE_URL}${RACKET_FILE}`;
   const active = flow.phase === "active";
@@ -736,6 +770,13 @@ export function Index() {
   const legacyActiveStage = (active || rotating) && !v8HeroStage;
   const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls, openMotionPreviewLab);
   const openSunControls = buildV8OpeningSunControls(openTuningControls);
+
+  useEffect(() => {
+    if (!isV8Route || !v8OrientationRestore) return;
+    if (!flow.events.some((event) => event.id === v8OrientationRestore.eventId)) return;
+    if (v8OrientationRestore.view === "active") setV8MeetupConfirmed(true);
+    else setV8MeetupConfirmed(false);
+  }, [flow.events, isV8Route, v8OrientationRestore]);
 
   useEffect(() => {
     if (!v8IntroSiteId) return;

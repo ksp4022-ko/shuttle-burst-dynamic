@@ -52,11 +52,11 @@ const BADGE_TEXT_INSETS = {
 // the opening sun's primary meetup copy is intentionally larger and higher
 // in the circle to match the supplied mobile reference.
 const SUN_SCALE_RATIO = 0.68;
-const SAFE_BOX = { width: 90, height: 95, showHelperBox: false };
-const DATE_MESSAGE = { x: 24, y: 29, fontSize: 9, opacity: 100, width: 34, height: 24 };
-const NAME_MESSAGE = { x: 70, y: 31, fontSize: 24, opacity: 100, width: 140, height: 24 };
-const TIME_MESSAGE = { x: 49, y: 54, fontSize: 15, opacity: 70, width: 72, height: 12 };
-const NOTE_MESSAGE = { x: 48, y: 72, fontSize: 14, opacity: 100, width: 88, height: 14 };
+const SAFE_BOX = { width: 70, height: 60, showHelperBox: false };
+const DATE_MESSAGE = { x: 31, y: 29, fontSize: 15, opacity: 90, width: 31, height: 14 };
+const NAME_MESSAGE = { x: 61, y: 29, fontSize: 32, opacity: 100, width: 100, height: 26 };
+const TIME_MESSAGE = { x: 50, y: 45, fontSize: 12, opacity: 70, width: 72, height: 12 };
+const NOTE_MESSAGE = { x: 50, y: 59, fontSize: 18, opacity: 88, width: 88, height: 18 };
 const OPEN_SUN_AUTO_FILL_CONFIG: SunAutoFillConfig = {
   mode: "autofill",
   globalSkewLinked: true,
