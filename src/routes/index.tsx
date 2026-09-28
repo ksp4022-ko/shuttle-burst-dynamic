@@ -800,8 +800,13 @@ export function Index() {
     window.location.replace(returnUrl.toString());
   }, [isV8Route]);
 
+  // Only ever CLEARS the flag (a route with no intro). On an intro route the
+  // initial state is already true and V8IntroVideo alone owns it from then
+  // on: a child's layout effect runs before this parent one, so setting it
+  // true here again overwrote the intro's own "already played -> false" on
+  // every same-session revisit and paused the countdown auto-enter forever.
   useLayoutEffect(() => {
-    setV8IntroBlocking(Boolean(v8IntroSiteId));
+    if (!v8IntroSiteId) setV8IntroBlocking(false);
   }, [v8IntroSiteId]);
 
   useLayoutEffect(() => {
