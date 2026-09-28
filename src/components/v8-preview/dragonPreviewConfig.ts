@@ -3179,6 +3179,10 @@ X ${Math.round(controls.activeSunDotsX)}, Y ${Math.round(controls.activeSunDotsY
 OPEN SUN DOTS (紅日場次指示)
 X ${Math.round(controls.openSunDotsX)}, Y ${Math.round(controls.openSunDotsY)}, Scale ${controls.openSunDotsScale.toFixed(2)}, Rotation ${Math.round(controls.openSunDotsRotation)}, Opacity ${Math.round(controls.openSunDotsOpacity)}, Z ${Math.round(controls.openSunDotsZIndex)}
 
+OPEN COUNTDOWN (自動進入倒數)
+Seconds: ${Math.round(controls.countdownSeconds)}
+Auto Enter: ${controls.countdownAutoEnter ? "ON" : "OFF"}
+
 ACTIVE SWITCH ARROW (切換聚會 <>)
 Show: ${controls.activeSwitchArrowShow ? "ON" : "OFF"}
 Prev: X ${Math.round(controls.activeSwitchArrowPrevX)}, Y ${Math.round(controls.activeSwitchArrowPrevY)}, Scale ${controls.activeSwitchArrowPrevScale.toFixed(2)}, Rotation ${Math.round(controls.activeSwitchArrowPrevRotation)}, Opacity ${Math.round(controls.activeSwitchArrowPrevOpacity)}, Z ${Math.round(controls.activeSwitchArrowPrevZIndex)}
