@@ -6,6 +6,7 @@ import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption, type V8P
 import { type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
+import { V8SunSwipeHint } from "@/components/v8-hero/V8SunSwipeHint";
 import {
   activeCtaAssemblyReplacedTargets,
   activeCtaAssemblyTarget,
@@ -1536,6 +1537,9 @@ export function V8ActiveSunContent({
           hasPrevious={hasPrevious ?? true}
           hasNext={hasNext ?? true}
         />
+      ) : null}
+      {onPreviousEvent && onNextEvent ? (
+        <V8SunSwipeHint hasPrevious={hasPrevious ?? true} hasNext={hasNext ?? true} />
       ) : null}
       {/* Clipped to the sun's circle only while the dial turns, so the
           tuned text positions are untouched the rest of the time. */}
