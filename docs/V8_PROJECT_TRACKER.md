@@ -38,21 +38,34 @@ Documentation commit 不等於 runtime baseline 變更。
 ## V8-ASSET-READY
 
 Status:
-CODE PASS / VERIFY
+IN PROGRESS — REAL DEVICE FAIL / ROLLED BACK
 
-Commit：
+Attempted implementation：
 
 6367bbb
 fix(v8): gate reveal on required image readiness
 
-Verification：
+（tsc / build / CI / Playwright iPhone-size + desktop 全部 PASS，
+但 real device FAIL。）
 
-- tsc PASS
-- build PASS
-- CI/deploy PASS
-- Playwright iPhone-size/desktop tests PASS
-- real iPhone Safari verification still pending
-- do NOT mark CLOSED until user confirms real-device PASS
+Real-device result：
+
+FAIL — real iPhone Safari became stuck behind V8LoadingCover.
+The 12-second "載入較久，重新整理" state appeared and reload did not recover.
+
+Rollback：
+
+920389e
+Revert "fix(v8): gate reveal on required image readiness"
+
+Runtime 回到 pre-P-021（src 與 2be4c61 相同）。
+
+Reason for rollback：
+
+Production usability takes priority.
+Exact Safari failing/stalled required asset is not yet identified.
+
+Do NOT mark CLOSED.
 
 Issue:
 
@@ -110,11 +123,10 @@ Required：
 - loading cover / transition 等真正 asset ready
 - no progressive pop-in
 
-Next：
+Next action：
 
-Asset Readiness patch 已實作（6367bbb）。
-
-待 iPhone real-device test；user 確認 PASS 後才可 CLOSED。
+Read-only diagnostic audit first.
+Identify the exact asset(s) and state transition causing Safari readiness to stall before implementing P-021 v2.
 
 ---
 
