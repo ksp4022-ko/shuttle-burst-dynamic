@@ -38,7 +38,21 @@ Documentation commit 不等於 runtime baseline 變更。
 ## V8-ASSET-READY
 
 Status:
-IN PROGRESS
+CODE PASS / VERIFY
+
+Commit：
+
+6367bbb
+fix(v8): gate reveal on required image readiness
+
+Verification：
+
+- tsc PASS
+- build PASS
+- CI/deploy PASS
+- Playwright iPhone-size/desktop tests PASS
+- real iPhone Safari verification still pending
+- do NOT mark CLOSED until user confirms real-device PASS
 
 Issue:
 
@@ -98,9 +112,9 @@ Required：
 
 Next：
 
-執行已核准 Asset Readiness patch。
+Asset Readiness patch 已實作（6367bbb）。
 
-完成後必須 iPhone real-device test。
+待 iPhone real-device test；user 確認 PASS 後才可 CLOSED。
 
 ---
 
