@@ -19,7 +19,7 @@ Test:
 ## Current Baseline
 
 Current main:
-- `dac033c` — `fix(v8test): isolate tuning storage`
+- `5ba6b66` — `fix(v8test): stop open-only countdown once active owns the screen`
   (docs-only commits may follow)
 
 Stable production runtime:
@@ -36,6 +36,9 @@ V8TEST infrastructure:
   - startup timeout + retry fix (`390bae2`)
 
 ### REAL DEVICE PASS
+- V8TEST-STORAGE-ISOLATION — `dac033c` (CLOSED)
+  - `/v8test` tuning / Auto-Fill / Identity Envelope use `v8test:<key>`,
+    seeded once from production; production keys unchanged
 - V8TEST baseline
   - `/v8test/kangxuan/` (user-confirmed real iPhone Safari)
   - cold load PASS
@@ -47,21 +50,13 @@ V8TEST infrastructure:
   - V8 TEST badge confirmed
 
 ### CODE PASS / VERIFY
-- V8TEST-STORAGE-ISOLATION — `dac033c` `fix(v8test): isolate tuning storage`
-  - `/v8test` uses `v8test:<key>` for tuning (+ migrations), Auto-Fill,
-    Identity Envelope; production keys unchanged
-  - first V8TEST read seeds from production, then independent;
-    clearing the V8TEST key re-seeds from current production
-  - tsc / build / CI (#319) PASS; module + browser isolation tests PASS
-  - real iPhone verification pending
-
-### ROOT CAUSE CONFIRMED / WAITING
-- V8-AUTO-ENTER-COUNTDOWN
-  - V8 page ownership uses `v8MeetupConfirmed`
-  - `flow.phase` may remain `meetup-preview` after ACTIVE mounts
-  - OPEN-only countdown can restart in ACTIVE
-  - fix only in V8TEST first
-  - do not change `flow.phase` architecture unnecessarily
+- V8-AUTO-ENTER-COUNTDOWN — `5ba6b66` (V8TEST only)
+  - OPEN-only effects (countdown / auto-enter, pendingSwitch auto-fill)
+    now require `preview && !v8MeetupConfirmed` on `/v8test`
+  - auto-enter fires exactly once; no restart while ACTIVE (32s observed)
+  - `/v8` keeps the old `preview` gate (still restarts every N s) until Cfm
+  - flow.phase unchanged
+  - tsc / build / CI (#321) PASS; real iPhone verification pending
 
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
@@ -88,10 +83,9 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-1. V8TEST-STORAGE-ISOLATION (real iPhone verify)
-2. V8-AUTO-ENTER-COUNTDOWN
-3. P-021 v2
-4. Other pending optimization items
+1. V8-AUTO-ENTER-COUNTDOWN (real iPhone verify, then Cfm → promote to `/v8`)
+2. P-021 v2
+3. Other pending optimization items
 
 ## Do Not Reopen Without Evidence
 

@@ -80,10 +80,45 @@ Verification：
 
 ---
 
+## V8-AUTO-ENTER-COUNTDOWN
+
+Status:
+CODE PASS / VERIFY（V8TEST only）
+
+Commit：
+
+5ba6b66
+fix(v8test): stop open-only countdown once active owns the screen
+
+Root cause（confirmed）：
+
+- V8 進 ACTIVE 只設 v8MeetupConfirmed=true，flow.phase 刻意維持 "meetup-preview"。
+- countdown effect 與 pendingSwitch auto-fill 只檢查 preview，
+  所以 ACTIVE 裡倒數會重啟，每 N 秒再呼叫 enterPreviewSelection。
+  （本機 /v8：32s 內 auto-enter 觸發 4 次。）
+
+Fix：
+
+- /v8test：OPEN-only effects 改看 openOnlyEffectsActive = preview && !v8MeetupConfirmed。
+- /v8：維持原本 preview gate，待 Cfm 後 promote。
+- 不改 flow.phase、Quick Pick、storage、P-021。
+
+Verification：
+
+- tsc / build / CI（run #321）PASS
+- Local Chromium /v8test：OPEN 倒數條正常遞減 → auto-enter 1 次 → ACTIVE 32s 無重啟、無重複 enter、無 OPEN UI；
+  CTA（含 enter 動畫）、Quick Pick current / different、ACTIVE switch、legacy UI 0 PASS
+- /v8 smoke：行為不變（仍保留原本重啟現象，符合 LOCKED）
+- real iPhone Safari：pending
+
+Do NOT mark CLOSED until user confirms real-device PASS.
+
+---
+
 ## V8TEST-STORAGE-ISOLATION
 
 Status:
-CODE PASS / VERIFY
+CLOSED（user 確認 real iPhone PASS）
 
 Commit：
 
@@ -99,9 +134,7 @@ fix(v8test): isolate tuning storage
 - 驗證：tsc / build / CI（run #319）PASS；
   module 隔離測試 16/16、瀏覽器隔離測試 13/13（含真的調整面板編輯）；
   /v8 與 /v8test smoke（CTA、Quick Pick、ACTIVE switch、legacy UI）PASS。
-- real iPhone Safari：pending。
-
-Do NOT mark CLOSED until user confirms real-device PASS.
+- real iPhone Safari：PASS（user 確認）。
 
 ---
 
@@ -586,7 +619,7 @@ Auto-Fill / experimental control values 已納入 copy output。
 # CURRENT EXECUTION ORDER
 
 （精簡現況與目前順序以 docs/V8_CURRENT_STATE.md 為準：
-V8TEST-STORAGE-ISOLATION → V8-AUTO-ENTER-COUNTDOWN → P-021 v2 → 其他）
+V8-AUTO-ENTER-COUNTDOWN verify → P-021 v2 → 其他）
 
 1. V8-ASSET-READY
 2. iPhone Quick Pick final verify
