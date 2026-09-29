@@ -4,9 +4,10 @@ import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-id
 import { useV8LineAuth, type V8LineAuthDiagnostic } from "@/hooks/use-v8-line-auth";
 import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption, type V8ProfileIdentityType } from "@/lib/v8-line-auth";
 import { type V8LineIdentity } from "@/lib/v8-line-auth-storage";
-import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
+import { configuredSiteId, type AlphaEvent, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
 import { V8SunSwipeHint } from "@/components/v8-hero/V8SunSwipeHint";
+import { V8MeetupPicker, V8MeetupPickerStyles } from "@/components/v8-hero/V8MeetupPicker";
 import {
   activeCtaAssemblyReplacedTargets,
   activeCtaAssemblyTarget,
@@ -395,6 +396,15 @@ export function V8ActivePage({
     setListCollapseSignal((signal) => signal + 1);
     flow.setPendingSwitchEventId(nextEvent.id);
   };
+  const switchToMeetupById = (eventId: string) => {
+    if (events.length <= 1 || pendingAction || actionLockRef.current) return;
+    if (!events.some((event) => event.id === eventId)) return;
+    if (eventId === selectedEventId && !flow.pendingSwitchEventId) return;
+    lastDialAtRef.current = Date.now();
+    setDisplayEventId(eventId);
+    setListCollapseSignal((signal) => signal + 1);
+    flow.setPendingSwitchEventId(eventId);
+  };
   const canSwitchMeetup = events.length > 1;
   const displayEvent = events.find((event) => event.id === displayEventId) || selectedEvent;
   const displayIndex = Math.max(0, events.findIndex((event) => event.id === displayEvent.id));
@@ -590,6 +600,10 @@ export function V8ActivePage({
             eventCount={events.length}
             hasPrevious={displayIndex > 0}
             hasNext={displayIndex < events.length - 1}
+            events={events}
+            currentEventId={selectedEventId}
+            pendingEventId={flow.pendingSwitchEventId}
+            onSelectEvent={switchToMeetupById}
             dotsControls={sunDotsControls}
             bump={dialBump}
             autoFill={{
@@ -1242,27 +1256,6 @@ function V8DialValue({ value, order }: { value: string; order: number }) {
   return <span className={phase === "idle" ? "v8-dial-value" : `v8-dial-value is-${phase}`}>{shown}</span>;
 }
 
-// Meetup indicator under the sun, as text "3 / 13" (a row of 13 dots was
-// too wide for the sun).
-function V8ActiveSunDots({ count, index, controls }: { count: number; index: number; controls: V8SunDotsControls }) {
-  if (count <= 1) return null;
-  return (
-    <div
-      className="v8-sun-dots"
-      aria-label={`第 ${index + 1} 場，共 ${count} 場`}
-      style={{
-        left: `${controls.x}%`,
-        top: `${controls.y}%`,
-        opacity: controls.opacity / 100,
-        zIndex: controls.zIndex,
-        transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
-      }}
-    >
-      {index + 1} / {count}
-    </div>
-  );
-}
-
 // Per docs/V8_COMPONENT_CONTROL_BASELINE.md -- X/Y % of the sun's own box,
 // translate(-50%,-50%)-centered on that point, same convention as
 // V8SunMessage/V8SunInfoBadgeScattered's centered variant. Added
@@ -1415,6 +1408,10 @@ export function V8ActiveSunContent({
   eventKey,
   eventIndex,
   eventCount,
+  events,
+  currentEventId,
+  pendingEventId,
+  onSelectEvent,
   hasPrevious,
   hasNext,
   dotsControls,
@@ -1457,6 +1454,10 @@ export function V8ActiveSunContent({
   eventKey?: string;
   eventIndex?: number;
   eventCount?: number;
+  events?: AlphaEvent[];
+  currentEventId?: string;
+  pendingEventId?: string;
+  onSelectEvent?: (eventId: string) => void;
   hasPrevious?: boolean;
   hasNext?: boolean;
   dotsControls?: V8SunDotsControls;
@@ -1583,8 +1584,16 @@ export function V8ActiveSunContent({
       {typeof capacity === "number" ? (
         <V8CapacityBadge src={assets.sunBadgeCapacity} label={`${capacity}人`} controls={capacityBadgeControls} />
       ) : null}
-      {dotsControls && typeof eventCount === "number" && typeof eventIndex === "number" ? (
-        <V8ActiveSunDots count={eventCount} index={eventIndex} controls={dotsControls} />
+      {dotsControls && events && currentEventId && onSelectEvent && typeof eventCount === "number" && typeof eventIndex === "number" ? (
+        <V8MeetupPicker
+          events={events}
+          index={eventIndex}
+          currentEventId={currentEventId}
+          pendingEventId={pendingEventId}
+          controls={dotsControls}
+          className="v8-sun-dots"
+          onSelectEvent={onSelectEvent}
+        />
       ) : null}
     </>
   );
@@ -2969,15 +2978,14 @@ export function V8ActiveStyles() {
       }
 
       .v8-sun-dots {
-        position: absolute;
         pointer-events: none;
-        white-space: nowrap;
         font: 700 12px/1 var(--font-sans, system-ui, sans-serif);
         letter-spacing: 0.06em;
         color: #ffe9a3;
         text-shadow: 0 1px 2px rgba(80, 20, 5, 0.65);
       }
 
+${V8MeetupPickerStyles({ prefix: "v8" })}
 
       @media (prefers-reduced-motion: reduce) {
         .v8-sun-dial-ring {

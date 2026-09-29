@@ -990,6 +990,26 @@ export function Index() {
     ],
   );
 
+  const selectV8MeetupById = useCallback(
+    (eventId: string) => {
+      if (flow.events.length <= 1 || flow.pendingAction) return;
+      if (!flow.events.some((event) => event.id === eventId)) return;
+      const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+      if (eventId === targetId) return;
+      openDialAtRef.current = Date.now();
+      flow.setPendingSwitchEventId(eventId);
+      markPreviewInteraction();
+    },
+    [
+      flow.events,
+      flow.pendingAction,
+      flow.pendingSwitchEventId,
+      flow.selectedEventId,
+      flow.setPendingSwitchEventId,
+      markPreviewInteraction,
+    ],
+  );
+
   // Opening -> Active stays one state switch on one route. Where the View
   // Transitions API exists (iOS 18+), the switch runs inside
   // document.startViewTransition: step 1 (plaque press) starts on tap, the
@@ -1808,6 +1828,10 @@ export function Index() {
                   onNextEvent={() => selectAdjacentV8Meetup(1)}
                   eventIndex={Math.max(0, flow.events.findIndex((item) => item.id === previewPickedEvent?.id))}
                   eventCount={flow.events.length}
+                  events={flow.events}
+                  currentEventId={flow.selectedEventId}
+                  pendingEventId={flow.pendingSwitchEventId}
+                  onSelectEvent={selectV8MeetupById}
                   dotsControls={buildV8SunDotsControls(openTuningControls, "open")}
                   bump={openDialBump}
                 />

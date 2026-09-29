@@ -9,6 +9,7 @@ import {
   type SunAutoFillConfig,
 } from "@/components/v8-active/V8SunAutoFillExperiment";
 import { V8SunSwipeHint } from "@/components/v8-hero/V8SunSwipeHint";
+import { V8MeetupPicker, V8MeetupPickerStyles } from "@/components/v8-hero/V8MeetupPicker";
 
 // Standalone copy of the Active page's red-sun content module (see
 // V8ActiveSunContent and its helpers in V8ActivePage.tsx), duplicated here
@@ -300,25 +301,6 @@ function useOpeningSunDial(text: OpeningDialText, order: string) {
   return dial;
 }
 
-function V8OpeningSunDots({ count, index, controls }: { count: number; index: number; controls: V8SunDotsControls }) {
-  if (count <= 1) return null;
-  return (
-    <div
-      className="v8-opening-sun-dots"
-      aria-label={`第 ${index + 1} 場，共 ${count} 場`}
-      style={{
-        left: `${controls.x}%`,
-        top: `${controls.y}%`,
-        opacity: controls.opacity / 100,
-        zIndex: controls.zIndex,
-        transform: `translate(-50%, -50%) scale(${controls.scale}) rotate(${controls.rotation}deg)`,
-      }}
-    >
-      {index + 1} / {count}
-    </div>
-  );
-}
-
 function V8OpeningSunSwitcher({
   assets,
   controls,
@@ -415,6 +397,10 @@ export function V8OpeningSunContent({
   canSwitchMeetup = true,
   eventIndex,
   eventCount,
+  events,
+  currentEventId,
+  pendingEventId,
+  onSelectEvent,
   dotsControls,
   bump,
 }: {
@@ -427,6 +413,10 @@ export function V8OpeningSunContent({
   // first/last arrow state.
   eventIndex?: number;
   eventCount?: number;
+  events?: AlphaEvent[];
+  currentEventId?: string;
+  pendingEventId?: string;
+  onSelectEvent?: (eventId: string) => void;
   dotsControls?: V8SunDotsControls;
   // Bumped when a switch hits the first/last meetup (spring-back turn).
   bump?: { n: number; dir: 1 | -1 } | undefined;
@@ -528,8 +518,16 @@ export function V8OpeningSunContent({
         <V8SunInfoBadgeScattered src={assets.sunBadgeCourtCount} label={courtTimeLabel} config={COURT_COUNT_BADGE} textInset={BADGE_TEXT_INSETS.courtCount} />
       ) : null}
       {SHOW_INFO_BADGES && typeof event.maxPeople === "number" ? <V8CapacityBadge src={assets.sunBadgeCapacity} label={`${event.maxPeople}人`} /> : null}
-      {dotsControls && typeof eventCount === "number" && typeof eventIndex === "number" ? (
-        <V8OpeningSunDots count={eventCount} index={eventIndex} controls={dotsControls} />
+      {dotsControls && events && currentEventId && onSelectEvent && typeof eventCount === "number" && typeof eventIndex === "number" ? (
+        <V8MeetupPicker
+          events={events}
+          index={eventIndex}
+          currentEventId={currentEventId}
+          pendingEventId={pendingEventId}
+          controls={dotsControls}
+          className="v8-opening-sun-dots"
+          onSelectEvent={onSelectEvent}
+        />
       ) : null}
     </>
   );
@@ -632,14 +630,14 @@ export function V8OpeningSunStyles() {
       }
 
       .v8-opening-sun-dots {
-        position: absolute;
         pointer-events: none;
-        white-space: nowrap;
         font: 700 12px/1 var(--font-sans, system-ui, sans-serif);
         letter-spacing: 0.06em;
         color: #ffe9a3;
         text-shadow: 0 1px 2px rgba(80, 20, 5, 0.65);
       }
+
+${V8MeetupPickerStyles({ prefix: "v8-opening" })}
 
 
       @media (prefers-reduced-motion: reduce) {
