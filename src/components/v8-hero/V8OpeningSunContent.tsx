@@ -8,7 +8,6 @@ import {
   V8SunAutoFillLayer,
   type SunAutoFillConfig,
 } from "@/components/v8-active/V8SunAutoFillExperiment";
-import { V8SunSwipeHint } from "@/components/v8-hero/V8SunSwipeHint";
 import { V8MeetupPicker, V8MeetupPickerStyles } from "@/components/v8-hero/V8MeetupPicker";
 
 // Standalone copy of the Active page's red-sun content module (see
@@ -491,7 +490,6 @@ export function V8OpeningSunContent({
           hasNext={hasNext}
         />
       ) : null}
-      {canSwitchMeetup ? <V8SunSwipeHint hasPrevious={hasPrevious} hasNext={hasNext} /> : null}
       {/* Clipped to the sun's circle only while the dial turns. */}
       <div
         key={`clip-${bump?.n ?? 0}`}

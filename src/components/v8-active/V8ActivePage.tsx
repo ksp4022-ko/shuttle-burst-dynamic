@@ -6,7 +6,6 @@ import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption, type V8P
 import { type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { configuredSiteId, type AlphaEvent, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
-import { V8SunSwipeHint } from "@/components/v8-hero/V8SunSwipeHint";
 import { V8MeetupPicker, V8MeetupPickerStyles } from "@/components/v8-hero/V8MeetupPicker";
 import {
   activeCtaAssemblyReplacedTargets,
@@ -178,13 +177,19 @@ export function V8ActivePage({
     lineAuthToken,
     eventId: selectedEventId,
   });
+  // 本季出席 belongs to the claimed season member, not the current event row.
+  // A fixed member can be waiting for the current event and still needs the
+  // season-progress view; the Worker remains the source of truth for counts.
+  const isSeasonMemberForAttendance = Boolean(
+    effectiveLineIdentity?.identityType === "fixed" && effectiveLineIdentity.claimedMemberId,
+  );
   // 本季出席: fail-soft, never gates the page (see use-v8-season-progress).
   const { progress: seasonProgress, refresh: refreshSeasonProgress } = useV8SeasonProgress({
     token: lineAuthToken,
     eventId: selectedEvent?.id,
     seasonId: selectedEvent?.seasonId,
     groupId: selectedEvent?.groupId,
-    isFixed: identity?.signupType === "fixed",
+    isFixed: isSeasonMemberForAttendance,
   });
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
@@ -643,6 +648,7 @@ export function V8ActivePage({
                 progress: seasonProgress,
                 controls: seasonAttendanceControls,
                 showHelper: tuningControls.activeSeasonAttendanceShowHelper,
+                isSeasonMember: isSeasonMemberForAttendance,
               }}
               identityEnvelope={identityEnvelope.config}
               onStatusFeedback={handleStatusFeedback}
@@ -1545,9 +1551,6 @@ export function V8ActiveSunContent({
           hasNext={hasNext ?? true}
         />
       ) : null}
-      {onPreviousEvent && onNextEvent ? (
-        <V8SunSwipeHint hasPrevious={hasPrevious ?? true} hasNext={hasNext ?? true} />
-      ) : null}
       {/* Clipped to the sun's circle only while the dial turns, so the
           tuned text positions are untouched the rest of the time. */}
       <div
@@ -1902,6 +1905,7 @@ export function V8IdentityScrollContent({
         progress: Extract<V8SeasonProgress, { eligible: true }> | null;
         controls: V8ActiveIdentityTextControls;
         showHelper: boolean;
+        isSeasonMember: boolean;
       }
     | undefined;
   identityEnvelope?: IdentityEnvelopeConfig | undefined;
@@ -1993,9 +1997,9 @@ export function V8IdentityScrollContent({
       <div className="v8-scroll-identity-tag" style={identityVisualStyle(controls.tag)} aria-label={roleLabel(identity)}>
         <img src={identityTagAsset(identity, assets)} alt="" aria-hidden="true" draggable={false} />
       </div>
-      {seasonAttendance && ((seasonAttendance.progress && identity.signupType === "fixed") || seasonAttendance.showHelper) ? (
+      {seasonAttendance && ((seasonAttendance.progress && seasonAttendance.isSeasonMember) || seasonAttendance.showHelper) ? (
         <V8SeasonAttendance
-          progress={identity.signupType === "fixed" ? seasonAttendance.progress : null}
+          progress={seasonAttendance.isSeasonMember ? seasonAttendance.progress : null}
           controls={seasonAttendance.controls}
           showHelper={seasonAttendance.showHelper}
         />

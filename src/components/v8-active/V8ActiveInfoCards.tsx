@@ -126,6 +126,7 @@ function InfoCardStatusLayer({
   textControls,
   countInset,
   zIndex = 20,
+  contentTransform,
 }: {
   src: string;
   controls: V8ActiveInfoCardControls;
@@ -134,6 +135,7 @@ function InfoCardStatusLayer({
   textControls: V8ActiveEmaTextControls;
   countInset: (typeof COUNT_INSETS)[keyof typeof COUNT_INSETS];
   zIndex?: number;
+  contentTransform?: string;
 }) {
   if (!controls.show) return null;
   return (
@@ -150,15 +152,24 @@ function InfoCardStatusLayer({
         } as CSSProperties
       }
     >
-      <img src={src} alt="" aria-hidden="true" draggable={false} style={{ display: "block", width: "100%", height: "auto" }} />
-      {/* Nested inside the same wrapper as the <img>, which carries the
-          rotate() transform above -- so the count text rotates together
-          with the plaque instead of staying upright, per the user's
-          request. */}
-      <span
+      <div
         style={
           {
-            position: "absolute",
+            position: "relative",
+            width: "100%",
+            transform: contentTransform,
+          } as CSSProperties
+        }
+      >
+        <img src={src} alt="" aria-hidden="true" draggable={false} style={{ display: "block", width: "100%", height: "auto" }} />
+        {/* Nested inside the same wrapper as the <img>, which carries the
+            rotate() transform above -- so the count text rotates together
+            with the plaque instead of staying upright, per the user's
+            request. */}
+        <span
+          style={
+            {
+              position: "absolute",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -172,10 +183,11 @@ function InfoCardStatusLayer({
             textAlign: textControls.textAlign,
             fontWeight: textControls.fontWeight,
           } as CSSProperties
-        }
-      >
-        <V8FlipCount value={count} />
-      </span>
+          }
+        >
+          <V8FlipCount value={count} />
+        </span>
+      </div>
     </div>
   );
 }
@@ -186,6 +198,11 @@ function InfoCardStatusLayer({
 // first render and unchanged values never animate.
 const FLIP_OUT_MS = 160;
 const FLIP_IN_MS = 420;
+// The shared ACTIVE INFO ALT SLOT intentionally keeps one outer X/Y for both
+// 尚缺 and 候補. 候補's source art has a different transparent visual center;
+// this inner-only compensation preserves the old tuned visual center without
+// restoring separate outer placement controls.
+const WAITLIST_ALT_SLOT_CONTENT_TRANSFORM = "translateX(6.67%)";
 
 function V8FlipCount({ value }: { value: number }) {
   const [shown, setShown] = useState(value);
@@ -317,6 +334,7 @@ export function V8ActiveInfoCards({
         count={counts.waiting}
         textControls={textControls.waitlist}
         zIndex={37}
+        contentTransform={WAITLIST_ALT_SLOT_CONTENT_TRANSFORM}
       />
     </>
   );
