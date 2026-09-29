@@ -83,7 +83,17 @@ Verification：
 ## V8-AUTO-ENTER-COUNTDOWN
 
 Status:
-REAL DEVICE PASS（V8TEST）— 等 Cfm 後 promote 到 /v8
+PRODUCTION DEPLOYED / VERIFY
+
+Promotion（Cfm）：
+
+4c91ddd
+fix(v8): stop open-only countdown once active owns the screen
+
+- 拿掉 v8test 例外：所有 route 都用 preview && !v8MeetupConfirmed。
+- CI/deploy PASS（run #324）。
+- Local /v8：auto-enter 1 次、ACTIVE 32s 無重啟；CTA（含動畫）、Quick Pick current / different、ACTIVE switch、legacy 0、無錯誤。/v8test smoke 不變。
+- production real iPhone Safari：pending → PASS 後才 CLOSED。
 
 Commit：
 

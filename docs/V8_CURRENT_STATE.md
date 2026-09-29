@@ -19,11 +19,11 @@ Test:
 ## Current Baseline
 
 Current main:
-- `5ba6b66` — `fix(v8test): stop open-only countdown once active owns the screen`
+- `4c91ddd` — `fix(v8): stop open-only countdown once active owns the screen`
   (docs-only commits may follow)
 
 Stable production runtime:
-- `390bae2` — `fix(v8): recover open startup flow`
+- `4c91ddd` — countdown fix promoted (startup fix `390bae2` included)
 
 V8TEST infrastructure:
 - `ca1bc53` — `feat(v8test): add isolated v8 test routes`
@@ -49,12 +49,12 @@ V8TEST infrastructure:
   - no legacy UI
   - V8 TEST badge confirmed
 
-### REAL DEVICE PASS (V8TEST) — awaiting Cfm to promote to `/v8`
-- V8-AUTO-ENTER-COUNTDOWN — `5ba6b66` (V8TEST only)
+### PRODUCTION DEPLOYED / VERIFY
+- V8-AUTO-ENTER-COUNTDOWN — `5ba6b66` (V8TEST) → `4c91ddd` (promoted to `/v8` on Cfm, CI #324)
   - OPEN-only effects (countdown / auto-enter, pendingSwitch auto-fill)
     now require `preview && !v8MeetupConfirmed` on `/v8test`
   - auto-enter fires exactly once; no restart while ACTIVE (32s observed)
-  - `/v8` keeps the old `preview` gate (still restarts every N s) until Cfm
+  - now applies to `/v8` too; production real-iPhone verification pending
   - flow.phase unchanged
   - tsc / build / CI (#321) PASS; real iPhone Safari PASS on `/v8test` (user)
 
@@ -83,7 +83,7 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-1. V8-AUTO-ENTER-COUNTDOWN: waiting for Cfm → promote to `/v8`
+1. V8-AUTO-ENTER-COUNTDOWN: production `/v8` real-iPhone verify
 2. P-021 v2
 3. Other pending optimization items
 
