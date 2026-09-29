@@ -33,8 +33,8 @@ function buildV8OpeningSunAssets(baseUrl: string) {
     sunBadgeTempFee: `${activeBase}/sun-info-badge-tempfee-v2.webp`,
     sunBadgeCourtCount: `${activeBase}/sun-info-badge-courttime-v1.webp`,
     sunBadgeCapacity: `${activeBase}/sun-info-badge-capacity-v1.webp`,
-    sunSwitchArrowPrev: `${statusAssetBase}/v8-switch-meetup-prev-display.webp`,
-    sunSwitchArrowNext: `${statusAssetBase}/v8-switch-meetup-next-display.webp`,
+    sunSwitchArrowPrev: `${statusAssetBase}/v8-meetup-switch-prev-v2.webp`,
+    sunSwitchArrowNext: `${statusAssetBase}/v8-meetup-switch-next-v2.webp`,
     sunTitleKangxuan: `${statusAssetBase}/v8-kangxuan-calligraphy-ivory-square-v2-640.webp`,
   };
 }
@@ -73,8 +73,8 @@ const BALL_TYPE_BADGE = { x: -5, y: 91, scale: 2.04 * SUN_SCALE_RATIO, rotation:
 const TEMP_FEE_BADGE = { x: 102, y: 60, scale: 1.72 * SUN_SCALE_RATIO, rotation: -1, fontSize: 11, textOffsetX: -12, textOffsetY: 2 };
 const COURT_COUNT_BADGE = { x: -49, y: 55, scale: 1.96 * SUN_SCALE_RATIO, rotation: 0, fontSize: 9, textOffsetX: -6, textOffsetY: 2 };
 const CAPACITY_BADGE = { x: 95, y: 13, scale: 2.8 * SUN_SCALE_RATIO, rotation: 0, opacity: 100, zIndex: 2, fontSize: 6, textOffsetX: -10, textOffsetY: -2 };
-const SWITCH_ARROW_PREV = { x: 0, y: 50, scale: 1.25, rotation: 0, opacity: 100, zIndex: 5 };
-const SWITCH_ARROW_NEXT = { x: 100, y: 50, scale: 1.25, rotation: 0, opacity: 100, zIndex: 5 };
+const SWITCH_ARROW_PREV = { x: 5, y: 50, scale: 0.55, rotation: 0, opacity: 100, zIndex: 8 };
+const SWITCH_ARROW_NEXT = { x: 95, y: 50, scale: 0.55, rotation: 0, opacity: 100, zIndex: 8 };
 
 // 2026-09-11: hidden for now per the user's request ("先隱藏，我看看效果") --
 // the four cloud badges (球種/費用/場地/上限) render disproportionately large
@@ -384,17 +384,13 @@ function V8OpeningSunSwitcher({
       />
       {controls.show ? (
         <>
-          <button type="button" className={hasPrevious ? "v8-opening-sun-switch-arrow" : "v8-opening-sun-switch-arrow is-end"} style={switchArrowStyle(controls.prev)} aria-disabled={!hasPrevious} onClick={onPreviousEvent} aria-label="上一場聚會">
+          <button type="button" className={hasPrevious ? "v8-opening-sun-switch-arrow" : "v8-opening-sun-switch-arrow is-end"} style={switchArrowStyle(controls.prev)} aria-disabled={!hasPrevious} disabled={!hasPrevious} onClick={onPreviousEvent} aria-label="上一場聚會">
             <span className="v8-opening-switch-arrow-visual is-prev">
-              <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-main" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
             </span>
           </button>
-          <button type="button" className={hasNext ? "v8-opening-sun-switch-arrow" : "v8-opening-sun-switch-arrow is-end"} style={switchArrowStyle(controls.next)} aria-disabled={!hasNext} onClick={onNextEvent} aria-label="下一場聚會">
+          <button type="button" className={hasNext ? "v8-opening-sun-switch-arrow" : "v8-opening-sun-switch-arrow is-end"} style={switchArrowStyle(controls.next)} aria-disabled={!hasNext} disabled={!hasNext} onClick={onNextEvent} aria-label="下一場聚會">
             <span className="v8-opening-switch-arrow-visual is-next">
-              <img className="v8-opening-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-opening-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-opening-switch-arrow-main" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
             </span>
           </button>
@@ -618,7 +614,7 @@ export function V8OpeningSunStyles() {
       }
 
       .v8-opening-sun-switch-arrow.is-end .v8-opening-switch-arrow-visual {
-        opacity: 0.3;
+        opacity: 0;
       }
 
       /* End of the meetup list: a small turn that springs back. */
@@ -688,7 +684,10 @@ export function V8OpeningSunStyles() {
       }
 
       .v8-opening-sun-switch-arrow {
-        width: 34px;
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+        min-height: 44px;
         border: none;
         background: none;
         padding: 0;
@@ -712,7 +711,7 @@ export function V8OpeningSunStyles() {
       .v8-opening-switch-arrow-main {
         position: relative;
         z-index: 3;
-        animation: v8-opening-switch-arrow-main-echo 5000ms ease-out infinite;
+        filter: drop-shadow(0 0 4px rgba(255, 219, 128, 0.42));
       }
 
       .v8-opening-switch-arrow-visual.is-prev .v8-opening-switch-arrow-main {

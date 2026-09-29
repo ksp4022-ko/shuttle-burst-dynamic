@@ -1348,12 +1348,11 @@ function V8SunMeetupSwitcher({
             className={hasPrevious ? "v8-sun-switch-arrow is-prev" : "v8-sun-switch-arrow is-prev is-end"}
             style={switchArrowStyle(controls.prev)}
             aria-disabled={!hasPrevious}
+            disabled={!hasPrevious}
             onClick={onPreviousEvent}
             aria-label="上一場聚會"
           >
             <span className="v8-switch-arrow-visual">
-              <img className="v8-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-switch-arrow-main" src={assets.sunSwitchArrowPrev} alt="" aria-hidden="true" draggable={false} />
             </span>
           </button>
@@ -1362,12 +1361,11 @@ function V8SunMeetupSwitcher({
             className={hasNext ? "v8-sun-switch-arrow is-next" : "v8-sun-switch-arrow is-next is-end"}
             style={switchArrowStyle(controls.next)}
             aria-disabled={!hasNext}
+            disabled={!hasNext}
             onClick={onNextEvent}
             aria-label="下一場聚會"
           >
             <span className="v8-switch-arrow-visual">
-              <img className="v8-switch-arrow-echo is-echo-2" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
-              <img className="v8-switch-arrow-echo is-echo-1" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
               <img className="v8-switch-arrow-main" src={assets.sunSwitchArrowNext} alt="" aria-hidden="true" draggable={false} />
             </span>
           </button>
@@ -2464,7 +2462,10 @@ export function V8ActiveStyles() {
          replacing the earlier fixed -8%/108% CSS positions) -- this only
          sets the button's own reset + the image's base width. */
       .v8-sun-switch-arrow {
-        width: 34px;
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+        min-height: 44px;
         border: none;
         background: none;
         padding: 0;
@@ -2488,7 +2489,7 @@ export function V8ActiveStyles() {
       .v8-switch-arrow-main {
         position: relative;
         z-index: 3;
-        animation: v8-switch-arrow-main-echo 5000ms ease-out infinite;
+        filter: drop-shadow(0 0 4px rgba(255, 219, 128, 0.42));
       }
 
       .v8-sun-switch-arrow.is-prev .v8-switch-arrow-main {
@@ -2945,7 +2946,7 @@ export function V8ActiveStyles() {
       }
 
       .v8-sun-switch-arrow.is-end .v8-switch-arrow-visual {
-        opacity: 0.3;
+        opacity: 0;
       }
       /* End of the meetup list: a small turn that springs back. */
       .v8-sun-dial-clip.is-bump {

@@ -226,8 +226,8 @@ export const v8ActiveRosterV2Files = {
 // Meetup switch arrows (‹/›) -- replaces the old CSS-drawn circle+glyph
 // (see V8SunMeetupSwitcher in V8ActivePage.tsx), per the user's request.
 export const v8ActiveSunSwitchArrowFiles = {
-  prev: "v8-switch-meetup-prev-display.webp",
-  next: "v8-switch-meetup-next-display.webp",
+  prev: "v8-meetup-switch-prev-v2.webp",
+  next: "v8-meetup-switch-next-v2.webp",
 } as const;
 
 export const v8ActiveSunTitleFiles = {

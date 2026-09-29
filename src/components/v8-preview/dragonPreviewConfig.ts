@@ -678,8 +678,8 @@ export type PreviewTargetId =
   | "OPEN TIGER RACKET"
   | "OPEN CTA"
   | "OPEN COUNTDOWN"
-  | "OPEN SWITCH ARROW PREV"
-  | "OPEN SWITCH ARROW NEXT"
+  | "OPEN SWITCH ICON PREV V2"
+  | "OPEN SWITCH ICON NEXT V2"
   | "ACTIVE TIGER SCROLL"
   | "ACTIVE IDENTITY STATUS MARK"
   | "ACTIVE IDENTITY NAME"
@@ -713,8 +713,8 @@ export type PreviewTargetId =
   | "ACTIVE CTA ASSEMBLY"
   | "ACTIVE SEASON ATTENDANCE"
   | "OPEN SUN DOTS"
-  | "ACTIVE SWITCH ARROW PREV"
-  | "ACTIVE SWITCH ARROW NEXT";
+  | "ACTIVE SWITCH ICON PREV V2"
+  | "ACTIVE SWITCH ICON NEXT V2";
 
 export type StepMode = "Fine" | "Normal" | "Large";
 export type HudOpacityMode = "normal" | "ghost";
@@ -744,8 +744,8 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "OPEN SUN TIME",
   "OPEN SUN NOTE",
   "OPEN COUNTDOWN",
-  "OPEN SWITCH ARROW PREV",
-  "OPEN SWITCH ARROW NEXT",
+  "OPEN SWITCH ICON PREV V2",
+  "OPEN SWITCH ICON NEXT V2",
 ];
 
 export const activeTargetOrder: PreviewTargetId[] = [
@@ -780,8 +780,8 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE ROSTER V2 A1",
   "ACTIVE ROSTER V2 B1",
   "ACTIVE ROSTER V2 B2",
-  "ACTIVE SWITCH ARROW PREV",
-  "ACTIVE SWITCH ARROW NEXT",
+  "ACTIVE SWITCH ICON PREV V2",
+  "ACTIVE SWITCH ICON NEXT V2",
 ];
 
 // Kept for anything still importing the old flat name -- identical to
@@ -1069,18 +1069,18 @@ export const previewDefaults: PreviewControls = {
   countdownSeconds: 9,
   countdownAutoEnter: true,
   openSwitchArrowShow: true,
-  openSwitchArrowPrevX: 0,
+  openSwitchArrowPrevX: 5,
   openSwitchArrowPrevY: 50,
-  openSwitchArrowPrevScale: 1.25,
+  openSwitchArrowPrevScale: 0.55,
   openSwitchArrowPrevRotation: 0,
   openSwitchArrowPrevOpacity: 100,
-  openSwitchArrowPrevZIndex: 5,
-  openSwitchArrowNextX: 100,
+  openSwitchArrowPrevZIndex: 8,
+  openSwitchArrowNextX: 95,
   openSwitchArrowNextY: 50,
-  openSwitchArrowNextScale: 1.25,
+  openSwitchArrowNextScale: 0.55,
   openSwitchArrowNextRotation: 0,
   openSwitchArrowNextOpacity: 100,
-  openSwitchArrowNextZIndex: 5,
+  openSwitchArrowNextZIndex: 8,
   activeInfoRopeShow: true,
   activeInfoRopeX: 30,
   activeInfoRopeY: 27,
@@ -1411,18 +1411,18 @@ export const previewDefaults: PreviewControls = {
   // red sun circle per the user's request, prev on the left / next on the
   // right, sharing one Show toggle.
   activeSwitchArrowShow: true,
-  activeSwitchArrowPrevX: 4,
-  activeSwitchArrowPrevY: 53,
-  activeSwitchArrowPrevScale: 1.22,
+  activeSwitchArrowPrevX: 5,
+  activeSwitchArrowPrevY: 50,
+  activeSwitchArrowPrevScale: 0.55,
   activeSwitchArrowPrevRotation: 0,
   activeSwitchArrowPrevOpacity: 100,
-  activeSwitchArrowPrevZIndex: 5,
-  activeSwitchArrowNextX: 96,
-  activeSwitchArrowNextY: 54,
-  activeSwitchArrowNextScale: 1.2,
+  activeSwitchArrowPrevZIndex: 8,
+  activeSwitchArrowNextX: 95,
+  activeSwitchArrowNextY: 50,
+  activeSwitchArrowNextScale: 0.55,
   activeSwitchArrowNextRotation: 0,
   activeSwitchArrowNextOpacity: 100,
-  activeSwitchArrowNextZIndex: 5,
+  activeSwitchArrowNextZIndex: 8,
 };
 
 export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[]> = {
@@ -1906,7 +1906,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRosterListsWaitingX",
     "activeRosterListsWaitingY",
   ],
-  "ACTIVE SWITCH ARROW PREV": [
+  "ACTIVE SWITCH ICON PREV V2": [
     "activeSwitchArrowShow",
     "activeSwitchArrowPrevX",
     "activeSwitchArrowPrevY",
@@ -1915,7 +1915,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSwitchArrowPrevOpacity",
     "activeSwitchArrowPrevZIndex",
   ],
-  "ACTIVE SWITCH ARROW NEXT": [
+  "ACTIVE SWITCH ICON NEXT V2": [
     "activeSwitchArrowShow",
     "activeSwitchArrowNextX",
     "activeSwitchArrowNextY",
@@ -1924,7 +1924,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSwitchArrowNextOpacity",
     "activeSwitchArrowNextZIndex",
   ],
-  "OPEN SWITCH ARROW PREV": [
+  "OPEN SWITCH ICON PREV V2": [
     "openSwitchArrowShow",
     "openSwitchArrowPrevX",
     "openSwitchArrowPrevY",
@@ -1933,7 +1933,7 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "openSwitchArrowPrevOpacity",
     "openSwitchArrowPrevZIndex",
   ],
-  "OPEN SWITCH ARROW NEXT": [
+  "OPEN SWITCH ICON NEXT V2": [
     "openSwitchArrowShow",
     "openSwitchArrowNextX",
     "openSwitchArrowNextY",
@@ -1997,10 +1997,10 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE ROSTER V2 A1": "activeRosterV2A1Show",
   "ACTIVE ROSTER V2 B1": "activeRosterV2B1Show",
   "ACTIVE ROSTER V2 B2": "activeRosterV2B2Show",
-  "ACTIVE SWITCH ARROW PREV": "activeSwitchArrowShow",
-  "ACTIVE SWITCH ARROW NEXT": "activeSwitchArrowShow",
-  "OPEN SWITCH ARROW PREV": "openSwitchArrowShow",
-  "OPEN SWITCH ARROW NEXT": "openSwitchArrowShow",
+  "ACTIVE SWITCH ICON PREV V2": "activeSwitchArrowShow",
+  "ACTIVE SWITCH ICON NEXT V2": "activeSwitchArrowShow",
+  "OPEN SWITCH ICON PREV V2": "openSwitchArrowShow",
+  "OPEN SWITCH ICON NEXT V2": "openSwitchArrowShow",
 };
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
