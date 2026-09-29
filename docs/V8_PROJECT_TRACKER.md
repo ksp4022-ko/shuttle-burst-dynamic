@@ -35,6 +35,73 @@ Documentation commit 不等於 runtime baseline 變更。
 
 # P0
 
+## V8-OPEN-STARTUP
+
+Status:
+CODE PASS / VERIFY
+
+Commit：
+
+390bae2
+fix(v8): recover open startup flow
+
+Issue：
+
+Real iPhone Safari：/v8/kangxuan/ cold load 停在 loading cover，
+OPEN 無法使用，reload 無效；發生在任何 Quick Pick 操作之前。
+P-021 已 rollback（920389e）後仍發生，所以不是 P-021 image gate 問題。
+
+Root cause（source + local reproduction）：
+
+- OPEN 要離開 phase "loading-particles"，
+  必須等 use-homepage-flow.ts 的 startup effect 依序完成：
+  listAlphaEvents → getAlphaRoster。
+- alphaFetch 沒有 timeout。
+  request 一直不回應時，phase 永遠停在 loading-particles，
+  不會進 load-error。
+- V8LoadingCover 在 20s 上限後放行，
+  底下只剩空白頁（只有 Replay Intro），無法操作；reload 同樣卡住。
+- request 若是「失敗」（500 / network error），約 1s 內就會顯示既有的
+  「database-alpha 讀取失敗 / 重新整理」畫面，不是這次症狀。
+- 這條 startup path（flow startup effect、database-alpha、
+  V8LoadingCover、V8IntroVideo）從 e9563cc 到 08f7066 都沒有改動。
+  meetup picker / quick-pick commits（3150080、79e6475、9a16515、a1f61a3）
+  都不在這條 path 上。
+  → 找不到 frontend 的 first bad commit。
+- 尚未確認：為什麼這台 iPhone 上的 startup request 不回應。
+  需要 real-device Web Inspector 的 Network 記錄。
+
+Fix：
+
+- events / 第一份 roster 的 startup request 各自 8s timeout，
+  換新 request 重試 1 次（間隔 0.8s）。
+- 仍失敗 → 進既有的 load-error 畫面（連線逾時，請重新整理。）。
+  worst case 約 17s，在 cover 的 20s 上限之內。
+- Quick Pick 維持啟用（audit 證實與 startup 無因果關係）。
+
+Verification：
+
+- tsc PASS
+- build PASS
+- CI/deploy PASS（run #312）
+- Local Chromium（iPhone-size）：
+  - healthy
+  - 第一次 events / roster 不回應 → 約 9s 後重試成功，進入 OPEN
+  - 一直不回應 → 約 17s 顯示 timeout 錯誤畫面
+  - 500 → 錯誤畫面
+  - /v8/、/v8/kangxuan/、/v8/rian/
+  - quick pick current / different
+  - 進入戰局 CTA
+  - ACTIVE switch
+  - legacy UI frames = 0
+  - desktop 430 置中
+- WebKit：環境沒有，未測。
+- real iPhone Safari：pending。
+
+Do NOT mark CLOSED until user confirms real-device PASS.
+
+---
+
 ## V8-ASSET-READY
 
 Status:
@@ -410,6 +477,7 @@ Auto-Fill / experimental control values 已納入 copy output。
 
 # CURRENT EXECUTION ORDER
 
+0. V8-OPEN-STARTUP real-device verify（先確認 OPEN 能穩定啟動）
 1. V8-ASSET-READY
 2. iPhone Quick Pick final verify
 3. Desktop + P-023 final verify
