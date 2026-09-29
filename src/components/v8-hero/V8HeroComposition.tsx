@@ -1,5 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
-import { useRequiredImages, type V8VisualState } from "./v8AssetReadiness";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import {
   bagBaseBaseline,
   bagStrapBaseline,
@@ -73,17 +72,7 @@ type V8HeroCompositionProps = {
   // cut off" screenshots). Callers pass the same URLs they hand to those
   // content props so this gate covers them too.
   extraPreloadSrcs?: string[] | undefined;
-  // Skips the 200ms artwork fade-in (a loading cover or the enter-morph
-  // already covers the reveal). Does NOT skip waiting for the images --
-  // the artwork only ever appears once every required image has loaded.
-  skipRevealFade?: boolean | undefined;
-  // Data the first screen depends on is still settling (e.g. the LINE
-  // identity that picks the stamp / CTA art): keep the artwork hidden even
-  // if the images that are known so far have loaded.
-  holdReveal?: boolean | undefined;
-  // "ready" = artwork visible and complete; "error" = a required image
-  // still failed after its retries (the artwork stays hidden).
-  onVisualStateChange?: ((state: V8VisualState) => void) | undefined;
+  revealImmediately?: boolean | undefined;
   // Caps only the outer stage width. Internal artwork still uses the same
   // responsive 390-wide coordinate system; callers opt in where the real
   // production route should stay phone-sized on desktop.
@@ -99,11 +88,76 @@ type V8HeroCompositionProps = {
   stageAspectRatio?: string | undefined;
 };
 
-// Image preloading / retry / readiness lives in v8AssetReadiness. History
-// that shaped it: decode() is avoided (it stalled on hidden tabs); a hung
-// request once blocked the reveal forever, which a 4s -> 9s -> 5s timeout
-// "fixed" by revealing a half-loaded canvas -- stalled or failed images are
-// now retried instead and are never treated as loaded.
+// Deliberately does NOT call image.decode() here -- decode() can stall
+// indefinitely on a backgrounded/hidden tab (a real browser quirk, not
+// speculative -- reproduced directly against these exact assets), which
+// hung this preload forever and permanently blocked assetsReady. onload
+// already guarantees the browser has the bitmap; decode() only avoided a
+// possible first-paint jank, not worth the hang risk now that
+// V8HeroComposition mounts more than once per page load (the Active page
+// reuses this same canvas) instead of just once.
+const preloadHeroImage = (src: string, priority: "high" | "auto" = "auto") =>
+  new Promise<void>((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    image.onload = finish;
+    image.onerror = finish;
+    image.decoding = "async";
+    // Feature-detected (Safari only picked this up in 17.2) -- on older
+    // browsers this is just a no-op property set, every image preloads the
+    // same as before.
+    if ("fetchPriority" in image) image.fetchPriority = priority;
+    image.src = src;
+  });
+
+// dragon/tiger body art are consistently the largest files in this set
+// (300-580KB pre-compression, still the biggest post-compression) and are
+// exactly what the user's own screenshots showed still blank after the
+// 9s gate had already opened -- every image fires its request in the same
+// tick regardless of order, so without a priority hint the browser has no
+// reason to favor these over a much smaller decor layer requested a
+// microtask earlier. Listing them first AND marking them high-priority
+// gives them first claim on the connection instead of splitting bandwidth
+// evenly across everything.
+const preloadHeroImages = (sources: string[], prioritySources: string[] = []) => {
+  const prioritySet = new Set(prioritySources);
+  const ordered = [...new Set(sources)].sort((a, b) => Number(prioritySet.has(b)) - Number(prioritySet.has(a)));
+  return Promise.all(ordered.map((src) => preloadHeroImage(src, prioritySet.has(src) ? "high" : "auto")));
+};
+
+// Safety net for the asset-preload gate below: if a single image's request
+// hangs at the network level (flaky/slow connection -- neither onload nor
+// onerror ever fires, so preloadHeroImages' Promise.all never settles),
+// assetsReady stayed false forever and the whole canvas stayed invisible
+// with no way to recover short of a reload. Racing against a timeout caps
+// how long a stuck load can block the reveal -- the images that DID load
+// still show immediately, and any that are genuinely still in flight just
+// keep loading in the background and pop in as their <img> tags resolve
+// instead of holding up every other layer.
+//
+// 2026-09-11: raised from 4000 -- confirmed via the user's own real-device
+// reports (4G, several plaque/scroll images still visibly blank right
+// after the reveal) that 4s wasn't enough real-world margin for this many
+// images to finish over a real mobile connection, so the timeout was firing
+// and revealing the canvas mid-load more often than intended. Paired with
+// trimming what actually gets preloaded (see requiredAssetEntries below and
+// the extraPreloadSrcs filtering at each call site) rather than relying on
+// a longer timeout alone.
+// 2026-09-25: 9000 -> 5000. The long blanks seen on iPhone turned out to be
+// the page-lock layout (fixed in useV8PageLock), and failed images now retry
+// on their own (routes/index.tsx), so a 9s invisible canvas mostly just read
+// as "stuck".
+const ASSET_PRELOAD_TIMEOUT_MS = 5000;
+const preloadHeroImagesWithTimeout = (sources: string[], prioritySources: string[] = []) =>
+  Promise.race([
+    preloadHeroImages(sources, prioritySources),
+    new Promise<void>((resolve) => window.setTimeout(resolve, ASSET_PRELOAD_TIMEOUT_MS)),
+  ]);
 
 function DecorLayer({
   src,
@@ -361,13 +415,12 @@ export function V8HeroComposition({
   infoCardsContent,
   rosterListsContent,
   extraPreloadSrcs,
-  skipRevealFade = false,
-  holdReveal = false,
-  onVisualStateChange,
+  revealImmediately = false,
   stageAspectRatio,
   maxStageWidth,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
+  const [assetsReady, setAssetsReady] = useState(revealImmediately);
   const controls = controlOverrides ? { ...v8HeroDefaults, ...controlOverrides } : v8HeroDefaults;
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
   const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
@@ -407,7 +460,6 @@ export function V8HeroComposition({
       ["goldInk", controls.goldInkShow],
       ["scroll", controls.scrollShow],
       ["tigerScroll", controls.tigerScrollShow],
-      ["enterBattleCta", !confirmed && controls.ctaShow],
     ] satisfies Array<[keyof typeof assets, boolean]>
   ).filter(([, shown]) => shown);
   const requiredAssets = requiredAssetEntries.map(([key]) => assets[key]);
@@ -421,22 +473,29 @@ export function V8HeroComposition({
     .filter(([key]) => PRIORITY_ASSET_KEYS.has(key))
     .map(([key]) => assets[key]);
 
-  const imagesState = useRequiredImages([...requiredAssets, ...(extraPreloadSrcs || [])], priorityAssets);
-  const readyNow = imagesState === "ready" && !holdReveal;
-  // Latched: once this canvas has been revealed complete, art that only
-  // becomes relevant later (a new stamp after an action, another meetup's
-  // title) loads without hiding the whole stage again.
-  const [revealed, setRevealed] = useState(readyNow);
-  useLayoutEffect(() => {
-    if (readyNow) setRevealed(true);
-  }, [readyNow]);
-  const assetsReady = revealed || readyNow;
-  const visualState: V8VisualState = assetsReady ? "ready" : imagesState === "error" ? "error" : "loading";
-  // Layout effect: the loading cover hears about a not-yet-ready stage
-  // before the browser paints it.
-  useLayoutEffect(() => {
-    onVisualStateChange?.(visualState);
-  }, [onVisualStateChange, visualState]);
+  useEffect(() => {
+    let cancelled = false;
+    if (revealImmediately) {
+      setAssetsReady(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+    setAssetsReady(false);
+    preloadHeroImagesWithTimeout([...requiredAssets, ...(extraPreloadSrcs || [])], priorityAssets).then(() => {
+      if (!cancelled) setAssetsReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // requiredAssets/extraPreloadSrcs are fresh arrays every render (built
+    // inline from `controls`/at call sites) -- depending on them directly
+    // would re-trigger this effect (and the fade-out-then-in flicker) on
+    // every render. The underlying show-flags and asset URLs are static per
+    // page mode (Active vs Opening always pass the same overrides), so it's
+    // safe to read them once here without listing as deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets]);
 
   return (
     <section className="sd-v8-hero-composition" aria-label="V8 聚會選擇" style={rootStyle}>
@@ -445,7 +504,7 @@ export function V8HeroComposition({
       <V8EnterMorphStyles />
       <div style={effectiveStageShellStyle}>
         <div data-v8-hero-stage="" style={stageAspectRatio ? { ...stageStyle, aspectRatio: stageAspectRatio } : stageStyle}>
-          <div style={{ ...artworkFadeStyle, ...(skipRevealFade ? { transition: "none" } : null), opacity: assetsReady ? 1 : 0 }}>
+          <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
             <div style={paperStyle} />
             <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
             <DecorLayer src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />

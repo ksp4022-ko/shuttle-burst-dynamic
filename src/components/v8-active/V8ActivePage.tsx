@@ -6,7 +6,6 @@ import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption, type V8P
 import { type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { configuredSiteId, type AlphaEvent, type AlphaSignup } from "@/lib/database-alpha";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
-import type { V8VisualState } from "@/components/v8-hero/v8AssetReadiness";
 import { V8MeetupPicker, V8MeetupPickerStyles } from "@/components/v8-hero/V8MeetupPicker";
 import {
   activeCtaAssemblyReplacedTargets,
@@ -59,7 +58,6 @@ import {
   type V8ActiveSwitchArrowsControls,
   type V8CtaAssemblyControls,
   type V8SunDotsControls,
-  v8ActiveListBuoyFiles,
 } from "./v8ActiveConfig";
 import { V8CtaAssembly, V8CtaAssemblyStyles, type V8CtaAssemblyAssets } from "./V8CtaAssembly";
 import { V8SeasonAttendance } from "./V8SeasonAttendance";
@@ -149,13 +147,9 @@ export function V8ActivePage({
   flow,
   onBeforeLineLogin,
   entering = false,
-  onVisualStateChange,
 }: {
   flow: HomepageFlow;
   onBeforeLineLogin?: () => void;
-  // Reports whether this page's first screen is fully loaded, so the
-  // route's loading cover stays up until it is (see V8HeroComposition).
-  onVisualStateChange?: (state: V8VisualState) => void;
   // ENTER-MORPH: true only right after 進入戰局 (not on reload / direct
   // link / LINE return) -- plays the staged entrance, see routes/index.tsx.
   entering?: boolean;
@@ -341,12 +335,6 @@ export function V8ActivePage({
     }
   };
 
-  // Nothing to show yet -> the stage is not ready (the hero below reports
-  // for itself once it renders).
-  const stageRenderable = Boolean(selectedEvent && roster);
-  useLayoutEffect(() => {
-    if (!stageRenderable) onVisualStateChange?.("loading");
-  }, [onVisualStateChange, stageRenderable]);
   if (!selectedEvent || !roster) return null;
 
   const busy = Boolean(pendingAction);
@@ -517,7 +505,6 @@ export function V8ActivePage({
   // when its own control is actually show:true -- the 三名單v2 candidate
   // panel/ornaments default OFF (~646KB combined) and were being preloaded
   // (and blocking the reveal) even while completely invisible.
-  const listBuoyAssetBase = `${import.meta.env.BASE_URL}v8-preview/active/`;
   const extraPreloadSrcs = [
     assets.sunInfoBadge,
     sunBadgeControls.ballType.show ? assets.sunBadgeBallType : null,
@@ -551,12 +538,6 @@ export function V8ActivePage({
           assets.ctaAssembly.bill,
         ]
       : []),
-    // V8ListBuoys (rendered outside the hero) always shows the wave band and
-    // its three headers; the opened panel's art loads on demand.
-    `${listBuoyAssetBase}${v8ActiveListBuoyFiles.waveBand}`,
-    `${listBuoyAssetBase}${v8ActiveListBuoyFiles.headerLeave}`,
-    `${listBuoyAssetBase}${v8ActiveListBuoyFiles.headerMain}`,
-    `${listBuoyAssetBase}${v8ActiveListBuoyFiles.headerWait}`,
   ].filter((src): src is string => Boolean(src));
 
   const displayNameForFixedRosterPerson = (person: AlphaSignup) => {
@@ -616,12 +597,7 @@ export function V8ActivePage({
         stageAspectRatio={v8ActiveStageAspectRatio}
         maxStageWidth={430}
         extraPreloadSrcs={extraPreloadSrcs}
-        // The enter-morph covers the reveal, so no extra fade -- but the
-        // artwork still waits for its images (and for the LINE identity,
-        // which decides the stamp / tag / CTA art) before it shows.
-        skipRevealFade={entering}
-        holdReveal={lineAuthLoading}
-        onVisualStateChange={onVisualStateChange}
+        revealImmediately={entering}
         sunContent={
           <V8ActiveSunContent
             assets={assets}
@@ -969,7 +945,7 @@ export function V8ActivePage({
       ) : null}
       {entering ? <span className="v8-ink-ring" aria-hidden="true" /> : null}
       <V8ListBuoys
-        assetBase={listBuoyAssetBase}
+        assetBase={`${import.meta.env.BASE_URL}v8-preview/active/`}
         controls={listBuoysControls}
         confirmed={rosterConfirmed}
         leave={rosterLeave}
