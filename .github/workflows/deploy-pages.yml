@@ -31,6 +31,11 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      # Type errors fail this job before anything is built or uploaded, so
+      # the deploy job (needs: build) never runs.
+      - name: TypeScript check
+        run: npx tsc --noEmit --pretty false
+
       - name: Build static site
         run: npm run build
 
