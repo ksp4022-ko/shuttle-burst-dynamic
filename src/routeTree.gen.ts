@@ -15,6 +15,7 @@ import { Route as RianRouteImport } from './routes/rian'
 import { Route as V8RouteImport } from './routes/v8'
 import { Route as V8KangxuanRouteImport } from './routes/v8.kangxuan'
 import { Route as V8RianRouteImport } from './routes/v8.rian'
+import { Route as V8P009bCalligraphyNameRouteImport } from './routes/v8_.p-009b-calligraphy-name'
 import { Route as V8PreviewRouteImport } from './routes/v8_.preview'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const V8RianRoute = V8RianRouteImport.update({
   path: '/rian',
   getParentRoute: () => V8Route,
 } as any)
+const V8P009bCalligraphyNameRoute = V8P009bCalligraphyNameRouteImport.update({
+  id: '/v8_/p-009b-calligraphy-name',
+  path: '/v8/p-009b-calligraphy-name',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const V8PreviewRoute = V8PreviewRouteImport.update({
   id: '/v8_/preview',
   path: '/v8/preview',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/v8': typeof V8RouteWithChildren
   '/v8/kangxuan': typeof V8KangxuanRoute
   '/v8/rian': typeof V8RianRoute
+  '/v8/p-009b-calligraphy-name': typeof V8P009bCalligraphyNameRoute
   '/v8/preview': typeof V8PreviewRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/v8': typeof V8RouteWithChildren
   '/v8/kangxuan': typeof V8KangxuanRoute
   '/v8/rian': typeof V8RianRoute
+  '/v8/p-009b-calligraphy-name': typeof V8P009bCalligraphyNameRoute
   '/v8/preview': typeof V8PreviewRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/v8': typeof V8RouteWithChildren
   '/v8/kangxuan': typeof V8KangxuanRoute
   '/v8/rian': typeof V8RianRoute
+  '/v8_/p-009b-calligraphy-name': typeof V8P009bCalligraphyNameRoute
   '/v8_/preview': typeof V8PreviewRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/v8'
     | '/v8/kangxuan'
     | '/v8/rian'
+    | '/v8/p-009b-calligraphy-name'
     | '/v8/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/v8'
     | '/v8/kangxuan'
     | '/v8/rian'
+    | '/v8/p-009b-calligraphy-name'
     | '/v8/preview'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/v8'
     | '/v8/kangxuan'
     | '/v8/rian'
+    | '/v8_/p-009b-calligraphy-name'
     | '/v8_/preview'
   fileRoutesById: FileRoutesById
 }
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   KangxuanRoute: typeof KangxuanRoute
   RianRoute: typeof RianRoute
   V8Route: typeof V8RouteWithChildren
+  V8P009bCalligraphyNameRoute: typeof V8P009bCalligraphyNameRoute
   V8PreviewRoute: typeof V8PreviewRoute
 }
 
@@ -163,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V8RianRouteImport
       parentRoute: typeof V8Route
     }
+    '/v8_/p-009b-calligraphy-name': {
+      id: '/v8_/p-009b-calligraphy-name'
+      path: '/v8/p-009b-calligraphy-name'
+      fullPath: '/v8/p-009b-calligraphy-name'
+      preLoaderRoute: typeof V8P009bCalligraphyNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v8_/preview': {
       id: '/v8_/preview'
       path: '/v8/preview'
@@ -190,6 +210,7 @@ const rootRouteChildren: RootRouteChildren = {
   KangxuanRoute: KangxuanRoute,
   RianRoute: RianRoute,
   V8Route: V8RouteWithChildren,
+  V8P009bCalligraphyNameRoute: V8P009bCalligraphyNameRoute,
   V8PreviewRoute: V8PreviewRoute,
 }
 export const routeTree = rootRouteImport
