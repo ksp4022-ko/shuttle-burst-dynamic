@@ -35,10 +35,58 @@ Documentation commit 不等於 runtime baseline 變更。
 
 # P0
 
-## V8-OPEN-STARTUP
+## V8TEST ENVIRONMENT
 
 Status:
 CODE PASS / VERIFY
+
+Commit：
+
+ca1bc53
+feat(v8test): add isolated v8 test routes
+
+Route family：
+
+- production（LOCKED）：/v8/、/v8/kangxuan/、/v8/rian/
+- test：/v8test/、/v8test/kangxuan/、/v8test/rian/
+- 同一份 app / 同一個 Worker + D1；右上角「V8 TEST」badge 只在 /v8test。
+- 規則與 storage 決策見 V8_SYSTEM_DESIGN.md「V8TEST Route Family」。
+
+V8TEST URL：
+
+https://ksp4022-ko.github.io/shuttle-burst-dynamic/v8test/
+https://ksp4022-ko.github.io/shuttle-burst-dynamic/v8test/kangxuan/
+https://ksp4022-ko.github.io/shuttle-burst-dynamic/v8test/rian/
+
+Production /v8 locked：
+
+- 對 7996e1d 做 regression：/v8、/v8/kangxuan、/v8/rian 的 OPEN + ACTIVE，
+  390 / 1280 凍結畫面 pixel diff = 0（唯一差異是倒數條時間點，base 對 base 也會出現）。
+- cold load / reload / CTA / Quick Pick current + different / ACTIVE switch / legacy UI / 430 cap 行為一致。
+- 唯一會影響 /v8 的共用程式變更：
+  LINE 回到 /v8 時，只有在存的 return URL 是 /v8test 才轉回 /v8test。
+  （純 production 登入不會存 /v8test URL，行為不變。）
+
+Verification：
+
+- tsc PASS
+- build PASS
+- CI/deploy PASS（run #314）
+- Local Chromium（390×844、1280）：/v8test 全流程 PASS
+- WebKit：環境沒有，未測。
+- real iPhone Safari：pending。
+
+Do NOT mark CLOSED until user confirms real-device PASS.
+下一個修正（P-021 v2 等）要等 user 確認 V8TEST baseline 後才開始。
+
+---
+
+## V8-OPEN-STARTUP
+
+Status:
+CLOSED
+
+User 已確認 real iPhone Safari：390bae2 之後 OPEN 可穩定啟動。
 
 Commit：
 
@@ -477,7 +525,7 @@ Auto-Fill / experimental control values 已納入 copy output。
 
 # CURRENT EXECUTION ORDER
 
-0. V8-OPEN-STARTUP real-device verify（先確認 OPEN 能穩定啟動）
+0. V8TEST ENVIRONMENT real-device verify（/v8test/kangxuan/）
 1. V8-ASSET-READY
 2. iPhone Quick Pick final verify
 3. Desktop + P-023 final verify
