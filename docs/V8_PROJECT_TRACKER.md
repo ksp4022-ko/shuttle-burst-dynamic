@@ -38,7 +38,7 @@ Documentation commit 不等於 runtime baseline 變更。
 ## V8TEST ENVIRONMENT
 
 Status:
-CODE PASS / VERIFY
+REAL DEVICE PASS（baseline）
 
 Commit：
 
@@ -74,10 +74,9 @@ Verification：
 - CI/deploy PASS（run #314）
 - Local Chromium（390×844、1280）：/v8test 全流程 PASS
 - WebKit：環境沒有，未測。
-- real iPhone Safari：pending。
-
-Do NOT mark CLOSED until user confirms real-device PASS.
-下一個修正（P-021 v2 等）要等 user 確認 V8TEST baseline 後才開始。
+- real iPhone Safari：PASS（user 確認 /v8test/kangxuan/ baseline：
+  cold load、reload、CTA → ACTIVE、Quick Pick current/different、ACTIVE switch、
+  no legacy UI、V8 TEST badge）
 
 ---
 
@@ -561,7 +560,9 @@ Auto-Fill / experimental control values 已納入 copy output。
 
 # CURRENT EXECUTION ORDER
 
-0. V8TEST ENVIRONMENT real-device verify（/v8test/kangxuan/）
+（精簡現況與目前順序以 docs/V8_CURRENT_STATE.md 為準：
+V8TEST-STORAGE-ISOLATION → V8-AUTO-ENTER-COUNTDOWN → P-021 v2 → 其他）
+
 1. V8-ASSET-READY
 2. iPhone Quick Pick final verify
 3. Desktop + P-023 final verify

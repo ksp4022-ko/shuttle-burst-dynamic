@@ -35,12 +35,16 @@ V8TEST infrastructure:
   - real iPhone stable
   - startup timeout + retry fix (`390bae2`)
 
-### CODE PASS / VERIFY
-- V8TEST ENVIRONMENT (baseline)
-  - `/v8test/kangxuan/`
-  - local Chromium: cold load, reload, CTA → ACTIVE, Quick Pick
-    current/different, ACTIVE meetup switch, no legacy UI, V8 TEST badge
-  - real iPhone Safari PASS not yet recorded
+### REAL DEVICE PASS
+- V8TEST baseline
+  - `/v8test/kangxuan/` (user-confirmed real iPhone Safari)
+  - cold load PASS
+  - reload PASS
+  - CTA → ACTIVE PASS
+  - Quick Pick current/different PASS
+  - ACTIVE meetup switch PASS
+  - no legacy UI
+  - V8 TEST badge confirmed
 
 ### NEXT
 - V8TEST-STORAGE-ISOLATION
@@ -81,7 +85,6 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-0. V8TEST baseline real-device confirmation
 1. V8TEST-STORAGE-ISOLATION
 2. V8-AUTO-ENTER-COUNTDOWN
 3. P-021 v2
