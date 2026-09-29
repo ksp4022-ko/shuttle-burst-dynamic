@@ -215,7 +215,7 @@ function visibleAt(source: SourceGeometry, x: number, y: number) {
   const ix = Math.round(x);
   const iy = Math.round(y);
   if (ix < 0 || iy < 0 || ix >= source.width || iy >= source.height) return false;
-  return source.data[(iy * source.width + ix) * 4 + 3] > 24;
+  return (source.data[(iy * source.width + ix) * 4 + 3] ?? 0) > 24;
 }
 
 function pixelScores(source: SourceGeometry, x: number, y: number) {
@@ -230,10 +230,10 @@ function pixelScores(source: SourceGeometry, x: number, y: number) {
       const iy = Math.round(y + dy);
       if (ix < 0 || iy < 0 || ix >= source.width || iy >= source.height) continue;
       const offset = (iy * source.width + ix) * 4;
-      if (source.data[offset + 3] <= 12) continue;
-      const red = source.data[offset];
-      const green = source.data[offset + 1];
-      const blue = source.data[offset + 2];
+      if ((source.data[offset + 3] ?? 0) <= 12) continue;
+      const red = source.data[offset] ?? 0;
+      const green = source.data[offset + 1] ?? 0;
+      const blue = source.data[offset + 2] ?? 0;
       const warm = red > 140 && green > 95 && blue < 150 && red >= green * 0.86;
       const energy = green > 135 && green > red * 1.04 && blue < 165;
       goldScore += warm ? 1.2 + red / 255 + green / 620 : 0;
@@ -261,7 +261,7 @@ function smoothBounds(values: number[], index: number, fallback: number, pick: "
   let samples = 0;
   for (let i = Math.max(0, index - 4); i <= Math.min(values.length - 1, index + 4); i += 1) {
     const value = values[i];
-    if (value < 0 || !Number.isFinite(value)) continue;
+    if (value === undefined || value < 0 || !Number.isFinite(value)) continue;
     total += value;
     samples += 1;
   }
@@ -305,10 +305,10 @@ function getSourceGeometry() {
 
       for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < width; x += 1) {
-          const alpha = data[(y * width + x) * 4 + 3];
+          const alpha = data[(y * width + x) * 4 + 3] ?? 0;
           if (alpha <= 24) continue;
-          rowMin[y] = Math.min(rowMin[y], x);
-          rowMax[y] = Math.max(rowMax[y], x);
+          rowMin[y] = Math.min(rowMin[y] ?? width, x);
+          rowMax[y] = Math.max(rowMax[y] ?? -1, x);
           bbox.minX = Math.min(bbox.minX, x);
           bbox.maxX = Math.max(bbox.maxX, x);
           bbox.minY = Math.min(bbox.minY, y);
@@ -324,7 +324,9 @@ function getSourceGeometry() {
       const sourceHeight = bbox.maxY - bbox.minY + 1;
       let headEndY = bbox.minY + Math.round(sourceHeight * 0.43);
       for (let y = bbox.minY + Math.round(sourceHeight * 0.32); y <= bbox.maxY; y += 1) {
-        const rowWidth = rowMax[y] >= rowMin[y] ? rowMax[y] - rowMin[y] + 1 : 0;
+        const rowMinY = rowMin[y] ?? width;
+        const rowMaxY = rowMax[y] ?? -1;
+        const rowWidth = rowMaxY >= rowMinY ? rowMaxY - rowMinY + 1 : 0;
         if (rowWidth > 0 && rowWidth < sourceWidth * 0.24) {
           headEndY = y;
           break;
@@ -336,10 +338,10 @@ function getSourceGeometry() {
       const headColMax = new Array<number>(width).fill(-1);
       for (let y = bbox.minY; y <= headEndY; y += 1) {
         for (let x = bbox.minX; x <= bbox.maxX; x += 1) {
-          const alpha = data[(y * width + x) * 4 + 3];
+          const alpha = data[(y * width + x) * 4 + 3] ?? 0;
           if (alpha <= 24) continue;
-          headColMin[x] = Math.min(headColMin[x], y);
-          headColMax[x] = Math.max(headColMax[x], y);
+          headColMin[x] = Math.min(headColMin[x] ?? height, y);
+          headColMax[x] = Math.max(headColMax[x] ?? -1, y);
         }
       }
 
@@ -395,7 +397,8 @@ function pickFrom(points: SourcePoint[], count: number, salt: number) {
   for (let i = 0; i < count; i += 1) {
     const offset = hash01((i + 1) * salt) * Math.min(step, 3);
     const index = Math.min(points.length - 1, Math.floor(i * step + offset));
-    picked.push(points[index]);
+    const point = points[index];
+    if (point) picked.push(point);
   }
   return picked;
 }
@@ -449,8 +452,9 @@ function makeStringPoints(source: SourceGeometry, count: number) {
   const headHeight = source.headEndY - source.bbox.minY;
   const insetX = source.bbox.width * 0.15;
   const insetY = headHeight * 0.12;
-  const xLines = 13;
-  const yLines = 17;
+  // Annotated as number so the `=== 1` guards below stay valid if these change.
+  const xLines: number = 13;
+  const yLines: number = 17;
 
   for (let i = 0; i < xLines; i += 1) {
     const t = xLines === 1 ? 0.5 : i / (xLines - 1);
@@ -610,8 +614,10 @@ function assignColors(dots: Dot[], points: SourcePoint[]) {
     .sort((a, b) => b.score - a.score)
     .slice(0, greenCount)
     .forEach(({ index }) => {
-      dots[index].accent = "green";
-      dots[index].color = GREEN;
+      const dot = dots[index];
+      if (!dot) return;
+      dot.accent = "green";
+      dot.color = GREEN;
       used.add(index);
     });
 
@@ -627,8 +633,10 @@ function assignColors(dots: Dot[], points: SourcePoint[]) {
     .sort((a, b) => b.score - a.score)
     .slice(0, goldCount)
     .forEach(({ index }) => {
-      dots[index].accent = "gold";
-      dots[index].color = GOLD;
+      const dot = dots[index];
+      if (!dot) return;
+      dot.accent = "gold";
+      dot.color = GOLD;
       used.add(index);
     });
 

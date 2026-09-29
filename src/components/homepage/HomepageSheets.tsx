@@ -221,6 +221,8 @@ export function MeetupTicketStack({
 
       {[...visibleIndexes].reverse().map((eventIndex) => {
         const event = events[eventIndex];
+        // visibleIndexes are always in range; this only narrows the type.
+        if (!event) return null;
         const slot = visibleIndexes.indexOf(eventIndex);
         const picked = event.id === (pendingEventId || selectedEventId);
         const current = event.id === selectedEventId;

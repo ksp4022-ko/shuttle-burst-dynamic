@@ -146,8 +146,11 @@ export function V8TuningPanel({
   const effectiveMotionPreviewLab = motionPreviewLab ?? internalMotionPreviewLab;
   const setMotionPreviewLab = onMotionPreviewLabChange ?? setInternalMotionPreviewLab;
   const panelRef = useRef<HTMLElement | null>(null);
-  const copyFeedbackTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-  const lineAuthResetTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  // Browser timer ids (window.setTimeout returns a number here; with Node's
+  // typings also loaded, ReturnType<typeof window.setTimeout> resolved to
+  // NodeJS.Timeout instead).
+  const copyFeedbackTimer = useRef<number | null>(null);
+  const lineAuthResetTimer = useRef<number | null>(null);
   const dragRef = useRef<{ pointerId: number | null; offsetY: number } | null>(null);
 
   const update = <Key extends keyof PreviewControls>(key: Key, value: PreviewControls[Key]) => {
@@ -297,8 +300,9 @@ export function V8TuningPanel({
   };
 
   const startPanelTouchDrag = (event: TouchEvent<HTMLElement>) => {
-    if (dragRef.current || event.touches.length !== 1) return;
-    beginPanelDrag(event.touches[0].clientY);
+    const touch = event.touches[0];
+    if (dragRef.current || event.touches.length !== 1 || !touch) return;
+    beginPanelDrag(touch.clientY);
   };
 
   useEffect(() => {
@@ -320,7 +324,8 @@ export function V8TuningPanel({
     const handleTouchMove = (event: globalThis.TouchEvent) => {
       if (dragRef.current?.pointerId !== null || event.touches.length !== 1) return;
       event.preventDefault();
-      updatePanelDrag(event.touches[0].clientY);
+      const touch = event.touches[0];
+      if (touch) updatePanelDrag(touch.clientY);
     };
     const handleTouchEnd = () => {
       if (dragRef.current?.pointerId !== null) return;
