@@ -1,21 +1,65 @@
-# Claude Repository Instructions
+# V8 Development Rules
 
-## V8 UI Component Baseline
+## Truth
+- Source code = implementation truth.
+- `docs/V8_SYSTEM_DESIGN.md` = architecture truth.
+- `docs/V8_PROJECT_TRACKER.md` = project-status truth.
+- `docs/V8_CURRENT_STATE.md` = concise current execution state.
+- If these conflict, report before changing code.
 
-Before creating or modifying any V8 frontend visual component, read:
+## Production Safety
+- `/v8/*` = locked production.
+- `/v8test/*` = development / real-device verification.
+- New V8 fixes must be implemented in `/v8test` first.
+- Do not intentionally change `/v8/*` until explicit user approval: `Cfm` or `確認`.
+- GitHub Pages deployment is allowed for `/v8test`.
+- Never force push or hard reset.
 
-`docs/V8_COMPONENT_CONTROL_BASELINE.md`
+## Repositories
+- Frontend: `ksp4022-ko/shuttle-burst-dynamic`
+- Worker/backend: `ksp4022-ko/badminton-signup`
+- Do not modify Worker, D1, backend, billing, signup rules, leave/return logic, waiting order, or grace-period logic unless explicitly requested.
+- `/v8test` uses the same official V8 backend/data unless explicitly changed by task.
 
-Treat that document as the authoritative V8 component-control specification.
+## Verification
+- Run relevant tests plus:
+  - `npx tsc --noEmit --pretty false`
+  - `npm run build`
+  - `git diff --check`
+- Browser automation is not real iPhone verification.
+- Real iPhone Safari is final visual/interaction acceptance.
+- Do not mark visual/interaction work CLOSED before real-device confirmation.
 
-Do not create a separate interpretation or duplicated baseline.
+## Working Style
+- Read `CLAUDE.md` and `docs/V8_CURRENT_STATE.md` first.
+- Read only the relevant sections/files for the current task.
+- Read full `docs/V8_SYSTEM_DESIGN.md` / `docs/V8_PROJECT_TRACKER.md` only for architecture changes, status conflicts, historical verification, or when the task requires them.
+- Use `rg`, `git diff`, and `git show` before opening large files wholesale.
+- Make the smallest necessary change.
+- Do not refactor unrelated code.
+- Do not reopen CLOSED items unless the current change directly affects them.
+- Expand scope only when source evidence proves it is necessary.
 
-For every new independently positioned V8 component:
+## V8 UI Components
+- Before creating or modifying an independently positioned V8 visual component, read `docs/V8_COMPONENT_CONTROL_BASELINE.md` (authoritative component-control spec; do not duplicate it).
+- Expose the baseline visual/text controls and use the shared visibility control; no per-component Visible controls or Safe Area / Guide systems unless requested.
+- Do not modify V7 unless explicitly instructed.
 
-- expose the baseline visual controls;
-- expose text controls when applicable;
-- use the existing shared visibility control;
-- do not add per-component Visible controls;
-- do not add Safe Area / Guide systems unless explicitly requested.
+## Test Scope
+- Small/local fix: relevant feature test + tsc/build/diff.
+- Shared V8 route/state change: add `/v8` regression smoke test.
+- Route/API/architecture change: full regression matrix.
 
-Do not modify V7 unless explicitly instructed.
+## Output
+For normal tasks return only:
+
+RESULT
+FILES CHANGED
+CHECKS
+COMMIT
+DEPLOY
+PRODUCTION /V8 STATUS
+REAL IPHONE STATUS
+NEXT STEP
+
+Use detailed root-cause reports only when a failure, regression, or architecture conflict is found.

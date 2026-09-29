@@ -14,6 +14,16 @@ Last reviewed: 2026-09-29
 不要自行推論或修正。
 先回報衝突。
 
+文件分工（不重複內容）：
+
+- `CLAUDE.md` = execution rules
+- `docs/V8_CURRENT_STATE.md` = concise current state
+- `docs/V8_PROJECT_TRACKER.md` = detailed project history / status
+- `docs/V8_SYSTEM_DESIGN.md` = architecture
+
+一般任務先讀 `CLAUDE.md` + `V8_CURRENT_STATE.md`，再只看相關 source；
+架構變更、狀態衝突、歷史查證或任務要求時才讀完整 design / tracker。
+
 ---
 
 ## Repository
