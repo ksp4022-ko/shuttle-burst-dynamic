@@ -49,6 +49,11 @@ jobs:
           cp dist/client/index.html dist/client/v8/index.html
           cp dist/client/index.html dist/client/v8/rian/index.html
           cp dist/client/index.html dist/client/v8/kangxuan/index.html
+          # /v8test/* = V8 test route family (same app, see v8-route-family).
+          mkdir -p dist/client/v8test dist/client/v8test/rian dist/client/v8test/kangxuan
+          cp dist/client/index.html dist/client/v8test/index.html
+          cp dist/client/index.html dist/client/v8test/rian/index.html
+          cp dist/client/index.html dist/client/v8test/kangxuan/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

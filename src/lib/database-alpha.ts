@@ -112,7 +112,8 @@ function configuredFrontendVersion() {
     .map((segment) => segment.trim().toLowerCase())
     .filter(Boolean);
 
-  return segments.includes("v8") ? "v8" : "v7";
+  // /v8test/* is the V8 test route family and uses the same V8 API.
+  return segments.includes("v8") || segments.includes("v8test") ? "v8" : "v7";
 }
 
 export function configuredApiBase() {

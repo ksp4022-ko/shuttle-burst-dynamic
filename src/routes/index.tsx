@@ -41,6 +41,8 @@ import {
 } from "@/components/v8-preview/dragonPreviewConfig";
 import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8IntroVideo";
 import { V8LoadingCover } from "@/components/v8-active/V8LoadingCover";
+import { V8TestBadge } from "@/components/v8-active/V8TestBadge";
+import { v8RouteFamilyOfBrowserPath, v8RouteFamilyOfRouterPath, v8SessionKeyPrefix } from "@/lib/v8-route-family";
 import { v8IntroConfig } from "@/components/v8-active/v8IntroConfig";
 import {
   HomepageToast,
@@ -76,8 +78,9 @@ const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN M
 type V8OrientationRestoreView = "active" | "open";
 type V8OrientationRestoreSnapshot = { eventId: string; view: V8OrientationRestoreView };
 
+// Either V8 route family (/v8/* or /v8test/*) -- see v8-route-family.
 function isV8BrowserPath(pathname: string) {
-  return pathname.split("/").filter(Boolean).includes("v8");
+  return v8RouteFamilyOfBrowserPath(pathname) !== null;
 }
 
 function hasV8LineAuthCallback() {
@@ -86,12 +89,13 @@ function hasV8LineAuthCallback() {
   return params.has("auth") || params.has("auth_error");
 }
 
+// Production keeps its exact "v8:" keys; /v8test uses "v8test:" ones.
 function v8SelectedEventStorageKey(siteId: string) {
-  return `v8:${siteId}:selected-event:${V8_SELECTED_EVENT_STORAGE_VERSION}`;
+  return `${v8SessionKeyPrefix()}:${siteId}:selected-event:${V8_SELECTED_EVENT_STORAGE_VERSION}`;
 }
 
 function v8OrientationRestoreStorageKey(siteId: string) {
-  return `v8:${siteId}:orientation-restore:${V8_ORIENTATION_RESTORE_STORAGE_VERSION}`;
+  return `${v8SessionKeyPrefix()}:${siteId}:orientation-restore:${V8_ORIENTATION_RESTORE_STORAGE_VERSION}`;
 }
 
 function readV8SelectedEventId(siteId: string) {
@@ -602,10 +606,16 @@ const DEFAULT_VISUAL_TUNING: VisualTuning = {
 
 export function Index() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const isV8Route = pathname === "/v8" || pathname.startsWith("/v8/");
+  const v8RouteFamily = v8RouteFamilyOfRouterPath(pathname);
+  const isV8Route = v8RouteFamily !== null;
   const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-  const v8IntroSiteId =
-    normalizedPathname === "/v8/kangxuan" ? "kangxuan" : normalizedPathname === "/v8/rian" ? "rian" : "";
+  const v8IntroSiteId = v8RouteFamily
+    ? normalizedPathname === `/${v8RouteFamily}/kangxuan`
+      ? "kangxuan"
+      : normalizedPathname === `/${v8RouteFamily}/rian`
+        ? "rian"
+        : ""
+    : "";
   const [v8OrientationRestore] = useState(() =>
     v8IntroSiteId ? readV8OrientationRestoreSnapshot(v8IntroSiteId) : null,
   );
@@ -805,6 +815,16 @@ export function Index() {
     if (!hasV8LineAuthCallback()) return;
 
     if (isV8Route) {
+      // The Worker only accepts /v8/* return URLs, so a login started on
+      // /v8test comes back to /v8; forward it to where it started. Only a
+      // stored /v8test URL does this -- production-only logins never store
+      // one, so their path is unchanged.
+      const testReturnUrl = v8RouteFamily === "v8" ? readV8LineLoginReturn() : null;
+      if (testReturnUrl && v8RouteFamilyOfBrowserPath(testReturnUrl.pathname) === "v8test") {
+        copyV8LineAuthCallbackParams(testReturnUrl);
+        window.location.replace(testReturnUrl.toString());
+        return;
+      }
       setV8MeetupConfirmed(true);
       clearV8LineLoginReturn();
       return;
@@ -814,7 +834,7 @@ export function Index() {
     if (!returnUrl) return;
     copyV8LineAuthCallbackParams(returnUrl);
     window.location.replace(returnUrl.toString());
-  }, [isV8Route]);
+  }, [isV8Route, v8RouteFamily]);
 
   // Only ever CLEARS the flag (a route with no intro). On an intro route the
   // initial state is already true and V8IntroVideo alone owns it from then
@@ -1610,6 +1630,7 @@ export function Index() {
           routes and same-session revisits -- the Intro overlay (z 80)
           plays on top of it when enabled for the current site. */}
       {isV8Route ? <V8LoadingCover ready={v8OpenReady} /> : null}
+      {v8RouteFamily === "v8test" ? <V8TestBadge /> : null}
       {!isV8Route && (
         <>
           <ParticleRacket
