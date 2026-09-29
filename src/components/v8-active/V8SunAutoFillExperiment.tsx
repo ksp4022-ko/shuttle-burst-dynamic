@@ -8,6 +8,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 
 // ACTIVE SUN AUTO-FILL EXPERIMENT (2026-09-26): a trial layer of four
 // stretch-to-fit boxes on the REAL ACTIVE red sun (大 DATE ─ 小 TIME /
@@ -88,7 +89,7 @@ function readBox(value: unknown, fallback: SunAutoFillBox): SunAutoFillBox {
 // to the defaults field by field; nothing here can throw.
 export function loadSunAutoFillConfig(): SunAutoFillConfig {
   try {
-    const raw = window.localStorage.getItem(SUN_AUTOFILL_STORAGE_KEY);
+    const raw = readV8ScopedStorage(SUN_AUTOFILL_STORAGE_KEY);
     if (!raw) return sunAutoFillDefaults;
     const saved = JSON.parse(raw) as Record<string, unknown> | null;
     if (!saved || typeof saved !== "object") return sunAutoFillDefaults;
@@ -118,7 +119,7 @@ export function useSunAutoFillExperiment() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(SUN_AUTOFILL_STORAGE_KEY, JSON.stringify(config));
+      window.localStorage.setItem(v8ScopedStorageKey(SUN_AUTOFILL_STORAGE_KEY), JSON.stringify(config));
     } catch {
       // Storage unavailable (private mode) -- the experiment just isn't saved.
     }
@@ -149,7 +150,7 @@ export function useSunAutoFillExperiment() {
   // Clears only this experiment's own key.
   const reset = useCallback(() => {
     try {
-      window.localStorage.removeItem(SUN_AUTOFILL_STORAGE_KEY);
+      window.localStorage.removeItem(v8ScopedStorageKey(SUN_AUTOFILL_STORAGE_KEY));
     } catch {
       // ignore
     }

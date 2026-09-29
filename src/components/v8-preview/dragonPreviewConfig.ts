@@ -16,6 +16,7 @@ import type {
   V8ActiveSwitchArrowsControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
+import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 
 export type PreviewControls = {
   dragonShow: boolean;
@@ -2734,7 +2735,7 @@ const identityEnvelopeDefaults: IdentityEnvelopeConfig = {
 const readStoredObject = (storageKey: string) => {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(storageKey);
+    const raw = readV8ScopedStorage(storageKey);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
@@ -3390,7 +3391,7 @@ const STALE_SAVED_CONTROL_KEYS: (keyof PreviewControls)[] = [
 
 function hasPreviewControlsMigration(name: string) {
   try {
-    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY);
+    const raw = readV8ScopedStorage(PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY);
     const saved = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
     return saved[name] === true;
   } catch {
@@ -3400,9 +3401,9 @@ function hasPreviewControlsMigration(name: string) {
 
 function markPreviewControlsMigration(name: string) {
   try {
-    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY);
+    const raw = readV8ScopedStorage(PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY);
     const saved = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
-    window.localStorage.setItem(PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY, JSON.stringify({ ...saved, [name]: true }));
+    window.localStorage.setItem(v8ScopedStorageKey(PREVIEW_CONTROLS_MIGRATION_STORAGE_KEY), JSON.stringify({ ...saved, [name]: true }));
   } catch {
     // Storage unavailable -- the migration is best-effort, same as control persistence.
   }
@@ -3416,7 +3417,7 @@ function migrateSavedControls(saved: Partial<PreviewControls>) {
   }
   markPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION);
   try {
-    window.localStorage.setItem(PREVIEW_CONTROLS_STORAGE_KEY, JSON.stringify(migrated));
+    window.localStorage.setItem(v8ScopedStorageKey(PREVIEW_CONTROLS_STORAGE_KEY), JSON.stringify(migrated));
   } catch {
     // If this write fails, the in-memory migrated controls still load for this session.
   }
@@ -3425,7 +3426,7 @@ function migrateSavedControls(saved: Partial<PreviewControls>) {
 
 export function loadSavedControls(): PreviewControls {
   try {
-    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
+    const raw = readV8ScopedStorage(PREVIEW_CONTROLS_STORAGE_KEY);
     if (!raw) {
       markPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION);
       return previewDefaults;
@@ -3447,7 +3448,7 @@ function withoutDefaultValues(values: Partial<PreviewControls>): Partial<Preview
 
 export function saveControls(controls: PreviewControls) {
   try {
-    window.localStorage.setItem(PREVIEW_CONTROLS_STORAGE_KEY, JSON.stringify(withoutDefaultValues(controls)));
+    window.localStorage.setItem(v8ScopedStorageKey(PREVIEW_CONTROLS_STORAGE_KEY), JSON.stringify(withoutDefaultValues(controls)));
   } catch {
     // Private browsing / storage disabled / quota exceeded -- tuning still
     // works for this session, it just won't survive a refresh.
@@ -3456,10 +3457,10 @@ export function saveControls(controls: PreviewControls) {
 
 export function saveControlPatch(patch: Partial<PreviewControls>) {
   try {
-    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
+    const raw = readV8ScopedStorage(PREVIEW_CONTROLS_STORAGE_KEY);
     const saved = raw ? (JSON.parse(raw) as Partial<PreviewControls>) : {};
     window.localStorage.setItem(
-      PREVIEW_CONTROLS_STORAGE_KEY,
+      v8ScopedStorageKey(PREVIEW_CONTROLS_STORAGE_KEY),
       JSON.stringify(withoutDefaultValues({ ...saved, ...patch })),
     );
   } catch {
@@ -3469,13 +3470,13 @@ export function saveControlPatch(patch: Partial<PreviewControls>) {
 
 export function saveScopedControls(controls: PreviewControls, scope: ControlsScope) {
   try {
-    const raw = window.localStorage.getItem(PREVIEW_CONTROLS_STORAGE_KEY);
+    const raw = readV8ScopedStorage(PREVIEW_CONTROLS_STORAGE_KEY);
     const saved = raw ? (JSON.parse(raw) as Partial<PreviewControls>) : {};
     for (const key of Object.keys(saved)) {
       if (isControlKeyInScope(key, scope)) delete (saved as Record<string, unknown>)[key];
     }
     window.localStorage.setItem(
-      PREVIEW_CONTROLS_STORAGE_KEY,
+      v8ScopedStorageKey(PREVIEW_CONTROLS_STORAGE_KEY),
       JSON.stringify({ ...saved, ...withoutDefaultValues(pickScopedControls(controls, scope)) }),
     );
   } catch {
@@ -3485,7 +3486,7 @@ export function saveScopedControls(controls: PreviewControls, scope: ControlsSco
 
 export function clearSavedControls() {
   try {
-    window.localStorage.removeItem(PREVIEW_CONTROLS_STORAGE_KEY);
+    window.localStorage.removeItem(v8ScopedStorageKey(PREVIEW_CONTROLS_STORAGE_KEY));
   } catch {
     // Same as above -- nothing to clean up if storage was never writable.
   }

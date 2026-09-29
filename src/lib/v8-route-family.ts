@@ -39,3 +39,29 @@ export function isV8TestRoute() {
 export function v8SessionKeyPrefix() {
   return isV8TestRoute() ? "v8test" : "v8";
 }
+
+// Writable tuning/debug localStorage (tuning panel, Auto-Fill, Identity
+// Envelope): production keeps its exact key; /v8test gets "v8test:<key>".
+export function v8ScopedStorageKey(productionKey: string) {
+  return isV8TestRoute() ? `v8test:${productionKey}` : productionKey;
+}
+
+// Reads a route-scoped localStorage value. Production reads its key exactly
+// as before. On /v8test, the first read of a missing "v8test:" key seeds it
+// from the current production value; from then on /v8test reads/writes only
+// its own copy (clearing it re-seeds from production on the next read).
+// May throw like localStorage itself -- callers already wrap storage in try.
+export function readV8ScopedStorage(productionKey: string): string | null {
+  const key = v8ScopedStorageKey(productionKey);
+  const own = window.localStorage.getItem(key);
+  if (own !== null || key === productionKey) return own;
+  const seed = window.localStorage.getItem(productionKey);
+  if (seed !== null) {
+    try {
+      window.localStorage.setItem(key, seed);
+    } catch {
+      // Unwritable storage: still use the seed for this read.
+    }
+  }
+  return seed;
+}

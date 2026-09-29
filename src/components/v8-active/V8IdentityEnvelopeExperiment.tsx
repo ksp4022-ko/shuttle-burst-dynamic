@@ -6,6 +6,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 
 // ACTIVE IDENTITY ENVELOPE EXPERIMENT (2026-09-26): a trial layer for the
 // identity scroll's NAME + 不是我 treatment. It has its own storage and
@@ -112,7 +113,7 @@ function readDecoration(value: unknown, fallback: IdentityEnvelopeDecoration): I
 
 export function loadIdentityEnvelopeConfig(): IdentityEnvelopeConfig {
   try {
-    const raw = window.localStorage.getItem(IDENTITY_ENVELOPE_STORAGE_KEY);
+    const raw = readV8ScopedStorage(IDENTITY_ENVELOPE_STORAGE_KEY);
     if (!raw) return identityEnvelopeDefaults;
     const saved = JSON.parse(raw) as Record<string, unknown> | null;
     if (!saved || typeof saved !== "object") return identityEnvelopeDefaults;
@@ -146,7 +147,7 @@ export function useIdentityEnvelopeExperiment() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(IDENTITY_ENVELOPE_STORAGE_KEY, JSON.stringify(config));
+      window.localStorage.setItem(v8ScopedStorageKey(IDENTITY_ENVELOPE_STORAGE_KEY), JSON.stringify(config));
     } catch {
       // Storage unavailable; the experiment still works for this session.
     }
@@ -173,7 +174,7 @@ export function useIdentityEnvelopeExperiment() {
   );
   const reset = useCallback(() => {
     try {
-      window.localStorage.removeItem(IDENTITY_ENVELOPE_STORAGE_KEY);
+      window.localStorage.removeItem(v8ScopedStorageKey(IDENTITY_ENVELOPE_STORAGE_KEY));
     } catch {
       // ignore
     }
