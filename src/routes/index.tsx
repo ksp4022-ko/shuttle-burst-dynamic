@@ -785,7 +785,7 @@ export function Index() {
       window.clearTimeout(timer);
     };
   }, [isV8Route, v8HeroPickerStage, v8OpenReady]);
-  const legacyActiveStage = (active || rotating) && !v8HeroStage;
+  const legacyActiveStage = !isV8Route && (active || rotating) && !v8HeroStage;
   const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls, openMotionPreviewLab);
   const openSunControls = buildV8OpeningSunControls(openTuningControls);
 
@@ -1086,22 +1086,22 @@ export function Index() {
   );
 
   useEffect(() => {
-    if (!openQuickPickEventId || !preview || flow.pendingAction || v8MorphBusyRef.current) return;
+    if (!openQuickPickEventId || flow.pendingAction || v8MorphBusyRef.current) return;
     const targetId = openQuickPickEventId;
     let cancelled = false;
     const run = async () => {
-      if (targetId !== flow.selectedEventId) {
-        if (flow.pendingSwitchEventId !== targetId || openQuickPickAttemptedSwitchRef.current === targetId) {
-          openQuickPickAttemptedSwitchRef.current = "";
-          setOpenQuickPickEventId("");
-          return;
-        }
-        openQuickPickAttemptedSwitchRef.current = targetId;
-        await flow.switchMeetup();
-        return;
-      }
+      if (targetId !== flow.selectedEventId && flow.pendingSwitchEventId !== targetId) return;
       v8MorphBusyRef.current = true;
       try {
+        if (targetId !== flow.selectedEventId) {
+          openQuickPickAttemptedSwitchRef.current = targetId;
+          const switched = await flow.switchMeetup();
+          if (!switched || cancelled) {
+            setOpenQuickPickEventId("");
+            openQuickPickAttemptedSwitchRef.current = "";
+            return;
+          }
+        }
         await enterV8Active();
         if (!cancelled) {
           setV8MeetupConfirmed(true);
@@ -1116,7 +1116,7 @@ export function Index() {
     return () => {
       cancelled = true;
     };
-  }, [enterV8Active, flow.pendingAction, flow.pendingSwitchEventId, flow.selectedEventId, flow.switchMeetup, openQuickPickEventId, preview]);
+  }, [enterV8Active, flow.pendingAction, flow.pendingSwitchEventId, flow.selectedEventId, flow.switchMeetup, openQuickPickEventId]);
 
   const confirmV8MeetupSelection = useCallback(async () => {
     if (flow.pendingAction || v8MorphBusyRef.current) return;
@@ -1661,7 +1661,7 @@ export function Index() {
           trigger -- a real regression, not just visual noise. V8's
           countdown-tuning needs its own narrower solution, not reusing
           this panel wholesale. */}
-      {(preview || rotating || active) && !v8HeroStage && (
+      {!isV8Route && (preview || rotating || active) && !v8HeroStage && (
         <HandoffTimingLab
           timing={handoffTiming}
           particle={particleTuning}
@@ -1822,7 +1822,7 @@ export function Index() {
               : undefined
         }
       >
-        {(preview || rotating) && !v8HeroStage && (
+        {!isV8Route && (preview || rotating) && !v8HeroStage && (
           <div className={`sd-preview-system-title ${rotating ? "is-leaving" : ""}`}>
             <strong>羽球報名系統</strong>
             <span>
@@ -2146,7 +2146,7 @@ export function Index() {
           </>
         )}
 
-        {flow.pendingAction && !v8HeroStage && (
+        {!isV8Route && flow.pendingAction && !v8HeroStage && (
           <div className="sd-pending" aria-live="polite">
             <span />
             <span />

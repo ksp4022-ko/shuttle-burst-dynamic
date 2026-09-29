@@ -273,11 +273,11 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     setPendingSwitchEventId("");
   }, []);
 
-  const switchMeetup = useCallback(async () => {
+  const switchMeetup = useCallback(async (): Promise<boolean> => {
     const nextId = pendingSwitchEventId;
     if (!nextId || nextId === selectedEventId || pendingAction) {
       closeMeetupPicker();
-      return;
+      return false;
     }
 
     setPendingAction({ type: "signup", label: "切換聚會中" });
@@ -289,8 +289,10 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
       setPendingSwitchEventId("");
       setNotice("已切換聚會");
       if (phase !== "active") enterActive();
+      return true;
     } catch (reason) {
       setNotice(reason instanceof Error ? reason.message : "切換聚會失敗，已保留原聚會。");
+      return false;
     } finally {
       setPendingAction(null);
     }
