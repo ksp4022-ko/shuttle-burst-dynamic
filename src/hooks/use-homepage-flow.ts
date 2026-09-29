@@ -273,8 +273,11 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     setPendingSwitchEventId("");
   }, []);
 
-  const switchMeetup = useCallback(async (): Promise<boolean> => {
-    const nextId = pendingSwitchEventId;
+  const switchMeetup = useCallback(async (
+    targetEventId?: string,
+    options: { enterActiveOnSuccess?: boolean } = {},
+  ): Promise<boolean> => {
+    const nextId = targetEventId || pendingSwitchEventId;
     if (!nextId || nextId === selectedEventId || pendingAction) {
       closeMeetupPicker();
       return false;
@@ -288,7 +291,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
       setMeetupPickerOpen(false);
       setPendingSwitchEventId("");
       setNotice("已切換聚會");
-      if (phase !== "active") enterActive();
+      if ((options.enterActiveOnSuccess ?? true) && phase !== "active") enterActive();
       return true;
     } catch (reason) {
       setNotice(reason instanceof Error ? reason.message : "切換聚會失敗，已保留原聚會。");

@@ -653,8 +653,6 @@ export function Index() {
   const [countdownKey, setCountdownKey] = useState(0);
   const countdownRemainingMsRef = useRef<number | null>(null);
   const [openMeetupPickerOpen, setOpenMeetupPickerOpen] = useState(false);
-  const [openQuickPickEventId, setOpenQuickPickEventId] = useState("");
-  const openQuickPickAttemptedSwitchRef = useRef("");
   const [rosterVisible, setRosterVisible] = useState(false);
   const [v8MeetupConfirmed, setV8MeetupConfirmed] = useState(false);
   // ENTER-MORPH: true only while the staged Active entrance plays after a
@@ -1028,20 +1026,6 @@ export function Index() {
     ],
   );
 
-  const quickPickV8MeetupById = useCallback(
-    (eventId: string) => {
-      if (flow.events.length <= 1 || flow.pendingAction || v8MorphBusyRef.current) return;
-      if (!flow.events.some((event) => event.id === eventId)) return;
-      setOpenQuickPickEventId(eventId);
-      setOpenMeetupPickerOpen(false);
-      resetCountdownRemaining();
-      if (eventId !== flow.selectedEventId) {
-        flow.setPendingSwitchEventId(eventId);
-      }
-    },
-    [flow.events, flow.pendingAction, flow.selectedEventId, flow.setPendingSwitchEventId, resetCountdownRemaining],
-  );
-
   // Opening -> Active stays one state switch on one route. Where the View
   // Transitions API exists (iOS 18+), the switch runs inside
   // document.startViewTransition: step 1 (plaque press) starts on tap, the
@@ -1085,39 +1069,38 @@ export function Index() {
     [],
   );
 
-  useEffect(() => {
-    if (!openQuickPickEventId || flow.pendingAction || v8MorphBusyRef.current) return;
-    const targetId = openQuickPickEventId;
-    let cancelled = false;
-    const run = async () => {
-      if (targetId !== flow.selectedEventId && flow.pendingSwitchEventId !== targetId) return;
+  const quickPickV8MeetupById = useCallback(
+    async (eventId: string) => {
+      if (flow.events.length <= 1 || flow.pendingAction || v8MorphBusyRef.current) return;
+      if (!flow.events.some((event) => event.id === eventId)) return;
+      setOpenMeetupPickerOpen(false);
+      resetCountdownRemaining();
       v8MorphBusyRef.current = true;
       try {
-        if (targetId !== flow.selectedEventId) {
-          openQuickPickAttemptedSwitchRef.current = targetId;
-          const switched = await flow.switchMeetup();
-          if (!switched || cancelled) {
-            setOpenQuickPickEventId("");
-            openQuickPickAttemptedSwitchRef.current = "";
-            return;
-          }
+        if (eventId === flow.selectedEventId) {
+          flow.setPendingSwitchEventId("");
+        } else {
+          const switched = await flow.switchMeetup(eventId, { enterActiveOnSuccess: false });
+          if (!switched) return;
+          // Let selectedEventId + roster commit before V8ActivePage mounts,
+          // so quick-pick never flashes the previous meetup as Active.
+          await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
         }
         await enterV8Active();
-        if (!cancelled) {
-          setV8MeetupConfirmed(true);
-          setOpenQuickPickEventId("");
-          openQuickPickAttemptedSwitchRef.current = "";
-        }
       } finally {
         v8MorphBusyRef.current = false;
       }
-    };
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [enterV8Active, flow.pendingAction, flow.pendingSwitchEventId, flow.selectedEventId, flow.switchMeetup, openQuickPickEventId]);
-
+    },
+    [
+      enterV8Active,
+      flow.events,
+      flow.pendingAction,
+      flow.selectedEventId,
+      flow.setPendingSwitchEventId,
+      flow.switchMeetup,
+      resetCountdownRemaining,
+    ],
+  );
   const confirmV8MeetupSelection = useCallback(async () => {
     if (flow.pendingAction || v8MorphBusyRef.current) return;
     const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
