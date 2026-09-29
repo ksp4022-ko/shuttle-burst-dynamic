@@ -73,6 +73,10 @@ type V8HeroCompositionProps = {
   // content props so this gate covers them too.
   extraPreloadSrcs?: string[] | undefined;
   revealImmediately?: boolean | undefined;
+  // Caps only the outer stage width. Internal artwork still uses the same
+  // responsive 390-wide coordinate system; callers opt in where the real
+  // production route should stay phone-sized on desktop.
+  maxStageWidth?: number | string | undefined;
   // Overrides stageStyle's default 390/890 aspect ratio. The Opening reveal
   // needs the taller 890 canvas (its own back-wave art bleeds down to
   // y=890), but the Active page has no such requirement -- with a roster
@@ -413,6 +417,7 @@ export function V8HeroComposition({
   extraPreloadSrcs,
   revealImmediately = false,
   stageAspectRatio,
+  maxStageWidth,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
   const [assetsReady, setAssetsReady] = useState(revealImmediately);
@@ -424,6 +429,9 @@ export function V8HeroComposition({
   // pre-composed tiger-with-racket image that replaces both.
   const tigerUsesOriginal = controls.tigerVariant === 1;
   const fallbackConfirmButtonRef = useRef<HTMLButtonElement | null>(null);
+  const effectiveStageShellStyle = maxStageWidth
+    ? ({ ...stageShellStyle, maxWidth: maxStageWidth, marginInline: "auto" } as CSSProperties)
+    : stageShellStyle;
 
   // 2026-09-11: `assets` (buildV8HeroAssets) always returns the FULL set of
   // Opening-only rig pieces (dragon body/claws/bag, tiger body/racket, the
@@ -494,7 +502,7 @@ export function V8HeroComposition({
       <V8HeroAmbientStyles />
       <V8CtaGlowOutlineStyles />
       <V8EnterMorphStyles />
-      <div style={stageShellStyle}>
+      <div style={effectiveStageShellStyle}>
         <div data-v8-hero-stage="" style={stageAspectRatio ? { ...stageStyle, aspectRatio: stageAspectRatio } : stageStyle}>
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
             <div style={paperStyle} />

@@ -595,6 +595,7 @@ export function V8ActivePage({
         confirmed
         controlOverrides={heroOverrides}
         stageAspectRatio={v8ActiveStageAspectRatio}
+        maxStageWidth={430}
         extraPreloadSrcs={extraPreloadSrcs}
         revealImmediately={entering}
         sunContent={
