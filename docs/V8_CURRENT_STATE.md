@@ -19,8 +19,8 @@ Test:
 ## Current Baseline
 
 Current main:
-- `389a647` — `docs(v8): track pending dev environment access setup`
-  (docs-only commits may follow; runtime unchanged since `ca1bc53`)
+- `dac033c` — `fix(v8test): isolate tuning storage`
+  (docs-only commits may follow)
 
 Stable production runtime:
 - `390bae2` — `fix(v8): recover open startup flow`
@@ -46,11 +46,14 @@ V8TEST infrastructure:
   - no legacy UI
   - V8 TEST badge confirmed
 
-### NEXT
-- V8TEST-STORAGE-ISOLATION
-  - isolate writable tuning/debug storage for `/v8test`
-  - production keys must remain unchanged
-  - first V8TEST seed from production, then independent
+### CODE PASS / VERIFY
+- V8TEST-STORAGE-ISOLATION — `dac033c` `fix(v8test): isolate tuning storage`
+  - `/v8test` uses `v8test:<key>` for tuning (+ migrations), Auto-Fill,
+    Identity Envelope; production keys unchanged
+  - first V8TEST read seeds from production, then independent;
+    clearing the V8TEST key re-seeds from current production
+  - tsc / build / CI (#319) PASS; module + browser isolation tests PASS
+  - real iPhone verification pending
 
 ### ROOT CAUSE CONFIRMED / WAITING
 - V8-AUTO-ENTER-COUNTDOWN
@@ -85,7 +88,7 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-1. V8TEST-STORAGE-ISOLATION
+1. V8TEST-STORAGE-ISOLATION (real iPhone verify)
 2. V8-AUTO-ENTER-COUNTDOWN
 3. P-021 v2
 4. Other pending optimization items

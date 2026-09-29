@@ -80,6 +80,31 @@ Verification：
 
 ---
 
+## V8TEST-STORAGE-ISOLATION
+
+Status:
+CODE PASS / VERIFY
+
+Commit：
+
+dac033c
+fix(v8test): isolate tuning storage
+
+- MUST ISOLATE（/v8test 用 "v8test:<key>"，production key 不變）：
+  v8-preview-controls-v4（+ :migrations）、
+  v8-red-sun-autofill-experiment-v1、v8-identity-envelope-experiment-v1
+- 第一次在 /v8test 讀取時從 production seed；之後各自獨立；
+  只刪 v8test key → 下次從目前 production 重新 seed。
+- SHARED：LINE auth、handoff lab（V8 無法編輯）、tutorial seen。
+- 驗證：tsc / build / CI（run #319）PASS；
+  module 隔離測試 16/16、瀏覽器隔離測試 13/13（含真的調整面板編輯）；
+  /v8 與 /v8test smoke（CTA、Quick Pick、ACTIVE switch、legacy UI）PASS。
+- real iPhone Safari：pending。
+
+Do NOT mark CLOSED until user confirms real-device PASS.
+
+---
+
 ## V8-OPEN-STARTUP
 
 Status:
