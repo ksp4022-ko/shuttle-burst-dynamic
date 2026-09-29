@@ -723,9 +723,9 @@ export function Index() {
   // auto-fill). On V8, ACTIVE owns the screen once v8MeetupConfirmed is
   // true while flow.phase deliberately stays "meetup-preview", so gating on
   // `preview` alone kept them running inside ACTIVE (the countdown restarted
-  // and re-fired its enter every N seconds). V8TEST-only for now: /v8 keeps
-  // `preview` until the fix is promoted (Cfm).
-  const openOnlyEffectsActive = v8RouteFamily === "v8test" ? preview && !v8MeetupConfirmed : preview;
+  // and re-fired its enter every N seconds). Verified on /v8test, promoted
+  // to /v8 on Cfm. (Non-V8 routes never set v8MeetupConfirmed.)
+  const openOnlyEffectsActive = preview && !v8MeetupConfirmed;
   const resetCountdownRemaining = useCallback(() => {
     countdownRemainingMsRef.current = null;
     setCountdownRemainingMs(null);
