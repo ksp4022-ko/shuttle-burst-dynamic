@@ -360,6 +360,42 @@ Fine Tune：
 
 # P2
 
+## DEV-ENV-ACCESS
+
+Status:
+PENDING
+
+Owner：user（環境設定只能由 user 在 claude.ai/code 修改，Claude 無法代改）
+
+Why：
+
+雲端開發環境目前連不到 production，只能本機重建 + Chromium 測試。
+P-021 / OPEN startup 都是「本機 PASS、實機 FAIL」，無法直接看線上站或 API。
+
+To do（建議用電腦瀏覽器開 https://claude.ai/code；手機 App 可能找不到此設定）：
+
+1. Session 標題列的雲端環境名稱 → Edit → Network access：
+   選較寬等級（例如 Full），或加入允許清單：
+   - ksp4022-ko.github.io
+   - badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev
+   - fonts.googleapis.com、fonts.gstatic.com
+   - cdn.playwright.dev、playwright.download.prss.microsoft.com、playwright.azureedge.net
+   - archive.ubuntu.com、security.ubuntu.com
+2. 同一個 Edit → Setup script 加入：
+
+   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD= PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx -y playwright@1.56.1 install --with-deps webkit
+
+   （1.56.1 = 環境內建 Playwright 版本）
+3. 開新 session（舊 session 不會套用），跟 Claude 說「驗證環境」：
+   - curl 線上 /v8test/kangxuan/ 與 API（只做唯讀）
+   - WebKit 啟動並跑一次 /v8test startup
+
+Optional（user 端）：
+
+Mac Safari Web Inspector 連 iPhone，可直接看實機 Network / Console。
+
+---
+
 ## V8-TUNING-LAZY
 
 Status:
