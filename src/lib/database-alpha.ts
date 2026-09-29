@@ -223,11 +223,11 @@ export async function alphaFetch<T>(
   return json.data as T;
 }
 
-export function listAlphaEvents(from: string, limit = 20) {
+export function listAlphaEvents(from: string, limit = 20, signal?: AbortSignal) {
   const siteId = configuredSiteId();
   return alphaFetch<AlphaEvent[]>(
     `/sites/${encodeURIComponent(siteId)}/events`,
-    undefined,
+    signal ? { signal } : undefined,
     {
       status: "open",
       from,
@@ -236,8 +236,8 @@ export function listAlphaEvents(from: string, limit = 20) {
   );
 }
 
-export function getAlphaRoster(eventId: string) {
-  return alphaFetch<AlphaRoster>(`/events/${encodeURIComponent(eventId)}/roster`);
+export function getAlphaRoster(eventId: string, signal?: AbortSignal) {
+  return alphaFetch<AlphaRoster>(`/events/${encodeURIComponent(eventId)}/roster`, signal ? { signal } : undefined);
 }
 
 export function createAlphaTempSignup(eventId: string, name: string, token?: string, options: { selfSignup?: boolean } = {}) {

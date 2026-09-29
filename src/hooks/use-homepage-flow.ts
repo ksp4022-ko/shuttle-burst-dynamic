@@ -77,6 +77,33 @@ function sortSignupsByOrder(signups: AlphaSignup[]) {
   );
 }
 
+// Startup loads (event list + first roster) had no timeout: a request that
+// never answered (seen on real iPhone Safari) left phase at
+// "loading-particles" forever -- the V8 loading cover lifted after its 20s
+// cap onto an empty page, and reload hit the same wall. Each startup request
+// now gets a timeout and one retry on a fresh request; if that also fails the
+// existing load-error screen (with 重新整理) shows, still inside the cover's
+// 20s cap. Worst case: 8s + 0.8s + 8s.
+const STARTUP_REQUEST_TIMEOUT_MS = 8000;
+const STARTUP_RETRY_DELAY_MS = 800;
+
+async function withStartupRetry<T>(request: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (attempt > 0) await new Promise((resolve) => window.setTimeout(resolve, STARTUP_RETRY_DELAY_MS));
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), STARTUP_REQUEST_TIMEOUT_MS);
+    try {
+      return await request(controller.signal);
+    } catch (reason) {
+      lastError = controller.signal.aborted ? new Error("連線逾時，請重新整理。") : reason;
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+  throw lastError;
+}
+
 export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   const [phase, setPhase] = useState<HomepagePhase>("loading-particles");
   const [motionMode, setMotionMode] = useState<MotionMode>("normal");
@@ -158,7 +185,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
 
   const loadInitial = useCallback(async () => {
     setError("");
-    const nextEvents = await listAlphaEvents(todayString(), 20);
+    const nextEvents = await withStartupRetry((signal) => listAlphaEvents(todayString(), 20, signal));
     setEvents(nextEvents);
 
     if (!nextEvents.length) {
@@ -174,9 +201,9 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     if (!nextEvent) throw new Error("找不到最近聚會。");
 
     setSelectedEventId(nextEvent.id);
-    await loadRoster(nextEvent.id, { silent: true });
+    setRoster(await withStartupRetry((signal) => getAlphaRoster(nextEvent.id, signal)));
     return true;
-  }, [loadRoster]);
+  }, []);
 
   useEffect(() => {
     if (didInit.current) return;
