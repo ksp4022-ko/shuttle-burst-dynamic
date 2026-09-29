@@ -83,7 +83,7 @@ Verification：
 ## V8-AUTO-ENTER-COUNTDOWN
 
 Status:
-CODE PASS / VERIFY（V8TEST only）
+REAL DEVICE PASS（V8TEST）— 等 Cfm 後 promote 到 /v8
 
 Commit：
 
@@ -109,9 +109,9 @@ Verification：
 - Local Chromium /v8test：OPEN 倒數條正常遞減 → auto-enter 1 次 → ACTIVE 32s 無重啟、無重複 enter、無 OPEN UI；
   CTA（含 enter 動畫）、Quick Pick current / different、ACTIVE switch、legacy UI 0 PASS
 - /v8 smoke：行為不變（仍保留原本重啟現象，符合 LOCKED）
-- real iPhone Safari：pending
+- real iPhone Safari：/v8test PASS（user 確認）
 
-Do NOT mark CLOSED until user confirms real-device PASS.
+Promotion 到 /v8 需要 user 回覆 Cfm / 確認；promote 並驗證後才 CLOSED。
 
 ---
 

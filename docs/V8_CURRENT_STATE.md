@@ -49,14 +49,14 @@ V8TEST infrastructure:
   - no legacy UI
   - V8 TEST badge confirmed
 
-### CODE PASS / VERIFY
+### REAL DEVICE PASS (V8TEST) — awaiting Cfm to promote to `/v8`
 - V8-AUTO-ENTER-COUNTDOWN — `5ba6b66` (V8TEST only)
   - OPEN-only effects (countdown / auto-enter, pendingSwitch auto-fill)
     now require `preview && !v8MeetupConfirmed` on `/v8test`
   - auto-enter fires exactly once; no restart while ACTIVE (32s observed)
   - `/v8` keeps the old `preview` gate (still restarts every N s) until Cfm
   - flow.phase unchanged
-  - tsc / build / CI (#321) PASS; real iPhone verification pending
+  - tsc / build / CI (#321) PASS; real iPhone Safari PASS on `/v8test` (user)
 
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
@@ -83,7 +83,7 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-1. V8-AUTO-ENTER-COUNTDOWN (real iPhone verify, then Cfm → promote to `/v8`)
+1. V8-AUTO-ENTER-COUNTDOWN: waiting for Cfm → promote to `/v8`
 2. P-021 v2
 3. Other pending optimization items
 
