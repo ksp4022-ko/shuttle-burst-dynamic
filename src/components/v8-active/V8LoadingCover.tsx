@@ -1,46 +1,59 @@
 import { useEffect, useState } from "react";
 
-// Opaque V8-paper loading screen shown on every real V8 route until the
-// OPEN/ACTIVE stage is ready (or a safety timeout elapses), so the shared
-// dark .sd-page background never shows during first load, after the Intro
-// ends before data is ready, or on same-session revisits. It sits BELOW
-// the Intro overlay (z-index 80) and the
-// Replay Intro button (79), so the Intro plays on top of it unchanged.
+// Opaque V8-paper loading screen for the real V8 routes. It stays up until
+// the route says the current stage is READY -- data settled AND every
+// first-screen image loaded (see V8HeroComposition / v8AssetReadiness) --
+// so the dark .sd-page background, an empty paper stage or half-loaded
+// artwork never show. It comes back if a later stage (OPEN -> ACTIVE) is
+// not ready yet. A timer never releases it: after a long wait it offers a
+// reload, and after a required image failed its retries it offers a retry.
+// It sits BELOW the Intro overlay (z-index 80) and the Replay Intro button
+// (79), so the Intro plays on top of it unchanged.
 const FADE_MS = 300;
+const SLOW_HINT_MS = 12000;
 
 type V8LoadingCoverProps = {
   ready: boolean;
-  // Hard cap so a hung request can never trap the user behind this screen.
-  maxWaitMs?: number;
+  // A required image still failed after its retries.
+  error?: boolean;
+  onRetry?: () => void;
 };
 
-export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps) {
-  const [timedOut, setTimedOut] = useState(false);
+export function V8LoadingCover({ ready, error = false, onRetry }: V8LoadingCoverProps) {
   const [phase, setPhase] = useState<"shown" | "fading" | "gone">("shown");
-  const release = ready || timedOut;
+  const [slow, setSlow] = useState(false);
+  // Not ready -> covered in this very render (no effect round-trip), so a
+  // not-yet-ready stage never gets a painted frame of dark page background.
+  const shownPhase = ready ? phase : "shown";
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setTimedOut(true), maxWaitMs);
-    return () => window.clearTimeout(timer);
-  }, [maxWaitMs]);
+    if (ready && phase === "shown") setPhase("fading");
+    else if (!ready && phase !== "shown") setPhase("shown");
+  }, [ready, phase]);
 
   useEffect(() => {
-    if (!release) return;
-    setPhase("fading");
+    if (phase !== "fading") return;
     const timer = window.setTimeout(() => setPhase("gone"), FADE_MS);
     return () => window.clearTimeout(timer);
-  }, [release]);
+  }, [phase]);
+
+  useEffect(() => {
+    setSlow(false);
+    if (ready || error) return;
+    const timer = window.setTimeout(() => setSlow(true), SLOW_HINT_MS);
+    return () => window.clearTimeout(timer);
+  }, [ready, error]);
 
   useEffect(() => {
     // Drop the pre-hydration paper body colour (see __root.tsx) once the
-    // cover is done, so the settled page looks exactly as it did before.
+    // cover is first done, so the settled page looks exactly as before.
     if (phase === "gone") document.documentElement.classList.remove("v8-boot");
   }, [phase]);
 
-  if (phase === "gone") return null;
+  if (shownPhase === "gone") return null;
 
   return (
-    <div className={`v8-loading-cover${phase === "fading" ? " is-fading" : ""}`} role="status" aria-live="polite">
+    <div className={`v8-loading-cover${shownPhase === "fading" ? " is-fading" : ""}`} role="status" aria-live="polite">
       <span className="v8-loading-cover-scene">
         <span className="v8-loading-cover-sun">
           <img
@@ -52,7 +65,16 @@ export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps
           />
           <span className="v8-loading-cover-mark" aria-hidden="true" />
         </span>
-        <span className="v8-loading-cover-text">載入中</span>
+        <span className="v8-loading-cover-text">{error ? "圖片載入失敗" : "載入中"}</span>
+        {error && onRetry ? (
+          <button type="button" className="v8-loading-cover-action" onClick={onRetry}>
+            重試
+          </button>
+        ) : slow ? (
+          <button type="button" className="v8-loading-cover-action" onClick={() => window.location.reload()}>
+            載入較久，重新整理
+          </button>
+        ) : null}
       </span>
       <style>{`
         .v8-loading-cover {
@@ -107,6 +129,18 @@ export function V8LoadingCover({ ready, maxWaitMs = 20000 }: V8LoadingCoverProps
           opacity: 0.9;
           box-shadow: 0 0 0 10px rgba(198, 67, 37, 0.1);
           animation: v8-loading-cover-breathe 2.4s ease-in-out infinite;
+        }
+        .v8-loading-cover-action {
+          margin-top: 4px;
+          padding: 8px 18px;
+          border: 1px solid rgba(90, 59, 28, 0.35);
+          border-radius: 999px;
+          background: rgba(255, 248, 230, 0.75);
+          color: #5a3b1c;
+          font: inherit;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
         }
         .v8-loading-cover-text {
           font-size: 13px;

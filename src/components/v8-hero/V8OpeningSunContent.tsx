@@ -3,6 +3,7 @@ import type { V8SunDotsControls } from "@/components/v8-active/v8ActiveConfig";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V8SunDateStretchText } from "@/components/v8-active/V8SunDateStretchText";
+import { buildV8OpeningSunAssets } from "./v8OpeningSunAssets";
 import {
   SunAutoFillErrorBoundary,
   V8SunAutoFillLayer,
@@ -25,19 +26,6 @@ import { V8MeetupPicker, V8MeetupPickerStyles } from "@/components/v8-hero/V8Mee
 // point at (public/v8-preview/active/*.webp) -- these are static images,
 // not Active's logic, so pointing at them from here isn't "sharing Active's
 // code" in the sense the user meant.
-function buildV8OpeningSunAssets(baseUrl: string) {
-  const activeBase = `${baseUrl}v8-preview/active`;
-  const statusAssetBase = `${baseUrl}v8-status-assets`;
-  return {
-    sunBadgeBallType: `${activeBase}/sun-info-badge-balltype-v2.webp`,
-    sunBadgeTempFee: `${activeBase}/sun-info-badge-tempfee-v2.webp`,
-    sunBadgeCourtCount: `${activeBase}/sun-info-badge-courttime-v1.webp`,
-    sunBadgeCapacity: `${activeBase}/sun-info-badge-capacity-v1.webp`,
-    sunSwitchArrowPrev: `${statusAssetBase}/v8-meetup-switch-prev-v2.webp`,
-    sunSwitchArrowNext: `${statusAssetBase}/v8-meetup-switch-next-v2.webp`,
-    sunTitleKangxuan: `${statusAssetBase}/v8-kangxuan-calligraphy-ivory-square-v2-640.webp`,
-  };
-}
 
 // Copied 1:1 from BADGE_TEXT_INSETS in V8ActivePage.tsx.
 const BADGE_TEXT_INSETS = {

@@ -19,12 +19,14 @@ import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepa
 import { HomepageRoster } from "@/components/homepage/HomepageRoster";
 import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
 import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
+import { preloadRequiredImage, retryV8RequiredImages, type V8VisualState } from "@/components/v8-hero/v8AssetReadiness";
 import {
   V8OpeningSunContent,
   V8OpeningSunStyles,
   v8OpeningSunDefaults,
   type V8OpeningSunControls,
 } from "@/components/v8-hero/V8OpeningSunContent";
+import { v8OpeningSunRequiredSrcs } from "@/components/v8-hero/v8OpeningSunAssets";
 import { V8ActivePage } from "@/components/v8-active/V8ActivePage";
 import { V8TuningPanel } from "@/components/v8-preview/V8TuningPanel";
 import {
@@ -658,6 +660,9 @@ export function Index() {
   // ENTER-MORPH: true only while the staged Active entrance plays after a
   // 進入戰局 tap (never on reload / direct link / LINE return).
   const [v8Entering, setV8Entering] = useState(false);
+  // Whichever V8 stage is mounted (OPEN picker or ACTIVE) reports whether
+  // its first screen is fully loaded -- see V8HeroComposition.
+  const [v8StageVisual, setV8StageVisual] = useState<V8VisualState>("loading");
   const v8MorphBusyRef = useRef(false);
   const openDialAtRef = useRef(0);
   // ?v8debug=1: on-page image timing panel (iPhone has no Web Inspector here).
@@ -703,6 +708,11 @@ export function Index() {
   // load-error counts as settled so a failed API never leaves the loading
   // screen up forever -- the page underneath shows its own error state.
   const v8OpenReady = (["meetup-preview", "rotating-to-active", "active", "load-error"] as string[]).includes(flow.phase);
+  // The V8 loading cover lifts only when the data is settled AND the stage
+  // on screen has every first-screen image loaded. Flow state alone (e.g.
+  // phase "active") says nothing about the artwork.
+  const v8CoverReady = flow.phase === "load-error" || (v8OpenReady && (!v8HeroStage || v8StageVisual === "ready"));
+  const v8StageAssetError = v8HeroStage && v8StageVisual === "error";
   // Once confirmed, V8ActivePage renders its own V8HeroComposition (same
   // canvas, active-state content) internally -- so the standalone mount
   // here (and the section's reserved 100svh height for it) is picker-only,
@@ -752,8 +762,11 @@ export function Index() {
   // so the morph never reveals half-loaded images. Skips the roster panels
   // that are off by default.
   // Waits until Opening's own images have all finished (so it never competes
-  // with them on a slow connection) and only downloads into the HTTP cache
-  // (fetch, no image decode) to keep memory low on iPhone.
+  // with them on a slow connection). Loads through the same low-priority
+  // preload the readiness gate uses (no decode() call), so an ACTIVE entry
+  // after the warm-up finds its art already known-loaded and shows in the
+  // first frame. Purely a speed-up: ACTIVE's own gate still waits for
+  // anything that is not loaded yet (e.g. a quick-pick before this ran).
   useEffect(() => {
     if (!isV8Route || !v8HeroPickerStage || !v8OpenReady) return;
     let cancelled = false;
@@ -767,14 +780,18 @@ export function Index() {
         return;
       }
       const assets = buildV8ActiveAssets(import.meta.env.BASE_URL) as Record<string, unknown>;
+      // Roster V2 B1 is on by default; A1/B2 and the old frame are off.
+      const skip = new Set(["rosterV2A1", "rosterV2B2", "rosterFrame"]);
       const urls = Object.entries(assets)
-        .filter(([key, src]) => typeof src === "string" && !key.startsWith("rosterV2") && key !== "rosterFrame")
-        .map(([, src]) => src as string);
+        .filter(([key]) => !skip.has(key))
+        // One nested level too (e.g. the CTA assembly's pieces).
+        .flatMap(([, src]) => (typeof src === "string" ? [src] : src && typeof src === "object" ? Object.values(src) : []))
+        .filter((src): src is string => typeof src === "string");
       ["list-buoy-wave-band-v1.webp", "list-buoy-header-leave-v1.webp", "list-buoy-header-main-v1.webp", "list-buoy-header-wait-v1.webp"].forEach((file) =>
         urls.push(`${import.meta.env.BASE_URL}v8-preview/active/${file}`),
       );
       urls.forEach((url) => {
-        void fetch(url, { priority: "low" } as RequestInit).catch(() => undefined);
+        void preloadRequiredImage(url, "low").catch(() => undefined);
       });
     };
     timer = window.setTimeout(warm, 1200);
@@ -1435,6 +1452,12 @@ export function Index() {
       setOpenMeetupPickerOpen(false);
       return;
     }
+    // Same as the Intro: the countdown only runs while OPEN is actually
+    // visible, not behind the loading cover.
+    if (isV8Route && !v8CoverReady) {
+      resetCountdownRemaining();
+      return;
+    }
     if (!countdownTuning.showCountdown && !effectiveAutoEnterAtZero) {
       resetCountdownRemaining();
       return;
@@ -1475,6 +1498,7 @@ export function Index() {
     preview,
     resetCountdownRemaining,
     tutorialOpen,
+    v8CoverReady,
     v8IntroBlocking,
   ]);
 
@@ -1609,7 +1633,7 @@ export function Index() {
       {/* Opaque V8 loading screen until data/OPEN is ready on all real V8
           routes and same-session revisits -- the Intro overlay (z 80)
           plays on top of it when enabled for the current site. */}
-      {isV8Route ? <V8LoadingCover ready={v8OpenReady} /> : null}
+      {isV8Route ? <V8LoadingCover ready={v8CoverReady} error={v8StageAssetError} onRetry={retryV8RequiredImages} /> : null}
       {!isV8Route && (
         <>
           <ParticleRacket
@@ -1898,7 +1922,11 @@ export function Index() {
               // (previewPickedEvent，輪播切換時即時更新)，非固定單一場次。
               controlOverrides={openHeroOverrides}
               maxStageWidth={430}
-              revealImmediately
+              // The loading cover handles the reveal; the artwork itself
+              // still waits for every first-screen image.
+              skipRevealFade
+              extraPreloadSrcs={v8OpeningSunRequiredSrcs({ canSwitchMeetup, controls: openSunControls })}
+              onVisualStateChange={setV8StageVisual}
               sunContent={
                 <V8OpeningSunContent
                   event={previewPickedEvent}
@@ -2166,7 +2194,12 @@ export function Index() {
       ) : null}
 
       {isV8Route && v8MeetupConfirmed ? (
-        <V8ActivePage flow={flow} onBeforeLineLogin={rememberV8LineLoginReturn} entering={v8Entering} />
+        <V8ActivePage
+          flow={flow}
+          onBeforeLineLogin={rememberV8LineLoginReturn}
+          entering={v8Entering}
+          onVisualStateChange={setV8StageVisual}
+        />
       ) : null}
 
       {!isV8Route && (
