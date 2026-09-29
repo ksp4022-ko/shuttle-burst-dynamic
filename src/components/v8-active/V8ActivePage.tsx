@@ -604,6 +604,8 @@ export function V8ActivePage({
             currentEventId={selectedEventId}
             pendingEventId={flow.pendingSwitchEventId}
             onSelectEvent={switchToMeetupById}
+            currentSummary={{ remainCount: roster.summary.remainCount, waitingCount: roster.summary.waitingCount }}
+            forcePickerOpen={tuningOpen && tuningTarget === "ACTIVE MEETUP PICKER"}
             dotsControls={sunDotsControls}
             bump={dialBump}
             autoFill={{
@@ -1412,6 +1414,9 @@ export function V8ActiveSunContent({
   currentEventId,
   pendingEventId,
   onSelectEvent,
+  forcePickerOpen,
+  onPickerOpenChange,
+  currentSummary,
   hasPrevious,
   hasNext,
   dotsControls,
@@ -1448,8 +1453,8 @@ export function V8ActiveSunContent({
   // anywhere on the sun. Optional so the /v8/preview mock canvas (which
   // has no real event list to switch between) can simply omit them and
   // get no switcher UI at all, instead of a non-functional one.
-  onPreviousEvent?: () => void;
-  onNextEvent?: () => void;
+  onPreviousEvent?: (() => void) | undefined;
+  onNextEvent?: (() => void) | undefined;
   // SUN-DIAL -- all optional so /v8/preview's mock sun is unchanged.
   eventKey?: string;
   eventIndex?: number;
@@ -1458,6 +1463,9 @@ export function V8ActiveSunContent({
   currentEventId?: string;
   pendingEventId?: string;
   onSelectEvent?: (eventId: string) => void;
+  forcePickerOpen?: boolean | undefined;
+  onPickerOpenChange?: ((open: boolean) => void) | undefined;
+  currentSummary?: { remainCount?: number | null; waitingCount?: number | null };
   hasPrevious?: boolean;
   hasNext?: boolean;
   dotsControls?: V8SunDotsControls;
@@ -1590,8 +1598,13 @@ export function V8ActiveSunContent({
           index={eventIndex}
           currentEventId={currentEventId}
           pendingEventId={pendingEventId}
+          currentSummary={currentSummary}
           controls={dotsControls}
+          cue={dotsControls.cue}
+          picker={dotsControls.picker}
           className="v8-sun-dots"
+          forceOpen={forcePickerOpen}
+          onOpenChange={onPickerOpenChange}
           onSelectEvent={onSelectEvent}
         />
       ) : null}

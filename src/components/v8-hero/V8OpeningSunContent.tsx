@@ -401,6 +401,8 @@ export function V8OpeningSunContent({
   currentEventId,
   pendingEventId,
   onSelectEvent,
+  forcePickerOpen,
+  onPickerOpenChange,
   dotsControls,
   bump,
 }: {
@@ -417,6 +419,8 @@ export function V8OpeningSunContent({
   currentEventId?: string;
   pendingEventId?: string;
   onSelectEvent?: (eventId: string) => void;
+  forcePickerOpen?: boolean | undefined;
+  onPickerOpenChange?: ((open: boolean) => void) | undefined;
   dotsControls?: V8SunDotsControls;
   // Bumped when a switch hits the first/last meetup (spring-back turn).
   bump?: { n: number; dir: 1 | -1 } | undefined;
@@ -525,7 +529,11 @@ export function V8OpeningSunContent({
           currentEventId={currentEventId}
           pendingEventId={pendingEventId}
           controls={dotsControls}
+          cue={dotsControls.cue}
+          picker={dotsControls.picker}
           className="v8-opening-sun-dots"
+          forceOpen={forcePickerOpen}
+          onOpenChange={onPickerOpenChange}
           onSelectEvent={onSelectEvent}
         />
       ) : null}

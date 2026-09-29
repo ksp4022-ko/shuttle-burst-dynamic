@@ -272,6 +272,7 @@ export function V8ActiveInfoCards({
   // automatic rule below, OFF force-hides regardless of counts.
   const showNeeded = controls.needed.show && counts.needed > 0;
   const showWaitlist = controls.waitlist.show && counts.needed === 0 && counts.waiting > 0;
+  const altSlotControls = controls.altSlot;
   return (
     <>
       <V8FlipCountStyles />
@@ -297,7 +298,7 @@ export function V8ActiveInfoCards({
           whatever else it overlaps. */}
       <InfoCardStatusLayer
         src={assets.infoCardNeeded}
-        controls={{ ...controls.needed, show: showNeeded }}
+        controls={{ ...controls.needed, ...altSlotControls, show: showNeeded }}
         baseWidth={15}
         count={counts.needed}
         textControls={textControls.needed}
@@ -310,12 +311,12 @@ export function V8ActiveInfoCards({
           being covered by it. */}
       <InfoCardStatusLayer
         src={assets.infoCardWaitlist}
-        controls={{ ...controls.waitlist, show: showWaitlist }}
+        controls={{ ...controls.waitlist, ...altSlotControls, show: showWaitlist }}
         baseWidth={15}
         countInset={COUNT_INSETS.waitlist}
         count={counts.waiting}
         textControls={textControls.waitlist}
-        zIndex={36}
+        zIndex={37}
       />
     </>
   );

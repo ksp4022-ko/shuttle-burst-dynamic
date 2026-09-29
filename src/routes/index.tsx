@@ -72,7 +72,7 @@ const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
 const V8_LINE_LOGIN_RETURN_STORAGE_KEY = "shuttle-v8-line-login-return-v1";
 const V8_SELECTED_EVENT_STORAGE_VERSION = "v1";
 const V8_ORIENTATION_RESTORE_STORAGE_VERSION = "v2";
-const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN MOTION", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE", "OPEN SWITCH ICON PREV V2", "OPEN SWITCH ICON NEXT V2", "OPEN TIGER 1", "OPEN TIGER 2", "OPEN TIGER 3", "OPEN TIGER RACKET", "OPEN CTA", "OPEN COUNTDOWN", "OPEN SUN DOTS"];
+const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN MOTION", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE", "OPEN SWITCH ICON PREV V2", "OPEN SWITCH ICON NEXT V2", "OPEN TIGER 1", "OPEN TIGER 2", "OPEN TIGER 3", "OPEN TIGER RACKET", "OPEN CTA", "OPEN COUNTDOWN", "OPEN SUN DOTS", "OPEN MEETUP PICKER"];
 type V8OrientationRestoreView = "active" | "open";
 type V8OrientationRestoreSnapshot = { eventId: string; view: V8OrientationRestoreView };
 
@@ -649,8 +649,12 @@ export function Index() {
   const [tutorialStartCountdown, setTutorialStartCountdown] = useState<number | null>(null);
   const [spotlightRect, setSpotlightRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [frontCardRect, setFrontCardRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
-  const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
+  const [countdownRemainingMs, setCountdownRemainingMs] = useState<number | null>(null);
   const [countdownKey, setCountdownKey] = useState(0);
+  const countdownRemainingMsRef = useRef<number | null>(null);
+  const [openMeetupPickerOpen, setOpenMeetupPickerOpen] = useState(false);
+  const [openQuickPickEventId, setOpenQuickPickEventId] = useState("");
+  const openQuickPickAttemptedSwitchRef = useRef("");
   const [rosterVisible, setRosterVisible] = useState(false);
   const [v8MeetupConfirmed, setV8MeetupConfirmed] = useState(false);
   // ENTER-MORPH: true only while the staged Active entrance plays after a
@@ -707,6 +711,20 @@ export function Index() {
   // or the canvas would render twice and this section would leave a blank
   // full-viewport gap above the Active page's content.
   const v8HeroPickerStage = v8HeroStage && !v8MeetupConfirmed;
+  const resetCountdownRemaining = useCallback(() => {
+    countdownRemainingMsRef.current = null;
+    setCountdownRemainingMs(null);
+  }, []);
+
+  const handleV8IntroBlockingChange = useCallback(
+    (blocking: boolean) => {
+      setV8IntroBlocking(blocking);
+      resetCountdownRemaining();
+      setCountdownKey((current) => current + 1);
+      if (blocking) setOpenMeetupPickerOpen(false);
+    },
+    [resetCountdownRemaining],
+  );
   // Opening is one screen too (Active locks via V8ListBuoys).
   useV8PageLock(isV8Route && !v8MeetupConfirmed);
 
@@ -925,7 +943,7 @@ export function Index() {
     if (flow.pendingAction) return;
     const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
     if (!targetId) return;
-    setCountdownRemaining(null);
+    resetCountdownRemaining();
     // The auto-countdown effect below fires this regardless of route (it
     // only checks `preview`, i.e. flow.phase === "meetup-preview"), so on
     // /v8 this must take the same branch confirmV8MeetupSelection does
@@ -1010,6 +1028,20 @@ export function Index() {
     ],
   );
 
+  const quickPickV8MeetupById = useCallback(
+    (eventId: string) => {
+      if (flow.events.length <= 1 || flow.pendingAction || v8MorphBusyRef.current) return;
+      if (!flow.events.some((event) => event.id === eventId)) return;
+      setOpenQuickPickEventId(eventId);
+      setOpenMeetupPickerOpen(false);
+      resetCountdownRemaining();
+      if (eventId !== flow.selectedEventId) {
+        flow.setPendingSwitchEventId(eventId);
+      }
+    },
+    [flow.events, flow.pendingAction, flow.selectedEventId, flow.setPendingSwitchEventId, resetCountdownRemaining],
+  );
+
   // Opening -> Active stays one state switch on one route. Where the View
   // Transitions API exists (iOS 18+), the switch runs inside
   // document.startViewTransition: step 1 (plaque press) starts on tap, the
@@ -1053,13 +1085,46 @@ export function Index() {
     [],
   );
 
+  useEffect(() => {
+    if (!openQuickPickEventId || !preview || flow.pendingAction || v8MorphBusyRef.current) return;
+    const targetId = openQuickPickEventId;
+    let cancelled = false;
+    const run = async () => {
+      if (targetId !== flow.selectedEventId) {
+        if (flow.pendingSwitchEventId !== targetId || openQuickPickAttemptedSwitchRef.current === targetId) {
+          openQuickPickAttemptedSwitchRef.current = "";
+          setOpenQuickPickEventId("");
+          return;
+        }
+        openQuickPickAttemptedSwitchRef.current = targetId;
+        await flow.switchMeetup();
+        return;
+      }
+      v8MorphBusyRef.current = true;
+      try {
+        await enterV8Active();
+        if (!cancelled) {
+          setV8MeetupConfirmed(true);
+          setOpenQuickPickEventId("");
+          openQuickPickAttemptedSwitchRef.current = "";
+        }
+      } finally {
+        v8MorphBusyRef.current = false;
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [enterV8Active, flow.pendingAction, flow.pendingSwitchEventId, flow.selectedEventId, flow.switchMeetup, openQuickPickEventId, preview]);
+
   const confirmV8MeetupSelection = useCallback(async () => {
     if (flow.pendingAction || v8MorphBusyRef.current) return;
     const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
     if (!targetId) return;
     v8MorphBusyRef.current = true;
     markPreviewInteraction();
-    setCountdownRemaining(null);
+    resetCountdownRemaining();
     try {
       await enterV8Active();
     } finally {
@@ -1126,7 +1191,7 @@ export function Index() {
       if (startCountdown) {
         setCountdownKey((value) => value + 1);
       } else {
-        setCountdownRemaining(null);
+        resetCountdownRemaining();
       }
     },
     [clearTutorialTimers],
@@ -1374,22 +1439,41 @@ export function Index() {
   const effectiveCountdownSeconds = isV8Route ? openTuningControls.countdownSeconds : countdownTuning.seconds;
   const effectiveAutoEnterAtZero = isV8Route ? openTuningControls.countdownAutoEnter : countdownTuning.autoEnterAtZero;
   useEffect(() => {
-    if (!preview || !flow.events.length || tutorialOpen || flow.pendingAction || v8IntroBlocking) {
-      setCountdownRemaining(null);
+    countdownRemainingMsRef.current = null;
+  }, [countdownKey]);
+
+  useEffect(() => {
+    if (!preview || !flow.events.length || tutorialOpen || flow.pendingAction) {
+      resetCountdownRemaining();
+      return;
+    }
+    if (v8IntroBlocking) {
+      resetCountdownRemaining();
+      setOpenMeetupPickerOpen(false);
       return;
     }
     if (!countdownTuning.showCountdown && !effectiveAutoEnterAtZero) {
-      setCountdownRemaining(null);
+      resetCountdownRemaining();
+      return;
+    }
+    if (openMeetupPickerOpen) {
       return;
     }
     const seconds = Math.max(0, Math.round(effectiveCountdownSeconds));
+    const totalMs = seconds * 1000;
+    const startRemainingMs =
+      countdownRemainingMsRef.current != null && countdownRemainingMsRef.current > 0 && countdownRemainingMsRef.current <= totalMs
+        ? countdownRemainingMsRef.current
+        : totalMs;
     const startedAt = window.performance.now();
-    setCountdownRemaining(countdownTuning.showCountdown ? seconds : null);
+    countdownRemainingMsRef.current = startRemainingMs;
+    setCountdownRemainingMs(isV8Route || countdownTuning.showCountdown ? startRemainingMs : null);
     const timer = window.setInterval(() => {
-      const elapsedSeconds = Math.floor((window.performance.now() - startedAt) / 1000);
-      const remaining = Math.max(0, seconds - elapsedSeconds);
-      if (countdownTuning.showCountdown) setCountdownRemaining(remaining);
-      if (remaining <= 0) {
+      const elapsedMs = window.performance.now() - startedAt;
+      const remainingMs = Math.max(0, startRemainingMs - elapsedMs);
+      countdownRemainingMsRef.current = remainingMs;
+      if (isV8Route || countdownTuning.showCountdown) setCountdownRemainingMs(remainingMs);
+      if (remainingMs <= 0) {
         window.clearInterval(timer);
         if (effectiveAutoEnterAtZero) enterPreviewSelection();
       }
@@ -1403,10 +1487,22 @@ export function Index() {
     enterPreviewSelection,
     flow.events.length,
     flow.pendingAction,
+    isV8Route,
+    openMeetupPickerOpen,
     preview,
+    resetCountdownRemaining,
     tutorialOpen,
     v8IntroBlocking,
   ]);
+
+  const effectiveCountdownTotalMs = Math.max(0, Math.round(effectiveCountdownSeconds)) * 1000;
+  const countdownDisplaySeconds = Math.max(
+    0,
+    Math.ceil((countdownRemainingMs ?? effectiveCountdownTotalMs) / 1000),
+  );
+  const countdownProgress = effectiveCountdownTotalMs > 0
+    ? Math.max(0, Math.min(1, (countdownRemainingMs ?? effectiveCountdownTotalMs) / effectiveCountdownTotalMs))
+    : 0;
 
   const clearReplayTimers = useCallback(() => {
     replayTimersRef.current.forEach((timer) => window.clearTimeout(timer));
@@ -1831,12 +1927,48 @@ export function Index() {
                   events={flow.events}
                   currentEventId={flow.selectedEventId}
                   pendingEventId={flow.pendingSwitchEventId}
-                  onSelectEvent={selectV8MeetupById}
+                  onSelectEvent={quickPickV8MeetupById}
+                  forcePickerOpen={openTuningOpen && openTuningTarget === "OPEN MEETUP PICKER"}
+                  onPickerOpenChange={setOpenMeetupPickerOpen}
                   dotsControls={buildV8SunDotsControls(openTuningControls, "open")}
                   bump={openDialBump}
                 />
               }
             />
+            {openTuningControls.countdownBarShow && countdownRemainingMs != null ? (
+              <div
+                className="v8-open-countdown-bar"
+                aria-hidden="true"
+                style={{
+                  position: "fixed",
+                  left: `${openTuningControls.countdownBarX}%`,
+                  top: `${openTuningControls.countdownBarY}%`,
+                  width: `${openTuningControls.countdownBarWidth}%`,
+                  height: `${openTuningControls.countdownBarHeight}px`,
+                  opacity: openTuningControls.countdownBarOpacity / 100,
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 38,
+                  pointerEvents: "none",
+                  borderRadius: 999,
+                  overflow: "hidden",
+                  background: "rgba(82, 45, 10, 0.24)",
+                  boxShadow: "inset 0 0 0 1px rgba(122, 74, 0, 0.24)",
+                } as CSSProperties}
+              >
+                <span
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: "100%",
+                    transform: `scaleX(${countdownProgress})`,
+                    transformOrigin: "left center",
+                    borderRadius: 999,
+                    background: "linear-gradient(90deg, #9b5a16, #f4d06f, #a1621d)",
+                    boxShadow: "0 0 8px rgba(244, 208, 111, 0.55)",
+                  } as CSSProperties}
+                />
+              </div>
+            ) : null}
             {openTuningOpen ? null : (
               <button
                 type="button"
@@ -1931,7 +2063,7 @@ export function Index() {
                     </span>
                   ) : null}
                   {countdownTuning.showCountdown ? (
-                    <small>自動進入 {countdownRemaining ?? countdownTuning.seconds}</small>
+                    <small>自動進入 {countdownDisplaySeconds}</small>
                   ) : null}
                 </span>
                 <button
@@ -2097,7 +2229,7 @@ export function Index() {
             key={v8IntroSiteId}
             config={v8IntroConfig}
             siteId={v8IntroSiteId}
-            onBlockingChange={setV8IntroBlocking}
+            onBlockingChange={handleV8IntroBlockingChange}
             replaySignal={v8IntroReplaySignal}
           />
           {/* Countdown auto-enter is already paused via v8IntroBlocking
@@ -2109,7 +2241,12 @@ export function Index() {
           <button
             type="button"
             className="v8-intro-replay-button"
-            onClick={() => setV8IntroReplaySignal((current) => current + 1)}
+            onClick={() => {
+              setOpenMeetupPickerOpen(false);
+              resetCountdownRemaining();
+              setCountdownKey((current) => current + 1);
+              setV8IntroReplaySignal((current) => current + 1);
+            }}
           >
             Replay Intro
           </button>

@@ -25,9 +25,9 @@ type V8HeroCompositionProps = {
   confirmed: boolean;
   confirmButtonRef?: RefObject<HTMLButtonElement | null>;
   confirmDisabled?: boolean;
-  onPreviousEvent?: () => void;
-  onNextEvent?: () => void;
-  onConfirm?: () => void;
+  onPreviousEvent?: (() => void) | undefined;
+  onNextEvent?: (() => void) | undefined;
+  onConfirm?: (() => void) | undefined;
   // Lets a caller reposition/hide any rig layer (dragon, claw, tiger, bag,
   // waves...) for a confirmed identity's own composition (e.g. the Active
   // page's dragon-holds-a-scroll layout) without needing a dedicated prop

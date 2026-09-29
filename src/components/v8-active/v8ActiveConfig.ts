@@ -207,6 +207,23 @@ export type V8SunDotsControls = {
   rotation: number;
   opacity: number;
   zIndex: number;
+  cue: {
+    show: boolean;
+    scale: number;
+    gap: number;
+    opacity: number;
+  };
+  picker: {
+    offsetX: number;
+    offsetY: number;
+    width: number;
+    maxHeight: number;
+    columns: number;
+    gap: number;
+    itemHeight: number;
+    fontSize: number;
+    opacity: number;
+  };
 };
 
 export const v8ActiveListBuoyFiles = {
@@ -420,8 +437,8 @@ export const v8ActiveTigerScrollOverrides: Partial<V8HeroControls> = {
   tigerRacketShow: false,
   tigerScrollShow: true,
   tigerScrollX: 84,
-  tigerScrollY: 42,
-  tigerScrollScale: 1.72,
+  tigerScrollY: 46,
+  tigerScrollScale: 1.9,
   tigerScrollRotation: 0,
 };
 
@@ -441,6 +458,7 @@ export type V8ActiveInfoCardControls = {
 export type V8ActiveInfoCardsControls = {
   rope: V8ActiveInfoCardControls;
   registered: V8ActiveInfoCardControls;
+  altSlot: Omit<V8ActiveInfoCardControls, "show">;
   needed: V8ActiveInfoCardControls;
   waitlist: V8ActiveInfoCardControls;
 };
@@ -455,6 +473,7 @@ export type V8ActiveInfoCardsControls = {
 export const v8ActiveInfoCardsDefaults: V8ActiveInfoCardsControls = {
   rope: { show: true, x: 30, y: 27, scale: 2.49, rotation: 9 },
   registered: { show: true, x: 14, y: 36, scale: 1.97, rotation: 11 },
+  altSlot: { x: 29, y: 38, scale: 2, rotation: 2 },
   needed: { show: true, x: 29, y: 38, scale: 2, rotation: 2 },
   waitlist: { show: true, x: 31, y: 38, scale: 2, rotation: 2 },
 };

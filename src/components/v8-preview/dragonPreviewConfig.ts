@@ -267,6 +267,12 @@ export type PreviewControls = {
   openSunNoteOpacity: number;
   countdownSeconds: number;
   countdownAutoEnter: boolean;
+  countdownBarShow: boolean;
+  countdownBarX: number;
+  countdownBarY: number;
+  countdownBarWidth: number;
+  countdownBarHeight: number;
+  countdownBarOpacity: number;
   openSunSafeBoxWidth: number;
   openSunSafeBoxHeight: number;
   openSunSafeBoxShowHelper: boolean;
@@ -283,6 +289,15 @@ export type PreviewControls = {
   openSwitchArrowNextRotation: number;
   openSwitchArrowNextOpacity: number;
   openSwitchArrowNextZIndex: number;
+  openMeetupPickerOffsetX: number;
+  openMeetupPickerOffsetY: number;
+  openMeetupPickerWidth: number;
+  openMeetupPickerMaxHeight: number;
+  openMeetupPickerColumns: number;
+  openMeetupPickerGap: number;
+  openMeetupPickerItemHeight: number;
+  openMeetupPickerFontSize: number;
+  openMeetupPickerOpacity: number;
   // Active-only: the three status plaques (已報/尚缺/候補) + their shared
   // rope, left of the dragon below the sun -- each independently
   // show/size/position/rotation-controlled (see V8ActiveInfoCards).
@@ -306,6 +321,10 @@ export type PreviewControls = {
   activeInfoWaitlistY: number;
   activeInfoWaitlistScale: number;
   activeInfoWaitlistRotation: number;
+  activeInfoAltSlotX: number;
+  activeInfoAltSlotY: number;
+  activeInfoAltSlotScale: number;
+  activeInfoAltSlotRotation: number;
   // Ema (已報/尚缺/候補) count text, added 2026-09-11 -- replaces the old
   // single countFontSize shared across all three; each plaque's number now
   // has its own full baseline text set. See V8ActiveEmaTextControls in
@@ -594,12 +613,29 @@ export type PreviewControls = {
   openSunDotsRotation: number;
   openSunDotsOpacity: number;
   openSunDotsZIndex: number;
+  openSunDotsCueShow: boolean;
+  openSunDotsCueScale: number;
+  openSunDotsCueGap: number;
+  openSunDotsCueOpacity: number;
   activeSunDotsX: number;
   activeSunDotsY: number;
   activeSunDotsScale: number;
   activeSunDotsRotation: number;
   activeSunDotsOpacity: number;
   activeSunDotsZIndex: number;
+  activeSunDotsCueShow: boolean;
+  activeSunDotsCueScale: number;
+  activeSunDotsCueGap: number;
+  activeSunDotsCueOpacity: number;
+  activeMeetupPickerOffsetX: number;
+  activeMeetupPickerOffsetY: number;
+  activeMeetupPickerWidth: number;
+  activeMeetupPickerMaxHeight: number;
+  activeMeetupPickerColumns: number;
+  activeMeetupPickerGap: number;
+  activeMeetupPickerItemHeight: number;
+  activeMeetupPickerFontSize: number;
+  activeMeetupPickerOpacity: number;
   // CTA-ASSEMBLY (real ACTIVE only): the whole button assembly.
   activeCtaAssemblyX: number;
   activeCtaAssemblyY: number;
@@ -678,6 +714,7 @@ export type PreviewTargetId =
   | "OPEN TIGER RACKET"
   | "OPEN CTA"
   | "OPEN COUNTDOWN"
+  | "OPEN MEETUP PICKER"
   | "OPEN SWITCH ICON PREV V2"
   | "OPEN SWITCH ICON NEXT V2"
   | "ACTIVE TIGER SCROLL"
@@ -690,6 +727,7 @@ export type PreviewTargetId =
   | "ACTIVE IDENTITY FORGET"
   | "ACTIVE INFO ROPE"
   | "ACTIVE INFO REGISTERED"
+  | "ACTIVE INFO ALT SLOT"
   | "ACTIVE INFO NEEDED"
   | "ACTIVE INFO WAITLIST"
   | "ACTIVE BACKGROUND FADE"
@@ -710,6 +748,7 @@ export type PreviewTargetId =
   | "ACTIVE LIST HEADER WAIT"
   | "ACTIVE LIST PANEL"
   | "ACTIVE SUN DOTS"
+  | "ACTIVE MEETUP PICKER"
   | "ACTIVE CTA ASSEMBLY"
   | "ACTIVE SEASON ATTENDANCE"
   | "OPEN SUN DOTS"
@@ -744,6 +783,7 @@ export const openingTargetOrder: PreviewTargetId[] = [
   "OPEN SUN TIME",
   "OPEN SUN NOTE",
   "OPEN COUNTDOWN",
+  "OPEN MEETUP PICKER",
   "OPEN SWITCH ICON PREV V2",
   "OPEN SWITCH ICON NEXT V2",
 ];
@@ -766,6 +806,7 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE IDENTITY FORGET",
   "ACTIVE INFO ROPE",
   "ACTIVE INFO REGISTERED",
+  "ACTIVE INFO ALT SLOT",
   "ACTIVE INFO NEEDED",
   "ACTIVE INFO WAITLIST",
   "ACTIVE BACKGROUND FADE",
@@ -782,6 +823,7 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE ROSTER V2 B2",
   "ACTIVE SWITCH ICON PREV V2",
   "ACTIVE SWITCH ICON NEXT V2",
+  "ACTIVE MEETUP PICKER",
 ];
 
 // Kept for anything still importing the old flat name -- identical to
@@ -954,8 +996,8 @@ export const previewDefaults: PreviewControls = {
   activeSunMotionEnergyIntensity: 70,
   activeSunMotionEnergyOpacity: 55,
   activeTigerScrollX: 84,
-  activeTigerScrollY: 42,
-  activeTigerScrollScale: 1.72,
+  activeTigerScrollY: 46,
+  activeTigerScrollScale: 1.9,
   activeTigerScrollRotation: 0,
   // Matches v8ActiveSunMessagesDefaults in v8ActiveConfig.ts exactly.
   activeSunSafeBoxWidth: 90,
@@ -1068,6 +1110,12 @@ export const previewDefaults: PreviewControls = {
   openSunNoteOpacity: 100,
   countdownSeconds: 9,
   countdownAutoEnter: true,
+  countdownBarShow: true,
+  countdownBarX: 50,
+  countdownBarY: 94,
+  countdownBarWidth: 58,
+  countdownBarHeight: 3,
+  countdownBarOpacity: 86,
   openSwitchArrowShow: true,
   openSwitchArrowPrevX: 5,
   openSwitchArrowPrevY: 50,
@@ -1081,6 +1129,15 @@ export const previewDefaults: PreviewControls = {
   openSwitchArrowNextRotation: 0,
   openSwitchArrowNextOpacity: 100,
   openSwitchArrowNextZIndex: 8,
+  openMeetupPickerOffsetX: 0,
+  openMeetupPickerOffsetY: 6,
+  openMeetupPickerWidth: 238,
+  openMeetupPickerMaxHeight: 272,
+  openMeetupPickerColumns: 3,
+  openMeetupPickerGap: 7,
+  openMeetupPickerItemHeight: 44,
+  openMeetupPickerFontSize: 13,
+  openMeetupPickerOpacity: 100,
   activeInfoRopeShow: true,
   activeInfoRopeX: 30,
   activeInfoRopeY: 27,
@@ -1101,6 +1158,10 @@ export const previewDefaults: PreviewControls = {
   activeInfoWaitlistY: 38,
   activeInfoWaitlistScale: 2,
   activeInfoWaitlistRotation: 2,
+  activeInfoAltSlotX: 29,
+  activeInfoAltSlotY: 38,
+  activeInfoAltSlotScale: 2,
+  activeInfoAltSlotRotation: 2,
   // Ema count text (2026-09-11) -- FontSize 20/MaxWidth 60/Align center/
   // Weight 800 match the old shared defaults (the span's previous hardcoded
   // fontWeight:800 and the old single countFontSize:20) so switching to
@@ -1328,9 +1389,9 @@ export const previewDefaults: PreviewControls = {
   activeRosterV2A1WaitingY: 4,
   activeRosterV2B1Show: true,
   activeRosterV2B1X: 20,
-  activeRosterV2B1Y: 72,
-  activeRosterV2B1Scale: 2.76,
-  activeRosterV2B1Rotation: -23,
+  activeRosterV2B1Y: 70,
+  activeRosterV2B1Scale: 2.84,
+  activeRosterV2B1Rotation: -21,
   activeRosterV2B1Opacity: 100,
   activeRosterV2B1ZIndex: 19,
   activeRosterV2B2Show: false,
@@ -1381,12 +1442,29 @@ export const previewDefaults: PreviewControls = {
   openSunDotsRotation: 0,
   openSunDotsOpacity: 100,
   openSunDotsZIndex: 6,
+  openSunDotsCueShow: true,
+  openSunDotsCueScale: 1,
+  openSunDotsCueGap: 5,
+  openSunDotsCueOpacity: 100,
   activeSunDotsX: 50,
   activeSunDotsY: 90,
   activeSunDotsScale: 1,
   activeSunDotsRotation: 0,
   activeSunDotsOpacity: 100,
   activeSunDotsZIndex: 6,
+  activeSunDotsCueShow: true,
+  activeSunDotsCueScale: 1,
+  activeSunDotsCueGap: 5,
+  activeSunDotsCueOpacity: 100,
+  activeMeetupPickerOffsetX: 0,
+  activeMeetupPickerOffsetY: 6,
+  activeMeetupPickerWidth: 238,
+  activeMeetupPickerMaxHeight: 272,
+  activeMeetupPickerColumns: 3,
+  activeMeetupPickerGap: 7,
+  activeMeetupPickerItemHeight: 44,
+  activeMeetupPickerFontSize: 13,
+  activeMeetupPickerOpacity: 100,
   activeCtaAssemblyX: 41,
   activeCtaAssemblyY: 70,
   activeCtaAssemblyScale: 0.65,
@@ -1546,7 +1624,8 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "openSunNoteFontSize",
     "openSunNoteOpacity",
   ],
-  "OPEN COUNTDOWN": ["countdownSeconds", "countdownAutoEnter"],
+  "OPEN COUNTDOWN": ["countdownSeconds", "countdownAutoEnter", "countdownBarShow", "countdownBarX", "countdownBarY", "countdownBarWidth", "countdownBarHeight", "countdownBarOpacity"],
+  "OPEN MEETUP PICKER": ["openMeetupPickerOffsetX", "openMeetupPickerOffsetY", "openMeetupPickerWidth", "openMeetupPickerMaxHeight", "openMeetupPickerColumns", "openMeetupPickerGap", "openMeetupPickerItemHeight", "openMeetupPickerFontSize", "openMeetupPickerOpacity"],
   "OPEN TIGER 1": ["openTiger1X", "openTiger1Y", "openTiger1Scale", "openTiger1Rotation", "openTiger1Opacity", "openTiger1ZIndex"],
   "OPEN TIGER 2": ["openTiger2X", "openTiger2Y", "openTiger2Scale", "openTiger2Rotation", "openTiger2Opacity", "openTiger2ZIndex"],
   "OPEN TIGER 3": ["openTiger3X", "openTiger3Y", "openTiger3Scale", "openTiger3Rotation", "openTiger3Opacity", "openTiger3ZIndex"],
@@ -1643,6 +1722,12 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeInfoRegisteredTextLineHeight",
     "activeInfoRegisteredTextAlign",
     "activeInfoRegisteredTextFontWeight",
+  ],
+  "ACTIVE INFO ALT SLOT": [
+    "activeInfoAltSlotX",
+    "activeInfoAltSlotY",
+    "activeInfoAltSlotScale",
+    "activeInfoAltSlotRotation",
   ],
   "ACTIVE INFO NEEDED": [
     "activeInfoNeededShow",
@@ -1854,6 +1939,10 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "openSunDotsRotation",
     "openSunDotsOpacity",
     "openSunDotsZIndex",
+    "openSunDotsCueShow",
+    "openSunDotsCueScale",
+    "openSunDotsCueGap",
+    "openSunDotsCueOpacity",
   ],
   "ACTIVE SUN DOTS": [
     "activeSunDotsX",
@@ -1862,6 +1951,21 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeSunDotsRotation",
     "activeSunDotsOpacity",
     "activeSunDotsZIndex",
+    "activeSunDotsCueShow",
+    "activeSunDotsCueScale",
+    "activeSunDotsCueGap",
+    "activeSunDotsCueOpacity",
+  ],
+  "ACTIVE MEETUP PICKER": [
+    "activeMeetupPickerOffsetX",
+    "activeMeetupPickerOffsetY",
+    "activeMeetupPickerWidth",
+    "activeMeetupPickerMaxHeight",
+    "activeMeetupPickerColumns",
+    "activeMeetupPickerGap",
+    "activeMeetupPickerItemHeight",
+    "activeMeetupPickerFontSize",
+    "activeMeetupPickerOpacity",
   ],
   "ACTIVE CTA ASSEMBLY": [
     "activeIdentityShow",
@@ -2197,6 +2301,11 @@ export const controlRanges = {
   openSunNoteFontSize: { label: "開場備註 Font Size", min: 4, max: 48 },
   openSunNoteOpacity: { label: "開場備註 Opacity", min: 0, max: 100 },
   countdownSeconds: { label: "自動進入倒數 (秒)", min: 5, max: 15, step: 1 },
+  countdownBarX: { label: "倒數條 X %", min: -20, max: 120 },
+  countdownBarY: { label: "倒數條 Y %", min: -20, max: 120 },
+  countdownBarWidth: { label: "倒數條 Width %", min: 10, max: 120 },
+  countdownBarHeight: { label: "倒數條 Height px", min: 1, max: 12 },
+  countdownBarOpacity: { label: "倒數條 Opacity", min: 0, max: 100 },
   activeIdentityStatusMarkX: { label: "印章 X %", min: -30, max: 130 },
   activeIdentityStatusMarkY: { label: "印章 Y %", min: -30, max: 160 },
   activeIdentityStatusMarkScale: { label: "印章 Scale", min: 0.3, max: 4, step: 0.01 },
@@ -2275,6 +2384,10 @@ export const controlRanges = {
   activeInfoWaitlistY: { label: "候補 Y %", min: -20, max: 140 },
   activeInfoWaitlistScale: { label: "候補 Scale", min: 0.2, max: 3, step: 0.01 },
   activeInfoWaitlistRotation: { label: "候補 Rotation", min: -180, max: 180 },
+  activeInfoAltSlotX: { label: "尚缺/候補共用 X %", min: -20, max: 120 },
+  activeInfoAltSlotY: { label: "尚缺/候補共用 Y %", min: -20, max: 140 },
+  activeInfoAltSlotScale: { label: "尚缺/候補共用 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeInfoAltSlotRotation: { label: "尚缺/候補共用 Rotation", min: -180, max: 180 },
   activeInfoWaitlistTextX: { label: "候補數字 X", min: -40, max: 40 },
   activeInfoWaitlistTextY: { label: "候補數字 Y", min: -40, max: 40 },
   activeInfoWaitlistTextFontSize: { label: "候補數字 Font Size", min: 10, max: 40 },
@@ -2407,12 +2520,36 @@ export const controlRanges = {
   openSunDotsRotation: { label: "OPEN 場次指示 Rotation", min: -180, max: 180 },
   openSunDotsOpacity: { label: "OPEN 場次指示 Opacity", min: 0, max: 100 },
   openSunDotsZIndex: { label: "OPEN 場次指示 Z-Index", min: 0, max: 40 },
+  openSunDotsCueScale: { label: "OPEN Cue Scale", min: 0.4, max: 2, step: 0.01 },
+  openSunDotsCueGap: { label: "OPEN Cue Gap", min: 0, max: 16 },
+  openSunDotsCueOpacity: { label: "OPEN Cue Opacity", min: 0, max: 100 },
   activeSunDotsX: { label: "ACTIVE 場次指示 X %", min: -20, max: 120 },
   activeSunDotsY: { label: "ACTIVE 場次指示 Y %", min: -20, max: 140 },
   activeSunDotsScale: { label: "ACTIVE 場次指示 Scale", min: 0.3, max: 3, step: 0.01 },
   activeSunDotsRotation: { label: "ACTIVE 場次指示 Rotation", min: -180, max: 180 },
   activeSunDotsOpacity: { label: "ACTIVE 場次指示 Opacity", min: 0, max: 100 },
   activeSunDotsZIndex: { label: "ACTIVE 場次指示 Z-Index", min: 0, max: 40 },
+  activeSunDotsCueScale: { label: "ACTIVE Cue Scale", min: 0.4, max: 2, step: 0.01 },
+  activeSunDotsCueGap: { label: "ACTIVE Cue Gap", min: 0, max: 16 },
+  activeSunDotsCueOpacity: { label: "ACTIVE Cue Opacity", min: 0, max: 100 },
+  openMeetupPickerOffsetX: { label: "OPEN Picker Offset X", min: -160, max: 160 },
+  openMeetupPickerOffsetY: { label: "OPEN Picker Offset Y", min: -120, max: 180 },
+  openMeetupPickerWidth: { label: "OPEN Picker Width", min: 132, max: 360 },
+  openMeetupPickerMaxHeight: { label: "OPEN Picker Max Height", min: 88, max: 420 },
+  openMeetupPickerColumns: { label: "OPEN Picker Columns", min: 1, max: 5, step: 1 },
+  openMeetupPickerGap: { label: "OPEN Picker Gap", min: 0, max: 18 },
+  openMeetupPickerItemHeight: { label: "OPEN Picker Item Height", min: 44, max: 84 },
+  openMeetupPickerFontSize: { label: "OPEN Picker Font Size", min: 10, max: 18 },
+  openMeetupPickerOpacity: { label: "OPEN Picker Opacity", min: 0, max: 100 },
+  activeMeetupPickerOffsetX: { label: "ACTIVE Picker Offset X", min: -160, max: 160 },
+  activeMeetupPickerOffsetY: { label: "ACTIVE Picker Offset Y", min: -120, max: 180 },
+  activeMeetupPickerWidth: { label: "ACTIVE Picker Width", min: 132, max: 360 },
+  activeMeetupPickerMaxHeight: { label: "ACTIVE Picker Max Height", min: 88, max: 420 },
+  activeMeetupPickerColumns: { label: "ACTIVE Picker Columns", min: 1, max: 5, step: 1 },
+  activeMeetupPickerGap: { label: "ACTIVE Picker Gap", min: 0, max: 18 },
+  activeMeetupPickerItemHeight: { label: "ACTIVE Picker Item Height", min: 44, max: 84 },
+  activeMeetupPickerFontSize: { label: "ACTIVE Picker Font Size", min: 10, max: 18 },
+  activeMeetupPickerOpacity: { label: "ACTIVE Picker Opacity", min: 0, max: 100 },
   activeCtaAssemblyX: { label: "按鍵組 X %", min: -30, max: 130, step: 0.5 },
   activeCtaAssemblyY: { label: "按鍵組 Y %", min: -30, max: 160, step: 0.5 },
   activeCtaAssemblyScale: { label: "按鍵組 Scale", min: 0.4, max: 2, step: 0.01 },
@@ -3631,6 +3768,12 @@ export function buildV8ActiveInfoCardsControls(controls: PreviewControls): V8Act
       scale: controls.activeInfoRegisteredScale,
       rotation: controls.activeInfoRegisteredRotation,
     },
+    altSlot: {
+      x: controls.activeInfoAltSlotX,
+      y: controls.activeInfoAltSlotY,
+      scale: controls.activeInfoAltSlotScale,
+      rotation: controls.activeInfoAltSlotRotation,
+    },
     needed: {
       show: controls.activeInfoNeededShow,
       x: controls.activeInfoNeededX,
@@ -3905,6 +4048,23 @@ export function buildV8SunDotsControls(controls: PreviewControls, scope: "open" 
       rotation: controls.openSunDotsRotation,
       opacity: controls.openSunDotsOpacity,
       zIndex: controls.openSunDotsZIndex,
+      cue: {
+        show: controls.openSunDotsCueShow,
+        scale: controls.openSunDotsCueScale,
+        gap: controls.openSunDotsCueGap,
+        opacity: controls.openSunDotsCueOpacity,
+      },
+      picker: {
+        offsetX: controls.openMeetupPickerOffsetX,
+        offsetY: controls.openMeetupPickerOffsetY,
+        width: controls.openMeetupPickerWidth,
+        maxHeight: controls.openMeetupPickerMaxHeight,
+        columns: controls.openMeetupPickerColumns,
+        gap: controls.openMeetupPickerGap,
+        itemHeight: controls.openMeetupPickerItemHeight,
+        fontSize: controls.openMeetupPickerFontSize,
+        opacity: controls.openMeetupPickerOpacity,
+      },
     };
   }
   return {
@@ -3914,6 +4074,23 @@ export function buildV8SunDotsControls(controls: PreviewControls, scope: "open" 
     rotation: controls.activeSunDotsRotation,
     opacity: controls.activeSunDotsOpacity,
     zIndex: controls.activeSunDotsZIndex,
+    cue: {
+      show: controls.activeSunDotsCueShow,
+      scale: controls.activeSunDotsCueScale,
+      gap: controls.activeSunDotsCueGap,
+      opacity: controls.activeSunDotsCueOpacity,
+    },
+    picker: {
+      offsetX: controls.activeMeetupPickerOffsetX,
+      offsetY: controls.activeMeetupPickerOffsetY,
+      width: controls.activeMeetupPickerWidth,
+      maxHeight: controls.activeMeetupPickerMaxHeight,
+      columns: controls.activeMeetupPickerColumns,
+      gap: controls.activeMeetupPickerGap,
+      itemHeight: controls.activeMeetupPickerItemHeight,
+      fontSize: controls.activeMeetupPickerFontSize,
+      opacity: controls.activeMeetupPickerOpacity,
+    },
   };
 }
 
