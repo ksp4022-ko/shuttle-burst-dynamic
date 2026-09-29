@@ -719,6 +719,13 @@ export function Index() {
   // or the canvas would render twice and this section would leave a blank
   // full-viewport gap above the Active page's content.
   const v8HeroPickerStage = v8HeroStage && !v8MeetupConfirmed;
+  // OPEN-only background effects (countdown / auto-enter, pendingSwitch
+  // auto-fill). On V8, ACTIVE owns the screen once v8MeetupConfirmed is
+  // true while flow.phase deliberately stays "meetup-preview", so gating on
+  // `preview` alone kept them running inside ACTIVE (the countdown restarted
+  // and re-fired its enter every N seconds). V8TEST-only for now: /v8 keeps
+  // `preview` until the fix is promoted (Cfm).
+  const openOnlyEffectsActive = v8RouteFamily === "v8test" ? preview && !v8MeetupConfirmed : preview;
   const resetCountdownRemaining = useCallback(() => {
     countdownRemainingMsRef.current = null;
     setCountdownRemainingMs(null);
@@ -1165,9 +1172,9 @@ export function Index() {
   }, [v8Entering]);
 
   useEffect(() => {
-    if (!preview || flow.pendingSwitchEventId || !flow.selectedEventId) return;
+    if (!openOnlyEffectsActive || flow.pendingSwitchEventId || !flow.selectedEventId) return;
     flow.setPendingSwitchEventId(flow.selectedEventId);
-  }, [flow.pendingSwitchEventId, flow.selectedEventId, flow.setPendingSwitchEventId, preview]);
+  }, [flow.pendingSwitchEventId, flow.selectedEventId, flow.setPendingSwitchEventId, openOnlyEffectsActive]);
 
   const clearTutorialTimers = useCallback(() => {
     tutorialTimersRef.current.forEach((timer) => window.clearTimeout(timer));
@@ -1446,7 +1453,7 @@ export function Index() {
   }, [countdownKey]);
 
   useEffect(() => {
-    if (!preview || !flow.events.length || tutorialOpen || flow.pendingAction) {
+    if (!openOnlyEffectsActive || !flow.events.length || tutorialOpen || flow.pendingAction) {
       resetCountdownRemaining();
       return;
     }
@@ -1492,7 +1499,7 @@ export function Index() {
     flow.pendingAction,
     isV8Route,
     openMeetupPickerOpen,
-    preview,
+    openOnlyEffectsActive,
     resetCountdownRemaining,
     tutorialOpen,
     v8IntroBlocking,
