@@ -963,7 +963,11 @@ export function Index() {
   const v8IntroHoldsImageLoads = v8RouteFamily === "v8test" && v8IntroBlocking && !v8IntroMediaBuffered;
   const v8IntroPrewarmStartedRef = useRef(false);
   useEffect(() => {
+    // Also after the startup data (events + roster) is in: started earlier,
+    // the queue's images competed with those API calls for bandwidth and
+    // could push them past their 8s timeout (real iPhone: load-error screen).
     if (v8RouteFamily !== "v8test" || !v8IntroMediaBuffered || v8IntroPrewarmStartedRef.current) return;
+    if (!v8OpenReady || flow.phase === "load-error") return;
     v8IntroPrewarmStartedRef.current = true;
     const hero = openCriticalAssetsAll;
     const activeAssets = buildV8ActiveAssets(import.meta.env.BASE_URL);
@@ -993,7 +997,7 @@ export function Index() {
       }),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v8IntroMediaBuffered, v8RouteFamily]);
+  }, [flow.phase, v8IntroMediaBuffered, v8OpenReady, v8RouteFamily]);
   useEffect(() => {
     if (v8RouteFamily !== "v8test" || !v8HeroPickerStage || !v8OpenReady) return;
     if (!openCountdownAssetsReady || v8IntroHoldsImageLoads) return;
