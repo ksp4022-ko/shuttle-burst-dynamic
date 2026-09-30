@@ -87,7 +87,7 @@ V8TEST infrastructure:
 
 - V8TEST 3 fixes — `647f677` (dragon load order / bfcache Back restore reset / animated auto-enter); real iPhone pending
 
-- /v8 cloud badges 450px on all routes — `c491044` (production fix on user request; verify on iPhone)
+- /v8 cloud badges 450px on all routes — `c491044` — CLOSED (production real iPhone PASS)
 - /v8test list-panel names wait for panel art — `5008630`; real iPhone pending
 - Batch 2: STOPPED (user)
 
