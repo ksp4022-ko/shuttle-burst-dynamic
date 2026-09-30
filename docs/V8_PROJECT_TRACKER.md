@@ -220,7 +220,28 @@ Do NOT mark CLOSED until user confirms real-device PASS.
 ## V8-ASSET-READY
 
 Status:
-IN PROGRESS — REAL DEVICE FAIL / ROLLED BACK
+IN PROGRESS — P-021 v2 step 1 V8TEST DEPLOYED / VERIFY（6367bbb 仍為 ROLLED BACK）
+
+P-021 v2 step 1（OPEN countdown readiness，/v8test only）：
+
+f5207d9
+fix(v8test): start OPEN auto-enter countdown only after critical art loads
+
+- Real iPhone：OPEN 還在載入時 9s auto-enter 就觸發，ACTIVE 下載與 OPEN 搶頻寬。
+- OPEN critical set：龍身、目前顯示的老虎（依 tigerVariant）、進入戰局 CTA 圖。
+  裝飾（浪/雲/山/金墨/前浪花/爪/袋/箭頭）可漸進載入，不等。
+- 判斷：畫面上的 <img> complete + naturalWidth>0（沿用 ?v8r 重試）；
+  無 timeout、error 不算 ready；critical 失敗 → 不自動進場，手動 CTA / Quick Pick 可用。
+- 不加 global gate、不改 cover、不改 ACTIVE preload；/v8 不變。
+- Local（Chromium 限速）：
+  - /v8test 600kbps：critical 全載完（40.7s）才開始倒數，ACTIVE 於 +9.06s 進場
+  - /v8test 20Mbps：2.2s 開始倒數，11.3s 進場（完整 9s）
+  - /v8test 龍身 error：25s 內不倒數、不自動進場；手動 CTA → ACTIVE PASS
+  - /v8 600kbps：原行為（資料好即倒數）不變
+  - Regression /v8、/v8/kangxuan（390/1280）、/v8test/kangxuan PASS，legacy 0，無 pageerror
+- real iPhone Safari：pending
+
+下一階段（ACTIVE gate / preload）未開始，需另行指示。
 
 Attempted implementation：
 
@@ -668,7 +689,7 @@ Auto-Fill / experimental control values 已納入 copy output。
 # CURRENT EXECUTION ORDER
 
 （精簡現況與目前順序以 docs/V8_CURRENT_STATE.md 為準：
-P-022 BASIC BILLING production verify → P-021 v2（先 read-only 診斷，經 V8TEST）→ 其他）
+P-022 BASIC BILLING production verify / P-021 v2 step 1 V8TEST verify → P-021 v2（先 read-only 診斷，經 V8TEST）→ 其他）
 
 1. V8-ASSET-READY
 2. iPhone Quick Pick final verify
