@@ -15,7 +15,7 @@ type UseV8SeasonPaymentInput = {
   groupId: string | undefined;
   // Only a claimed 季打 identity has a season payment.
   isFixed: boolean;
-  // P-022 is V8TEST-only until Cfm.
+  // Kill switch; true on all V8 routes since the P-022 Cfm.
   enabled: boolean;
 };
 

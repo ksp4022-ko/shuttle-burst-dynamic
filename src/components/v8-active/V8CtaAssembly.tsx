@@ -105,7 +105,7 @@ export function V8CtaAssembly({
   onPrimary: () => void;
   onHelperSignup: () => void;
   onHelperCancel: () => void;
-  // P-022 (V8TEST only): when given, 帳單 is live; otherwise it stays the
+  // P-022: when given, 帳單 is live; otherwise it stays the
   // greyed placeholder.
   onBill?: (() => void) | undefined;
 }) {
@@ -186,7 +186,7 @@ export function V8CtaAssembly({
       </button>
 
       {/* 帳單: greyed placeholder (hiding it would leave an empty recess)
-          unless onBill is given -- P-022 read-only bill, V8TEST only. */}
+          unless onBill is given -- P-022 read-only bill. */}
       <button
         type="button"
         className={onBill ? hitClass("bill") : "v8-asm-hit"}

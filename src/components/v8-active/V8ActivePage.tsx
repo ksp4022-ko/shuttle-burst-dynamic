@@ -62,7 +62,6 @@ import {
 import { V8CtaAssembly, V8CtaAssemblyStyles, type V8CtaAssemblyAssets } from "./V8CtaAssembly";
 import { V8SeasonAttendance } from "./V8SeasonAttendance";
 import { V8SeasonBillingDetails } from "./V8SeasonBilling";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { useV8SeasonPayment } from "@/hooks/use-v8-season-payment";
 import type { V8SeasonProgress } from "@/lib/database-alpha";
@@ -194,15 +193,14 @@ export function V8ActivePage({
     groupId: selectedEvent?.groupId,
     isFixed: isSeasonMemberForAttendance,
   });
-  // P-022 季費 (read-only, V8TEST only until Cfm).
-  const seasonBillingEnabled = isV8TestRoute();
+  // P-022 季費 (read-only). Verified on /v8test, promoted to /v8 on Cfm.
   const seasonPayment = useV8SeasonPayment({
     token: lineAuthToken,
     eventId: selectedEvent?.id,
     seasonId: selectedEvent?.seasonId,
     groupId: selectedEvent?.groupId,
     isFixed: isSeasonMemberForAttendance,
-    enabled: seasonBillingEnabled,
+    enabled: true,
   });
   const [billOpen, setBillOpen] = useState(false);
   // A different meetup closes the bill (no stale payment on screen).
@@ -773,7 +771,7 @@ export function V8ActivePage({
           identical to the identity gate since the two are mutually
           exclusive (helperMode only ever opens once identity is already
           known, so they never need to layer on top of each other). */}
-      {/* P-022 帳單 (V8TEST, read-only): same blur-gate card as 代報/代退.
+      {/* P-022 帳單 (read-only): same blur-gate card as 代報/代退.
           Only backend values; no payment or edit actions. */}
       {billOpen && seasonPayment ? (
         <div className="v8-identity-gate">
@@ -1952,8 +1950,9 @@ export function V8IdentityScrollContent({
   onForget: () => void;
   onHelperSignup: () => void;
   onHelperCancel: () => void;
-  // P-022 帳單 (V8TEST, 季打 only): enables the assembly's 帳單 plaque.
-  // Omitted everywhere else, so /v8 keeps the greyed placeholder.
+  // P-022 帳單 (季打 only): enables the assembly's 帳單 plaque. Omitted
+  // otherwise (temp / non-season event / preview), which keeps the greyed
+  // placeholder.
   onBill?: (() => void) | undefined;
 }) {
   // SCROLL-FEEDBACK stamp: when THIS signup's status changes (same signupId,

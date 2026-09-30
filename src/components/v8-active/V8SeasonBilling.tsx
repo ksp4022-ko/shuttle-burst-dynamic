@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { V8SeasonPaymentState } from "@/hooks/use-v8-season-payment";
 
-// P-022 本季帳單 (V8TEST, 2026-09-30): read-only season bill shown in the
+// P-022 本季帳單 (2026-09-30; /v8test first, promoted to /v8 on Cfm): read-only season bill shown in the
 // 帳單 dialog. Every number is the Worker's season_payments value -- nothing
 // here adds, subtracts or derives an amount. No payment or edit actions.
 
