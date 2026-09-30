@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { v8ActiveListBuoyFiles, type V8ActiveListBuoyLayerControls, type V8ActiveListBuoysControls } from "./v8ActiveConfig";
 import type { V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { useV8PageLock } from "./useV8PageLock";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // LIST-BUOYS (名單浮標): the three rosters live in a panel that rises from a
 // wave band at the bottom of the screen instead of sitting in the canvas.
@@ -92,6 +93,14 @@ export function V8ListBuoys({
   const panelReadyRef = useRef(false);
   const panelPromiseRef = useRef<Promise<void> | null>(null);
   const expandWaitingRef = useRef(false);
+  // V8TEST: the panel may open before its 452KB art has arrived (expand
+  // waits at most 1.5s), which left the names floating unreadably over the
+  // page. The names now stay hidden until the panel <img> itself has loaded;
+  // if it fails, they show on a plain paper fallback instead. Panel timing
+  // is unchanged -- only its own text waits for its own background.
+  const holdNamesForArt = isV8TestRoute();
+  const [panelArt, setPanelArt] = useState<"pending" | "loaded" | "failed">("pending");
+  const panelImageRef = useRef<HTMLImageElement | null>(null);
   const ensurePanelArt = useCallback(() => {
     if (!panelPromiseRef.current) {
       panelPromiseRef.current = new Promise<void>((resolve) => {
@@ -220,6 +229,11 @@ export function V8ListBuoys({
   const keepOpen = () => setIdleKey((key) => key + 1);
 
   const panelOpen = phase !== "collapsed";
+  // A cached panel image can be complete before React sees its load event.
+  useLayoutEffect(() => {
+    const image = panelImageRef.current;
+    if (panelOpen && image?.complete && image.naturalWidth > 0) setPanelArt("loaded");
+  }, [panelOpen]);
   const headersHidden = phase === "expanded";
   const wave = controls.wave;
   const panel = controls.panel;
@@ -301,8 +315,16 @@ export function V8ListBuoys({
               zIndex: panel.zIndex,
             }}
           >
-            <div className={`v8-list-panel-inner is-${phase}`}>
-              <img src={`${assetBase}${v8ActiveListBuoyFiles.panel}`} alt="" aria-hidden="true" draggable={false} />
+            <div className={`v8-list-panel-inner is-${phase}${holdNamesForArt ? ` is-art-${panelArt}` : ""}`}>
+              <img
+                ref={panelImageRef}
+                src={`${assetBase}${v8ActiveListBuoyFiles.panel}`}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                onLoad={() => setPanelArt("loaded")}
+                onError={() => setPanelArt((state) => (state === "loaded" ? state : "failed"))}
+              />
               {LIST_ORDER.map((key) => {
                 const [x, y, w, h] = LIST_AREAS[key];
                 const areaStyle: CSSProperties = {
@@ -431,6 +453,18 @@ function V8ListBuoysStyles() {
       .v8-list-panel-inner {
         position: absolute;
         inset: 0;
+      }
+
+      /* V8TEST: names wait for the panel art (see holdNamesForArt). */
+      .v8-list-panel-inner.is-art-pending .v8-list-area,
+      .v8-list-panel-inner.is-art-pending .v8-list-flash {
+        visibility: hidden;
+      }
+
+      .v8-list-panel-inner.is-art-failed {
+        border-radius: 18px;
+        background: #f6e8c9;
+        box-shadow: 0 6px 18px rgba(40, 24, 8, 0.25);
       }
 
       .v8-list-panel-inner > img {
