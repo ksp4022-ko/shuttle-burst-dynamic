@@ -34,7 +34,7 @@ const ASSEMBLY_WIDTH_PCT = 61;
 const PRESS_MS = 280;
 const TEXT_FADE_MS = 200;
 
-type PressKey = "main" | "helperSignup" | "helperCancel";
+type PressKey = "main" | "helperSignup" | "helperCancel" | "bill";
 
 const pct = (value: number, total: number) => `${(value / total) * 100}%`;
 
@@ -90,6 +90,7 @@ export function V8CtaAssembly({
   onPrimary,
   onHelperSignup,
   onHelperCancel,
+  onBill,
 }: {
   controls: V8CtaAssemblyControls;
   assets: V8CtaAssemblyAssets;
@@ -104,6 +105,9 @@ export function V8CtaAssembly({
   onPrimary: () => void;
   onHelperSignup: () => void;
   onHelperCancel: () => void;
+  // P-022 (V8TEST only): when given, 帳單 is live; otherwise it stays the
+  // greyed placeholder.
+  onBill?: (() => void) | undefined;
 }) {
   const textLayers = useTextCrossfade(mainText);
   const [pressed, setPressed] = useState<PressKey | null>(null);
@@ -181,9 +185,17 @@ export function V8CtaAssembly({
         </span>
       </button>
 
-      {/* 帳單 ships after S4 is finalized; shown greyed until then (hiding
-          it would leave an empty recess). */}
-      <button type="button" className="v8-asm-hit" style={{ ...boxStyle(L.bill.hit), zIndex: 2 }} disabled aria-label="帳單（尚未開放）">
+      {/* 帳單: greyed placeholder (hiding it would leave an empty recess)
+          unless onBill is given -- P-022 read-only bill, V8TEST only. */}
+      <button
+        type="button"
+        className={onBill ? hitClass("bill") : "v8-asm-hit"}
+        style={{ ...boxStyle(L.bill.hit), zIndex: 2 }}
+        disabled={!onBill || helpersDisabled}
+        onClick={onBill}
+        onPointerDown={onBill ? () => press("bill", helpersDisabled) : undefined}
+        aria-label={onBill ? "帳單" : "帳單（尚未開放）"}
+      >
         <span className="v8-asm-plaque" style={artInHitStyle(L.bill.art, L.bill.hit)}>
           <span className="v8-asm-motion">
             <img className="v8-asm-art" src={assets.bill} alt="" aria-hidden="true" draggable={false} />

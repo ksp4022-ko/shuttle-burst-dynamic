@@ -303,6 +303,45 @@ export function fetchV8SeasonProgress(token: string, eventId: string, signal?: A
   });
 }
 
+// P-022 季費 (read-only): every amount comes from the Worker's season_payments
+// row -- V8 never computes billing. Only the Bearer token identifies the
+// member (no memberId is sent); the response is no-store and never cached.
+export type V8SeasonPaymentLeaveDetail = {
+  eventId: string;
+  date: string;
+  name: string;
+  reason: "leave" | "waiting";
+};
+
+export type V8SeasonPayment = {
+  paymentId: string;
+  seasonId: string;
+  seasonName: string;
+  groupId: string;
+  groupName: string;
+  memberName: string;
+  baseSeasonFee: number;
+  leaveCount: number;
+  refundUnitAmount: number;
+  refundCreditTotal: number;
+  amountDue: number;
+  status: string;
+  amountPaid: number;
+  outstanding: number;
+  paidAt: string | null;
+  updatedAt: string | null;
+  leaveDetails: V8SeasonPaymentLeaveDetail[];
+  detailCountMatchesPayment: boolean;
+};
+
+export function fetchV8SeasonPayment(token: string, eventId: string, signal?: AbortSignal) {
+  return alphaFetch<V8SeasonPayment>(`/events/${encodeURIComponent(eventId)}/me/season-payment`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+    ...(signal ? { signal } : {}),
+  });
+}
+
 export function fetchV8CancellableTempSignups(token: string, eventId: string) {
   return alphaFetch<{
     eventId: string;

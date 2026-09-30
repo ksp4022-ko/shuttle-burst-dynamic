@@ -61,7 +61,10 @@ import {
 } from "./v8ActiveConfig";
 import { V8CtaAssembly, V8CtaAssemblyStyles, type V8CtaAssemblyAssets } from "./V8CtaAssembly";
 import { V8SeasonAttendance } from "./V8SeasonAttendance";
+import { V8SeasonBillingDetails } from "./V8SeasonBilling";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
+import { useV8SeasonPayment } from "@/hooks/use-v8-season-payment";
 import type { V8SeasonProgress } from "@/lib/database-alpha";
 import {
   SunAutoFillErrorBoundary,
@@ -191,6 +194,21 @@ export function V8ActivePage({
     groupId: selectedEvent?.groupId,
     isFixed: isSeasonMemberForAttendance,
   });
+  // P-022 季費 (read-only, V8TEST only until Cfm).
+  const seasonBillingEnabled = isV8TestRoute();
+  const seasonPayment = useV8SeasonPayment({
+    token: lineAuthToken,
+    eventId: selectedEvent?.id,
+    seasonId: selectedEvent?.seasonId,
+    groupId: selectedEvent?.groupId,
+    isFixed: isSeasonMemberForAttendance,
+    enabled: seasonBillingEnabled,
+  });
+  const [billOpen, setBillOpen] = useState(false);
+  // A different meetup closes the bill (no stale payment on screen).
+  useEffect(() => {
+    setBillOpen(false);
+  }, [selectedEvent?.id]);
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
   const [heightGuides, setHeightGuides] = useState(false);
@@ -651,6 +669,7 @@ export function V8ActivePage({
                 showHelper: tuningControls.activeSeasonAttendanceShowHelper,
                 isSeasonMember: isSeasonMemberForAttendance,
               }}
+              {...(seasonPayment ? { onBill: () => setBillOpen(true) } : {})}
               identityEnvelope={identityEnvelope.config}
               onStatusFeedback={handleStatusFeedback}
               onPrimaryAction={handlePrimaryAction}
@@ -754,6 +773,23 @@ export function V8ActivePage({
           identical to the identity gate since the two are mutually
           exclusive (helperMode only ever opens once identity is already
           known, so they never need to layer on top of each other). */}
+      {/* P-022 帳單 (V8TEST, read-only): same blur-gate card as 代報/代退.
+          Only backend values; no payment or edit actions. */}
+      {billOpen && seasonPayment ? (
+        <div className="v8-identity-gate">
+          <div className="v8-identity-gate-card v8-helper-card">
+            <V8HelperDialogWave />
+            <div className="v8-helper-content">
+              <p className="v8-helper-title">本季帳單</p>
+              <V8SeasonBillingDetails state={seasonPayment} />
+              <button type="button" className="v8-active-helper-cancel" onClick={() => setBillOpen(false)}>
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {helperMode ? (
         <div className="v8-identity-gate">
           <div className="v8-identity-gate-card v8-helper-card">
@@ -1889,6 +1925,7 @@ export function V8IdentityScrollContent({
   onForget,
   onHelperSignup,
   onHelperCancel,
+  onBill,
 }: {
   identity: CurrentIdentity;
   assets: V8IdentityAssets;
@@ -1915,6 +1952,9 @@ export function V8IdentityScrollContent({
   onForget: () => void;
   onHelperSignup: () => void;
   onHelperCancel: () => void;
+  // P-022 帳單 (V8TEST, 季打 only): enables the assembly's 帳單 plaque.
+  // Omitted everywhere else, so /v8 keeps the greyed placeholder.
+  onBill?: (() => void) | undefined;
 }) {
   // SCROLL-FEEDBACK stamp: when THIS signup's status changes (same signupId,
   // i.e. not a meetup switch or first load), the old stamp fades out (160ms)
@@ -2020,6 +2060,7 @@ export function V8IdentityScrollContent({
           onPrimary={handlePrimaryClick}
           onHelperSignup={onHelperSignup}
           onHelperCancel={onHelperCancel}
+          {...(onBill ? { onBill } : {})}
         />
       ) : (
         <>
