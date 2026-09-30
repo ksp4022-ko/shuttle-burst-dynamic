@@ -75,6 +75,12 @@ V8TEST infrastructure:
   - no ACTIVE gate; Step 1 unchanged; `/v8` unchanged
   - real iPhone Safari pending
 
+- P-021 v2 Step 2B — `b967175` Intro-time preload + Intro sizing (`/v8test` only)
+  - after the Intro video is fully buffered: OPEN critical -> shared bg -> ACTIVE first -> decor
+  - hidden OPEN art / Step 2A wait until then (video keeps priority)
+  - Intro contain inside visible viewport + safe area
+  - real iPhone Safari pending
+
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
   - attempted commit: `6367bbb`
@@ -101,7 +107,7 @@ V8TEST infrastructure:
 ## Current Execution Order
 
 1. P-022 BASIC BILLING: production `/v8` real-iPhone verify
-2. P-021 v2: step 1 `/v8test` PASS (promote on Cfm); Step 2A `/v8test` real-iPhone verify; ACTIVE gate / Intro-Time preload only on user instruction
+2. P-021 v2: step 1 `/v8test` PASS (promote on Cfm); Step 2A/2B `/v8test` real-iPhone verify; ACTIVE gate only on user instruction
 3. Other pending optimization items
 
 ## Do Not Reopen Without Evidence

@@ -268,7 +268,28 @@ Status: V8TEST DEPLOYED / VERIFY
   /v8 預熱行為 before/after 相同。
 - real iPhone Safari：pending
 
-ACTIVE gate、Intro-Time preload 未開始，需另行指示。
+P-021 v2 Step 2B（Intro-time preload + Intro sizing，/v8test only）：
+
+b967175
+perf(v8test): preload during the Intro and keep the Intro video smooth
+
+Status: V8TEST DEPLOYED / VERIFY
+
+- Intro 影片完整 buffer 後依序預載：OPEN critical → OPEN/ACTIVE 共用背景 → ACTIVE first-visible
+  （Step 2A tier 1）→ 裝飾。沿用 Step 2A warm()/dedup（startV8PrewarmQueue）；exact URL、無 ?v8r。
+- buffer 完成前，Intro 底下看不到的 OPEN 圖與 Step 2A 預載先等，讓影片優先；
+  buffer 完成、略過、播完或失敗即放行。
+- Intro 尺寸：contain，限制在可見 viewport + safe area 內（移除 iOS 會裁掉底部的 100vh min-height）。
+- Step 1 readiness 邏輯不變；無 global / ACTIVE gate；/v8 不變。
+- Local 量測（Chromium 無 H.264 → 用同尺寸 846KB / 10s / 512x910 WebM 代替 Intro；真 HTTP cache）：
+  - 1500kbps：Intro 卡頓 21 次 / 10.9s → 0；倒數 30.7s → 21.1s；進 ACTIVE 40.1s → 29.9s
+  - 1000kbps：卡頓 21 次 / 22.2s → 3 次 / 0.4s；倒數 47.1s → 32.6s；進 ACTIVE 56.5s → 41.9s
+  - 4000kbps：兩者皆 0 卡頓，時間不變
+  - Intro 框 390x664 = 可見 viewport，object-fit contain
+- Regression：/v8/kangxuan、/v8test/kangxuan PASS；Step 1 critical error 手動進場 PASS；/v8 行為不變；legacy 0。
+- real iPhone Safari：pending
+
+ACTIVE gate 未開始，需另行指示。
 
 Attempted implementation：
 
