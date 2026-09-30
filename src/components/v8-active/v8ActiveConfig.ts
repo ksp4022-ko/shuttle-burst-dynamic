@@ -1,4 +1,5 @@
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // All visual elements here are image-file-driven (PNG/SVG/WEBP), never
 // CSS-drawn shapes -- per the redesign brief, badge art must stay swappable
@@ -247,6 +248,19 @@ export const v8ActiveSunSwitchArrowFiles = {
   next: "v8-meetup-switch-next-v2.webp",
 } as const;
 
+// P-021 asset Batch 1 (V8TEST only until Cfm): the same art resized to what
+// a 3x iPhone actually draws -- badges 450px wide (were 1236-1447px for
+// ~135px on screen), arrows 96x98 lossy (were 500x512 lossless for ~25px).
+// New filenames, so /v8's files and caches are untouched.
+export const v8TestOptimizedStatusAssetFiles = {
+  ballType: "v8-cloud-shuttle-display-450.webp",
+  tempFee: "v8-cloud-fee-display-450.webp",
+  courtCount: "v8-cloud-court-time-display-450.webp",
+  capacity: "v8-cloud-limit-display-450.webp",
+  arrowPrev: "v8-meetup-switch-prev-v3-96.webp",
+  arrowNext: "v8-meetup-switch-next-v3-96.webp",
+} as const;
+
 export const v8ActiveSunTitleFiles = {
   // 640px display export (v1 was 1600px, 497KB, ~9.8MB decoded, for a
   // title shown at ~160 CSS px).
@@ -257,6 +271,7 @@ export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
   const statusAssetBase = `${baseUrl}v8-status-assets`;
+  const optimized = isV8TestRoute() ? v8TestOptimizedStatusAssetFiles : null;
   return {
     sunInfoBadge: `${activeBase}/${v8ActiveAssetFiles.sunInfoBadge}`,
     dragonSea: `${displayBase}/${v8ActiveBackgroundFiles.dragonSea}`,
@@ -267,9 +282,9 @@ export function buildV8ActiveAssets(baseUrl: string) {
     infoCardNeeded: `${activeBase}/${v8ActiveInfoCardFiles.needed}`,
     infoCardWaitlist: `${activeBase}/${v8ActiveInfoCardFiles.waitlist}`,
     infoRope: `${activeBase}/${v8ActiveInfoCardFiles.rope}`,
-    sunBadgeBallType: `${statusAssetBase}/${v8ActiveSunBadgeFiles.ballType}`,
-    sunBadgeTempFee: `${statusAssetBase}/${v8ActiveSunBadgeFiles.tempFee}`,
-    sunBadgeCourtCount: `${statusAssetBase}/${v8ActiveSunBadgeFiles.courtCount}`,
+    sunBadgeBallType: `${statusAssetBase}/${optimized ? optimized.ballType : v8ActiveSunBadgeFiles.ballType}`,
+    sunBadgeTempFee: `${statusAssetBase}/${optimized ? optimized.tempFee : v8ActiveSunBadgeFiles.tempFee}`,
+    sunBadgeCourtCount: `${statusAssetBase}/${optimized ? optimized.courtCount : v8ActiveSunBadgeFiles.courtCount}`,
     rosterFrame: `${activeBase}/${v8ActiveRosterFrameFile}`,
     statusStampConfirmed: `${activeBase}/${v8ActiveStatusStampFiles.confirmed}`,
     statusStampWaiting: `${activeBase}/${v8ActiveStatusStampFiles.waiting}`,
@@ -283,15 +298,15 @@ export function buildV8ActiveAssets(baseUrl: string) {
     ctaTempSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.tempSignup}`,
     ctaHelperSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperSignup}`,
     ctaHelperCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperCancel}`,
-    sunBadgeCapacity: `${statusAssetBase}/${v8ActiveCapacityBadgeFile}`,
+    sunBadgeCapacity: `${statusAssetBase}/${optimized ? optimized.capacity : v8ActiveCapacityBadgeFile}`,
     ropeOrnamentA: `${activeBase}/${v8ActiveRopeOrnamentFiles.a}`,
     ropeOrnamentB: `${activeBase}/${v8ActiveRopeOrnamentFiles.b}`,
     ropeOrnamentC: `${activeBase}/${v8ActiveRopeOrnamentFiles.c}`,
     rosterV2A1: `${activeBase}/${v8ActiveRosterV2Files.a1}`,
     rosterV2B1: `${activeBase}/${v8ActiveRosterV2Files.b1}`,
     rosterV2B2: `${activeBase}/${v8ActiveRosterV2Files.b2}`,
-    sunSwitchArrowPrev: `${statusAssetBase}/${v8ActiveSunSwitchArrowFiles.prev}`,
-    sunSwitchArrowNext: `${statusAssetBase}/${v8ActiveSunSwitchArrowFiles.next}`,
+    sunSwitchArrowPrev: `${statusAssetBase}/${optimized ? optimized.arrowPrev : v8ActiveSunSwitchArrowFiles.prev}`,
+    sunSwitchArrowNext: `${statusAssetBase}/${optimized ? optimized.arrowNext : v8ActiveSunSwitchArrowFiles.next}`,
     sunTitleKangxuan: `${statusAssetBase}/${v8ActiveSunTitleFiles.kangxuan}`,
     ctaAssembly: {
       base: `${activeBase}/${v8CtaAssemblyFiles.base}`,
