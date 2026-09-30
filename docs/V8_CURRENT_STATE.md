@@ -61,12 +61,12 @@ V8TEST infrastructure:
   - phase 2 (not included): guest fees, historical unpaid, total-due logic
   - production real iPhone Safari pending
 
-### V8TEST DEPLOYED / VERIFY
+### V8TEST REAL DEVICE PASS (awaiting Cfm for `/v8`)
 - P-021 v2 step 1 — `f5207d9` OPEN countdown readiness (`/v8test` only)
   - 9s auto-enter starts only after dragon / shown tiger / 進入戰局 plaque are loaded
   - no timeout, error != ready; manual CTA / Quick Pick always available
   - decor loads progressively; no global gate; `/v8` unchanged
-  - real iPhone Safari pending
+  - real iPhone Safari PASS on `/v8test` (user); promote to `/v8` only on Cfm
 
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
@@ -94,7 +94,7 @@ V8TEST infrastructure:
 ## Current Execution Order
 
 1. P-022 BASIC BILLING: production `/v8` real-iPhone verify
-2. P-021 v2 step 1 (`/v8test` OPEN countdown readiness): real-iPhone verify; ACTIVE gate/preload is a later step, only on user instruction
+2. P-021 v2 step 1: `/v8test` PASS — promote to `/v8` on Cfm; ACTIVE gate/preload is a later step, only on user instruction
 3. Other pending optimization items
 
 ## Do Not Reopen Without Evidence

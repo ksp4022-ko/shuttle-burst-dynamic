@@ -220,7 +220,7 @@ Do NOT mark CLOSED until user confirms real-device PASS.
 ## V8-ASSET-READY
 
 Status:
-IN PROGRESS — P-021 v2 step 1 V8TEST DEPLOYED / VERIFY（6367bbb 仍為 ROLLED BACK）
+IN PROGRESS — P-021 v2 step 1 V8TEST REAL DEVICE PASS（待 Cfm 才上 /v8；6367bbb 仍為 ROLLED BACK）
 
 P-021 v2 step 1（OPEN countdown readiness，/v8test only）：
 
@@ -239,7 +239,8 @@ fix(v8test): start OPEN auto-enter countdown only after critical art loads
   - /v8test 龍身 error：25s 內不倒數、不自動進場；手動 CTA → ACTIVE PASS
   - /v8 600kbps：原行為（資料好即倒數）不變
   - Regression /v8、/v8/kangxuan（390/1280）、/v8test/kangxuan PASS，legacy 0，無 pageerror
-- real iPhone Safari：pending
+- real iPhone Safari：/v8test PASS（user 確認 2026-09-30）
+- Promotion 到 /v8 需要 user 回覆 Cfm / 確認。
 
 下一階段（ACTIVE gate / preload）未開始，需另行指示。
 
@@ -689,7 +690,7 @@ Auto-Fill / experimental control values 已納入 copy output。
 # CURRENT EXECUTION ORDER
 
 （精簡現況與目前順序以 docs/V8_CURRENT_STATE.md 為準：
-P-022 BASIC BILLING production verify / P-021 v2 step 1 V8TEST verify → P-021 v2（先 read-only 診斷，經 V8TEST）→ 其他）
+P-022 BASIC BILLING production verify / P-021 v2 step 1（/v8test PASS，待 Cfm）→ P-021 v2（先 read-only 診斷，經 V8TEST）→ 其他）
 
 1. V8-ASSET-READY
 2. iPhone Quick Pick final verify
