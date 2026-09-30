@@ -291,6 +291,25 @@ Status: V8TEST DEPLOYED / VERIFY
 
 ACTIVE gate 未開始，需另行指示。
 
+P-021 asset Batch 1（/v8test only）：
+
+5ed870c
+perf(v8test): resized sun badges and switch arrows (asset Batch 1)
+
+Status: V8TEST DEPLOYED / VERIFY
+
+- 新檔（原檔不動、/v8 仍用原檔）：
+  - v8-cloud-shuttle/fee/court-time/limit-display-450.webp：450px 寬；568KB → 125KB
+  - v8-meetup-switch-prev/next-v3-96.webp：96x98 lossy；172KB → 6KB
+- 透明與比例保留；/v8 vs /v8test 截圖一致（ACTIVE 平均差 2.5/255，多為動畫；OPEN 0.3/255）。
+- 不改 preload / readiness 邏輯（URL 來源 builder 自動帶入新檔名）。
+- Local（Chromium 真 cache，cached identity）before → after：
+  - 1500kbps Quick Pick：全部首屏 +7.5s → +5.5s；倒數 16.9s → 16.3s
+  - 1500kbps auto-enter：ACTIVE+0.3s 16/23 → 23/23；+2.9s → +0.3s
+  - 600kbps auto-enter：+22.7s → +16.5s；倒數 39.8s → 38.3s
+- Regression /v8/kangxuan、/v8test/kangxuan PASS。
+- real iPhone Safari：pending
+
 Attempted implementation：
 
 6367bbb
