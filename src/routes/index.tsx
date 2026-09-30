@@ -51,6 +51,8 @@ import {
   type ToastOrigin,
 } from "@/components/homepage/HomepageToast";
 import { useHomepageFlow, type MotionMode } from "@/hooks/use-homepage-flow";
+import { useV8DomImagesReady } from "@/hooks/use-v8-dom-images-ready";
+import { buildV8HeroAssets, v8HeroDefaults } from "@/components/v8-hero/v8HeroConfig";
 import type { AlphaEvent } from "@/lib/database-alpha";
 
 export const Route = createFileRoute("/")({
@@ -889,6 +891,28 @@ export function Index() {
   }, [isV8Route, v8HeroPickerStage, v8OpenReady]);
   const legacyActiveStage = !isV8Route && (active || rotating) && !v8HeroStage;
   const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls, openMotionPreviewLab);
+  // P-021 v2 (V8TEST): the OPEN auto-enter countdown starts only once OPEN's
+  // critical art is really on screen -- the dragon, the tiger variant shown
+  // and the 進入戰局 plaque. Decor (waves/clouds/claws/bag/arrows) may keep
+  // loading progressively. No timeout; a failed image never counts; manual
+  // CTA / Quick Pick stay available throughout.
+  const openCriticalHero = { ...v8HeroDefaults, ...openHeroOverrides };
+  const openCriticalAssetsAll = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
+  const openCriticalUrls =
+    v8RouteFamily === "v8test" && v8HeroPickerStage
+      ? [
+          openCriticalHero.dragonShow ? openCriticalAssetsAll.body : null,
+          openCriticalHero.tigerShow
+            ? openCriticalHero.tigerVariant === 3
+              ? openCriticalAssetsAll.tigerAlt3
+              : openCriticalHero.tigerVariant === 2
+                ? openCriticalAssetsAll.tigerAlt2
+                : openCriticalAssetsAll.tigerBody
+            : null,
+          openCriticalHero.ctaShow ? openCriticalAssetsAll.enterBattleCta : null,
+        ].filter((src): src is string => Boolean(src))
+      : null;
+  const openCountdownAssetsReady = useV8DomImagesReady(openCriticalUrls);
   const openSunControls = buildV8OpeningSunControls(openTuningControls);
 
   useEffect(() => {
@@ -1540,7 +1564,7 @@ export function Index() {
   }, [countdownKey]);
 
   useEffect(() => {
-    if (!openOnlyEffectsActive || !flow.events.length || tutorialOpen || flow.pendingAction) {
+    if (!openOnlyEffectsActive || !flow.events.length || tutorialOpen || flow.pendingAction || !openCountdownAssetsReady) {
       resetCountdownRemaining();
       return;
     }
@@ -1585,6 +1609,7 @@ export function Index() {
     flow.events.length,
     flow.pendingAction,
     isV8Route,
+    openCountdownAssetsReady,
     openMeetupPickerOpen,
     openOnlyEffectsActive,
     resetCountdownRemaining,
