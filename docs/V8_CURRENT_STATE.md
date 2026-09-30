@@ -19,7 +19,7 @@ Test:
 ## Current Baseline
 
 Current main:
-- `4c91ddd` — `fix(v8): stop open-only countdown once active owns the screen`
+- `00d971d` — `feat(v8test): read-only season bill behind the 帳單 plaque`
   (docs-only commits may follow)
 
 Stable production runtime:
@@ -53,6 +53,13 @@ V8TEST infrastructure:
   - no legacy UI
   - V8 TEST badge confirmed
 
+### V8TEST DEPLOYED / VERIFY
+- P-022 UI — `00d971d` (read-only 本季帳單, `/v8test` only)
+  - CTA 帳單 plaque → dialog; data from `GET /events/:eventId/me/season-payment`
+  - backend values only, Bearer only (no memberId), no-store, no local cache
+  - `/v8` unchanged (greyed placeholder, no API call)
+  - real iPhone Safari pending
+
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
   - attempted commit: `6367bbb`
@@ -78,8 +85,9 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-1. P-021 v2 (read-only diagnostic of the Safari stall first; scoped via V8TEST; only on user instruction)
-2. Other pending optimization items
+1. P-022 UI: `/v8test` real-iPhone verify (then Cfm → `/v8`)
+2. P-021 v2 (read-only diagnostic of the Safari stall first; scoped via V8TEST; only on user instruction)
+3. Other pending optimization items
 
 ## Do Not Reopen Without Evidence
 

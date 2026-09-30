@@ -519,11 +519,37 @@ V8 不重新算 official billing。
 ## P-022 UI
 
 Status:
-PAUSED
+V8TEST DEPLOYED / VERIFY（/v8 未改）
 
-Personal bill read-only UI。
+Commit：
 
-必須等 Billing Source Audit / Data API source-of-truth 決定完成後才繼續。
+00d971d
+feat(v8test): read-only season bill behind the 帳單 plaque
+
+- User 指示開始（2026-09-30），使用 Worker 既有 API（badminton-signup 4c986d5）：
+  GET /api/v8-shuttle/events/:eventId/me/season-payment
+- 入口：CTA 按鍵組「帳單」plaque（/v8test、季打 claimed member、季打 event 才啟用）
+  → 本季帳單 dialog（沿用 代報/代退 blur-gate card）。
+- 顯示：原始季費、上季請假抵扣、請假 X 次（展開 leaveDetails 日期，請假/備取）、
+  本季應付、狀態 已繳/未繳、paidAt（已繳時）。
+- V8 不算帳：全部顯示 backend 值；只送 Bearer token，不送 memberId；
+  no-store、無 local snapshot/cache；換場次即關閉並重新讀取。
+- 狀態處理：loading / 無紀錄（SEASON_PAYMENT_NOT_FOUND）/ auth error（401、
+  FIXED_MEMBER_REQUIRED、SEASON_MEMBER_REQUIRED、LINE_IDENTITY_DISABLED）/
+  其他錯誤 / detailCountMatchesPayment=false 警告。非季打 event 不啟用。
+- 測試 event 明細由 API 過濾（本機驗證：test event 的請假不出現）。
+- /v8：帳單維持灰色 placeholder，不呼叫 API（本機驗證）。
+
+Verification：
+
+- tsc / build PASS
+- Local Chromium /v8test（本機 Worker = badminton-signup origin/main）：
+  未繳+明細不一致警告、已繳+paidAt、無紀錄、auth error、loading→ready、
+  請假明細展開、關閉 PASS；legacy UI 0；無 pageerror
+- /v8 smoke：帳單 disabled、無 season-payment request
+- real iPhone Safari：pending
+
+Promotion 到 /v8 需要 user 回覆 Cfm / 確認。
 
 ---
 
@@ -629,7 +655,7 @@ Auto-Fill / experimental control values 已納入 copy output。
 # CURRENT EXECUTION ORDER
 
 （精簡現況與目前順序以 docs/V8_CURRENT_STATE.md 為準：
-P-021 v2（先 read-only 診斷，經 V8TEST）→ 其他）
+P-022 UI V8TEST verify → P-021 v2（先 read-only 診斷，經 V8TEST）→ 其他）
 
 1. V8-ASSET-READY
 2. iPhone Quick Pick final verify
