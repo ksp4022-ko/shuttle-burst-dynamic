@@ -31,7 +31,8 @@ function lineDisplayName(lineIdentity: V8LineIdentity): string {
   return lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName || "";
 }
 
-function findFixedIdentity(
+// Exported for the V8TEST ACTIVE prewarm (exact stamp/text before ACTIVE mounts).
+export function findFixedIdentity(
   roster: AlphaRoster | null,
   lineIdentity: V8LineIdentity,
 ): CurrentIdentity | null {

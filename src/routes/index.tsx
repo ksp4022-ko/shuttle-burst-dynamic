@@ -52,6 +52,10 @@ import {
 } from "@/components/homepage/HomepageToast";
 import { useHomepageFlow, type MotionMode } from "@/hooks/use-homepage-flow";
 import { useV8DomImagesReady } from "@/hooks/use-v8-dom-images-ready";
+import { findFixedIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
+import { buildV8ActivePrewarmTiers, startV8ActivePrewarm } from "@/lib/v8-active-prewarm";
+import { loadV8LineIdentity } from "@/lib/v8-line-auth-storage";
+import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { buildV8HeroAssets, v8HeroDefaults } from "@/components/v8-hero/v8HeroConfig";
 import type { AlphaEvent } from "@/lib/database-alpha";
 
@@ -861,7 +865,8 @@ export function Index() {
   // with them on a slow connection) and only downloads into the HTTP cache
   // (fetch, no image decode) to keep memory low on iPhone.
   useEffect(() => {
-    if (!isV8Route || !v8HeroPickerStage || !v8OpenReady) return;
+    // /v8test uses the Step 2A prewarm below instead.
+    if (!isV8Route || !v8HeroPickerStage || !v8OpenReady || v8RouteFamily === "v8test") return;
     let cancelled = false;
     let timer = 0;
     const startedAt = Date.now();
@@ -888,7 +893,7 @@ export function Index() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [isV8Route, v8HeroPickerStage, v8OpenReady]);
+  }, [isV8Route, v8HeroPickerStage, v8OpenReady, v8RouteFamily]);
   const legacyActiveStage = !isV8Route && (active || rotating) && !v8HeroStage;
   const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls, openMotionPreviewLab);
   // P-021 v2 (V8TEST): the OPEN auto-enter countdown starts only once OPEN's
@@ -913,6 +918,41 @@ export function Index() {
         ].filter((src): src is string => Boolean(src))
       : null;
   const openCountdownAssetsReady = useV8DomImagesReady(openCriticalUrls);
+
+  // P-021 v2 Step 2A (V8TEST): ACTIVE prewarm. Starts as soon as OPEN's
+  // critical art (Step 1) is in -- not after every OPEN decor image -- so it
+  // never competes with that art (an earlier timed fallback start delayed
+  // the Step 1 countdown by ~20s at 600kbps). Optimization only: it never
+  // makes anything "ready". First-visible ACTIVE art goes first at high
+  // priority; identity art is added once the cached LINE identity + roster
+  // say which stamp/text ACTIVE will show.
+  const v8TestPrewarmEventName = flow.selectedEvent?.name || "";
+  useEffect(() => {
+    if (v8RouteFamily !== "v8test" || !v8HeroPickerStage || !v8OpenReady) return;
+    if (!openCountdownAssetsReady) return;
+    // Mirrors useCurrentIdentity: a claimed 季打 found in this roster is
+    // exact; otherwise ACTIVE falls back to the temp flow, whose most common
+    // state (unregistered) is warmed first -- the other states are in the
+    // low-priority tier.
+    const lineIdentity = loadV8LineIdentity();
+    const identity: CurrentIdentity | null =
+      lineIdentity?.profileComplete && lineIdentity.identityType
+        ? findFixedIdentity(flow.roster, lineIdentity) ?? { signupId: "", name: "", signupType: "temp", status: "unregistered" }
+        : null;
+    return startV8ActivePrewarm(
+      buildV8ActivePrewarmTiers(import.meta.env.BASE_URL, {
+        showSunTitleKangxuan: parseV8MeetupDisplay(v8TestPrewarmEventName).displayName === "康軒",
+        identity,
+      }),
+    );
+  }, [
+    flow.roster,
+    openCountdownAssetsReady,
+    v8HeroPickerStage,
+    v8OpenReady,
+    v8RouteFamily,
+    v8TestPrewarmEventName,
+  ]);
   const openSunControls = buildV8OpeningSunControls(openTuningControls);
 
   useEffect(() => {
