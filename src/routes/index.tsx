@@ -343,6 +343,89 @@ function V8MobileLandscapeOverlay({ show }: { show: boolean }) {
   );
 }
 
+function V7UpgradeNotice({ href }: { href: string }) {
+  return (
+    <main
+      className="sd-page sd-v7-upgrade-page"
+      style={
+        {
+          "--sd-viewport-h": "100svh",
+        } as CSSProperties
+      }
+    >
+      <HomepageStyles />
+      <section className="sd-v7-upgrade-card" aria-labelledby="v7-upgrade-title">
+        <p className="sd-v7-upgrade-kicker">SHUTTLE DYNAMICS</p>
+        <h1 id="v7-upgrade-title">系統升級</h1>
+        <p className="sd-v7-upgrade-message">請到 V8 報名</p>
+        <a className="sd-v7-upgrade-button" href={href}>
+          前往 V8 報名
+        </a>
+      </section>
+      <style>{`
+        .sd-v7-upgrade-page {
+          min-height: 100svh;
+          display: grid;
+          place-items: center;
+          padding: max(24px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom));
+          background:
+            radial-gradient(circle at 50% 28%, rgba(184, 242, 46, 0.12), transparent 38%),
+            linear-gradient(145deg, #080a09 0%, #101613 48%, #050604 100%);
+          color: #f7f3e7;
+        }
+        .sd-v7-upgrade-card {
+          width: min(100%, 380px);
+          padding: 32px 26px 28px;
+          border: 1px solid rgba(216, 180, 92, 0.34);
+          border-radius: 22px;
+          background:
+            linear-gradient(180deg, rgba(20, 22, 20, 0.88), rgba(8, 10, 8, 0.94));
+          box-shadow:
+            0 22px 60px rgba(0, 0, 0, 0.48),
+            0 0 42px rgba(184, 242, 46, 0.08);
+          text-align: center;
+        }
+        .sd-v7-upgrade-kicker {
+          margin: 0 0 18px;
+          color: rgba(216, 180, 92, 0.86);
+          font-family: "Chakra Petch", "Noto Sans TC", sans-serif;
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: 0.22em;
+        }
+        .sd-v7-upgrade-card h1 {
+          margin: 0;
+          color: #f5f4ee;
+          font-size: 36px;
+          line-height: 1.1;
+          letter-spacing: 0.08em;
+        }
+        .sd-v7-upgrade-message {
+          margin: 14px 0 26px;
+          color: rgba(245, 244, 238, 0.78);
+          font-size: 18px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+        }
+        .sd-v7-upgrade-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 48px;
+          width: 100%;
+          border-radius: 999px;
+          background: linear-gradient(180deg, #c8ff2b, #7fdc00);
+          color: #11180b;
+          font-size: 17px;
+          font-weight: 900;
+          text-decoration: none;
+          box-shadow: 0 0 24px rgba(184, 242, 46, 0.24);
+        }
+      `}</style>
+    </main>
+  );
+}
+
 function rememberV8LineLoginReturn() {
   if (typeof window === "undefined") return;
   try {
@@ -609,6 +692,9 @@ export function Index() {
   const v8RouteFamily = v8RouteFamilyOfRouterPath(pathname);
   const isV8Route = v8RouteFamily !== null;
   const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  const v7UpgradeOnly = !isV8Route;
+  const v7UpgradeSiteId = normalizedPathname === "/rian" ? "rian" : "kangxuan";
+  const v7UpgradeHref = `${import.meta.env.BASE_URL}v8/${v7UpgradeSiteId}/`;
   const v8IntroSiteId = v8RouteFamily
     ? normalizedPathname === `/${v8RouteFamily}/kangxuan`
       ? "kangxuan"
@@ -691,6 +777,7 @@ export function Index() {
   const flow = useHomepageFlow({
     preHoldMs: handoffTiming.preHold,
     realFadeMs: materializeWindowMs,
+    disabled: v7UpgradeOnly,
     skipIntro: isV8Route,
     ...(v8IntroSiteId
       ? { preferredEventId: () => v8OrientationRestore?.eventId || readV8SelectedEventId(v8IntroSiteId) }
@@ -1589,6 +1676,10 @@ export function Index() {
       block: "start",
     });
   };
+
+  if (v7UpgradeOnly) {
+    return <V7UpgradeNotice href={v7UpgradeHref} />;
+  }
 
   return (
     <main

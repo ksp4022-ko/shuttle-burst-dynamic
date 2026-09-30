@@ -39,6 +39,7 @@ export type HomepageHandoffTiming = {
   // racket the intro was building up to.
   skipIntro?: boolean;
   preferredEventId?: () => string | null | undefined;
+  disabled?: boolean;
 };
 
 const PARTICLE_ASSEMBLY_MS = 4600;
@@ -105,6 +106,7 @@ async function withStartupRetry<T>(request: (signal: AbortSignal) => Promise<T>)
 }
 
 export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
+  const disabled = Boolean(handoffTiming?.disabled);
   const [phase, setPhase] = useState<HomepagePhase>("loading-particles");
   const [motionMode, setMotionMode] = useState<MotionMode>("normal");
   const [events, setEvents] = useState<AlphaEvent[]>([]);
@@ -127,6 +129,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     preHoldMs: Math.max(0, Number(handoffTiming?.preHoldMs ?? DEFAULT_PRE_HOLD_MS)),
     realFadeMs: Math.max(0, Number(handoffTiming?.realFadeMs ?? DEFAULT_REAL_FADE_MS)),
     skipIntro: Boolean(handoffTiming?.skipIntro),
+    disabled,
     ...(handoffTiming?.preferredEventId ? { preferredEventId: handoffTiming.preferredEventId } : {}),
   };
 
@@ -206,6 +209,17 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
   }, []);
 
   useEffect(() => {
+    if (disabled) {
+      didInit.current = false;
+      setMotionMode(detectMotionMode());
+      setEvents([]);
+      setSelectedEventId("");
+      setPendingSwitchEventId("");
+      setRoster(null);
+      setError("");
+      setPhase("load-error");
+      return;
+    }
     if (didInit.current) return;
     didInit.current = true;
     setMotionMode(detectMotionMode());
@@ -256,7 +270,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     return () => {
       cancelled = true;
     };
-  }, [loadInitial]);
+  }, [disabled, loadInitial]);
 
   const enterActive = useCallback(() => {
     if (motionMode === "reduced") {
