@@ -289,6 +289,12 @@ Status: V8TEST DEPLOYED / VERIFY
 - Regression：/v8/kangxuan、/v8test/kangxuan PASS；Step 1 critical error 手動進場 PASS；/v8 行為不變；legacy 0。
 - real iPhone Safari：pending
 
+Step 2B hotfix：024e420 fix(v8test): start the Intro-time preload only after startup data loads
+- Real iPhone /v8test 出現 load-error（連線逾時）。Step 2B 在影片 buffer 完就開始預載，
+  可能早於啟動 API（local 4000kbps：預載 7.7s、events 8.9s、roster 11.9s），~2.5MB 圖片搶 API 頻寬。
+- 修正：預載另需 startup data 完成（v8OpenReady 且非 load-error）；預載改在 roster 回來後才開始。
+- Intro 仍 0 卡頓；1500kbps 倒數 21.1s → 18.1s。
+
 ACTIVE gate 未開始，需另行指示。
 
 V8TEST 3 fixes（/v8test only）：
