@@ -311,6 +311,9 @@ Real-iPhone issues（Batch 2 暫停）：
    - 修正（/v8test）：panel 內姓名等 panel <img> 真的 load 才顯示；失敗則改用紙色底板顯示。展開時機不變、無全域 gate。
    - Local：1500kbps 展開時 names hidden（圖未到）；擋掉圖 → 紙色底 + 姓名可讀；/v8 不變。
    - Status：V8TEST DEPLOYED / VERIFY
+   - 實機錄影（4G）：面板第一次打開底圖 error → 紙色備援；約 6s 後 ?v8r 重試才出現。原版無此問題 → /v8test regression。
+   - 4f5b669：面板底圖移出 Step 2A/2B 預載（只走 V8ListBuoys 原本的 3s / 點擊載入）；預載完成的 Image 物件釋放（保留 URL 去重）。
+     根因未在實機證實（最可能：預載的第二個 loader + 常駐 ~40 個 Image 物件的記憶體壓力）；待 iPhone 驗證。
 
 V8TEST 3 fixes（/v8test only）：
 
