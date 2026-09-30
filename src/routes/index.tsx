@@ -53,7 +53,7 @@ import {
 import { useHomepageFlow, type MotionMode } from "@/hooks/use-homepage-flow";
 import { useV8DomImagesReady } from "@/hooks/use-v8-dom-images-ready";
 import { findFixedIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
-import { buildV8ActivePrewarmTiers, startV8ActivePrewarm } from "@/lib/v8-active-prewarm";
+import { buildV8ActivePrewarmTiers, buildV8IntroPrewarmTiers, startV8ActivePrewarm, startV8PrewarmQueue } from "@/lib/v8-active-prewarm";
 import { loadV8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { buildV8HeroAssets, v8HeroDefaults } from "@/components/v8-hero/v8HeroConfig";
@@ -903,20 +903,18 @@ export function Index() {
   // CTA / Quick Pick stay available throughout.
   const openCriticalHero = { ...v8HeroDefaults, ...openHeroOverrides };
   const openCriticalAssetsAll = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
-  const openCriticalUrls =
-    v8RouteFamily === "v8test" && v8HeroPickerStage
-      ? [
-          openCriticalHero.dragonShow ? openCriticalAssetsAll.body : null,
-          openCriticalHero.tigerShow
-            ? openCriticalHero.tigerVariant === 3
-              ? openCriticalAssetsAll.tigerAlt3
-              : openCriticalHero.tigerVariant === 2
-                ? openCriticalAssetsAll.tigerAlt2
-                : openCriticalAssetsAll.tigerBody
-            : null,
-          openCriticalHero.ctaShow ? openCriticalAssetsAll.enterBattleCta : null,
-        ].filter((src): src is string => Boolean(src))
-      : null;
+  const openCriticalList = [
+    openCriticalHero.dragonShow ? openCriticalAssetsAll.body : null,
+    openCriticalHero.tigerShow
+      ? openCriticalHero.tigerVariant === 3
+        ? openCriticalAssetsAll.tigerAlt3
+        : openCriticalHero.tigerVariant === 2
+          ? openCriticalAssetsAll.tigerAlt2
+          : openCriticalAssetsAll.tigerBody
+      : null,
+    openCriticalHero.ctaShow ? openCriticalAssetsAll.enterBattleCta : null,
+  ].filter((src): src is string => Boolean(src));
+  const openCriticalUrls = v8RouteFamily === "v8test" && v8HeroPickerStage ? openCriticalList : null;
   const openCountdownAssetsReady = useV8DomImagesReady(openCriticalUrls);
 
   // P-021 v2 Step 2A (V8TEST): ACTIVE prewarm. Starts as soon as OPEN's
@@ -927,9 +925,50 @@ export function Index() {
   // priority; identity art is added once the cached LINE identity + roster
   // say which stamp/text ACTIVE will show.
   const v8TestPrewarmEventName = flow.selectedEvent?.name || "";
+
+  // P-021 v2 Step 2B (V8TEST): use the Intro's ~10s. Once the Intro video is
+  // fully buffered (so it keeps the bandwidth it needs to play smoothly),
+  // warm in order: OPEN critical -> OPEN/ACTIVE shared backgrounds ->
+  // ACTIVE first-visible (Step 2A tier 1) -> decor. Same warm()/dedup as
+  // Step 2A, so the later Step 1/2A work reuses whatever is already in.
+  // One-shot per page; optimization only -- gates nothing.
+  const [v8IntroMediaBuffered, setV8IntroMediaBuffered] = useState(false);
+  const handleV8IntroMediaBuffered = useCallback(() => setV8IntroMediaBuffered(true), []);
+  // While the Intro plays and its video is not fully buffered yet, the
+  // hidden OPEN art (under the opaque Intro) and the Step 2A prewarm wait,
+  // so the video keeps the bandwidth -- measured at 1500kbps they caused 21
+  // stalls (~10.5s) in the 10s Intro. This queue then loads OPEN critical
+  // first, so OPEN is ready when the Intro ends.
+  const v8IntroHoldsImageLoads = v8RouteFamily === "v8test" && v8IntroBlocking && !v8IntroMediaBuffered;
+  const v8IntroPrewarmStartedRef = useRef(false);
+  useEffect(() => {
+    if (v8RouteFamily !== "v8test" || !v8IntroMediaBuffered || v8IntroPrewarmStartedRef.current) return;
+    v8IntroPrewarmStartedRef.current = true;
+    const hero = openCriticalAssetsAll;
+    const activeAssets = buildV8ActiveAssets(import.meta.env.BASE_URL);
+    const openDecor = [
+      openCriticalHero.rearClawShow ? hero.rearClaw : null,
+      openCriticalHero.clawShow ? hero.claw : null,
+      openCriticalHero.bagBaseShow ? hero.bagBase : null,
+      openCriticalHero.bagStrapShow ? hero.bagStrap : null,
+      openCriticalHero.tigerShow && openCriticalHero.tigerVariant === 1 && openCriticalHero.tigerRacketShow ? hero.tigerRacket : null,
+      activeAssets.sunSwitchArrowPrev,
+      activeAssets.sunSwitchArrowNext,
+    ].filter((src): src is string => Boolean(src));
+    startV8PrewarmQueue(
+      buildV8IntroPrewarmTiers(import.meta.env.BASE_URL, {
+        openCritical: openCriticalList,
+        openDecor,
+        // Identity/event aren't known yet during the Intro; Step 2A adds
+        // the identity art and sun title once they are.
+        active: buildV8ActivePrewarmTiers(import.meta.env.BASE_URL, { showSunTitleKangxuan: false, identity: null }),
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [v8IntroMediaBuffered, v8RouteFamily]);
   useEffect(() => {
     if (v8RouteFamily !== "v8test" || !v8HeroPickerStage || !v8OpenReady) return;
-    if (!openCountdownAssetsReady) return;
+    if (!openCountdownAssetsReady || v8IntroHoldsImageLoads) return;
     // Mirrors useCurrentIdentity: a claimed 季打 found in this roster is
     // exact; otherwise ACTIVE falls back to the temp flow, whose most common
     // state (unregistered) is warmed first -- the other states are in the
@@ -949,6 +988,7 @@ export function Index() {
     flow.roster,
     openCountdownAssetsReady,
     v8HeroPickerStage,
+    v8IntroHoldsImageLoads,
     v8OpenReady,
     v8RouteFamily,
     v8TestPrewarmEventName,
@@ -2064,7 +2104,7 @@ export function Index() {
           </section>
         )}
 
-        {v8HeroPickerStage ? (
+        {v8HeroPickerStage && !v8IntroHoldsImageLoads ? (
           <>
             <V8OpeningSunStyles />
             <V8HeroComposition
@@ -2399,6 +2439,7 @@ export function Index() {
             siteId={v8IntroSiteId}
             onBlockingChange={handleV8IntroBlockingChange}
             replaySignal={v8IntroReplaySignal}
+            {...(v8RouteFamily === "v8test" ? { fit: "contain" as const, onMediaBuffered: handleV8IntroMediaBuffered } : {})}
           />
           {/* Countdown auto-enter is already paused via v8IntroBlocking
               (set true the instant V8IntroVideo starts playing, including

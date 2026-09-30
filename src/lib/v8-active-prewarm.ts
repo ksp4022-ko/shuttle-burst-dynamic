@@ -122,14 +122,57 @@ function warm(src: string, priority: "high" | "low") {
   });
 }
 
-// first-tier all at once (high priority), the rest only after it settles.
-export function startV8ActivePrewarm({ first, rest }: Tiers) {
+// Tiers run in order: each tier's images all at once, the next tier only
+// after the previous one settles (loaded or failed). The returned cleanup
+// stops scheduling further tiers; in-flight images are left to finish.
+export function startV8PrewarmQueue(tiers: Array<{ urls: string[]; priority: "high" | "low" }>) {
   let cancelled = false;
-  void Promise.all(first.map((src) => warm(src, "high"))).then(() => {
-    if (cancelled) return;
-    rest.forEach((src) => void warm(src, "low"));
-  });
+  void tiers.reduce<Promise<void>>(
+    (previous, tier) =>
+      previous.then(async () => {
+        if (cancelled) return;
+        await Promise.all(tier.urls.map((src) => warm(src, tier.priority)));
+      }),
+    Promise.resolve(),
+  );
   return () => {
     cancelled = true;
   };
+}
+
+// Step 2A: first-tier all at once (high priority), the rest only after it settles.
+export function startV8ActivePrewarm({ first, rest }: Tiers) {
+  return startV8PrewarmQueue([
+    { urls: first, priority: "high" },
+    { urls: rest, priority: "low" },
+  ]);
+}
+
+// P-021 v2 Step 2B (V8TEST): the order to warm while the Intro plays --
+// OPEN critical, the OPEN/ACTIVE shared backgrounds, ACTIVE's first-visible
+// set (Step 2A's tier 1), then decor (OPEN rig extras + Step 2A's tier 2).
+// Exact <img> URLs only; each URL appears once, in its earliest tier.
+export function buildV8IntroPrewarmTiers(
+  baseUrl: string,
+  options: {
+    openCritical: string[];
+    openDecor: string[];
+    active: Tiers;
+  },
+) {
+  const hero = buildV8HeroAssets(baseUrl);
+  const shared = [hero.cloud, hero.mountain, hero.backWave, hero.midWave, hero.frontFoam, hero.goldInk];
+  const seen = new Set<string>();
+  const unique = (urls: string[]) =>
+    urls.filter((src) => {
+      if (!src || seen.has(src)) return false;
+      seen.add(src);
+      return true;
+    });
+  return [
+    { urls: unique(options.openCritical), priority: "high" as const },
+    { urls: unique(shared), priority: "high" as const },
+    { urls: unique(options.active.first), priority: "low" as const },
+    { urls: unique([...options.openDecor, ...options.active.rest]), priority: "low" as const },
+  ];
 }
