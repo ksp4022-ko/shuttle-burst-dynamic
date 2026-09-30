@@ -1,6 +1,6 @@
 # V8 Current State
 
-Last updated: 2026-09-29. Current-only summary; details and history live in
+Last updated: 2026-09-30. Current-only summary; details and history live in
 `V8_PROJECT_TRACKER.md`, architecture in `V8_SYSTEM_DESIGN.md`.
 
 ## Route Model
@@ -34,6 +34,10 @@ V8TEST infrastructure:
 - V8-OPEN-STARTUP
   - real iPhone stable
   - startup timeout + retry fix (`390bae2`)
+- V8-AUTO-ENTER-COUNTDOWN — `5ba6b66` (V8TEST) → `4c91ddd` (`/v8`, CI #324)
+  - OPEN-only effects require `preview && !v8MeetupConfirmed` on all V8 routes
+  - auto-enter fires once; no countdown restart while ACTIVE
+  - real iPhone Safari PASS on `/v8test` and production `/v8` (user)
 
 ### REAL DEVICE PASS
 - V8TEST-STORAGE-ISOLATION — `dac033c` (CLOSED)
@@ -48,15 +52,6 @@ V8TEST infrastructure:
   - ACTIVE meetup switch PASS
   - no legacy UI
   - V8 TEST badge confirmed
-
-### PRODUCTION DEPLOYED / VERIFY
-- V8-AUTO-ENTER-COUNTDOWN — `5ba6b66` (V8TEST) → `4c91ddd` (promoted to `/v8` on Cfm, CI #324)
-  - OPEN-only effects (countdown / auto-enter, pendingSwitch auto-fill)
-    now require `preview && !v8MeetupConfirmed` on `/v8test`
-  - auto-enter fires exactly once; no restart while ACTIVE (32s observed)
-  - now applies to `/v8` too; production real-iPhone verification pending
-  - flow.phase unchanged
-  - tsc / build / CI (#321) PASS; real iPhone Safari PASS on `/v8test` (user)
 
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
@@ -83,14 +78,14 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-1. V8-AUTO-ENTER-COUNTDOWN: production `/v8` real-iPhone verify
-2. P-021 v2
-3. Other pending optimization items
+1. P-021 v2 (read-only diagnostic of the Safari stall first; scoped via V8TEST; only on user instruction)
+2. Other pending optimization items
 
 ## Do Not Reopen Without Evidence
 
 - P-020
 - P-020B
 - V8-OPEN-STARTUP
+- V8-AUTO-ENTER-COUNTDOWN
 - atomic Quick Pick architecture
 - P-023 implementation baseline

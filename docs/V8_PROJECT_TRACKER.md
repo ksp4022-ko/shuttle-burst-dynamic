@@ -83,7 +83,7 @@ Verification：
 ## V8-AUTO-ENTER-COUNTDOWN
 
 Status:
-PRODUCTION DEPLOYED / VERIFY
+CLOSED（2026-09-30，production /v8 real iPhone Safari PASS，user 確認）
 
 Promotion（Cfm）：
 
@@ -93,7 +93,7 @@ fix(v8): stop open-only countdown once active owns the screen
 - 拿掉 v8test 例外：所有 route 都用 preview && !v8MeetupConfirmed。
 - CI/deploy PASS（run #324）。
 - Local /v8：auto-enter 1 次、ACTIVE 32s 無重啟；CTA（含動畫）、Quick Pick current / different、ACTIVE switch、legacy 0、無錯誤。/v8test smoke 不變。
-- production real iPhone Safari：pending → PASS 後才 CLOSED。
+- production real iPhone Safari：PASS（user 確認）→ CLOSED。
 
 Commit：
 
@@ -629,7 +629,7 @@ Auto-Fill / experimental control values 已納入 copy output。
 # CURRENT EXECUTION ORDER
 
 （精簡現況與目前順序以 docs/V8_CURRENT_STATE.md 為準：
-V8-AUTO-ENTER-COUNTDOWN verify → P-021 v2 → 其他）
+P-021 v2（先 read-only 診斷，經 V8TEST）→ 其他）
 
 1. V8-ASSET-READY
 2. iPhone Quick Pick final verify
