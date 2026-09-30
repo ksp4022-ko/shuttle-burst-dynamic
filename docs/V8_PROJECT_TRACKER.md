@@ -242,7 +242,33 @@ fix(v8test): start OPEN auto-enter countdown only after critical art loads
 - real iPhone Safari：/v8test PASS（user 確認 2026-09-30）
 - Promotion 到 /v8 需要 user 回覆 Cfm / 確認。
 
-下一階段（ACTIVE gate / preload）未開始，需另行指示。
+P-021 v2 Step 2A（ACTIVE preload optimization，/v8test only）：
+
+5943420
+perf(v8test): warm ACTIVE's first-visible art as soon as OPEN is usable
+
+Status: V8TEST DEPLOYED / VERIFY
+
+- 開始時機：Step 1 critical OPEN art ready 後（不再等全部 OPEN 圖／15s）；不用 timer，
+  避免與 OPEN critical 搶頻寬（試過 8s fallback → 600kbps 倒數延後 ~22s，已移除）。
+- new Image() + ACTIVE <img> 的 exact URL（無 ?v8r），整頁去重；
+  舊 fetch() 預熱與 <img> 不共用，ACTIVE 會重抓 ~22 張。
+- Tier 1（high）：tiger scroll、CTA assembly（舊版漏掉）、identity 章/牌/CTA 字
+  （cached LINE identity + roster，mirror useCurrentIdentity）、紅日標題/徽章、繩/牌、B1 名單、list buoy。
+  Tier 2（low）：其他狀態圖、候補牌、list panel。
+- 不加 ACTIVE gate；Step 1 不變；/v8 保留舊預熱（未改）。
+- Local 量測（Chromium，真 HTTP cache max-age=600，cached identity；first-visible 23 張）：
+  - 1500kbps Quick Pick（倒數 +3s）：ACTIVE+0.3s ready 3→7；全部 +12.8s→+7.9s
+  - 1500kbps auto-enter：4→16；+7.7s→+2.9s
+  - 600kbps Quick Pick：2→4；>30s→+26.6s
+  - 600kbps auto-enter：3→6；>30s→+22.7s
+  - 重複 request 22–24→0；?v8r 0；倒數開始時間不變（17.1s / ~40s）
+  - 600kbps 仍受頻寬限制（9s 內載不完 ACTIVE）→ 之後 Intro-Time preload 另議
+- Regression：/v8、/v8/kangxuan、/v8test/kangxuan PASS；Step 1（慢網路倒數、critical error 手動進場）PASS；
+  /v8 預熱行為 before/after 相同。
+- real iPhone Safari：pending
+
+ACTIVE gate、Intro-Time preload 未開始，需另行指示。
 
 Attempted implementation：
 

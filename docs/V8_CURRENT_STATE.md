@@ -68,6 +68,13 @@ V8TEST infrastructure:
   - decor loads progressively; no global gate; `/v8` unchanged
   - real iPhone Safari PASS on `/v8test` (user); promote to `/v8` only on Cfm
 
+### V8TEST DEPLOYED / VERIFY
+- P-021 v2 Step 2A — `5943420` ACTIVE preload optimization (`/v8test` only)
+  - starts after Step 1 critical OPEN art; exact <img> URLs, deduped, tiered (first-visible high)
+  - includes CTA assembly, B1 roster, list buoys, identity art (cached identity + roster)
+  - no ACTIVE gate; Step 1 unchanged; `/v8` unchanged
+  - real iPhone Safari pending
+
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
   - attempted commit: `6367bbb`
@@ -94,7 +101,7 @@ V8TEST infrastructure:
 ## Current Execution Order
 
 1. P-022 BASIC BILLING: production `/v8` real-iPhone verify
-2. P-021 v2 step 1: `/v8test` PASS — promote to `/v8` on Cfm; ACTIVE gate/preload is a later step, only on user instruction
+2. P-021 v2: step 1 `/v8test` PASS (promote on Cfm); Step 2A `/v8test` real-iPhone verify; ACTIVE gate / Intro-Time preload only on user instruction
 3. Other pending optimization items
 
 ## Do Not Reopen Without Evidence
