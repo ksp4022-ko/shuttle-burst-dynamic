@@ -73,6 +73,12 @@ type V8HeroCompositionProps = {
   // content props so this gate covers them too.
   extraPreloadSrcs?: string[] | undefined;
   revealImmediately?: boolean | undefined;
+  // V8TEST OPEN: load the dragon in visual order -- body first (high
+  // priority), then the claws, then bag/strap -- and the decor layers at low
+  // priority, so a small claw/bag never appears floating before the body.
+  // Each step waits only for the previous one to load OR fail (a failed body
+  // never hides the rest). Load sequencing only; nothing is gated on it.
+  sequenceDragonRig?: boolean | undefined;
   // Caps only the outer stage width. Internal artwork still uses the same
   // responsive 390-wide coordinate system; callers opt in where the real
   // production route should stay phone-sized on desktop.
@@ -169,6 +175,7 @@ function DecorLayer({
   blur,
   zIndex,
   driftClassName,
+  fetchPriority,
 }: {
   src: string;
   x: number;
@@ -179,6 +186,7 @@ function DecorLayer({
   blur: number;
   zIndex: number;
   driftClassName?: string;
+  fetchPriority?: "low" | undefined;
 }) {
   const img = (
     <img
@@ -187,6 +195,7 @@ function DecorLayer({
       aria-hidden="true"
       decoding="async"
       loading="eager"
+      fetchPriority={fetchPriority}
       draggable={false}
       style={{
         ...decorImageStyle,
@@ -416,11 +425,17 @@ export function V8HeroComposition({
   rosterListsContent,
   extraPreloadSrcs,
   revealImmediately = false,
+  sequenceDragonRig = false,
   stageAspectRatio,
   maxStageWidth,
 }: V8HeroCompositionProps) {
   const assets = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
   const [assetsReady, setAssetsReady] = useState(revealImmediately);
+  // 0 = body only, 1 = + claws, 2 = + bag/strap (always 2 when not sequenced).
+  const [rigStage, setRigStage] = useState(sequenceDragonRig ? 0 : 2);
+  const clawsSettledRef = useRef(0);
+  const bodyImageRef = useRef<HTMLImageElement | null>(null);
+  const decorPriority = sequenceDragonRig ? ("low" as const) : undefined;
   const controls = controlOverrides ? { ...v8HeroDefaults, ...controlOverrides } : v8HeroDefaults;
   const decorBlur = (value: number) => (controls.decorMode === "LIGHT" ? 0 : value);
   const tigerRigTransform = `translate(${controls.tigerX}px, ${controls.tigerY}px) scale(${controls.tigerScale}) rotate(${controls.tigerRotation}deg)`;
@@ -497,6 +512,20 @@ export function V8HeroComposition({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assets]);
 
+  const shownClaws = (controls.rearClawShow ? 1 : 0) + (controls.clawShow ? 1 : 0);
+  const onBodySettled = () => setRigStage((stage) => Math.max(stage, shownClaws ? 1 : 2));
+  const onClawSettled = () => {
+    clawsSettledRef.current += 1;
+    if (clawsSettledRef.current >= shownClaws) setRigStage(2);
+  };
+  // A body already in the cache can be complete before React sees its load.
+  useEffect(() => {
+    if (rigStage === 0 && bodyImageRef.current?.complete) onBodySettled();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rigStage]);
+  const clawSrc = (src: string) => (rigStage >= 1 ? src : undefined);
+  const bagSrc = (src: string) => (rigStage >= 2 ? src : undefined);
+
   return (
     <section className="sd-v8-hero-composition" aria-label="V8 聚會選擇" style={rootStyle}>
       <V8HeroAmbientStyles />
@@ -506,8 +535,8 @@ export function V8HeroComposition({
         <div data-v8-hero-stage="" style={stageAspectRatio ? { ...stageStyle, aspectRatio: stageAspectRatio } : stageStyle}>
           <div style={{ ...artworkFadeStyle, opacity: assetsReady ? 1 : 0 }}>
             <div style={paperStyle} />
-            <DecorLayer src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
-            <DecorLayer src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
+            <DecorLayer fetchPriority={decorPriority} src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
+            <DecorLayer fetchPriority={decorPriority} src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
             <div
               data-v8-sun=""
               style={
@@ -621,10 +650,10 @@ export function V8HeroComposition({
                 </div>
               </div>
             </div>
-            <DecorLayer src={assets.cloud} x={controls.cloudBackX} y={controls.cloudBackY} scale={controls.cloudBackScale} rotation={controls.cloudBackRotation} opacity={controls.cloudBackOpacity} blur={decorBlur(controls.cloudBackBlur)} zIndex={5} driftClassName="v8-cloud-drift-back" />
-            <DecorLayer src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={5} driftClassName="v8-cloud-drift-front" />
-            <DecorLayer src={assets.mountain} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={6} />
-            <DecorLayer src={assets.backWave} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} driftClassName="v8-wave-drift-back" />
+            <DecorLayer fetchPriority={decorPriority} src={assets.cloud} x={controls.cloudBackX} y={controls.cloudBackY} scale={controls.cloudBackScale} rotation={controls.cloudBackRotation} opacity={controls.cloudBackOpacity} blur={decorBlur(controls.cloudBackBlur)} zIndex={5} driftClassName="v8-cloud-drift-back" />
+            <DecorLayer fetchPriority={decorPriority} src={assets.cloud} x={controls.cloudX} y={controls.cloudY} scale={controls.cloudScale} rotation={controls.cloudRotation} opacity={controls.cloudOpacity} blur={decorBlur(controls.cloudBlur)} zIndex={5} driftClassName="v8-cloud-drift-front" />
+            <DecorLayer fetchPriority={decorPriority} src={assets.mountain} x={controls.mountainX} y={controls.mountainY} scale={controls.mountainScale} rotation={controls.mountainRotation} opacity={controls.mountainOpacity} blur={decorBlur(controls.mountainBlur)} zIndex={6} />
+            <DecorLayer fetchPriority={decorPriority} src={assets.backWave} x={controls.backWaveX} y={controls.backWaveY} scale={controls.backWaveScale} rotation={controls.backWaveRotation} opacity={controls.backWaveOpacity} blur={decorBlur(controls.backWaveBlur)} zIndex={7} driftClassName="v8-wave-drift-back" />
             {controls.dragonShow ? (
               <div
                 aria-hidden="true"
@@ -639,10 +668,12 @@ export function V8HeroComposition({
               >
                 {controls.rearClawShow ? (
                   <img
-                    src={assets.rearClaw}
+                    src={clawSrc(assets.rearClaw)}
                     alt=""
                     decoding="async"
                     loading="eager"
+                    onLoad={sequenceDragonRig ? onClawSettled : undefined}
+                    onError={sequenceDragonRig ? onClawSettled : undefined}
                     draggable={false}
                     style={{
                       ...rigImageStyle,
@@ -654,10 +685,21 @@ export function V8HeroComposition({
                     }}
                   />
                 ) : null}
-                <img src={assets.body} alt="" decoding="async" loading="eager" draggable={false} style={{ ...rigImageStyle, inset: 0, width: "100%", zIndex: 1 }} />
+                <img
+                  ref={bodyImageRef}
+                  src={assets.body}
+                  alt=""
+                  decoding="async"
+                  loading="eager"
+                  fetchPriority={sequenceDragonRig ? "high" : undefined}
+                  onLoad={sequenceDragonRig ? onBodySettled : undefined}
+                  onError={sequenceDragonRig ? onBodySettled : undefined}
+                  draggable={false}
+                  style={{ ...rigImageStyle, inset: 0, width: "100%", zIndex: 1 }}
+                />
                 {controls.bagBaseShow ? (
                   <img
-                    src={assets.bagBase}
+                    src={bagSrc(assets.bagBase)}
                     alt=""
                     decoding="async"
                     loading="eager"
@@ -674,7 +716,7 @@ export function V8HeroComposition({
                 ) : null}
                 {controls.bagStrapShow ? (
                   <img
-                    src={assets.bagStrap}
+                    src={bagSrc(assets.bagStrap)}
                     alt=""
                     decoding="async"
                     loading="eager"
@@ -691,10 +733,12 @@ export function V8HeroComposition({
                 ) : null}
                 {controls.clawShow ? (
                   <img
-                    src={assets.claw}
+                    src={clawSrc(assets.claw)}
                     alt=""
                     decoding="async"
                     loading="eager"
+                    onLoad={sequenceDragonRig ? onClawSettled : undefined}
+                    onError={sequenceDragonRig ? onClawSettled : undefined}
                     draggable={false}
                     style={{
                       ...rigImageStyle,
@@ -838,7 +882,7 @@ export function V8HeroComposition({
                 <img src={assets.tigerBody} alt="" decoding="async" loading="eager" draggable={false} style={{ ...stageImageStyle, inset: 0, width: "100%", transform: `rotate(${tigerRigBaseline.bodyRotation}deg)`, zIndex: 0 }} />
               </div>
             ) : null}
-            <DecorLayer src={assets.midWave} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={10} driftClassName="v8-wave-drift-mid" />
+            <DecorLayer fetchPriority={decorPriority} src={assets.midWave} x={controls.midWaveX} y={controls.midWaveY} scale={controls.midWaveScale} rotation={controls.midWaveRotation} opacity={controls.midWaveOpacity} blur={decorBlur(controls.midWaveBlur)} zIndex={10} driftClassName="v8-wave-drift-mid" />
             <div style={{ ...heroStyle, zIndex: controls.ctaZIndex }}>
               {confirmed || !controls.ctaShow ? null : (
                 // 2026-09-11: eyebrow/title/event-selector/position-label

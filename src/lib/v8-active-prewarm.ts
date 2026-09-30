@@ -149,13 +149,18 @@ export function startV8ActivePrewarm({ first, rest }: Tiers) {
 }
 
 // P-021 v2 Step 2B (V8TEST): the order to warm while the Intro plays --
-// OPEN critical, the OPEN/ACTIVE shared backgrounds, ACTIVE's first-visible
+// OPEN critical, the dragon's claws then bag/strap, the OPEN/ACTIVE shared
+// backgrounds, ACTIVE's first-visible
 // set (Step 2A's tier 1), then decor (OPEN rig extras + Step 2A's tier 2).
 // Exact <img> URLs only; each URL appears once, in its earliest tier.
 export function buildV8IntroPrewarmTiers(
   baseUrl: string,
   options: {
     openCritical: string[];
+    // The dragon's claws, then bag/strap -- right after the body (in
+    // openCritical) so they never show before it.
+    openDragonClaws: string[];
+    openDragonBag: string[];
     openDecor: string[];
     active: Tiers;
   },
@@ -171,6 +176,8 @@ export function buildV8IntroPrewarmTiers(
     });
   return [
     { urls: unique(options.openCritical), priority: "high" as const },
+    { urls: unique(options.openDragonClaws), priority: "high" as const },
+    { urls: unique(options.openDragonBag), priority: "high" as const },
     { urls: unique(shared), priority: "high" as const },
     { urls: unique(options.active.first), priority: "low" as const },
     { urls: unique([...options.openDecor, ...options.active.rest]), priority: "low" as const },

@@ -836,6 +836,27 @@ export function Index() {
   // Opening is one screen too (Active locks via V8ListBuoys).
   useV8PageLock(isV8Route && !v8MeetupConfirmed);
 
+  // V8TEST: browser Back can hand iPhone Safari's back/forward cache a page
+  // frozen mid-state -- a morph (html.v8-morph-launch / v8-morphing, a live
+  // view transition), a root scroll or shifted visual viewport -- and a
+  // restore fires no scroll/touch event, so the page lock's snap-to-top and
+  // the viewport listeners never run. On a bfcache restore, finish any
+  // transition, drop the morph classes, snap to the top and let the
+  // viewport-dependent layout re-measure. (A normal load needs none of it.)
+  useEffect(() => {
+    if (v8RouteFamily !== "v8test") return;
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      v8ViewTransitionRef.current?.skipTransition?.();
+      v8ViewTransitionRef.current = null;
+      document.documentElement.classList.remove("v8-morph-launch", "v8-morphing");
+      window.scrollTo(0, 0);
+      window.dispatchEvent(new Event("resize"));
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [v8RouteFamily]);
+
   // Image retry for flaky mobile networks: on iPhone 4G a dropped connection
   // fails every image in flight at once (broken "?" icons) and nothing ever
   // retried them. Retries up to 3 times with growing delays; the query
@@ -946,11 +967,16 @@ export function Index() {
     v8IntroPrewarmStartedRef.current = true;
     const hero = openCriticalAssetsAll;
     const activeAssets = buildV8ActiveAssets(import.meta.env.BASE_URL);
-    const openDecor = [
+    // Dragon in visual order (body is in openCritical): claws, then bag.
+    const openDragonClaws = [
       openCriticalHero.rearClawShow ? hero.rearClaw : null,
       openCriticalHero.clawShow ? hero.claw : null,
+    ].filter((src): src is string => Boolean(src));
+    const openDragonBag = [
       openCriticalHero.bagBaseShow ? hero.bagBase : null,
       openCriticalHero.bagStrapShow ? hero.bagStrap : null,
+    ].filter((src): src is string => Boolean(src));
+    const openDecor = [
       openCriticalHero.tigerShow && openCriticalHero.tigerVariant === 1 && openCriticalHero.tigerRacketShow ? hero.tigerRacket : null,
       activeAssets.sunSwitchArrowPrev,
       activeAssets.sunSwitchArrowNext,
@@ -958,6 +984,8 @@ export function Index() {
     startV8PrewarmQueue(
       buildV8IntroPrewarmTiers(import.meta.env.BASE_URL, {
         openCritical: openCriticalList,
+        openDragonClaws,
+        openDragonBag,
         openDecor,
         // Identity/event aren't known yet during the Intro; Step 2A adds
         // the identity art and sun title once they are.
@@ -1346,6 +1374,14 @@ export function Index() {
     markPreviewInteraction,
   ]);
 
+  // V8TEST: the countdown's auto-enter runs this exact manual 進入戰局 path
+  // (plaque launch -> morph -> staged entrance, via enterV8Active) instead of
+  // switching straight to ACTIVE. v8MorphBusyRef inside it already blocks a
+  // tap during the animation from entering twice. Read through a ref so the
+  // countdown effect doesn't restart whenever this callback's deps change.
+  const confirmV8MeetupSelectionRef = useRef(confirmV8MeetupSelection);
+  confirmV8MeetupSelectionRef.current = confirmV8MeetupSelection;
+
   // The staged entrance lasts ~1.7s; any tap during it jumps to the end.
   useEffect(() => {
     if (!v8Entering) return;
@@ -1676,7 +1712,10 @@ export function Index() {
       if (isV8Route || countdownTuning.showCountdown) setCountdownRemainingMs(remainingMs);
       if (remainingMs <= 0) {
         window.clearInterval(timer);
-        if (effectiveAutoEnterAtZero) enterPreviewSelection();
+        if (effectiveAutoEnterAtZero) {
+          if (v8RouteFamily === "v8test") void confirmV8MeetupSelectionRef.current();
+          else enterPreviewSelection();
+        }
       }
     }, 250);
     return () => window.clearInterval(timer);
@@ -1695,6 +1734,7 @@ export function Index() {
     resetCountdownRemaining,
     tutorialOpen,
     v8IntroBlocking,
+    v8RouteFamily,
   ]);
 
   const effectiveCountdownTotalMs = Math.max(0, Math.round(effectiveCountdownSeconds)) * 1000;
@@ -2123,6 +2163,7 @@ export function Index() {
               controlOverrides={openHeroOverrides}
               maxStageWidth={430}
               revealImmediately
+              sequenceDragonRig={v8RouteFamily === "v8test"}
               sunContent={
                 <V8OpeningSunContent
                   event={previewPickedEvent}
