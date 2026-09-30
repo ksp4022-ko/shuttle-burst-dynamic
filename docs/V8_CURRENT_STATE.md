@@ -19,11 +19,11 @@ Test:
 ## Current Baseline
 
 Current main:
-- `00d971d` — `feat(v8test): read-only season bill behind the 帳單 plaque`
+- `f16a337` — `feat(v8): promote read-only season bill to production`
   (docs-only commits may follow)
 
 Stable production runtime:
-- `4c91ddd` — countdown fix promoted (startup fix `390bae2` included)
+- `f16a337` — P-022 basic billing promoted (countdown `4c91ddd`, startup `390bae2` included)
 
 V8TEST infrastructure:
 - `ca1bc53` — `feat(v8test): add isolated v8 test routes`
@@ -53,12 +53,13 @@ V8TEST infrastructure:
   - no legacy UI
   - V8 TEST badge confirmed
 
-### V8TEST DEPLOYED / VERIFY
-- P-022 UI — `00d971d` (read-only 本季帳單, `/v8test` only)
-  - CTA 帳單 plaque → dialog; data from `GET /events/:eventId/me/season-payment`
-  - backend values only, Bearer only (no memberId), no-store, no local cache
-  - `/v8` unchanged (greyed placeholder, no API call)
-  - real iPhone Safari pending
+### PRODUCTION DEPLOYED / VERIFY
+- P-022 BASIC BILLING — `00d971d` (V8TEST) → `f16a337` (promoted to `/v8` on Cfm)
+  - CTA 帳單 plaque → read-only 本季帳單 dialog on all V8 routes (季打 only)
+  - data from `GET /events/:eventId/me/season-payment`; backend values only,
+    Bearer only (no memberId), no-store, no local cache
+  - phase 2 (not included): guest fees, historical unpaid, total-due logic
+  - production real iPhone Safari pending
 
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
@@ -85,7 +86,7 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-1. P-022 UI: `/v8test` real-iPhone verify (then Cfm → `/v8`)
+1. P-022 BASIC BILLING: production `/v8` real-iPhone verify
 2. P-021 v2 (read-only diagnostic of the Safari stall first; scoped via V8TEST; only on user instruction)
 3. Other pending optimization items
 

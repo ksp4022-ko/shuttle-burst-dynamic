@@ -516,10 +516,25 @@ V8 不重新算 official billing。
 
 ---
 
-## P-022 UI
+## P-022 UI — P-022 BASIC BILLING
 
 Status:
-V8TEST DEPLOYED / VERIFY（/v8 未改）
+PRODUCTION DEPLOYED / VERIFY
+
+Promotion（Cfm，2026-09-30）：
+
+f16a337
+feat(v8): promote read-only season bill to production
+
+- /v8test 版本 as-is 上 /v8：只拿掉 V8TEST gate，行為不變。
+- 範圍（basic）：個人季費、上季請假抵扣、可展開請假日期、本季應付、已繳/未繳、paidAt。
+- 不含（P-022 phase 2）：臨打費、歷史未繳、新的 total-due 邏輯。
+- Local /v8 regression：帳單 未繳+警告 / 已繳+paidAt / 無紀錄 / auth / loading PASS；
+  /v8、/v8/kangxuan、/v8test/kangxuan：cold / reload / CTA→ACTIVE / ACTIVE switch /
+  Quick Pick current+different PASS，legacy UI 0，無 pageerror。
+- production real iPhone Safari：pending → PASS 後才 CLOSED。
+
+V8TEST（已驗證）：
 
 Commit：
 
@@ -547,9 +562,7 @@ Verification：
   未繳+明細不一致警告、已繳+paidAt、無紀錄、auth error、loading→ready、
   請假明細展開、關閉 PASS；legacy UI 0；無 pageerror
 - /v8 smoke：帳單 disabled、無 season-payment request
-- real iPhone Safari：pending
-
-Promotion 到 /v8 需要 user 回覆 Cfm / 確認。
+- real iPhone Safari：/v8test PASS（user 核准 Cfm）
 
 ---
 
@@ -655,7 +668,7 @@ Auto-Fill / experimental control values 已納入 copy output。
 # CURRENT EXECUTION ORDER
 
 （精簡現況與目前順序以 docs/V8_CURRENT_STATE.md 為準：
-P-022 UI V8TEST verify → P-021 v2（先 read-only 診斷，經 V8TEST）→ 其他）
+P-022 BASIC BILLING production verify → P-021 v2（先 read-only 診斷，經 V8TEST）→ 其他）
 
 1. V8-ASSET-READY
 2. iPhone Quick Pick final verify
