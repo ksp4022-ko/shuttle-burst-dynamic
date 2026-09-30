@@ -291,6 +291,28 @@ Status: V8TEST DEPLOYED / VERIFY
 
 ACTIVE gate 未開始，需另行指示。
 
+V8TEST 3 fixes（/v8test only）：
+
+647f677
+fix(v8test): dragon load order, bfcache restore reset, animated auto-enter
+
+Status: V8TEST DEPLOYED / VERIFY
+
+1. OPEN dragon 載入順序：body（fetchpriority high）→ 爪 → 袋/背帶；每步等上一步 load 或 error；
+   裝飾層 low priority；Step 2B intro queue 同順序。
+   Local 1500kbps：/v8 爪/袋 10.7s 先出現、body 在自動進場前都沒出現；/v8test body 12.2s → 爪 13.4s → 袋 15.8s。
+2. ACTIVE → Back → OPEN：本機 Chromium 重現不了（Back 為 fresh load，版面正常，TanStack 存的 scrollY=0）。
+   程式上確認的缺口：bfcache 還原（pageshow persisted）不會觸發 scroll/touch，
+   page lock 的 snap-to-top 與 viewport listener 都不跑，停在離開時的狀態（morph class、root scroll、visual viewport 位移）。
+   修正：還原時結束 view transition、移除 morph class、scrollTo(0,0)、觸發 resize 重新量測（無任何 offset）。
+   模擬測試：stale scrollY=400 + morph class → 還原後 scrollY=0、stageTop=0、class 清除。
+   若 iPhone 仍重現，需要截圖 + 操作步驟（從哪個頁面進入、是否經過 LINE 登入）。
+3. 倒數自動進場：改走手動「進入戰局」同一路徑（confirmV8MeetupSelection → enterV8Active：
+   plaque launch → morph → staged entrance）。v8MorphBusyRef 防重複；自動動畫中連點 6 次 → ACTIVE 只進 1 次。
+- Step 1 readiness 不變（龍身 error 仍不自動進場、手動 CTA 可進）；無新 gate；billing 未動；/v8 不變。
+- Regression /v8/kangxuan、/v8test/kangxuan PASS。
+- real iPhone Safari：pending
+
 P-021 asset Batch 1（/v8test only）：
 
 5ed870c
