@@ -297,6 +297,21 @@ Step 2B hotfix：024e420 fix(v8test): start the Intro-time preload only after st
 
 ACTIVE gate 未開始，需另行指示。
 
+Real-iPhone issues（Batch 2 暫停）：
+
+1. /v8 ACTIVE 雲朵框不見、數值有顯示 — c491044 fix(v8): serve the 450px ACTIVE cloud badges on all routes
+   - Root cause（local 1500kbps 實測）：/v8 舊預熱要等全部 OPEN 圖（最多 15s），9s 自動進場前從未請求雲朵；
+     ACTIVE mount 才請求，原圖 568KB，ACTIVE 後 11.0s 才畫出 → 數值浮在空白上。
+     URL / 請求 / CSS / z-index / 檔案格式皆正常（本機 /v8 最終都 complete、可見）。
+   - 修正：/v8 也改用已驗證的 450px 版（同圖，125KB）→ 11.0s → 7.1s。箭頭與其他圖仍只在 /v8test。
+   - 剩餘 7.1s：/v8 沒有 Step 2A 預載（ACTIVE 才請求）；完整解法 = Step 2A 上 /v8（需 Cfm）。
+   - Status：PRODUCTION DEPLOYED / VERIFY（user 指示修正 production）
+2. /v8test ACTIVE 名單姓名在底圖前浮出 — 5008630 fix(v8test): keep list-panel names hidden until the panel art loads
+   - Root cause：list panel 展開最多只等 1.5s panel 圖（452KB），timeout / error 都當 ready → 姓名浮在頁面上。
+   - 修正（/v8test）：panel 內姓名等 panel <img> 真的 load 才顯示；失敗則改用紙色底板顯示。展開時機不變、無全域 gate。
+   - Local：1500kbps 展開時 names hidden（圖未到）；擋掉圖 → 紙色底 + 姓名可讀；/v8 不變。
+   - Status：V8TEST DEPLOYED / VERIFY
+
 V8TEST 3 fixes（/v8test only）：
 
 647f677

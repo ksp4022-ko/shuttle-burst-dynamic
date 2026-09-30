@@ -23,6 +23,7 @@ Current main:
   (docs-only commits may follow)
 
 Stable production runtime:
+- `c491044` — cloud badges 450px (on top of `f16a337`)
 - `f16a337` — P-022 basic billing promoted (countdown `4c91ddd`, startup `390bae2` included)
 
 V8TEST infrastructure:
@@ -85,6 +86,10 @@ V8TEST infrastructure:
   - 740KB -> 131KB; real iPhone Safari pending
 
 - V8TEST 3 fixes — `647f677` (dragon load order / bfcache Back restore reset / animated auto-enter); real iPhone pending
+
+- /v8 cloud badges 450px on all routes — `c491044` (production fix on user request; verify on iPhone)
+- /v8test list-panel names wait for panel art — `5008630`; real iPhone pending
+- Batch 2: STOPPED (user)
 
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
