@@ -18,10 +18,14 @@ export const v8ActiveAssetFiles = {
 // (2026-09-08 batch). The third badge (courtCount) now shows courtCount +
 // hours merged into one "X場/Yhr" label (confirmed by the user) instead of
 // courtCount alone, matching the courttime asset's baked-in "場時" label.
+// 2026-09-30: all routes use the 450px-wide cuts (same art; the originals
+// were 1236-1447px for ~135px on screen, 568KB for the four). On /v8 they
+// were only requested once ACTIVE mounted and painted ~11s after it at
+// 1500kbps, so the values showed with no cloud behind them.
 export const v8ActiveSunBadgeFiles = {
-  ballType: "v8-cloud-shuttle-display.webp",
-  tempFee: "v8-cloud-fee-display.webp",
-  courtCount: "v8-cloud-court-time-display.webp",
+  ballType: "v8-cloud-shuttle-display-450.webp",
+  tempFee: "v8-cloud-fee-display-450.webp",
+  courtCount: "v8-cloud-court-time-display-450.webp",
 } as const;
 
 // The three-panel roster frame (季打請假/正取名單/備取名單) -- the new
@@ -146,7 +150,7 @@ export type V8CtaAssemblyControls = {
 // its own standalone control group (V8ActiveCapacityBadgeControls below)
 // rather than folded into the older three's shared type, which predates
 // the component baseline and doesn't have Opacity/Z-index.
-export const v8ActiveCapacityBadgeFile = "v8-cloud-limit-display.webp";
+export const v8ActiveCapacityBadgeFile = "v8-cloud-limit-display-450.webp";
 
 // Three rope-hanging ornaments (注連繩 decoration) threaded along the
 // red/blue rope, below the 已報/尚缺/候補 ema plaques -- purely decorative,
@@ -248,15 +252,11 @@ export const v8ActiveSunSwitchArrowFiles = {
   next: "v8-meetup-switch-next-v2.webp",
 } as const;
 
-// P-021 asset Batch 1 (V8TEST only until Cfm): the same art resized to what
-// a 3x iPhone actually draws -- badges 450px wide (were 1236-1447px for
-// ~135px on screen), arrows 96x98 lossy (were 500x512 lossless for ~25px).
-// New filenames, so /v8's files and caches are untouched.
+// P-021 asset Batch 1 (V8TEST only until Cfm): the switch arrows resized to
+// what a 3x iPhone draws -- 96x98 lossy (were 500x512 lossless for ~25px).
+// New filenames, so /v8's files and caches are untouched. (The cloud badges
+// moved to all routes, see v8ActiveSunBadgeFiles.)
 export const v8TestOptimizedStatusAssetFiles = {
-  ballType: "v8-cloud-shuttle-display-450.webp",
-  tempFee: "v8-cloud-fee-display-450.webp",
-  courtCount: "v8-cloud-court-time-display-450.webp",
-  capacity: "v8-cloud-limit-display-450.webp",
   arrowPrev: "v8-meetup-switch-prev-v3-96.webp",
   arrowNext: "v8-meetup-switch-next-v3-96.webp",
 } as const;
@@ -282,9 +282,9 @@ export function buildV8ActiveAssets(baseUrl: string) {
     infoCardNeeded: `${activeBase}/${v8ActiveInfoCardFiles.needed}`,
     infoCardWaitlist: `${activeBase}/${v8ActiveInfoCardFiles.waitlist}`,
     infoRope: `${activeBase}/${v8ActiveInfoCardFiles.rope}`,
-    sunBadgeBallType: `${statusAssetBase}/${optimized ? optimized.ballType : v8ActiveSunBadgeFiles.ballType}`,
-    sunBadgeTempFee: `${statusAssetBase}/${optimized ? optimized.tempFee : v8ActiveSunBadgeFiles.tempFee}`,
-    sunBadgeCourtCount: `${statusAssetBase}/${optimized ? optimized.courtCount : v8ActiveSunBadgeFiles.courtCount}`,
+    sunBadgeBallType: `${statusAssetBase}/${v8ActiveSunBadgeFiles.ballType}`,
+    sunBadgeTempFee: `${statusAssetBase}/${v8ActiveSunBadgeFiles.tempFee}`,
+    sunBadgeCourtCount: `${statusAssetBase}/${v8ActiveSunBadgeFiles.courtCount}`,
     rosterFrame: `${activeBase}/${v8ActiveRosterFrameFile}`,
     statusStampConfirmed: `${activeBase}/${v8ActiveStatusStampFiles.confirmed}`,
     statusStampWaiting: `${activeBase}/${v8ActiveStatusStampFiles.waiting}`,
@@ -298,7 +298,7 @@ export function buildV8ActiveAssets(baseUrl: string) {
     ctaTempSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.tempSignup}`,
     ctaHelperSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperSignup}`,
     ctaHelperCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperCancel}`,
-    sunBadgeCapacity: `${statusAssetBase}/${optimized ? optimized.capacity : v8ActiveCapacityBadgeFile}`,
+    sunBadgeCapacity: `${statusAssetBase}/${v8ActiveCapacityBadgeFile}`,
     ropeOrnamentA: `${activeBase}/${v8ActiveRopeOrnamentFiles.a}`,
     ropeOrnamentB: `${activeBase}/${v8ActiveRopeOrnamentFiles.b}`,
     ropeOrnamentC: `${activeBase}/${v8ActiveRopeOrnamentFiles.c}`,
