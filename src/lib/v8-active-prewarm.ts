@@ -75,7 +75,11 @@ export function buildV8ActivePrewarmTiers(
     buoy(v8ActiveListBuoyFiles.headerWait),
   ];
 
-  // Everything else ACTIVE may show next (other states, list panel, ...).
+  // Everything else ACTIVE may show next (other states, ...). The list
+  // panel art (list-buoy-body, 452KB) is deliberately NOT here: warming it
+  // on /v8test coincided with the panel <img> failing on real iPhones (names
+  // over a missing panel), which the original on-tap loading in V8ListBuoys
+  // never did -- it keeps that original path only.
   const rest = [
     a.statusStampConfirmed,
     a.statusStampWaiting,
@@ -89,37 +93,42 @@ export function buildV8ActivePrewarmTiers(
     a.ctaAssembly.textTempCancel,
     a.infoCardWaitlist,
     a.sunInfoBadge,
-    buoy(v8ActiveListBuoyFiles.panel),
   ];
 
   const firstSet = new Set(first.filter((src): src is string => Boolean(src)));
   return { first: [...firstSet], rest: [...new Set(rest)].filter((src) => !firstSet.has(src)) };
 }
 
-// Kept for the page's lifetime so repeated calls (identity/event change)
-// never request the same URL twice and the images aren't GC'd mid-load.
-const warmed = new Map<string, HTMLImageElement>();
+// In-flight warms are held (so they aren't GC'd mid-load and a repeat call
+// never requests the same URL twice); once settled only the URL is kept, so
+// the page doesn't pin ~40 extra image objects for its whole lifetime on
+// iPhone.
+const inflight = new Map<string, Promise<void>>();
+const warmedDone = new Set<string>();
 
 function warm(src: string, priority: "high" | "low") {
-  const existing = warmed.get(src);
-  if (existing) return existing.complete ? Promise.resolve() : new Promise<void>((resolve) => {
-    existing.addEventListener("load", () => resolve(), { once: true });
-    existing.addEventListener("error", () => resolve(), { once: true });
-  });
-  return new Promise<void>((resolve) => {
+  if (warmedDone.has(src)) return Promise.resolve();
+  const pending = inflight.get(src);
+  if (pending) return pending;
+  const promise = new Promise<void>((resolve) => {
     const image = new Image();
     image.decoding = "async";
     if ("fetchPriority" in image) image.fetchPriority = priority;
-    image.onload = () => resolve();
-    // A failed warm is simply forgotten; the real <img> (and the page's own
-    // retry) handles it. No cache-busting URL here.
-    image.onerror = () => {
-      warmed.delete(src);
+    const settle = (ok: boolean) => {
+      inflight.delete(src);
+      // A failed warm is simply forgotten; the real <img> (and the page's
+      // own retry) handles it. No cache-busting URL here.
+      if (ok) warmedDone.add(src);
+      image.onload = null;
+      image.onerror = null;
       resolve();
     };
-    warmed.set(src, image);
+    image.onload = () => settle(true);
+    image.onerror = () => settle(false);
     image.src = src;
   });
+  inflight.set(src, promise);
+  return promise;
 }
 
 // Tiers run in order: each tier's images all at once, the next tier only
