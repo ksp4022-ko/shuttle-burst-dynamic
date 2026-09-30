@@ -63,3 +63,9 @@ REAL IPHONE STATUS
 NEXT STEP
 
 Use detailed root-cause reports only when a failure, regression, or architecture conflict is found.
+
+Reply format (user preference):
+- Traditional Chinese; the report goes in ONE copyable code block.
+- If there is a NEXT STEP with a checklist the user must do (e.g. real-iPhone test items),
+  put the checklist OUTSIDE the code block, as normal text after it.
+  Inside the block, NEXT STEP keeps only a one-line summary.
