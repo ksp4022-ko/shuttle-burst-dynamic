@@ -23,7 +23,7 @@ Current main:
   (docs-only commits may follow)
 
 Stable production runtime:
-- `4c1f87b` — Step 1 / 2A / 2B, 647f677 fixes, list panel, asset Batch 1+2 promoted (Cfm 全部 2026-10-01); production real iPhone pending
+- `4c1f87b` — Step 1 / 2A / 2B, 647f677 fixes, list panel, asset Batch 1+2 promoted (Cfm 全部 2026-10-01); CLOSED (production real iPhone PASS)
 - `bdbbb21` — ACTIVE red sun Auto-Fill + asset Batch 3 promoted (Cfm 2026-10-01)
 - `c491044` — cloud badges 450px (on top of `f16a337`)
 - `f16a337` — P-022 basic billing promoted (countdown `4c91ddd`, startup `390bae2` included)
@@ -127,9 +127,9 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-1. P-022 BASIC BILLING: production `/v8` real-iPhone verify
-2. P-021 v2 Step 1 / 2A / 2B + Batch 1/2 + list panel + 647f677 promoted (`4c1f87b`): production real-iPhone verify; ACTIVE gate only on user instruction
-3. Other pending optimization items
+1. V8-ISSUE-IDENTITY-TAG-POSITION
+2. V8-ISSUE-CLOUD-BADGE-ART-MISSING
+3. Other pending items (ACTIVE gate only on user instruction)
 
 ## Do Not Reopen Without Evidence
 

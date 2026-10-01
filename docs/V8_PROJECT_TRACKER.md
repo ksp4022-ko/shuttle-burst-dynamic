@@ -151,7 +151,7 @@ Status: OPEN（只記錄）
 4c1f87b
 feat(v8): promote the verified /v8test load-speed work to production
 
-Status: PRODUCTION DEPLOYED / VERIFY
+Status: CLOSED（production real iPhone PASS，user 2026-10-01：Intro / 龍順序 / 倒數 / 自動進場 / ACTIVE 首屏 / 名單面板 / 返回 全 OK）
 
 - 套用到所有 V8 路由：Step 1（f5207d9）、Step 2A（5943420）、Step 2B（b967175，影片 Intro contain + 緩衝完才載圖；取代舊的 fetch 預載）、
   647f677（龍載入順序 / bfcache 返回重置 / 自動進場動畫）、名單面板（5008630 + 4f5b669）、縮圖 Batch 1（5ed870c）、Batch 2（051d7dc）。
@@ -159,7 +159,7 @@ Status: PRODUCTION DEPLOYED / VERIFY
 - Local（/v8）：family PASS；影片 Intro、?intro 參數在 /v8 無效；縮圖檔全部是新檔、無破圖、紅日 Auto-Fill；
   1500kbps Quick Pick：身分圖在 ACTIVE 前已預載、首屏 +3.4s、0 重複請求；自動進場走動畫路徑、ACTIVE 只進一次；
   bfcache 返回重置 OK；名單面板：圖未到名字隱藏、圖失敗時紙底顯示名字。
-- production real iPhone：pending
+- production real iPhone：PASS
 
 ---
 
@@ -258,7 +258,7 @@ Do NOT mark CLOSED until user confirms real-device PASS.
 ## V8-ASSET-READY
 
 Status:
-P-021 v2 Step 1 / 2A / 2B PROMOTED TO /v8（4c1f87b）；production real iPhone pending（6367bbb 仍為 ROLLED BACK，不可恢復）
+P-021 v2 Step 1 / 2A / 2B CLOSED（4c1f87b，production real iPhone PASS）（6367bbb 仍為 ROLLED BACK，不可恢復）
 
 P-021 v2 step 1（OPEN countdown readiness，/v8test only）：
 
@@ -285,7 +285,7 @@ P-021 v2 Step 2A（ACTIVE preload optimization，/v8test only）：
 5943420
 perf(v8test): warm ACTIVE's first-visible art as soon as OPEN is usable
 
-Status: PROMOTED TO /v8（Cfm 全部 2026-10-01，4c1f87b）；production real iPhone pending
+Status: CLOSED（Cfm 全部 2026-10-01，4c1f87b；production real iPhone PASS，user）
 
 - 開始時機：Step 1 critical OPEN art ready 後（不再等全部 OPEN 圖／15s）；不用 timer，
   避免與 OPEN critical 搶頻寬（試過 8s fallback → 600kbps 倒數延後 ~22s，已移除）。
@@ -311,7 +311,7 @@ P-021 v2 Step 2B（Intro-time preload + Intro sizing，/v8test only）：
 b967175
 perf(v8test): preload during the Intro and keep the Intro video smooth
 
-Status: PROMOTED TO /v8（Cfm 全部 2026-10-01，4c1f87b）；production real iPhone pending
+Status: CLOSED（Cfm 全部 2026-10-01，4c1f87b；production real iPhone PASS，user）
 
 - Intro 影片完整 buffer 後依序預載：OPEN critical → OPEN/ACTIVE 共用背景 → ACTIVE first-visible
   （Step 2A tier 1）→ 裝飾。沿用 Step 2A warm()/dedup（startV8PrewarmQueue）；exact URL、無 ?v8r。
@@ -391,7 +391,7 @@ V8TEST code-driven Intro（方案 A，/v8test only）：
 bc29cbc
 feat(v8test): code-driven Intro on the OPEN stage that ends exactly on OPEN
 
-Status: PROMOTED TO /v8（Cfm 全部 2026-10-01，4c1f87b）；production real iPhone pending
+Status: CLOSED（Cfm 全部 2026-10-01，4c1f87b；production real iPhone PASS，user）
 
 - /v8test 以 OPEN 本身圖層做 ~7s 開場（不再播影片）：墨染 → 雲/山/浪 → 龍入場 → 虎入場揮拍 → 羽球擊入太陽 → 太陽蓋章 → 進入戰局；最後一幀即 OPEN。
 - 略過（1s 後出現）/ 點畫面略過 / Replay Intro / 每分頁一次 維持；Intro 期間倒數暫停，結束後開始。
@@ -421,7 +421,7 @@ P-021 asset Batch 2（/v8test only，user 指示繼續）：
 051d7dc
 perf(v8test): resized identity tags, status stamps and CTA base (asset Batch 2)
 
-Status: PROMOTED TO /v8（Cfm 全部 2026-10-01，4c1f87b）；production real iPhone pending
+Status: CLOSED（Cfm 全部 2026-10-01，4c1f87b；production real iPhone PASS，user）
 
 - 新檔（原檔不動、/v8 仍用原檔）：
   identity 牌 ×2 → 200px 寬；狀態章 ×4 → 140px；cta-assembly base → 576px、front → 64px。580KB → 170KB。
@@ -456,7 +456,7 @@ V8TEST 3 fixes（/v8test only）：
 647f677
 fix(v8test): dragon load order, bfcache restore reset, animated auto-enter
 
-Status: PROMOTED TO /v8（Cfm 全部 2026-10-01，4c1f87b）；production real iPhone pending
+Status: CLOSED（Cfm 全部 2026-10-01，4c1f87b；production real iPhone PASS，user）
 
 1. OPEN dragon 載入順序：body（fetchpriority high）→ 爪 → 袋/背帶；每步等上一步 load 或 error；
    裝飾層 low priority；Step 2B intro queue 同順序。
@@ -478,7 +478,7 @@ P-021 asset Batch 1（/v8test only）：
 5ed870c
 perf(v8test): resized sun badges and switch arrows (asset Batch 1)
 
-Status: PROMOTED TO /v8（Cfm 全部 2026-10-01，4c1f87b）；production real iPhone pending
+Status: CLOSED（Cfm 全部 2026-10-01，4c1f87b；production real iPhone PASS，user）
 
 - 新檔（原檔不動、/v8 仍用原檔）：
   - v8-cloud-shuttle/fee/court-time/limit-display-450.webp：450px 寬；568KB → 125KB
