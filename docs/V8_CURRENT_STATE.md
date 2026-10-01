@@ -23,6 +23,7 @@ Current main:
   (docs-only commits may follow)
 
 Stable production runtime:
+- `4c1f87b` — Step 1 / 2A / 2B, 647f677 fixes, list panel, asset Batch 1+2 promoted (Cfm 全部 2026-10-01); production real iPhone pending
 - `bdbbb21` — ACTIVE red sun Auto-Fill + asset Batch 3 promoted (Cfm 2026-10-01)
 - `c491044` — cloud badges 450px (on top of `f16a337`)
 - `f16a337` — P-022 basic billing promoted (countdown `4c91ddd`, startup `390bae2` included)
@@ -68,31 +69,31 @@ V8TEST infrastructure:
   - 9s auto-enter starts only after dragon / shown tiger / 進入戰局 plaque are loaded
   - no timeout, error != ready; manual CTA / Quick Pick always available
   - decor loads progressively; no global gate; `/v8` unchanged
-  - real iPhone Safari PASS on `/v8test` (user); promote to `/v8` only on Cfm
+  - real iPhone Safari PASS on `/v8test` (user); promoted to `/v8` (`4c1f87b`)
 
 ### V8TEST DEPLOYED / VERIFY
 - P-021 v2 Step 2A — `5943420` ACTIVE preload optimization (`/v8test` only)
   - starts after Step 1 critical OPEN art; exact <img> URLs, deduped, tiered (first-visible high)
   - includes CTA assembly, B1 roster, list buoys, identity art (cached identity + roster)
   - no ACTIVE gate; Step 1 unchanged; `/v8` unchanged
-  - real iPhone PASS (user, 2026-10-01); promote on Cfm
+  - promoted to `/v8` (`4c1f87b`)
 
 - P-021 v2 Step 2B — `b967175` Intro-time preload + Intro sizing (`/v8test` only)
   - after the Intro video is fully buffered: OPEN critical -> shared bg -> ACTIVE first -> decor
   - hidden OPEN art / Step 2A wait until then (video keeps priority)
   - Intro contain inside visible viewport + safe area
-  - real iPhone PASS (user, 2026-10-01); promote on Cfm
+  - promoted to `/v8` (`4c1f87b`)
 
 - P-021 asset Batch 1 — `5ed870c` resized sun badges + switch arrows (`/v8test` only; new filenames, /v8 untouched)
-  - 740KB -> 131KB; real iPhone Safari pending
+  - 740KB -> 131KB; promoted to `/v8` on Cfm 全部 (`4c1f87b`)
 
-- V8TEST 3 fixes — `647f677` (dragon load order / bfcache Back restore reset / animated auto-enter); real iPhone PASS (user); promote on Cfm
+- V8TEST 3 fixes — `647f677` (dragon load order / bfcache Back restore reset / animated auto-enter); promoted to `/v8` (`4c1f87b`)
 
 - /v8 cloud badges 450px on all routes — `c491044` — CLOSED (production real iPhone PASS)
 - /v8test list panel — `5008630` + `4f5b669` (panel art out of prewarm, warmed images released): real iPhone PASS on 4G (user); promote on Cfm
-- P-021 asset Batch 2 — `051d7dc` identity tags / status stamps / CTA base+front (`/v8test` only, 580KB -> 170KB); real iPhone PASS (user); promote on Cfm
+- P-021 asset Batch 2 — `051d7dc` identity tags / status stamps / CTA base+front (`/v8test` only, 580KB -> 170KB); promoted to `/v8` (`4c1f87b`)
 - P-021 asset Batch 3 — `d04ae40` plaques / rope ornaments / CTA parts / titles (`/v8test` only, 516KB -> 273KB); real iPhone PASS (user) → promoted to `/v8` on Cfm (`bdbbb21`); CLOSED (production real iPhone PASS)
-- V8TEST code-driven Intro — `bc29cbc` OPEN layers + dragon/tiger + shuttle strike, ~7s, ends on OPEN (`/v8test` only; /v8 keeps video); real iPhone PASS (user); promote on Cfm
+- V8TEST code-driven Intro — `bc29cbc` OPEN layers + dragon/tiger + shuttle strike, ~7s, ends on OPEN (`/v8test` only; /v8 keeps video); promoted to `/v8` (`4c1f87b`)
 - V8TEST video Intro restored — `984fab9` (user decision); 程式 Intro only via `?intro=code` on `/v8test`
 - V8TEST ACTIVE red sun Auto-Fill — `ce9eb2d` OPEN sun layout by default, v2 key, error fallback not saved (`/v8test` only); real iPhone PASS (user) → promoted to `/v8` on Cfm (`bdbbb21`); CLOSED (production real iPhone PASS)
 - V8TEST blank-screen report — `3d05337` on-page error box + 10s not-started note (`/v8test` only); Intro guarded; user reopened: normal (not reproduced), report box kept
@@ -123,7 +124,7 @@ V8TEST infrastructure:
 ## Current Execution Order
 
 1. P-022 BASIC BILLING: production `/v8` real-iPhone verify
-2. P-021 v2: step 1 / Step 2A / Step 2B `/v8test` real-iPhone PASS (promote on Cfm); ACTIVE gate only on user instruction
+2. P-021 v2 Step 1 / 2A / 2B + Batch 1/2 + list panel + 647f677 promoted (`4c1f87b`): production real-iPhone verify; ACTIVE gate only on user instruction
 3. Other pending optimization items
 
 ## Do Not Reopen Without Evidence
