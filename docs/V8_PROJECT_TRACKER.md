@@ -127,7 +127,7 @@ Promotion 到 /v8 需要 user 回覆 Cfm / 確認；promote 並驗證後才 CLOS
 
 ## V8-ISSUE-IDENTITY-TAG-POSITION（待修正，user 回報 2026-10-01）
 
-Status: PROMOTED TO /v8（Cfm 2026-10-01，57a3af5）；production real iPhone pending
+Status: CLOSED（57a3af5；production real iPhone PASS，user 2026-10-01）
 
 - 現象（正式 /v8，iPhone Chrome，柯山米 季打請假）：季打旗跑到卷軸下方、被浪遮住（圖1，18:16）；
   正確位置應在卷軸左側、名字左邊（圖2，20:51）。
@@ -142,7 +142,7 @@ Status: PROMOTED TO /v8（Cfm 2026-10-01，57a3af5）；production real iPhone p
 
 ## V8-ISSUE-CLOUD-BADGE-ART-MISSING（待確認）
 
-Status: OPEN（只記錄）
+Status: CLOSED（user 2026-10-01：雲框已正常；未再重現，判定為一次性載入問題）
 
 - 圖2（20:51，正式 /v8）ACTIVE 紅日四周雲朵徽章底圖沒出現，只剩文字（MS-101 / 22人 / 2場/2hr / $220）；圖1（18:16）正常。
 - 可能是弱網路下雲朵圖載入失敗或還在載入；待確認是否可重現。
