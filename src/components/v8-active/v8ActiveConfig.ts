@@ -269,9 +269,16 @@ export const v8TestOptimizedStatusAssetFiles = {
   stampUnregistered: "status-stamp-unregistered-v1-140.webp",
   ctaAssemblyBase: "cta-assembly-base-v1-576.webp",
   ctaAssemblyFront: "cta-assembly-front-v1-64.webp",
-  // Batch 3 (V8TEST only until Cfm): plaques / rope ornaments / CTA
-  // assembly parts / 康軒 title at ~3x their iPhone draw size. 516KB ->
-  // 273KB for the fifteen (the OPEN 進入戰局 plaque lives in v8HeroConfig).
+  arrowPrev: "v8-meetup-switch-prev-v3-96.webp",
+  arrowNext: "v8-meetup-switch-next-v3-96.webp",
+} as const;
+
+// P-021 asset Batch 3 -- all routes (verified on /v8test, promoted to /v8
+// on Cfm 2026-10-01): plaques / rope ornaments / CTA assembly parts / 康軒
+// title at ~3x their iPhone draw size, 516KB -> 273KB for the fifteen (the
+// OPEN 進入戰局 plaque lives in v8HeroConfig). New filenames next to the
+// originals.
+export const v8OptimizedAssetFiles = {
   infoCardRegistered: "plaque-registered-v1-460.webp",
   infoCardNeeded: "plaque-needed-v1-460.webp",
   infoCardWaitlist: "plaque-waitlist-v1-460.webp",
@@ -286,8 +293,6 @@ export const v8TestOptimizedStatusAssetFiles = {
   ctaHelperSignup: "cta-plaque-helper-signup-v3-190.webp",
   ctaHelperCancel: "cta-plaque-helper-cancel-v3-190.webp",
   sunTitleKangxuan: "v8-kangxuan-calligraphy-ivory-square-v2-420.webp",
-  arrowPrev: "v8-meetup-switch-prev-v3-96.webp",
-  arrowNext: "v8-meetup-switch-next-v3-96.webp",
 } as const;
 
 export const v8ActiveSunTitleFiles = {
@@ -307,9 +312,9 @@ export function buildV8ActiveAssets(baseUrl: string) {
     tigerMountain: `${displayBase}/${v8ActiveBackgroundFiles.tigerMountain}`,
     dragon: `${displayBase}/${v8ActiveCharacterFiles.dragon}`,
     tiger: `${displayBase}/${v8ActiveCharacterFiles.tiger}`,
-    infoCardRegistered: `${activeBase}/${optimized ? optimized.infoCardRegistered : v8ActiveInfoCardFiles.registered}`,
-    infoCardNeeded: `${activeBase}/${optimized ? optimized.infoCardNeeded : v8ActiveInfoCardFiles.needed}`,
-    infoCardWaitlist: `${activeBase}/${optimized ? optimized.infoCardWaitlist : v8ActiveInfoCardFiles.waitlist}`,
+    infoCardRegistered: `${activeBase}/${v8OptimizedAssetFiles.infoCardRegistered}`,
+    infoCardNeeded: `${activeBase}/${v8OptimizedAssetFiles.infoCardNeeded}`,
+    infoCardWaitlist: `${activeBase}/${v8OptimizedAssetFiles.infoCardWaitlist}`,
     infoRope: `${activeBase}/${v8ActiveInfoCardFiles.rope}`,
     sunBadgeBallType: `${statusAssetBase}/${v8ActiveSunBadgeFiles.ballType}`,
     sunBadgeTempFee: `${statusAssetBase}/${v8ActiveSunBadgeFiles.tempFee}`,
@@ -328,26 +333,26 @@ export function buildV8ActiveAssets(baseUrl: string) {
     ctaHelperSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperSignup}`,
     ctaHelperCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperCancel}`,
     sunBadgeCapacity: `${statusAssetBase}/${v8ActiveCapacityBadgeFile}`,
-    ropeOrnamentA: `${activeBase}/${optimized ? optimized.ropeOrnamentA : v8ActiveRopeOrnamentFiles.a}`,
-    ropeOrnamentB: `${activeBase}/${optimized ? optimized.ropeOrnamentB : v8ActiveRopeOrnamentFiles.b}`,
+    ropeOrnamentA: `${activeBase}/${v8OptimizedAssetFiles.ropeOrnamentA}`,
+    ropeOrnamentB: `${activeBase}/${v8OptimizedAssetFiles.ropeOrnamentB}`,
     ropeOrnamentC: `${activeBase}/${v8ActiveRopeOrnamentFiles.c}`,
     rosterV2A1: `${activeBase}/${v8ActiveRosterV2Files.a1}`,
     rosterV2B1: `${activeBase}/${v8ActiveRosterV2Files.b1}`,
     rosterV2B2: `${activeBase}/${v8ActiveRosterV2Files.b2}`,
     sunSwitchArrowPrev: `${statusAssetBase}/${optimized ? optimized.arrowPrev : v8ActiveSunSwitchArrowFiles.prev}`,
     sunSwitchArrowNext: `${statusAssetBase}/${optimized ? optimized.arrowNext : v8ActiveSunSwitchArrowFiles.next}`,
-    sunTitleKangxuan: `${statusAssetBase}/${optimized ? optimized.sunTitleKangxuan : v8ActiveSunTitleFiles.kangxuan}`,
+    sunTitleKangxuan: `${statusAssetBase}/${v8OptimizedAssetFiles.sunTitleKangxuan}`,
     ctaAssembly: {
       base: `${activeBase}/${optimized ? optimized.ctaAssemblyBase : v8CtaAssemblyFiles.base}`,
       front: `${activeBase}/${optimized ? optimized.ctaAssemblyFront : v8CtaAssemblyFiles.front}`,
-      mainBlank: `${activeBase}/${optimized ? optimized.ctaMainBlank : v8CtaAssemblyFiles.mainBlank}`,
-      textSeasonLeave: `${activeBase}/${optimized ? optimized.ctaTextSeasonLeave : v8CtaAssemblyFiles.textSeasonLeave}`,
-      textSeasonReturn: `${activeBase}/${optimized ? optimized.ctaTextSeasonReturn : v8CtaAssemblyFiles.textSeasonReturn}`,
-      textTempSignup: `${activeBase}/${optimized ? optimized.ctaTextTempSignup : v8CtaAssemblyFiles.textTempSignup}`,
-      textTempCancel: `${activeBase}/${optimized ? optimized.ctaTextTempCancel : v8CtaAssemblyFiles.textTempCancel}`,
-      helperSignup: `${activeBase}/${optimized ? optimized.ctaHelperSignup : v8CtaAssemblyFiles.helperSignup}`,
-      helperCancel: `${activeBase}/${optimized ? optimized.ctaHelperCancel : v8CtaAssemblyFiles.helperCancel}`,
-      bill: `${activeBase}/${optimized ? optimized.ctaBill : v8CtaAssemblyFiles.bill}`,
+      mainBlank: `${activeBase}/${v8OptimizedAssetFiles.ctaMainBlank}`,
+      textSeasonLeave: `${activeBase}/${v8OptimizedAssetFiles.ctaTextSeasonLeave}`,
+      textSeasonReturn: `${activeBase}/${v8OptimizedAssetFiles.ctaTextSeasonReturn}`,
+      textTempSignup: `${activeBase}/${v8OptimizedAssetFiles.ctaTextTempSignup}`,
+      textTempCancel: `${activeBase}/${v8OptimizedAssetFiles.ctaTextTempCancel}`,
+      helperSignup: `${activeBase}/${v8OptimizedAssetFiles.ctaHelperSignup}`,
+      helperCancel: `${activeBase}/${v8OptimizedAssetFiles.ctaHelperCancel}`,
+      bill: `${activeBase}/${v8OptimizedAssetFiles.ctaBill}`,
     },
   };
 }

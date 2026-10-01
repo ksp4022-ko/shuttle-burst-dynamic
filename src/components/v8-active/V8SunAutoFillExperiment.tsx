@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { isV8TestRoute, readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
+import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 
 // ACTIVE SUN AUTO-FILL EXPERIMENT (2026-09-26): a trial layer of four
 // stretch-to-fit boxes on the REAL ACTIVE red sun (大 DATE ─ 小 TIME /
@@ -64,13 +64,13 @@ export const openSunAutoFillLayout: SunAutoFillConfig = {
   name: { x: 29, y: 38, width: 43, height: 40, skewX: -2.5, skewY: -7.5 },
 };
 
-// V8TEST: ACTIVE's red sun starts from the same Auto-Fill layout as OPEN
-// instead of CURRENT, under a fresh key so a CURRENT left in the v1 key
-// (e.g. by a past error fallback, which used to be saved) no longer wins.
-// /v8 keeps its v1 key and CURRENT default.
-const SUN_AUTOFILL_TEST_STORAGE_KEY = "v8-red-sun-autofill-experiment-v2";
-const storageKey = () => (isV8TestRoute() ? SUN_AUTOFILL_TEST_STORAGE_KEY : SUN_AUTOFILL_STORAGE_KEY);
-const routeDefaults = () => (isV8TestRoute() ? openSunAutoFillLayout : sunAutoFillDefaults);
+// ACTIVE's red sun starts from the same Auto-Fill layout as OPEN instead
+// of CURRENT, under a fresh v2 key so a CURRENT left in the v1 key (e.g. by
+// a past error fallback, which used to be saved) no longer wins. Verified on
+// /v8test, all routes since Cfm 2026-10-01.
+const SUN_AUTOFILL_V2_STORAGE_KEY = "v8-red-sun-autofill-experiment-v2";
+const storageKey = () => SUN_AUTOFILL_V2_STORAGE_KEY;
+const routeDefaults = () => openSunAutoFillLayout;
 
 const BOX_RANGES: Record<keyof SunAutoFillBox, { min: number; max: number; step: number }> = {
   x: { min: -20, max: 120, step: 0.5 },
@@ -132,11 +132,11 @@ export function loadSunAutoFillConfig(): SunAutoFillConfig {
 }
 
 export function useSunAutoFillExperiment() {
-  // First load (nothing saved): CURRENT on /v8, OPEN's Auto-Fill layout on /v8test.
+  // First load (nothing saved): OPEN's Auto-Fill layout.
   const [config, setConfig] = useState<SunAutoFillConfig>(() =>
     typeof window === "undefined" ? sunAutoFillDefaults : loadSunAutoFillConfig(),
   );
-  // V8TEST: an error falls back to CURRENT for this page only (never saved).
+  // An error falls back to CURRENT for this page only (never saved).
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -179,10 +179,7 @@ export function useSunAutoFillExperiment() {
     setConfig(routeDefaults());
   }, []);
 
-  const fallBack = useCallback(() => {
-    if (isV8TestRoute()) setFailed(true);
-    else setMode("current");
-  }, [setMode]);
+  const fallBack = useCallback(() => setFailed(true), []);
   const shown = failed ? { ...config, mode: "current" as const } : config;
 
   return { config: shown, setMode, setLinked, setBoxValue, reset, fallBack };

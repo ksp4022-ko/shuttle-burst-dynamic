@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
-import { v8TestOptimizedStatusAssetFiles, type V8SunDotsControls } from "@/components/v8-active/v8ActiveConfig";
+import { v8OptimizedAssetFiles, v8TestOptimizedStatusAssetFiles, type V8SunDotsControls } from "@/components/v8-active/v8ActiveConfig";
 import { isV8TestRoute } from "@/lib/v8-route-family";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
@@ -39,7 +39,7 @@ function buildV8OpeningSunAssets(baseUrl: string) {
     // ACTIVE, see v8TestOptimizedStatusAssetFiles); /v8 unchanged.
     sunSwitchArrowPrev: `${statusAssetBase}/${isV8TestRoute() ? v8TestOptimizedStatusAssetFiles.arrowPrev : "v8-meetup-switch-prev-v2.webp"}`,
     sunSwitchArrowNext: `${statusAssetBase}/${isV8TestRoute() ? v8TestOptimizedStatusAssetFiles.arrowNext : "v8-meetup-switch-next-v2.webp"}`,
-    sunTitleKangxuan: `${statusAssetBase}/${isV8TestRoute() ? v8TestOptimizedStatusAssetFiles.sunTitleKangxuan : "v8-kangxuan-calligraphy-ivory-square-v2-640.webp"}`,
+    sunTitleKangxuan: `${statusAssetBase}/${v8OptimizedAssetFiles.sunTitleKangxuan}`,
   };
 }
 

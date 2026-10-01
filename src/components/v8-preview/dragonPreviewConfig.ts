@@ -16,7 +16,7 @@ import type {
   V8ActiveSwitchArrowsControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
-import { isV8TestRoute, readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
+import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 import { loadSunAutoFillConfig } from "@/components/v8-active/V8SunAutoFillExperiment";
 
 export type PreviewControls = {
@@ -2709,20 +2709,9 @@ type PreviewExperimentSettings = {
   identityEnvelope: IdentityEnvelopeConfig;
 };
 
-const SUN_AUTOFILL_STORAGE_KEY = "v8-red-sun-autofill-experiment-v1";
 const IDENTITY_ENVELOPE_STORAGE_KEY = "v8-identity-envelope-experiment-v1";
 const SUN_AUTOFILL_BOX_KEYS: SunAutoFillBoxKey[] = ["date", "time", "note", "name"];
-const SUN_AUTOFILL_MODES: SunAutoFillMode[] = ["current", "autofill", "compare"];
 const IDENTITY_ENVELOPE_MODES: IdentityEnvelopeMode[] = ["current", "autofill", "compare"];
-
-const sunAutoFillDefaults: SunAutoFillConfig = {
-  mode: "current",
-  globalSkewLinked: true,
-  date: { x: 34, y: 38, width: 40, height: 22, skewX: 0, skewY: -18 },
-  time: { x: 70, y: 38, width: 30, height: 12, skewX: 0, skewY: -18 },
-  note: { x: 32, y: 62, width: 30, height: 12, skewX: 0, skewY: -18 },
-  name: { x: 67, y: 62, width: 40, height: 22, skewX: 0, skewY: -18 },
-};
 
 const identityEnvelopeDefaults: IdentityEnvelopeConfig = {
   mode: "current",
@@ -2751,18 +2740,6 @@ const readStoredNumber = (value: unknown, fallback: number) =>
 const readStoredBoolean = (value: unknown, fallback: boolean) =>
   typeof value === "boolean" ? value : fallback;
 
-const readSunAutoFillBox = (value: unknown, fallback: SunAutoFillBox): SunAutoFillBox => {
-  const saved = value && typeof value === "object" ? (value as Partial<Record<keyof SunAutoFillBox | "skew", unknown>>) : {};
-  return {
-    x: readStoredNumber(saved.x, fallback.x),
-    y: readStoredNumber(saved.y, fallback.y),
-    width: readStoredNumber(saved.width, fallback.width),
-    height: readStoredNumber(saved.height, fallback.height),
-    skewX: readStoredNumber(saved.skewX ?? saved.skew, fallback.skewX),
-    skewY: readStoredNumber(saved.skewY, fallback.skewY),
-  };
-};
-
 const readIdentityEnvelopeBox = (value: unknown, fallback: IdentityEnvelopeBox): IdentityEnvelopeBox => {
   const saved = value && typeof value === "object" ? (value as Partial<Record<keyof IdentityEnvelopeBox, unknown>>) : {};
   return {
@@ -2776,20 +2753,8 @@ const readIdentityEnvelopeBox = (value: unknown, fallback: IdentityEnvelopeBox):
 };
 
 const loadSunAutoFillExportConfig = (): SunAutoFillConfig => {
-  // V8TEST: ACTIVE reads its own key/defaults (see V8SunAutoFillExperiment).
-  if (isV8TestRoute()) return loadSunAutoFillConfig();
-  const saved = readStoredObject(SUN_AUTOFILL_STORAGE_KEY);
-  if (!saved) return sunAutoFillDefaults;
-  return {
-    mode: SUN_AUTOFILL_MODES.includes(saved["mode"] as SunAutoFillMode)
-      ? (saved["mode"] as SunAutoFillMode)
-      : sunAutoFillDefaults.mode,
-    globalSkewLinked: readStoredBoolean(saved["globalSkewLinked"], sunAutoFillDefaults.globalSkewLinked),
-    date: readSunAutoFillBox(saved["date"], sunAutoFillDefaults.date),
-    time: readSunAutoFillBox(saved["time"], sunAutoFillDefaults.time),
-    note: readSunAutoFillBox(saved["note"], sunAutoFillDefaults.note),
-    name: readSunAutoFillBox(saved["name"], sunAutoFillDefaults.name),
-  };
+  // ACTIVE reads its own v2 key/defaults (see V8SunAutoFillExperiment).
+  return loadSunAutoFillConfig();
 };
 
 const loadIdentityEnvelopeExportConfig = (): IdentityEnvelopeConfig => {
