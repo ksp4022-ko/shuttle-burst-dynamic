@@ -36,7 +36,11 @@ export function useV8PersonalBillingTest({
       }
       setState({ kind: "loading" });
       try {
-        const billing = await fetchV8PersonalBilling(token, { siteId, eventId, signal });
+        const billing = await fetchV8PersonalBilling(token, {
+          siteId,
+          ...(eventId ? { eventId } : {}),
+          ...(signal ? { signal } : {}),
+        });
         if (signal?.aborted) return;
         setState({ kind: "ready", billing });
       } catch (error) {
@@ -73,7 +77,7 @@ export function useV8PersonalBillingTest({
     try {
       const next = await fetchV8PersonalBilling(token, {
         siteId,
-        eventId,
+        ...(eventId ? { eventId } : {}),
         guestCursor: state.billing.guestLedger.nextCursor,
         guestLimit: state.billing.guestLedger.limit,
         seasonLimit: 1,
@@ -102,7 +106,7 @@ export function useV8PersonalBillingTest({
     try {
       const next = await fetchV8PersonalBilling(token, {
         siteId,
-        eventId,
+        ...(eventId ? { eventId } : {}),
         seasonCursor: state.billing.seasonPaymentHistory.nextCursor,
         seasonLimit: state.billing.seasonPaymentHistory.limit,
         guestLimit: 1,

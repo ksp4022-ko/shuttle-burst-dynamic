@@ -262,7 +262,12 @@ export function V8BillingTestPanel({
   eventId?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const billing = useV8PersonalBillingTest({ enabled: open, token, siteId, eventId });
+  const billing = useV8PersonalBillingTest({
+    enabled: open,
+    token,
+    siteId,
+    ...(eventId ? { eventId } : {}),
+  });
 
   useEffect(() => {
     if (!open) return;
