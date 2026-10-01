@@ -75,18 +75,18 @@ V8TEST infrastructure:
   - starts after Step 1 critical OPEN art; exact <img> URLs, deduped, tiered (first-visible high)
   - includes CTA assembly, B1 roster, list buoys, identity art (cached identity + roster)
   - no ACTIVE gate; Step 1 unchanged; `/v8` unchanged
-  - real iPhone Safari pending
+  - real iPhone PASS (user, 2026-10-01); promote on Cfm
 
 - P-021 v2 Step 2B — `b967175` Intro-time preload + Intro sizing (`/v8test` only)
   - after the Intro video is fully buffered: OPEN critical -> shared bg -> ACTIVE first -> decor
   - hidden OPEN art / Step 2A wait until then (video keeps priority)
   - Intro contain inside visible viewport + safe area
-  - real iPhone Safari pending
+  - real iPhone PASS (user, 2026-10-01); promote on Cfm
 
 - P-021 asset Batch 1 — `5ed870c` resized sun badges + switch arrows (`/v8test` only; new filenames, /v8 untouched)
   - 740KB -> 131KB; real iPhone Safari pending
 
-- V8TEST 3 fixes — `647f677` (dragon load order / bfcache Back restore reset / animated auto-enter); real iPhone pending
+- V8TEST 3 fixes — `647f677` (dragon load order / bfcache Back restore reset / animated auto-enter); real iPhone PASS (user); promote on Cfm
 
 - /v8 cloud badges 450px on all routes — `c491044` — CLOSED (production real iPhone PASS)
 - /v8test list panel — `5008630` + `4f5b669` (panel art out of prewarm, warmed images released): real iPhone PASS on 4G (user); promote on Cfm
@@ -123,7 +123,7 @@ V8TEST infrastructure:
 ## Current Execution Order
 
 1. P-022 BASIC BILLING: production `/v8` real-iPhone verify
-2. P-021 v2: step 1 `/v8test` PASS (promote on Cfm); Step 2A/2B `/v8test` real-iPhone verify; ACTIVE gate only on user instruction
+2. P-021 v2: step 1 / Step 2A / Step 2B `/v8test` real-iPhone PASS (promote on Cfm); ACTIVE gate only on user instruction
 3. Other pending optimization items
 
 ## Do Not Reopen Without Evidence

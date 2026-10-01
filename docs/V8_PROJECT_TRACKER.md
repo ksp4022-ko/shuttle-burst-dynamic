@@ -247,7 +247,7 @@ P-021 v2 Step 2A（ACTIVE preload optimization，/v8test only）：
 5943420
 perf(v8test): warm ACTIVE's first-visible art as soon as OPEN is usable
 
-Status: V8TEST DEPLOYED / VERIFY
+Status: V8TEST REAL IPHONE PASS（user，2026-10-01）；promote on Cfm
 
 - 開始時機：Step 1 critical OPEN art ready 後（不再等全部 OPEN 圖／15s）；不用 timer，
   避免與 OPEN critical 搶頻寬（試過 8s fallback → 600kbps 倒數延後 ~22s，已移除）。
@@ -273,7 +273,7 @@ P-021 v2 Step 2B（Intro-time preload + Intro sizing，/v8test only）：
 b967175
 perf(v8test): preload during the Intro and keep the Intro video smooth
 
-Status: V8TEST DEPLOYED / VERIFY
+Status: V8TEST REAL IPHONE PASS（user，2026-10-01）；promote on Cfm
 
 - Intro 影片完整 buffer 後依序預載：OPEN critical → OPEN/ACTIVE 共用背景 → ACTIVE first-visible
   （Step 2A tier 1）→ 裝飾。沿用 Step 2A warm()/dedup（startV8PrewarmQueue）；exact URL、無 ?v8r。
@@ -418,7 +418,7 @@ V8TEST 3 fixes（/v8test only）：
 647f677
 fix(v8test): dragon load order, bfcache restore reset, animated auto-enter
 
-Status: V8TEST DEPLOYED / VERIFY
+Status: V8TEST REAL IPHONE PASS（user，2026-10-01）；promote on Cfm
 
 1. OPEN dragon 載入順序：body（fetchpriority high）→ 爪 → 袋/背帶；每步等上一步 load 或 error；
    裝飾層 low priority；Step 2B intro queue 同順序。
