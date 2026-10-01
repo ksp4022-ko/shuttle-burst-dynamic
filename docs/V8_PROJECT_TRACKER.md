@@ -297,7 +297,23 @@ Step 2B hotfix：024e420 fix(v8test): start the Intro-time preload only after st
 
 ACTIVE gate 未開始，需另行指示。
 
-Real-iPhone issues（Batch 2 暫停）：
+P-021 asset Batch 2（/v8test only，user 指示繼續）：
+
+051d7dc
+perf(v8test): resized identity tags, status stamps and CTA base (asset Batch 2)
+
+Status: V8TEST DEPLOYED / VERIFY
+
+- 新檔（原檔不動、/v8 仍用原檔）：
+  identity 牌 ×2 → 200px 寬；狀態章 ×4 → 140px；cta-assembly base → 576px、front → 64px。580KB → 170KB。
+- 截圖 /v8 vs /v8test 一致（平均差 0.9/255）。
+- Local before → after（真 cache、cached identity）：
+  1500kbps Quick Pick：ACTIVE+0.3s 7/23 → 11/23；全部 +5.9s → +4.7s
+  1500kbps auto：23/23 維持
+  600kbps auto：5/23 → 10/23；+15.6s → +13.0s；倒數時間不變
+- Regression /v8/kangxuan、/v8test/kangxuan PASS。real iPhone：pending
+
+Real-iPhone issues（Batch 2 曾暫停）：
 
 1. /v8 ACTIVE 雲朵框不見、數值有顯示 — c491044 fix(v8): serve the 450px ACTIVE cloud badges on all routes
    - Root cause（local 1500kbps 實測）：/v8 舊預熱要等全部 OPEN 圖（最多 15s），9s 自動進場前從未請求雲朵；
