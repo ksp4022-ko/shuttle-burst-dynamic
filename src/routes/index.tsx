@@ -26,7 +26,7 @@ import {
   type V8OpeningSunControls,
 } from "@/components/v8-hero/V8OpeningSunContent";
 import { V8ActivePage } from "@/components/v8-active/V8ActivePage";
-import { V8TuningPanel } from "@/components/v8-preview/V8TuningPanel";
+import { LazyV8TuningPanel } from "@/components/v8-preview/LazyV8TuningPanel";
 import {
   buildV8OpeningHeroOverrides,
   buildV8OpeningSunControls,
@@ -2224,7 +2224,7 @@ export function Index() {
               />
             )}
             {openTuningOpen ? (
-              <V8TuningPanel
+              <LazyV8TuningPanel
                 controls={openTuningControls}
                 setControls={setOpenTuningControls}
                 targetOrder={OPEN_SUN_TUNING_TARGETS}

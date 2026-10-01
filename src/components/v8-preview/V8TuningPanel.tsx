@@ -2,15 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, Dispatch, MouseEvent, PointerEvent, ReactNode, SetStateAction, TouchEvent } from "react";
 import {
   clearSavedControls,
-  controlRanges,
-  formatScopedPreviewSettings,
   pickScopedControls,
   type ControlsScope,
   getButtonStep,
   motionPreviewLabDefaults,
   previewDefaults,
-  targetControlKeys,
-  targetVisibilityKeys,
   type MotionPreviewLabState,
   type PreviewControls,
   type PreviewMode,
@@ -18,6 +14,7 @@ import {
   type StepMode,
   type SunMotionEffectKey,
 } from "./dragonPreviewConfig";
+import { controlRanges, formatScopedPreviewSettings, targetControlKeys, targetVisibilityKeys } from "./dragonPreviewPanelConfig";
 import { v8ActiveRosterFontOptions } from "@/components/v8-active/v8ActiveConfig";
 import { resetV8LineProfile } from "@/lib/v8-line-auth";
 import { clearV8LineAuthStorage, loadV8LineToken } from "@/lib/v8-line-auth-storage";

@@ -36,7 +36,7 @@ import {
   type PreviewControls,
   type PreviewTargetId,
 } from "@/components/v8-preview/dragonPreviewConfig";
-import { V8TuningPanel } from "@/components/v8-preview/V8TuningPanel";
+import { LazyV8TuningPanel } from "@/components/v8-preview/LazyV8TuningPanel";
 import {
   buildV8ActiveAssets,
   v8ActiveStageAspectRatio,
@@ -933,7 +933,7 @@ export function V8ActivePage({
         />
       )}
       {tuningOpen ? (
-        <V8TuningPanel
+        <LazyV8TuningPanel
           controls={tuningControls}
           setControls={setTuningControls}
           targetOrder={activeTuningTargets}
