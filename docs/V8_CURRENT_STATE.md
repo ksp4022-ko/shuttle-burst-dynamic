@@ -98,6 +98,10 @@ V8TEST infrastructure:
 - V8TEST ACTIVE red sun Auto-Fill — `ce9eb2d` OPEN sun layout by default, v2 key, error fallback not saved (`/v8test` only); real iPhone PASS (user) → promoted to `/v8` on Cfm (`bdbbb21`); CLOSED (production real iPhone PASS)
 - V8TEST blank-screen report — `3d05337` on-page error box + 10s not-started note (`/v8test` only); Intro guarded; user reopened: normal (not reproduced), report box kept
 
+### OPEN ISSUES（recorded 2026-10-01, not fixed yet）
+- V8-ISSUE-IDENTITY-TAG-POSITION — 季打/臨打 tag should sit left of the scroll (user 圖2), not below it (default X40/Y96); one shared position for both
+- V8-ISSUE-CLOUD-BADGE-ART-MISSING — cloud badge art missing once on production ACTIVE (text only); repro pending
+
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
   - attempted commit: `6367bbb`
