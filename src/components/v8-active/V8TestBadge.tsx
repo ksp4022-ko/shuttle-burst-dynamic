@@ -4,6 +4,8 @@ export function V8TestBadge() {
   return (
     <div
       aria-hidden="true"
+      // Also the "app started" marker for the /v8test error report (__root.tsx).
+      data-v8-test-badge=""
       style={{
         position: "fixed",
         top: "calc(6px + env(safe-area-inset-top, 0px))",
