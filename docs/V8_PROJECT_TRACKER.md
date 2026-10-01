@@ -325,6 +325,17 @@ Status: V8TEST REAL IPHONE PASS（user，2026-10-01）；promote on Cfm
 - 截圖：/v8test ACTIVE 紅日 = OPEN 紅日版型；/v8 不變。Regression PASS。
 - real iPhone：pending
 
+V8TEST Intro 改回影片（user 決定維持舊 Intro）：
+
+984fab9
+revert(v8test): play the video Intro again; 程式 Intro only with ?intro=code
+
+Status: V8TEST DEPLOYED / VERIFY
+
+- /v8test 預設回到影片 Intro（含 Step 2B contain + 緩衝完才預載）。
+- 「程式 Intro」（bc29cbc，OPEN 圖層動畫）保留，只在 /v8test 網址加 ?intro=code 時播放，供比較；其預載也會啟動。
+- /v8 不變。Local：預設 → 影片、?intro=code → 程式 Intro、/v8 → 影片；family PASS、0 errors。
+
 Intro 載入速度比較（local，同一份 Batch 3 資產：d04ae40 影片 Intro vs 3d05337 程式 Intro；cold、真 HTTP cache）：
 
 | 網速 | 影片：Intro / OPEN 完整 | 程式：Intro / OPEN 完整 | 到倒數前下載 |
