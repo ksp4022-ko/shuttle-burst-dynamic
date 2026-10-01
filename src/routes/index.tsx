@@ -837,7 +837,7 @@ export function Index() {
   // Opening is one screen too (Active locks via V8ListBuoys).
   useV8PageLock(isV8Route && !v8MeetupConfirmed);
 
-  // V8TEST: browser Back can hand iPhone Safari's back/forward cache a page
+  // Browser Back can hand iPhone Safari's back/forward cache a page
   // frozen mid-state -- a morph (html.v8-morph-launch / v8-morphing, a live
   // view transition), a root scroll or shifted visual viewport -- and a
   // restore fires no scroll/touch event, so the page lock's snap-to-top and
@@ -845,7 +845,7 @@ export function Index() {
   // transition, drop the morph classes, snap to the top and let the
   // viewport-dependent layout re-measure. (A normal load needs none of it.)
   useEffect(() => {
-    if (v8RouteFamily !== "v8test") return;
+    if (!isV8Route) return;
     const onPageShow = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
       v8ViewTransitionRef.current?.skipTransition?.();
@@ -856,7 +856,7 @@ export function Index() {
     };
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);
-  }, [v8RouteFamily]);
+  }, [isV8Route]);
 
   // Image retry for flaky mobile networks: on iPhone 4G a dropped connection
   // fails every image in flight at once (broken "?" icons) and nothing ever
@@ -880,42 +880,8 @@ export function Index() {
     return () => document.removeEventListener("error", onImageError, true);
   }, [isV8Route]);
 
-  // ENTER-MORPH: warm the Active page's own art while Opening is on screen,
-  // so the morph never reveals half-loaded images. Skips the roster panels
-  // that are off by default.
-  // Waits until Opening's own images have all finished (so it never competes
-  // with them on a slow connection) and only downloads into the HTTP cache
-  // (fetch, no image decode) to keep memory low on iPhone.
-  useEffect(() => {
-    // /v8test uses the Step 2A prewarm below instead.
-    if (!isV8Route || !v8HeroPickerStage || !v8OpenReady || v8RouteFamily === "v8test") return;
-    let cancelled = false;
-    let timer = 0;
-    const startedAt = Date.now();
-    const warm = () => {
-      if (cancelled) return;
-      const pending = Array.from(document.images).some((image) => !image.complete);
-      if (pending && Date.now() - startedAt < 15000) {
-        timer = window.setTimeout(warm, 600);
-        return;
-      }
-      const assets = buildV8ActiveAssets(import.meta.env.BASE_URL) as Record<string, unknown>;
-      const urls = Object.entries(assets)
-        .filter(([key, src]) => typeof src === "string" && !key.startsWith("rosterV2") && key !== "rosterFrame")
-        .map(([, src]) => src as string);
-      ["list-buoy-wave-band-v1.webp", "list-buoy-header-leave-v1.webp", "list-buoy-header-main-v1.webp", "list-buoy-header-wait-v1.webp"].forEach((file) =>
-        urls.push(`${import.meta.env.BASE_URL}v8-preview/active/${file}`),
-      );
-      urls.forEach((url) => {
-        void fetch(url, { priority: "low" } as RequestInit).catch(() => undefined);
-      });
-    };
-    timer = window.setTimeout(warm, 1200);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [isV8Route, v8HeroPickerStage, v8OpenReady, v8RouteFamily]);
+  // (The old ENTER-MORPH fetch() warm-up was replaced on all V8 routes by
+  // the Step 2A / 2B <img> prewarm below -- Cfm 2026-10-01.)
   const legacyActiveStage = !isV8Route && (active || rotating) && !v8HeroStage;
   const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls, openMotionPreviewLab);
   // P-021 v2 (V8TEST): the OPEN auto-enter countdown starts only once OPEN's
@@ -936,7 +902,7 @@ export function Index() {
       : null,
     openCriticalHero.ctaShow ? openCriticalAssetsAll.enterBattleCta : null,
   ].filter((src): src is string => Boolean(src));
-  const openCriticalUrls = v8RouteFamily === "v8test" && v8HeroPickerStage ? openCriticalList : null;
+  const openCriticalUrls = isV8Route && v8HeroPickerStage ? openCriticalList : null;
   const openCountdownAssetsReady = useV8DomImagesReady(openCriticalUrls);
 
   // P-021 v2 Step 2A (V8TEST): ACTIVE prewarm. Starts as soon as OPEN's
@@ -976,13 +942,13 @@ export function Index() {
   const v8CodeIntro = v8TestIntroParam === "code";
   // V8TEST ?intro=fresh: the video Intro plays on every load (cold-open test).
   const v8IntroIgnorePlayed = v8TestIntroParam === "fresh";
-  const v8IntroHoldsImageLoads = v8RouteFamily === "v8test" && !v8CodeIntro && v8IntroBlocking && !v8IntroMediaBuffered;
+  const v8IntroHoldsImageLoads = isV8Route && !v8CodeIntro && v8IntroBlocking && !v8IntroMediaBuffered;
   const v8IntroPrewarmStartedRef = useRef(false);
   useEffect(() => {
     // Also after the startup data (events + roster) is in: started earlier,
     // the queue's images competed with those API calls for bandwidth and
     // could push them past their 8s timeout (real iPhone: load-error screen).
-    if (v8RouteFamily !== "v8test" || !(v8IntroMediaBuffered || v8CodeIntro) || v8IntroPrewarmStartedRef.current) return;
+    if (!isV8Route || !(v8IntroMediaBuffered || v8CodeIntro) || v8IntroPrewarmStartedRef.current) return;
     if (!v8OpenReady || flow.phase === "load-error") return;
     v8IntroPrewarmStartedRef.current = true;
     const hero = openCriticalAssetsAll;
@@ -1015,7 +981,7 @@ export function Index() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.phase, v8CodeIntro, v8IntroMediaBuffered, v8OpenReady, v8RouteFamily]);
   useEffect(() => {
-    if (v8RouteFamily !== "v8test" || !v8HeroPickerStage || !v8OpenReady) return;
+    if (!isV8Route || !v8HeroPickerStage || !v8OpenReady) return;
     if (!openCountdownAssetsReady || v8IntroHoldsImageLoads) return;
     // Mirrors useCurrentIdentity: a claimed 季打 found in this roster is
     // exact; otherwise ACTIVE falls back to the temp flow, whose most common
@@ -1733,7 +1699,7 @@ export function Index() {
       if (remainingMs <= 0) {
         window.clearInterval(timer);
         if (effectiveAutoEnterAtZero) {
-          if (v8RouteFamily === "v8test") void confirmV8MeetupSelectionRef.current();
+          if (isV8Route) void confirmV8MeetupSelectionRef.current();
           else enterPreviewSelection();
         }
       }
@@ -2183,7 +2149,7 @@ export function Index() {
               controlOverrides={openHeroOverrides}
               maxStageWidth={430}
               revealImmediately
-              sequenceDragonRig={v8RouteFamily === "v8test"}
+              sequenceDragonRig={isV8Route}
               sunContent={
                 <V8OpeningSunContent
                   event={previewPickedEvent}
@@ -2512,7 +2478,9 @@ export function Index() {
               siteId={v8IntroSiteId}
               onBlockingChange={handleV8IntroBlockingChange}
               replaySignal={v8IntroReplaySignal}
-              {...(v8RouteFamily === "v8test" ? { fit: "contain" as const, onMediaBuffered: handleV8IntroMediaBuffered, ignorePlayed: v8IntroIgnorePlayed } : {})}
+              fit="contain"
+              onMediaBuffered={handleV8IntroMediaBuffered}
+              ignorePlayed={v8IntroIgnorePlayed}
             />
           )}
           {/* Countdown auto-enter is already paused via v8IntroBlocking

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
-import { v8OptimizedAssetFiles, v8TestOptimizedStatusAssetFiles, type V8SunDotsControls } from "@/components/v8-active/v8ActiveConfig";
-import { isV8TestRoute } from "@/lib/v8-route-family";
+import { v8OptimizedAssetFiles, v8OptimizedStatusAssetFiles, type V8SunDotsControls } from "@/components/v8-active/v8ActiveConfig";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V8SunDateStretchText } from "@/components/v8-active/V8SunDateStretchText";
@@ -35,10 +34,10 @@ function buildV8OpeningSunAssets(baseUrl: string) {
     sunBadgeTempFee: `${activeBase}/sun-info-badge-tempfee-v2.webp`,
     sunBadgeCourtCount: `${activeBase}/sun-info-badge-courttime-v1.webp`,
     sunBadgeCapacity: `${activeBase}/sun-info-badge-capacity-v1.webp`,
-    // P-021 asset Batch 1: /v8test uses the resized arrows (same files as
-    // ACTIVE, see v8TestOptimizedStatusAssetFiles); /v8 unchanged.
-    sunSwitchArrowPrev: `${statusAssetBase}/${isV8TestRoute() ? v8TestOptimizedStatusAssetFiles.arrowPrev : "v8-meetup-switch-prev-v2.webp"}`,
-    sunSwitchArrowNext: `${statusAssetBase}/${isV8TestRoute() ? v8TestOptimizedStatusAssetFiles.arrowNext : "v8-meetup-switch-next-v2.webp"}`,
+    // P-021 asset Batch 1: the resized arrows (same files as ACTIVE, see
+    // v8OptimizedStatusAssetFiles).
+    sunSwitchArrowPrev: `${statusAssetBase}/${v8OptimizedStatusAssetFiles.arrowPrev}`,
+    sunSwitchArrowNext: `${statusAssetBase}/${v8OptimizedStatusAssetFiles.arrowNext}`,
     sunTitleKangxuan: `${statusAssetBase}/${v8OptimizedAssetFiles.sunTitleKangxuan}`,
   };
 }

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { v8ActiveListBuoyFiles, type V8ActiveListBuoyLayerControls, type V8ActiveListBuoysControls } from "./v8ActiveConfig";
 import type { V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { useV8PageLock } from "./useV8PageLock";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // LIST-BUOYS (名單浮標): the three rosters live in a panel that rises from a
 // wave band at the bottom of the screen instead of sitting in the canvas.
@@ -93,12 +92,12 @@ export function V8ListBuoys({
   const panelReadyRef = useRef(false);
   const panelPromiseRef = useRef<Promise<void> | null>(null);
   const expandWaitingRef = useRef(false);
-  // V8TEST: the panel may open before its 452KB art has arrived (expand
+  // The panel may open before its 452KB art has arrived (expand
   // waits at most 1.5s), which left the names floating unreadably over the
   // page. The names now stay hidden until the panel <img> itself has loaded;
   // if it fails, they show on a plain paper fallback instead. Panel timing
   // is unchanged -- only its own text waits for its own background.
-  const holdNamesForArt = isV8TestRoute();
+  const holdNamesForArt = true;
   const [panelArt, setPanelArt] = useState<"pending" | "loaded" | "failed">("pending");
   const panelImageRef = useRef<HTMLImageElement | null>(null);
   const ensurePanelArt = useCallback(() => {

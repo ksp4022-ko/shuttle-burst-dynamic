@@ -1,5 +1,4 @@
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // All visual elements here are image-file-driven (PNG/SVG/WEBP), never
 // CSS-drawn shapes -- per the redesign brief, badge art must stay swappable
@@ -252,12 +251,12 @@ export const v8ActiveSunSwitchArrowFiles = {
   next: "v8-meetup-switch-next-v2.webp",
 } as const;
 
-// P-021 asset Batch 1 (V8TEST only until Cfm): the switch arrows resized to
+// P-021 asset Batch 1 (all routes since Cfm 2026-10-01): the switch arrows resized to
 // what a 3x iPhone draws -- 96x98 lossy (were 500x512 lossless for ~25px).
 // New filenames, so /v8's files and caches are untouched. (The cloud badges
 // moved to all routes, see v8ActiveSunBadgeFiles.)
-export const v8TestOptimizedStatusAssetFiles = {
-  // Batch 2 (V8TEST only until Cfm): ACTIVE scroll art at ~3.3x its iPhone
+export const v8OptimizedStatusAssetFiles = {
+  // Batch 2 (all routes since Cfm 2026-10-01): ACTIVE scroll art at ~3.3x its iPhone
   // draw size -- identity tags 200px wide (were 440/480 for ~60px), status
   // stamps 140px (were 400 for ~42px), CTA assembly base 576px (was 960 for
   // ~170px) and front 64px (was 109). 580KB -> 170KB for the eight.
@@ -305,7 +304,6 @@ export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
   const statusAssetBase = `${baseUrl}v8-status-assets`;
-  const optimized = isV8TestRoute() ? v8TestOptimizedStatusAssetFiles : null;
   return {
     sunInfoBadge: `${activeBase}/${v8ActiveAssetFiles.sunInfoBadge}`,
     dragonSea: `${displayBase}/${v8ActiveBackgroundFiles.dragonSea}`,
@@ -320,12 +318,12 @@ export function buildV8ActiveAssets(baseUrl: string) {
     sunBadgeTempFee: `${statusAssetBase}/${v8ActiveSunBadgeFiles.tempFee}`,
     sunBadgeCourtCount: `${statusAssetBase}/${v8ActiveSunBadgeFiles.courtCount}`,
     rosterFrame: `${activeBase}/${v8ActiveRosterFrameFile}`,
-    statusStampConfirmed: `${activeBase}/${optimized ? optimized.stampConfirmed : v8ActiveStatusStampFiles.confirmed}`,
-    statusStampWaiting: `${activeBase}/${optimized ? optimized.stampWaiting : v8ActiveStatusStampFiles.waiting}`,
-    statusStampLeave: `${activeBase}/${optimized ? optimized.stampLeave : v8ActiveStatusStampFiles.leave}`,
-    statusStampUnregistered: `${activeBase}/${optimized ? optimized.stampUnregistered : v8ActiveStatusStampFiles.unregistered}`,
-    identityTagSeason: `${statusAssetBase}/${optimized ? optimized.identityTagSeason : v8ActiveIdentityTagFiles.season}`,
-    identityTagTemp: `${statusAssetBase}/${optimized ? optimized.identityTagTemp : v8ActiveIdentityTagFiles.temp}`,
+    statusStampConfirmed: `${activeBase}/${v8OptimizedStatusAssetFiles.stampConfirmed}`,
+    statusStampWaiting: `${activeBase}/${v8OptimizedStatusAssetFiles.stampWaiting}`,
+    statusStampLeave: `${activeBase}/${v8OptimizedStatusAssetFiles.stampLeave}`,
+    statusStampUnregistered: `${activeBase}/${v8OptimizedStatusAssetFiles.stampUnregistered}`,
+    identityTagSeason: `${statusAssetBase}/${v8OptimizedStatusAssetFiles.identityTagSeason}`,
+    identityTagTemp: `${statusAssetBase}/${v8OptimizedStatusAssetFiles.identityTagTemp}`,
     ctaSeasonLeave: `${activeBase}/${v8ActiveCtaPlaqueFiles.seasonLeave}`,
     ctaSeasonReturn: `${activeBase}/${v8ActiveCtaPlaqueFiles.seasonReturn}`,
     ctaTempCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.tempCancel}`,
@@ -339,12 +337,12 @@ export function buildV8ActiveAssets(baseUrl: string) {
     rosterV2A1: `${activeBase}/${v8ActiveRosterV2Files.a1}`,
     rosterV2B1: `${activeBase}/${v8ActiveRosterV2Files.b1}`,
     rosterV2B2: `${activeBase}/${v8ActiveRosterV2Files.b2}`,
-    sunSwitchArrowPrev: `${statusAssetBase}/${optimized ? optimized.arrowPrev : v8ActiveSunSwitchArrowFiles.prev}`,
-    sunSwitchArrowNext: `${statusAssetBase}/${optimized ? optimized.arrowNext : v8ActiveSunSwitchArrowFiles.next}`,
+    sunSwitchArrowPrev: `${statusAssetBase}/${v8OptimizedStatusAssetFiles.arrowPrev}`,
+    sunSwitchArrowNext: `${statusAssetBase}/${v8OptimizedStatusAssetFiles.arrowNext}`,
     sunTitleKangxuan: `${statusAssetBase}/${v8OptimizedAssetFiles.sunTitleKangxuan}`,
     ctaAssembly: {
-      base: `${activeBase}/${optimized ? optimized.ctaAssemblyBase : v8CtaAssemblyFiles.base}`,
-      front: `${activeBase}/${optimized ? optimized.ctaAssemblyFront : v8CtaAssemblyFiles.front}`,
+      base: `${activeBase}/${v8OptimizedStatusAssetFiles.ctaAssemblyBase}`,
+      front: `${activeBase}/${v8OptimizedStatusAssetFiles.ctaAssemblyFront}`,
       mainBlank: `${activeBase}/${v8OptimizedAssetFiles.ctaMainBlank}`,
       textSeasonLeave: `${activeBase}/${v8OptimizedAssetFiles.ctaTextSeasonLeave}`,
       textSeasonReturn: `${activeBase}/${v8OptimizedAssetFiles.ctaTextSeasonReturn}`,
