@@ -739,7 +739,7 @@ Mac Safari Web Inspector 連 iPhone，可直接看實機 Network / Console。
 ## V8-TUNING-LAZY
 
 Status:
-PROMOTED TO /v8（Cfm 2026-10-01，48bf75a）；production real iPhone pending
+CLOSED（48bf75a；production real iPhone PASS，user 2026-10-01）
 
 這是 performance task，
 不是 P1-3 本體。
