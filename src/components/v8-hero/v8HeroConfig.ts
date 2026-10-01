@@ -1,3 +1,4 @@
+import { isV8TestRoute } from "@/lib/v8-route-family";
 export type V8HeroControls = {
   dragonShow: boolean;
   dragonX: number;
@@ -376,6 +377,10 @@ export const v8HeroTigerScrollAssetFile = "tiger-scroll-fixed-v2.webp";
 // no letterboxing needed since there's only one asset, not four that need
 // to match sizes.
 export const v8HeroEnterBattleCtaFile = "cta-plaque-enter-battle-v1.webp";
+// P-021 asset Batch 3 (V8TEST only until Cfm): 700 -> 480px wide (~144 CSS
+// px on screen), 39KB -> 27KB. Also Step 1's OPEN critical URL on /v8test,
+// since that list is built from this same builder.
+export const v8TestHeroEnterBattleCtaFile = "cta-plaque-enter-battle-v1-480.webp";
 
 export const buildV8HeroAssets = (baseUrl: string) => {
   const displayAssetBase = `${baseUrl}v8-preview/display`;
@@ -397,7 +402,7 @@ export const buildV8HeroAssets = (baseUrl: string) => {
     goldInk: `${displayAssetBase}/${v8HeroDisplayAssets.goldInk}`,
     scroll: `${baseUrl}v8-preview/active/${v8HeroActiveAssetFile}`,
     tigerScroll: `${baseUrl}v8-preview/active/${v8HeroTigerScrollAssetFile}`,
-    enterBattleCta: `${baseUrl}v8-preview/active/${v8HeroEnterBattleCtaFile}`,
+    enterBattleCta: `${baseUrl}v8-preview/active/${isV8TestRoute() ? v8TestHeroEnterBattleCtaFile : v8HeroEnterBattleCtaFile}`,
   };
 };
 

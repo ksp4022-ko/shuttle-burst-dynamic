@@ -38,7 +38,7 @@ function buildV8OpeningSunAssets(baseUrl: string) {
     // ACTIVE, see v8TestOptimizedStatusAssetFiles); /v8 unchanged.
     sunSwitchArrowPrev: `${statusAssetBase}/${isV8TestRoute() ? v8TestOptimizedStatusAssetFiles.arrowPrev : "v8-meetup-switch-prev-v2.webp"}`,
     sunSwitchArrowNext: `${statusAssetBase}/${isV8TestRoute() ? v8TestOptimizedStatusAssetFiles.arrowNext : "v8-meetup-switch-next-v2.webp"}`,
-    sunTitleKangxuan: `${statusAssetBase}/v8-kangxuan-calligraphy-ivory-square-v2-640.webp`,
+    sunTitleKangxuan: `${statusAssetBase}/${isV8TestRoute() ? v8TestOptimizedStatusAssetFiles.sunTitleKangxuan : "v8-kangxuan-calligraphy-ivory-square-v2-640.webp"}`,
   };
 }
 
