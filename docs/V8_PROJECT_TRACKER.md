@@ -317,7 +317,7 @@ V8TEST ACTIVE 紅日回到 Auto-Fill 版（user 回報 ACTIVE 紅日變舊版）
 ce9eb2d
 fix(v8test): ACTIVE red sun uses the OPEN Auto-Fill layout again
 
-Status: V8TEST DEPLOYED / VERIFY
+Status: V8TEST REAL IPHONE PASS（user，2026-10-01）；promote on Cfm
 
 - 原因：ACTIVE 紅日版型只存在各瀏覽器 localStorage（v8-red-sun-autofill-experiment-v1），預設 CURRENT（舊版、\n 原樣顯示）；
   且 Auto-Fill 任何一次錯誤會把 CURRENT 永久寫回。程式碼無法確認是哪次觸發，本機無法重現。
@@ -325,12 +325,22 @@ Status: V8TEST DEPLOYED / VERIFY
 - 截圖：/v8test ACTIVE 紅日 = OPEN 紅日版型；/v8 不變。Regression PASS。
 - real iPhone：pending
 
+Intro 載入速度比較（local，同一份 Batch 3 資產：d04ae40 影片 Intro vs 3d05337 程式 Intro；cold、真 HTTP cache）：
+
+| 網速 | 影片：Intro / OPEN 完整 | 程式：Intro / OPEN 完整 | 到倒數前下載 |
+| 4000kbps | 2.9→13.7s / 13.7s | 3.3→13.3s / 13.3s（完整播放） | 5032 → 4216KB |
+| 1500kbps | 6.2→17.5s / 17.8s | 6.6→12.6s / 15.5s（關鍵圖 6s 未到 → 未播） | 2757 → 2305KB |
+|  600kbps | 14.2→33.5s / 46.9s | 14.7→20.8s / 37.2s（未播） | 2896 → 2305KB |
+
+- 省下影片 ~830KB；弱網 OPEN 提早 2.3s（1500）/ 9.7s（600）；好網路差不多。
+- 缺點：弱網時程式 Intro 等關鍵圖最多 6s（期間舞台隱藏），之後直接顯示 OPEN、不播動畫。
+
 V8TEST code-driven Intro（方案 A，/v8test only）：
 
 bc29cbc
 feat(v8test): code-driven Intro on the OPEN stage that ends exactly on OPEN
 
-Status: V8TEST DEPLOYED / VERIFY
+Status: V8TEST REAL IPHONE PASS（user，2026-10-01）；promote on Cfm
 
 - /v8test 以 OPEN 本身圖層做 ~7s 開場（不再播影片）：墨染 → 雲/山/浪 → 龍入場 → 虎入場揮拍 → 羽球擊入太陽 → 太陽蓋章 → 進入戰局；最後一幀即 OPEN。
 - 略過（1s 後出現）/ 點畫面略過 / Replay Intro / 每分頁一次 維持；Intro 期間倒數暫停，結束後開始。
@@ -344,7 +354,7 @@ P-021 asset Batch 3（/v8test only）：
 d04ae40
 perf(v8test): resized plaques, rope ornaments, CTA parts and titles (asset Batch 3)
 
-Status: V8TEST DEPLOYED / VERIFY
+Status: V8TEST REAL IPHONE PASS（user，2026-10-01）；promote on Cfm
 
 - 新檔（原檔不動、/v8 仍用原檔）：plaque ×3 → 460px；繩飾 a/b → 220/300px；
   CTA blank + 文字 ×4 → 300px、帳單 → 220px、代報/代退 → 190px；康軒標題 640 → 420px；
