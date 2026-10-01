@@ -318,7 +318,7 @@ V8TEST ACTIVE 紅日回到 Auto-Fill 版（user 回報 ACTIVE 紅日變舊版）
 ce9eb2d
 fix(v8test): ACTIVE red sun uses the OPEN Auto-Fill layout again
 
-Status: V8TEST REAL IPHONE PASS（user，2026-10-01）；promote on Cfm
+Status: PROMOTED TO /v8（Cfm 2026-10-01，bdbbb21）；production real iPhone pending
 
 - 原因：ACTIVE 紅日版型只存在各瀏覽器 localStorage（v8-red-sun-autofill-experiment-v1），預設 CURRENT（舊版、\n 原樣顯示）；
   且 Auto-Fill 任何一次錯誤會把 CURRENT 永久寫回。程式碼無法確認是哪次觸發，本機無法重現。
@@ -367,7 +367,7 @@ P-021 asset Batch 3（/v8test only）：
 d04ae40
 perf(v8test): resized plaques, rope ornaments, CTA parts and titles (asset Batch 3)
 
-Status: V8TEST REAL IPHONE PASS（user，2026-10-01）；promote on Cfm
+Status: PROMOTED TO /v8（Cfm 2026-10-01，bdbbb21）；production real iPhone pending
 
 - 新檔（原檔不動、/v8 仍用原檔）：plaque ×3 → 460px；繩飾 a/b → 220/300px；
   CTA blank + 文字 ×4 → 300px、帳單 → 220px、代報/代退 → 190px；康軒標題 640 → 420px；
