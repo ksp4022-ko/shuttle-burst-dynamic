@@ -282,7 +282,7 @@ export function V8BillingTestPanel({
     <div className="p12-billing-test" data-testid="p12-billing-test">
       <V8BillingTestStyles />
       <button className="p12-billing-entry" type="button" onClick={() => setOpen(true)}>
-        我的帳務 TEST
+        P12 TEST｜我的帳務
       </button>
       {open ? (
         <div
@@ -294,8 +294,7 @@ export function V8BillingTestPanel({
           <div className="p12-billing-page">
             <header>
               <div>
-                <small>P12 TEST</small>
-                <h1>我的帳務</h1>
+                <h1>P12 TEST｜我的帳務</h1>
               </div>
               <button type="button" aria-label="關閉我的帳務" onClick={() => setOpen(false)}>
                 ×

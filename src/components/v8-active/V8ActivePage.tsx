@@ -205,7 +205,10 @@ export function V8ActivePage({
     enabled: true,
   });
   const [billOpen, setBillOpen] = useState(false);
-  const p12BillingTest = useMemo(() => isP12BillingTestEnabled(), []);
+  const [p12BillingTest, setP12BillingTest] = useState(false);
+  useEffect(() => {
+    setP12BillingTest(isP12BillingTestEnabled());
+  }, []);
   const p12BillingSiteId = configuredSiteId();
   // A different meetup closes the bill (no stale payment on screen).
   useEffect(() => {

@@ -28,12 +28,25 @@ try {
   assert.equal(billingModule.isP12BillingTestEnabled("?p12BillingTest=0"), false);
   assert.equal(billingModule.isP12BillingTestEnabled("?p12BillingTest=1"), true);
   assert.match(activeSource, /p12BillingTest\s*\?\s*\(\s*<V8BillingTestPanel/);
+  assert.match(activeSource, /const \[p12BillingTest, setP12BillingTest\] = useState\(false\)/);
+  assert.match(activeSource, /useEffect\(\(\) => \{\s*setP12BillingTest\(isP12BillingTestEnabled\(\)\);\s*\}, \[\]\)/);
+  assert.doesNotMatch(activeSource, /useMemo\(\(\) => isP12BillingTestEnabled\(\), \[\]\)/);
   assert.match(panelSource, /enabled:\s*open/);
+  assert.match(panelSource, /P12 TEST｜我的帳務/);
   assert.match(apiSource, /fetchV8PersonalBilling[\s\S]*"\/me\/billing"/);
   assert.doesNotMatch(
     apiSource,
     /fetchV8PersonalBilling[\s\S]{0,800}(payerMemberId|lineIdentityId)/,
   );
+
+  const panelEntryHtml = renderToStaticMarkup(
+    React.createElement(panelModule.V8BillingTestPanel, {
+      token: null,
+      siteId: "kangxuan",
+      eventId: "event-current",
+    }),
+  );
+  assert.match(panelEntryHtml, /P12 TEST｜我的帳務/);
 
   const ownUnpaid = {
     paymentId: "temp-own",
