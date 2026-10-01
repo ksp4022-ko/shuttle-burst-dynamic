@@ -588,7 +588,7 @@ Identify the exact asset(s) and state transition causing Safari readiness to sta
 ## V8-QUICK-PICK
 
 Status:
-CODE PASS / VERIFY
+CLOSED（user 2026-10-01：日常使用正常）
 
 Core commit：
 
@@ -619,7 +619,7 @@ Asset Readiness 修完後測：
 ## V8-DESKTOP-CAP
 
 Status:
-CODE PASS / VERIFY
+CLOSED（user 2026-10-01：日常使用正常）
 
 Commit：
 
@@ -645,7 +645,7 @@ visual verify：
 ## P-023
 
 Status:
-CODE PASS / VERIFY
+CLOSED（user 2026-10-01：日常使用正常）
 
 Commit：
 
