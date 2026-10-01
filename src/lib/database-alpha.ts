@@ -1,3 +1,5 @@
+import type { V8PersonalBilling } from "@/lib/v8-personal-billing";
+
 export type AlphaEvent = {
   id: string;
   siteId: string;
@@ -340,6 +342,36 @@ export function fetchV8SeasonPayment(token: string, eventId: string, signal?: Ab
     cache: "no-store",
     ...(signal ? { signal } : {}),
   });
+}
+
+export function fetchV8PersonalBilling(
+  token: string,
+  input: {
+    siteId: string;
+    eventId?: string;
+    guestCursor?: string;
+    seasonCursor?: string;
+    guestLimit?: number;
+    seasonLimit?: number;
+    signal?: AbortSignal;
+  },
+) {
+  return alphaFetch<V8PersonalBilling>(
+    "/me/billing",
+    {
+      headers: authHeaders(token),
+      cache: "no-store",
+      ...(input.signal ? { signal: input.signal } : {}),
+    },
+    {
+      siteId: input.siteId,
+      eventId: input.eventId,
+      guestCursor: input.guestCursor,
+      seasonCursor: input.seasonCursor,
+      guestLimit: input.guestLimit,
+      seasonLimit: input.seasonLimit,
+    },
+  );
 }
 
 export function fetchV8CancellableTempSignups(token: string, eventId: string) {
