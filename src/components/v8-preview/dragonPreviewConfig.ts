@@ -16,7 +16,7 @@ import type {
   V8ActiveSwitchArrowsControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
-import { isV8TestRoute, readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
+import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 import { loadSunAutoFillConfig } from "@/components/v8-active/V8SunAutoFillExperiment";
 
 export type PreviewControls = {
@@ -1277,12 +1277,12 @@ export const previewDefaults: PreviewControls = {
   // visual regression; tune further via the console.
   activeIdentityNameBoxWidth: 90,
   activeIdentityNameBoxHeight: 40,
-  // V8TEST (2026-10-01, until Cfm): the 季打/臨打 tag sits left of the
-  // scroll, beside the name (user's tuned values) instead of below it,
+  // 2026-10-01 (Cfm): the 季打/臨打 tag sits left of the scroll, beside
+  // the name (user's tuned values) -- was X 40 / Y 96, below the scroll and
   // hidden by the waves. One element for every identity/status.
-  activeIdentityTagX: isV8TestRoute() ? 21 : 40,
-  activeIdentityTagY: isV8TestRoute() ? 50 : 96,
-  activeIdentityTagScale: isV8TestRoute() ? 1.36 : 1.31,
+  activeIdentityTagX: 21,
+  activeIdentityTagY: 50,
+  activeIdentityTagScale: 1.36,
   activeIdentityTagRotation: 5,
   activeIdentityTagOpacity: 100,
   activeIdentityTagZIndex: 1,
