@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
+import { isV8TestRoute, readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 
 // ACTIVE SUN AUTO-FILL EXPERIMENT (2026-09-26): a trial layer of four
 // stretch-to-fit boxes on the REAL ACTIVE red sun (大 DATE ─ 小 TIME /
@@ -53,6 +53,25 @@ export const sunAutoFillDefaults: SunAutoFillConfig = {
   name: { x: 67, y: 62, width: 40, height: 22, skewX: 0, skewY: -18 },
 };
 
+// The OPEN red sun's fixed Auto-Fill layout (the user's tuned ACTIVE
+// values, applied to OPEN in 1f65452).
+export const openSunAutoFillLayout: SunAutoFillConfig = {
+  mode: "autofill",
+  globalSkewLinked: true,
+  date: { x: 72, y: 63, width: 39, height: 32.5, skewX: -2.5, skewY: -7.5 },
+  time: { x: 32.5, y: 67.5, width: 33, height: 18, skewX: -2.5, skewY: -7.5 },
+  note: { x: 71, y: 36, width: 34, height: 25.5, skewX: -2.5, skewY: -7.5 },
+  name: { x: 29, y: 38, width: 43, height: 40, skewX: -2.5, skewY: -7.5 },
+};
+
+// V8TEST: ACTIVE's red sun starts from the same Auto-Fill layout as OPEN
+// instead of CURRENT, under a fresh key so a CURRENT left in the v1 key
+// (e.g. by a past error fallback, which used to be saved) no longer wins.
+// /v8 keeps its v1 key and CURRENT default.
+const SUN_AUTOFILL_TEST_STORAGE_KEY = "v8-red-sun-autofill-experiment-v2";
+const storageKey = () => (isV8TestRoute() ? SUN_AUTOFILL_TEST_STORAGE_KEY : SUN_AUTOFILL_STORAGE_KEY);
+const routeDefaults = () => (isV8TestRoute() ? openSunAutoFillLayout : sunAutoFillDefaults);
+
 const BOX_RANGES: Record<keyof SunAutoFillBox, { min: number; max: number; step: number }> = {
   x: { min: -20, max: 120, step: 0.5 },
   y: { min: -20, max: 120, step: 0.5 },
@@ -89,37 +108,40 @@ function readBox(value: unknown, fallback: SunAutoFillBox): SunAutoFillBox {
 // to the defaults field by field; nothing here can throw.
 export function loadSunAutoFillConfig(): SunAutoFillConfig {
   try {
-    const raw = readV8ScopedStorage(SUN_AUTOFILL_STORAGE_KEY);
-    if (!raw) return sunAutoFillDefaults;
+    const defaults = routeDefaults();
+    const raw = readV8ScopedStorage(storageKey());
+    if (!raw) return defaults;
     const saved = JSON.parse(raw) as Record<string, unknown> | null;
-    if (!saved || typeof saved !== "object") return sunAutoFillDefaults;
+    if (!saved || typeof saved !== "object") return defaults;
     return {
       mode: MODES.includes(saved["mode"] as SunAutoFillMode)
         ? (saved["mode"] as SunAutoFillMode)
-        : "current",
+        : defaults.mode,
       globalSkewLinked:
         typeof saved["globalSkewLinked"] === "boolean"
           ? (saved["globalSkewLinked"] as boolean)
-          : sunAutoFillDefaults.globalSkewLinked,
-      date: readBox(saved["date"], sunAutoFillDefaults.date),
-      time: readBox(saved["time"], sunAutoFillDefaults.time),
-      note: readBox(saved["note"], sunAutoFillDefaults.note),
-      name: readBox(saved["name"], sunAutoFillDefaults.name),
+          : defaults.globalSkewLinked,
+      date: readBox(saved["date"], defaults.date),
+      time: readBox(saved["time"], defaults.time),
+      note: readBox(saved["note"], defaults.note),
+      name: readBox(saved["name"], defaults.name),
     };
   } catch {
-    return sunAutoFillDefaults;
+    return routeDefaults();
   }
 }
 
 export function useSunAutoFillExperiment() {
-  // First load (nothing saved) is always CURRENT.
+  // First load (nothing saved): CURRENT on /v8, OPEN's Auto-Fill layout on /v8test.
   const [config, setConfig] = useState<SunAutoFillConfig>(() =>
     typeof window === "undefined" ? sunAutoFillDefaults : loadSunAutoFillConfig(),
   );
+  // V8TEST: an error falls back to CURRENT for this page only (never saved).
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(v8ScopedStorageKey(SUN_AUTOFILL_STORAGE_KEY), JSON.stringify(config));
+      window.localStorage.setItem(v8ScopedStorageKey(storageKey()), JSON.stringify(config));
     } catch {
       // Storage unavailable (private mode) -- the experiment just isn't saved.
     }
@@ -150,14 +172,20 @@ export function useSunAutoFillExperiment() {
   // Clears only this experiment's own key.
   const reset = useCallback(() => {
     try {
-      window.localStorage.removeItem(v8ScopedStorageKey(SUN_AUTOFILL_STORAGE_KEY));
+      window.localStorage.removeItem(v8ScopedStorageKey(storageKey()));
     } catch {
       // ignore
     }
-    setConfig(sunAutoFillDefaults);
+    setConfig(routeDefaults());
   }, []);
 
-  return { config, setMode, setLinked, setBoxValue, reset };
+  const fallBack = useCallback(() => {
+    if (isV8TestRoute()) setFailed(true);
+    else setMode("current");
+  }, [setMode]);
+  const shown = failed ? { ...config, mode: "current" as const } : config;
+
+  return { config: shown, setMode, setLinked, setBoxValue, reset, fallBack };
 }
 
 // Stretch-to-fit, same idea as V8SunDateStretchText (which stays as is):

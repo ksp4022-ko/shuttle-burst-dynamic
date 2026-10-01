@@ -16,7 +16,8 @@ import type {
   V8ActiveSwitchArrowsControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
-import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
+import { isV8TestRoute, readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
+import { loadSunAutoFillConfig } from "@/components/v8-active/V8SunAutoFillExperiment";
 
 export type PreviewControls = {
   dragonShow: boolean;
@@ -2775,6 +2776,8 @@ const readIdentityEnvelopeBox = (value: unknown, fallback: IdentityEnvelopeBox):
 };
 
 const loadSunAutoFillExportConfig = (): SunAutoFillConfig => {
+  // V8TEST: ACTIVE reads its own key/defaults (see V8SunAutoFillExperiment).
+  if (isV8TestRoute()) return loadSunAutoFillConfig();
   const saved = readStoredObject(SUN_AUTOFILL_STORAGE_KEY);
   if (!saved) return sunAutoFillDefaults;
   return {

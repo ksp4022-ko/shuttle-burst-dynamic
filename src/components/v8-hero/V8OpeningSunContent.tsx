@@ -7,6 +7,7 @@ import { V8SunDateStretchText } from "@/components/v8-active/V8SunDateStretchTex
 import {
   SunAutoFillErrorBoundary,
   V8SunAutoFillLayer,
+  openSunAutoFillLayout,
   type SunAutoFillConfig,
 } from "@/components/v8-active/V8SunAutoFillExperiment";
 import { V8MeetupPicker, V8MeetupPickerStyles } from "@/components/v8-hero/V8MeetupPicker";
@@ -61,14 +62,7 @@ const DATE_MESSAGE = { x: 31, y: 29, fontSize: 15, opacity: 90, width: 31, heigh
 const NAME_MESSAGE = { x: 61, y: 29, fontSize: 32, opacity: 100, width: 100, height: 26 };
 const TIME_MESSAGE = { x: 50, y: 45, fontSize: 12, opacity: 70, width: 72, height: 12 };
 const NOTE_MESSAGE = { x: 50, y: 59, fontSize: 18, opacity: 88, width: 88, height: 18 };
-const OPEN_SUN_AUTO_FILL_CONFIG: SunAutoFillConfig = {
-  mode: "autofill",
-  globalSkewLinked: true,
-  date: { x: 72, y: 63, width: 39, height: 32.5, skewX: -2.5, skewY: -7.5 },
-  time: { x: 32.5, y: 67.5, width: 33, height: 18, skewX: -2.5, skewY: -7.5 },
-  note: { x: 71, y: 36, width: 34, height: 25.5, skewX: -2.5, skewY: -7.5 },
-  name: { x: 29, y: 38, width: 43, height: 40, skewX: -2.5, skewY: -7.5 },
-};
+const OPEN_SUN_AUTO_FILL_CONFIG: SunAutoFillConfig = openSunAutoFillLayout;
 
 // Copied from previewDefaults' activeSunBadge*/activeSwitchArrow* values,
 // same 0.68 scale-ratio adjustment as the messages above.

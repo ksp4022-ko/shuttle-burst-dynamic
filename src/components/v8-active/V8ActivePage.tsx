@@ -633,7 +633,7 @@ export function V8ActivePage({
             autoFill={{
               config: sunAutoFill.config,
               showGuides: tuningOpen,
-              onError: () => sunAutoFill.setMode("current"),
+              onError: sunAutoFill.fallBack,
             }}
             eventDate={displayEvent.eventDate}
             eventName={displayEvent.name}
