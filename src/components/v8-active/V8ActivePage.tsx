@@ -62,6 +62,8 @@ import {
 import { V8CtaAssembly, V8CtaAssemblyStyles, type V8CtaAssemblyAssets } from "./V8CtaAssembly";
 import { V8SeasonAttendance } from "./V8SeasonAttendance";
 import { V8SeasonBillingDetails } from "./V8SeasonBilling";
+import { V8BillingTestPanel } from "./V8BillingTestPanel";
+import { isP12BillingTestEnabled } from "@/lib/v8-personal-billing";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { useV8SeasonPayment } from "@/hooks/use-v8-season-payment";
 import type { V8SeasonProgress } from "@/lib/database-alpha";
@@ -203,6 +205,8 @@ export function V8ActivePage({
     enabled: true,
   });
   const [billOpen, setBillOpen] = useState(false);
+  const p12BillingTest = useMemo(() => isP12BillingTestEnabled(), []);
+  const p12BillingSiteId = configuredSiteId();
   // A different meetup closes the bill (no stale payment on screen).
   useEffect(() => {
     setBillOpen(false);
@@ -606,6 +610,13 @@ export function V8ActivePage({
     >
       <V8ActiveStyles />
       <V8CtaAssemblyStyles />
+      {p12BillingTest ? (
+        <V8BillingTestPanel
+          token={lineAuthToken}
+          siteId={p12BillingSiteId}
+          {...(selectedEventId ? { eventId: selectedEventId } : {})}
+        />
+      ) : null}
 
       <V8HeroComposition
         confirmed
