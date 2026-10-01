@@ -92,6 +92,7 @@ V8TEST infrastructure:
 - P-021 asset Batch 2 — `051d7dc` identity tags / status stamps / CTA base+front (`/v8test` only, 580KB -> 170KB); real iPhone PASS (user); promote on Cfm
 - P-021 asset Batch 3 — `d04ae40` plaques / rope ornaments / CTA parts / titles (`/v8test` only, 516KB -> 273KB); real iPhone pending
 - V8TEST code-driven Intro — `bc29cbc` OPEN layers + dragon/tiger + shuttle strike, ~7s, ends on OPEN (`/v8test` only; /v8 keeps video); real iPhone pending
+- V8TEST ACTIVE red sun Auto-Fill — `ce9eb2d` OPEN sun layout by default, v2 key, error fallback not saved (`/v8test` only); real iPhone pending
 
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY

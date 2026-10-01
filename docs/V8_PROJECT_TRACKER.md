@@ -297,6 +297,19 @@ Step 2B hotfix：024e420 fix(v8test): start the Intro-time preload only after st
 
 ACTIVE gate 未開始，需另行指示。
 
+V8TEST ACTIVE 紅日回到 Auto-Fill 版（user 回報 ACTIVE 紅日變舊版）：
+
+ce9eb2d
+fix(v8test): ACTIVE red sun uses the OPEN Auto-Fill layout again
+
+Status: V8TEST DEPLOYED / VERIFY
+
+- 原因：ACTIVE 紅日版型只存在各瀏覽器 localStorage（v8-red-sun-autofill-experiment-v1），預設 CURRENT（舊版、\n 原樣顯示）；
+  且 Auto-Fill 任何一次錯誤會把 CURRENT 永久寫回。程式碼無法確認是哪次觸發，本機無法重現。
+- 修正（/v8test only）：預設改為 OPEN 紅日同一組 Auto-Fill 數值；改用 v2 key（舊 v1 的 CURRENT 不再生效）；錯誤只在當頁退回 CURRENT、不寫入。
+- 截圖：/v8test ACTIVE 紅日 = OPEN 紅日版型；/v8 不變。Regression PASS。
+- real iPhone：pending
+
 V8TEST code-driven Intro（方案 A，/v8test only）：
 
 bc29cbc
