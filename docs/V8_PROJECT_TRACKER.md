@@ -258,7 +258,7 @@ Do NOT mark CLOSED until user confirms real-device PASS.
 ## V8-ASSET-READY
 
 Status:
-IN PROGRESS — P-021 v2 step 1 V8TEST REAL DEVICE PASS（待 Cfm 才上 /v8；6367bbb 仍為 ROLLED BACK）
+P-021 v2 Step 1 / 2A / 2B PROMOTED TO /v8（4c1f87b）；production real iPhone pending（6367bbb 仍為 ROLLED BACK，不可恢復）
 
 P-021 v2 step 1（OPEN countdown readiness，/v8test only）：
 
@@ -478,7 +478,7 @@ P-021 asset Batch 1（/v8test only）：
 5ed870c
 perf(v8test): resized sun badges and switch arrows (asset Batch 1)
 
-Status: V8TEST DEPLOYED / VERIFY
+Status: PROMOTED TO /v8（Cfm 全部 2026-10-01，4c1f87b）；production real iPhone pending
 
 - 新檔（原檔不動、/v8 仍用原檔）：
   - v8-cloud-shuttle/fee/court-time/limit-display-450.webp：450px 寬；568KB → 125KB

@@ -62,7 +62,7 @@ V8TEST infrastructure:
   - data from `GET /events/:eventId/me/season-payment`; backend values only,
     Bearer only (no memberId), no-store, no local cache
   - phase 2 (not included): guest fees, historical unpaid, total-due logic
-  - production real iPhone Safari pending
+  - production real iPhone: 帳單 opens (user 實測 ok 2026-10-01, with the red sun / Batch 3 check)
 
 ### V8TEST REAL DEVICE PASS (awaiting Cfm for `/v8`)
 - P-021 v2 step 1 — `f5207d9` OPEN countdown readiness (`/v8test` only)
@@ -93,7 +93,7 @@ V8TEST infrastructure:
 - /v8test list panel — `5008630` + `4f5b669` (panel art out of prewarm, warmed images released): real iPhone PASS on 4G (user); promoted to `/v8` (`4c1f87b`)
 - P-021 asset Batch 2 — `051d7dc` identity tags / status stamps / CTA base+front (`/v8test` only, 580KB -> 170KB); promoted to `/v8` (`4c1f87b`)
 - P-021 asset Batch 3 — `d04ae40` plaques / rope ornaments / CTA parts / titles (`/v8test` only, 516KB -> 273KB); real iPhone PASS (user) → promoted to `/v8` on Cfm (`bdbbb21`); CLOSED (production real iPhone PASS)
-- V8TEST code-driven Intro — `bc29cbc` OPEN layers + dragon/tiger + shuttle strike, ~7s, ends on OPEN (`/v8test` only; /v8 keeps video); promoted to `/v8` (`4c1f87b`)
+- V8TEST code-driven Intro — `bc29cbc` OPEN layers + dragon/tiger + shuttle strike, ~7s, ends on OPEN (`/v8test` only; /v8 keeps video); real iPhone PASS; NOT promoted — video Intro kept (user), `?intro=code` on `/v8test` only
 - V8TEST video Intro restored — `984fab9` (user decision); 程式 Intro only via `?intro=code` on `/v8test`
 - V8TEST ACTIVE red sun Auto-Fill — `ce9eb2d` OPEN sun layout by default, v2 key, error fallback not saved (`/v8test` only); real iPhone PASS (user) → promoted to `/v8` on Cfm (`bdbbb21`); CLOSED (production real iPhone PASS)
 - V8TEST blank-screen report — `3d05337` on-page error box + 10s not-started note (`/v8test` only); Intro guarded; user reopened: normal (not reproduced), report box kept
