@@ -961,16 +961,25 @@ export function Index() {
   // so the video keeps the bandwidth -- measured at 1500kbps they caused 21
   // stalls (~10.5s) in the 10s Intro. This queue then loads OPEN critical
   // first, so OPEN is ready when the Intro ends.
-  // V8TEST plays the code-driven Intro on the OPEN stage itself (no video),
-  // so there is no media to wait for: the hold never applies there now.
-  const v8CodeIntro = v8RouteFamily === "v8test";
+  // 程式 Intro (code-driven Intro on the OPEN stage, no video): off by
+  // default -- /v8test plays the video Intro again (user, 2026-10-01). Kept
+  // for comparison on /v8test with ?intro=code; no media to wait for there,
+  // so the hold never applies to it.
+  const v8CodeIntro = useMemo(() => {
+    if (v8RouteFamily !== "v8test" || typeof window === "undefined") return false;
+    try {
+      return new URLSearchParams(window.location.search).get("intro") === "code";
+    } catch {
+      return false;
+    }
+  }, [v8RouteFamily]);
   const v8IntroHoldsImageLoads = v8RouteFamily === "v8test" && !v8CodeIntro && v8IntroBlocking && !v8IntroMediaBuffered;
   const v8IntroPrewarmStartedRef = useRef(false);
   useEffect(() => {
     // Also after the startup data (events + roster) is in: started earlier,
     // the queue's images competed with those API calls for bandwidth and
     // could push them past their 8s timeout (real iPhone: load-error screen).
-    if (v8RouteFamily !== "v8test" || !v8IntroMediaBuffered || v8IntroPrewarmStartedRef.current) return;
+    if (v8RouteFamily !== "v8test" || !(v8IntroMediaBuffered || v8CodeIntro) || v8IntroPrewarmStartedRef.current) return;
     if (!v8OpenReady || flow.phase === "load-error") return;
     v8IntroPrewarmStartedRef.current = true;
     const hero = openCriticalAssetsAll;
@@ -1001,7 +1010,7 @@ export function Index() {
       }),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flow.phase, v8IntroMediaBuffered, v8OpenReady, v8RouteFamily]);
+  }, [flow.phase, v8CodeIntro, v8IntroMediaBuffered, v8OpenReady, v8RouteFamily]);
   useEffect(() => {
     if (v8RouteFamily !== "v8test" || !v8HeroPickerStage || !v8OpenReady) return;
     if (!openCountdownAssetsReady || v8IntroHoldsImageLoads) return;
@@ -2500,6 +2509,7 @@ export function Index() {
               siteId={v8IntroSiteId}
               onBlockingChange={handleV8IntroBlockingChange}
               replaySignal={v8IntroReplaySignal}
+              {...(v8RouteFamily === "v8test" ? { fit: "contain" as const, onMediaBuffered: handleV8IntroMediaBuffered } : {})}
             />
           )}
           {/* Countdown auto-enter is already paused via v8IntroBlocking
