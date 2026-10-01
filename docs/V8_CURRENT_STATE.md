@@ -90,7 +90,7 @@ V8TEST infrastructure:
 - V8TEST 3 fixes — `647f677` (dragon load order / bfcache Back restore reset / animated auto-enter); promoted to `/v8` (`4c1f87b`)
 
 - /v8 cloud badges 450px on all routes — `c491044` — CLOSED (production real iPhone PASS)
-- /v8test list panel — `5008630` + `4f5b669` (panel art out of prewarm, warmed images released): real iPhone PASS on 4G (user); promote on Cfm
+- /v8test list panel — `5008630` + `4f5b669` (panel art out of prewarm, warmed images released): real iPhone PASS on 4G (user); promoted to `/v8` (`4c1f87b`)
 - P-021 asset Batch 2 — `051d7dc` identity tags / status stamps / CTA base+front (`/v8test` only, 580KB -> 170KB); promoted to `/v8` (`4c1f87b`)
 - P-021 asset Batch 3 — `d04ae40` plaques / rope ornaments / CTA parts / titles (`/v8test` only, 516KB -> 273KB); real iPhone PASS (user) → promoted to `/v8` on Cfm (`bdbbb21`); CLOSED (production real iPhone PASS)
 - V8TEST code-driven Intro — `bc29cbc` OPEN layers + dragon/tiger + shuttle strike, ~7s, ends on OPEN (`/v8test` only; /v8 keeps video); promoted to `/v8` (`4c1f87b`)
