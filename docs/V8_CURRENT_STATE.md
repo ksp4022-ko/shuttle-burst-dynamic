@@ -127,7 +127,9 @@ V8TEST infrastructure:
 
 ## Current Execution Order
 
-1. Other pending items (ACTIVE gate only on user instruction)
+1. V8-TUNING-LAZY — `570a8b4` /v8test (console loads on open; startup JS 967KB -> 868KB): real iPhone verify, then Cfm
+2. P-022 phase 2 billing — Codex (not this session)
+3. Other pending items (ACTIVE gate only on user instruction)
 
 ## Do Not Reopen Without Evidence
 

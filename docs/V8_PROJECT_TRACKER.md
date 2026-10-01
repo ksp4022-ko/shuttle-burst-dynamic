@@ -739,7 +739,7 @@ Mac Safari Web Inspector 連 iPhone，可直接看實機 Network / Console。
 ## V8-TUNING-LAZY
 
 Status:
-PENDING
+V8TEST DEPLOYED / VERIFY（570a8b4）
 
 這是 performance task，
 不是 P1-3 本體。
@@ -750,12 +750,15 @@ Goal：
 
 只有開啟 tuning/debug 時 dynamic import。
 
+570a8b4（/v8test）：V8TuningPanel 獨立 chunk（LazyV8TuningPanel）；控制台專用設定（targetControlKeys / targetVisibilityKeys / controlRanges / 複製設定格式化）移到 dragonPreviewPanelConfig.ts。
+/v8test 開啟控制台才下載；/v8 仍在啟動時下載（等 Cfm）。Local 啟動 JS：967KB → 868KB；控制台開啟、複製設定（210 行）與 /v8 相同；family PASS。
+
 ---
 
 ## V8-SUN-MOTION
 
 Status:
-PENDING
+DONE（d9de47a，已在使用：Float / Pulse / Halo / Ring 開，Energy 關；由控制台 ACTIVE SUN MOTION 調整）
 
 Effects：
 
@@ -777,7 +780,7 @@ Principle：
 ## P-022 DATA/API
 
 Status:
-PAUSED
+PAUSED — 帳單第二階段由 Codex 處理（user 2026-10-01）
 
 Blocker：
 
