@@ -297,6 +297,20 @@ Step 2B hotfix：024e420 fix(v8test): start the Intro-time preload only after st
 
 ACTIVE gate 未開始，需另行指示。
 
+V8TEST code-driven Intro（方案 A，/v8test only）：
+
+bc29cbc
+feat(v8test): code-driven Intro on the OPEN stage that ends exactly on OPEN
+
+Status: V8TEST DEPLOYED / VERIFY
+
+- /v8test 以 OPEN 本身圖層做 ~7s 開場（不再播影片）：墨染 → 雲/山/浪 → 龍入場 → 虎入場揮拍 → 羽球擊入太陽 → 太陽蓋章 → 進入戰局；最後一幀即 OPEN。
+- 略過（1s 後出現）/ 點畫面略過 / Replay Intro / 每分頁一次 維持；Intro 期間倒數暫停，結束後開始。
+- 關鍵圖 6s 未到 → 直接顯示 OPEN；prefers-reduced-motion → 不播。
+- Intro 中離開 OPEN（進入戰局）→ Intro 立即結束，不留在 ACTIVE 上。
+- /v8 不變（仍為影片 Intro）。Local：introflow / family（v8test、v8 kangxuan）PASS、0 page errors。
+- real iPhone：pending
+
 P-021 asset Batch 3（/v8test only）：
 
 d04ae40
