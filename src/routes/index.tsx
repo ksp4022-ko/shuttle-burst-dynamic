@@ -40,6 +40,7 @@ import {
   type PreviewTargetId,
 } from "@/components/v8-preview/dragonPreviewConfig";
 import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8IntroVideo";
+import { V8OpenIntro } from "@/components/v8-hero/V8OpenIntro";
 import { V8LoadingCover } from "@/components/v8-active/V8LoadingCover";
 import { V8TestBadge } from "@/components/v8-active/V8TestBadge";
 import { v8RouteFamilyOfBrowserPath, v8RouteFamilyOfRouterPath, v8SessionKeyPrefix } from "@/lib/v8-route-family";
@@ -960,7 +961,10 @@ export function Index() {
   // so the video keeps the bandwidth -- measured at 1500kbps they caused 21
   // stalls (~10.5s) in the 10s Intro. This queue then loads OPEN critical
   // first, so OPEN is ready when the Intro ends.
-  const v8IntroHoldsImageLoads = v8RouteFamily === "v8test" && v8IntroBlocking && !v8IntroMediaBuffered;
+  // V8TEST plays the code-driven Intro on the OPEN stage itself (no video),
+  // so there is no media to wait for: the hold never applies there now.
+  const v8CodeIntro = v8RouteFamily === "v8test";
+  const v8IntroHoldsImageLoads = v8RouteFamily === "v8test" && !v8CodeIntro && v8IntroBlocking && !v8IntroMediaBuffered;
   const v8IntroPrewarmStartedRef = useRef(false);
   useEffect(() => {
     // Also after the startup data (events + roster) is in: started earlier,
@@ -2478,14 +2482,25 @@ export function Index() {
       {v8IntroSiteId ? (
         <>
           <V8IntroVideoStyles />
-          <V8IntroVideo
-            key={v8IntroSiteId}
-            config={v8IntroConfig}
-            siteId={v8IntroSiteId}
-            onBlockingChange={handleV8IntroBlockingChange}
-            replaySignal={v8IntroReplaySignal}
-            {...(v8RouteFamily === "v8test" ? { fit: "contain" as const, onMediaBuffered: handleV8IntroMediaBuffered } : {})}
-          />
+          {v8CodeIntro ? (
+            <V8OpenIntro
+              key={v8IntroSiteId}
+              siteId={v8IntroSiteId}
+              heroMounted={v8HeroPickerStage}
+              artReady={openCountdownAssetsReady}
+              dataSettled={v8OpenReady}
+              replaySignal={v8IntroReplaySignal}
+              onBlockingChange={handleV8IntroBlockingChange}
+            />
+          ) : (
+            <V8IntroVideo
+              key={v8IntroSiteId}
+              config={v8IntroConfig}
+              siteId={v8IntroSiteId}
+              onBlockingChange={handleV8IntroBlockingChange}
+              replaySignal={v8IntroReplaySignal}
+            />
+          )}
           {/* Countdown auto-enter is already paused via v8IntroBlocking
               (set true the instant V8IntroVideo starts playing, including
               a forced replay -- see replaySignal) and only resumes once
