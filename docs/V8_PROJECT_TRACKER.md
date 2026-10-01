@@ -138,6 +138,7 @@ Status: V8TEST DEPLOYED / VERIFY（8e8194b）
   先改 /v8test 驗證，再等 Cfm。
 - 8e8194b（/v8test）：預設改為 user 提供的值 X 21 / Y 50 / Scale 1.36（Rotation 5 不變）。
   Local：/v8test 季打 正取、請假 位置相同（卷軸左側、名字旁）；/v8 仍在卷軸下方。
+  臨打（local DB 暫時把 L2 改成 temp 驗證後還原）：/v8test 臨打旗與季打旗同位置；/v8 臨打旗在卷軸下方。user 無臨打帳號，以本機截圖驗證。
 
 ## V8-ISSUE-CLOUD-BADGE-ART-MISSING（待確認）
 
