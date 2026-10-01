@@ -89,7 +89,7 @@ V8TEST infrastructure:
 
 - /v8 cloud badges 450px on all routes — `c491044` — CLOSED (production real iPhone PASS)
 - /v8test list panel — `5008630` + `4f5b669` (panel art out of prewarm, warmed images released): real iPhone PASS on 4G (user); promote on Cfm
-- P-021 asset Batch 2 — `051d7dc` identity tags / status stamps / CTA base+front (`/v8test` only, 580KB -> 170KB); real iPhone pending
+- P-021 asset Batch 2 — `051d7dc` identity tags / status stamps / CTA base+front (`/v8test` only, 580KB -> 170KB); real iPhone PASS (user); promote on Cfm
 
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY

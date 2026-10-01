@@ -302,7 +302,7 @@ P-021 asset Batch 2（/v8test only，user 指示繼續）：
 051d7dc
 perf(v8test): resized identity tags, status stamps and CTA base (asset Batch 2)
 
-Status: V8TEST DEPLOYED / VERIFY
+Status: V8TEST REAL DEVICE PASS（待 Cfm）
 
 - 新檔（原檔不動、/v8 仍用原檔）：
   identity 牌 ×2 → 200px 寬；狀態章 ×4 → 140px；cta-assembly base → 576px、front → 64px。580KB → 170KB。
@@ -311,7 +311,7 @@ Status: V8TEST DEPLOYED / VERIFY
   1500kbps Quick Pick：ACTIVE+0.3s 7/23 → 11/23；全部 +5.9s → +4.7s
   1500kbps auto：23/23 維持
   600kbps auto：5/23 → 10/23；+15.6s → +13.0s；倒數時間不變
-- Regression /v8/kangxuan、/v8test/kangxuan PASS。real iPhone：pending
+- Regression /v8/kangxuan、/v8test/kangxuan PASS。real iPhone：/v8test PASS（user 驗收 2026-10-01）；待 Cfm 才上 /v8
 
 Real-iPhone issues（Batch 2 曾暫停）：
 
