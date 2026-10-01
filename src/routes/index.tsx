@@ -40,7 +40,7 @@ import {
   type PreviewTargetId,
 } from "@/components/v8-preview/dragonPreviewConfig";
 import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8IntroVideo";
-import { V8OpenIntro } from "@/components/v8-hero/V8OpenIntro";
+import { V8OpenIntro, V8OpenIntroBoundary } from "@/components/v8-hero/V8OpenIntro";
 import { V8LoadingCover } from "@/components/v8-active/V8LoadingCover";
 import { V8TestBadge } from "@/components/v8-active/V8TestBadge";
 import { v8RouteFamilyOfBrowserPath, v8RouteFamilyOfRouterPath, v8SessionKeyPrefix } from "@/lib/v8-route-family";
@@ -2483,15 +2483,16 @@ export function Index() {
         <>
           <V8IntroVideoStyles />
           {v8CodeIntro ? (
-            <V8OpenIntro
-              key={v8IntroSiteId}
-              siteId={v8IntroSiteId}
-              heroMounted={v8HeroPickerStage}
-              artReady={openCountdownAssetsReady}
-              dataSettled={v8OpenReady}
-              replaySignal={v8IntroReplaySignal}
-              onBlockingChange={handleV8IntroBlockingChange}
-            />
+            <V8OpenIntroBoundary key={v8IntroSiteId} onError={() => handleV8IntroBlockingChange(false)}>
+              <V8OpenIntro
+                siteId={v8IntroSiteId}
+                heroMounted={v8HeroPickerStage}
+                artReady={openCountdownAssetsReady}
+                dataSettled={v8OpenReady}
+                replaySignal={v8IntroReplaySignal}
+                onBlockingChange={handleV8IntroBlockingChange}
+              />
+            </V8OpenIntroBoundary>
           ) : (
             <V8IntroVideo
               key={v8IntroSiteId}

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Component, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { buildV8HeroAssets } from "./v8HeroConfig";
 
@@ -73,7 +73,13 @@ export function V8OpenIntro({ siteId, heroMounted, artReady, dataSettled, replay
   blockingRef.current = onBlockingChange;
 
   const finish = (played: boolean) => {
-    animationsRef.current.forEach((animation) => animation.cancel());
+    animationsRef.current.forEach((animation) => {
+      try {
+        animation.cancel();
+      } catch {
+        // already gone
+      }
+    });
     animationsRef.current = [];
     holdRef.current?.cancel();
     holdRef.current = null;
@@ -119,7 +125,11 @@ export function V8OpenIntro({ siteId, heroMounted, artReady, dataSettled, replay
     setStage(el);
     const art = el.firstElementChild as HTMLElement | null;
     if (art && !holdRef.current) {
-      holdRef.current = art.animate([{ opacity: 0 }, { opacity: 0 }], { duration: 1, fill: "forwards" });
+      try {
+        holdRef.current = art.animate([{ opacity: 0 }, { opacity: 0 }], { duration: 1, fill: "forwards" });
+      } catch {
+        // No Web Animations: just show OPEN.
+      }
     }
   }, [phase, heroMounted]);
 
@@ -135,7 +145,14 @@ export function V8OpenIntro({ siteId, heroMounted, artReady, dataSettled, replay
     if (phase !== "pending" || !artReady || !stage) return;
     holdRef.current?.cancel();
     holdRef.current = null;
-    animationsRef.current = buildTimeline(stage, overlayRef.current);
+    try {
+      animationsRef.current = buildTimeline(stage, overlayRef.current);
+    } catch (error) {
+      // Any browser quirk in the timeline skips the Intro -- never the page.
+      console.error("[v8test intro]", error);
+      finishRef.current(true);
+      return;
+    }
     setPhase("playing");
   }, [phase, artReady, stage]);
 
@@ -360,4 +377,23 @@ function V8OpenIntroStyles() {
       }
     `}</style>
   );
+}
+
+// A render error inside the Intro ends the Intro (OPEN stays usable) instead
+// of unmounting the whole page.
+export class V8OpenIntroBoundary extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  override componentDidCatch(error: unknown) {
+    console.error("[v8test intro]", error);
+    this.props.onError();
+  }
+
+  override render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
