@@ -304,6 +304,7 @@ fix(v8test): on-page error report for blank screens; Intro can never take the pa
 
 Status: V8TEST DEPLOYED / 未再重現（user：重開後正常）
 
+- 95cbb4e：紅框「app not started」誤報修正（影片 Intro 播放中 10s 時 OPEN/cover/ACTIVE 都還沒掛上 → 改以 V8 TEST 標籤判斷 app 已啟動）。
 - 2026-10-01 user 重開 /v8test：正常（未出現紅框）。判定為一次性主程式未啟動（載入/網路），保留紅框以便再發生時定位。
 
 - 判讀：只有 v8-boot 底色 = app 主程式沒有啟動（沒 render 任何東西）。本機擋掉主 JS 檔 → 畫面完全一致；
