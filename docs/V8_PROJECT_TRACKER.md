@@ -334,6 +334,7 @@ revert(v8test): play the video Intro again; 程式 Intro only with ?intro=code
 Status: V8TEST DEPLOYED / VERIFY
 
 - /v8test 預設回到影片 Intro（含 Step 2B contain + 緩衝完才預載）。
+- 8d12425：/v8test 網址加 ?intro=fresh → 影片 Intro 每次載入都播（冷開測試用）；/v8 忽略此參數。
 - 「程式 Intro」（bc29cbc，OPEN 圖層動畫）保留，只在 /v8test 網址加 ?intro=code 時播放，供比較；其預載也會啟動。
 - /v8 不變。Local：預設 → 影片、?intro=code → 程式 Intro、/v8 → 影片；family PASS、0 errors。
 
