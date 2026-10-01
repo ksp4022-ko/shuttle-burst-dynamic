@@ -297,6 +297,19 @@ Step 2B hotfix：024e420 fix(v8test): start the Intro-time preload only after st
 
 ACTIVE gate 未開始，需另行指示。
 
+V8TEST 空白畫面（iPhone Chrome，只有底色、無 V8 TEST 標籤、無載入中）：
+
+3d05337
+fix(v8test): on-page error report for blank screens; Intro can never take the page down
+
+Status: V8TEST DEPLOYED / 等 user 重現回報
+
+- 判讀：只有 v8-boot 底色 = app 主程式沒有啟動（沒 render 任何東西）。本機擋掉主 JS 檔 → 畫面完全一致；
+  程式內錯誤則會顯示「This page didn't load」文字頁，與截圖不符。真正原因未確認（主 JS 載入失敗 / 弱網還在下載 / iOS 特有錯誤）。
+- /v8test 加頁面錯誤回報：JS 錯誤、script/style 載入失敗、10 秒未啟動（列出已載入的 JS）→ 頁面底部紅框。/v8 不加。
+- 程式動畫 Intro：Web Animations 呼叫加保護 + 獨立 error boundary，任何瀏覽器差異只會略過 Intro。
+- Local：正常流程無紅框；擋主 JS → 紅框顯示原因；introflow / family PASS。
+
 V8TEST ACTIVE 紅日回到 Auto-Fill 版（user 回報 ACTIVE 紅日變舊版）：
 
 ce9eb2d

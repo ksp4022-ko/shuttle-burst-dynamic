@@ -93,6 +93,7 @@ V8TEST infrastructure:
 - P-021 asset Batch 3 — `d04ae40` plaques / rope ornaments / CTA parts / titles (`/v8test` only, 516KB -> 273KB); real iPhone pending
 - V8TEST code-driven Intro — `bc29cbc` OPEN layers + dragon/tiger + shuttle strike, ~7s, ends on OPEN (`/v8test` only; /v8 keeps video); real iPhone pending
 - V8TEST ACTIVE red sun Auto-Fill — `ce9eb2d` OPEN sun layout by default, v2 key, error fallback not saved (`/v8test` only); real iPhone pending
+- V8TEST blank-screen report — `3d05337` on-page error box + 10s not-started note (`/v8test` only); Intro guarded; waiting for user repro
 
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
