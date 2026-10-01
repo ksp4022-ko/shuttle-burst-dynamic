@@ -302,7 +302,9 @@ V8TEST 空白畫面（iPhone Chrome，只有底色、無 V8 TEST 標籤、無載
 3d05337
 fix(v8test): on-page error report for blank screens; Intro can never take the page down
 
-Status: V8TEST DEPLOYED / 等 user 重現回報
+Status: V8TEST DEPLOYED / 未再重現（user：重開後正常）
+
+- 2026-10-01 user 重開 /v8test：正常（未出現紅框）。判定為一次性主程式未啟動（載入/網路），保留紅框以便再發生時定位。
 
 - 判讀：只有 v8-boot 底色 = app 主程式沒有啟動（沒 render 任何東西）。本機擋掉主 JS 檔 → 畫面完全一致；
   程式內錯誤則會顯示「This page didn't load」文字頁，與截圖不符。真正原因未確認（主 JS 載入失敗 / 弱網還在下載 / iOS 特有錯誤）。
