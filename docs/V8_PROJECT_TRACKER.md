@@ -127,7 +127,7 @@ Promotion 到 /v8 需要 user 回覆 Cfm / 確認；promote 並驗證後才 CLOS
 
 ## V8-ISSUE-IDENTITY-TAG-POSITION（待修正，user 回報 2026-10-01）
 
-Status: OPEN（只記錄，尚未修改）
+Status: V8TEST DEPLOYED / VERIFY（8e8194b）
 
 - 現象（正式 /v8，iPhone Chrome，柯山米 季打請假）：季打旗跑到卷軸下方、被浪遮住（圖1，18:16）；
   正確位置應在卷軸左側、名字左邊（圖2，20:51）。
@@ -136,6 +136,8 @@ Status: OPEN（只記錄，尚未修改）
   與請假等狀態無關（請假只讓名字變淡）。圖2 的位置推測來自該瀏覽器存過的控制台設定；兩張圖不同的原因未確認。
 - 修正方向：把預設值改成圖2 的位置（需該位置的確切數值：控制台「複製設定」中的「身份吊牌 (tag)」一行）。
   先改 /v8test 驗證，再等 Cfm。
+- 8e8194b（/v8test）：預設改為 user 提供的值 X 21 / Y 50 / Scale 1.36（Rotation 5 不變）。
+  Local：/v8test 季打 正取、請假 位置相同（卷軸左側、名字旁）；/v8 仍在卷軸下方。
 
 ## V8-ISSUE-CLOUD-BADGE-ART-MISSING（待確認）
 
