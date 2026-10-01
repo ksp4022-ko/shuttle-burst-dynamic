@@ -127,7 +127,7 @@ Promotion 到 /v8 需要 user 回覆 Cfm / 確認；promote 並驗證後才 CLOS
 
 ## V8-ISSUE-IDENTITY-TAG-POSITION（待修正，user 回報 2026-10-01）
 
-Status: V8TEST DEPLOYED / VERIFY（8e8194b）
+Status: PROMOTED TO /v8（Cfm 2026-10-01，57a3af5）；production real iPhone pending
 
 - 現象（正式 /v8，iPhone Chrome，柯山米 季打請假）：季打旗跑到卷軸下方、被浪遮住（圖1，18:16）；
   正確位置應在卷軸左側、名字左邊（圖2，20:51）。

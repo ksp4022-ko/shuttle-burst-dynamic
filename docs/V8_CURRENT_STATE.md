@@ -99,7 +99,7 @@ V8TEST infrastructure:
 - V8TEST blank-screen report — `3d05337` on-page error box + 10s not-started note (`/v8test` only); Intro guarded; user reopened: normal (not reproduced), report box kept
 
 ### OPEN ISSUES（recorded 2026-10-01, not fixed yet）
-- V8-ISSUE-IDENTITY-TAG-POSITION — 季打/臨打 tag should sit left of the scroll (user 圖2), not below it (default X40/Y96); one shared position for both; `8e8194b` /v8test default X21/Y50/scale 1.36 — real iPhone pending
+- V8-ISSUE-IDENTITY-TAG-POSITION — 季打/臨打 tag should sit left of the scroll (user 圖2), not below it (default X40/Y96); one shared position for both; `8e8194b` /v8test → `57a3af5` /v8 (Cfm): default X21/Y50/scale 1.36 — production real iPhone pending
 - V8-ISSUE-CLOUD-BADGE-ART-MISSING — cloud badge art missing once on production ACTIVE (text only); repro pending
 
 ### IN PROGRESS / ROLLED BACK
