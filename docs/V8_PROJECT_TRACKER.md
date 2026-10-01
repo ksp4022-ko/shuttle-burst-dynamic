@@ -297,6 +297,22 @@ Step 2B hotfix：024e420 fix(v8test): start the Intro-time preload only after st
 
 ACTIVE gate 未開始，需另行指示。
 
+P-021 asset Batch 3（/v8test only）：
+
+d04ae40
+perf(v8test): resized plaques, rope ornaments, CTA parts and titles (asset Batch 3)
+
+Status: V8TEST DEPLOYED / VERIFY
+
+- 新檔（原檔不動、/v8 仍用原檔）：plaque ×3 → 460px；繩飾 a/b → 220/300px；
+  CTA blank + 文字 ×4 → 300px、帳單 → 220px、代報/代退 → 190px；康軒標題 640 → 420px；
+  OPEN 進入戰局 700 → 480px（/v8test Step 1 critical URL 同步，同一 builder）。516KB → 273KB。
+- 截圖 /v8 vs /v8test 一致。
+- Local before（Batch 2）→ after：1500kbps Quick Pick 全部首屏 +5.1s → +3.8s；600kbps auto +13.0s → +10.4s。
+- Step 1：600kbps 新 CTA 載完才倒數；CTA error 不自動進場、手動可進 PASS。Regression PASS。
+- 註：600kbps 有 ~3 個 CTA 零件重複請求（預載進行中 ACTIVE 就 mount 的時間競爭，約 25KB，非本批造成）。
+- real iPhone：pending
+
 P-021 asset Batch 2（/v8test only，user 指示繼續）：
 
 051d7dc
