@@ -965,14 +965,17 @@ export function Index() {
   // default -- /v8test plays the video Intro again (user, 2026-10-01). Kept
   // for comparison on /v8test with ?intro=code; no media to wait for there,
   // so the hold never applies to it.
-  const v8CodeIntro = useMemo(() => {
-    if (v8RouteFamily !== "v8test" || typeof window === "undefined") return false;
+  const v8TestIntroParam = useMemo(() => {
+    if (v8RouteFamily !== "v8test" || typeof window === "undefined") return null;
     try {
-      return new URLSearchParams(window.location.search).get("intro") === "code";
+      return new URLSearchParams(window.location.search).get("intro");
     } catch {
-      return false;
+      return null;
     }
   }, [v8RouteFamily]);
+  const v8CodeIntro = v8TestIntroParam === "code";
+  // V8TEST ?intro=fresh: the video Intro plays on every load (cold-open test).
+  const v8IntroIgnorePlayed = v8TestIntroParam === "fresh";
   const v8IntroHoldsImageLoads = v8RouteFamily === "v8test" && !v8CodeIntro && v8IntroBlocking && !v8IntroMediaBuffered;
   const v8IntroPrewarmStartedRef = useRef(false);
   useEffect(() => {
@@ -2509,7 +2512,7 @@ export function Index() {
               siteId={v8IntroSiteId}
               onBlockingChange={handleV8IntroBlockingChange}
               replaySignal={v8IntroReplaySignal}
-              {...(v8RouteFamily === "v8test" ? { fit: "contain" as const, onMediaBuffered: handleV8IntroMediaBuffered } : {})}
+              {...(v8RouteFamily === "v8test" ? { fit: "contain" as const, onMediaBuffered: handleV8IntroMediaBuffered, ignorePlayed: v8IntroIgnorePlayed } : {})}
             />
           )}
           {/* Countdown auto-enter is already paused via v8IntroBlocking

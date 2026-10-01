@@ -19,6 +19,9 @@ type V8IntroVideoProps = {
   // Fires once when the whole video is buffered, so image preloading can
   // start without competing with playback for bandwidth.
   onMediaBuffered?: () => void;
+  // V8TEST ?intro=fresh: play on every load, ignoring "already played"
+  // (cold-open testing without opening a new tab).
+  ignorePlayed?: boolean;
 };
 
 // Per-page-load memory (module scope, so it also survives this component
@@ -52,6 +55,7 @@ export function V8IntroVideo({
   replaySignal = 0,
   fit = "cover",
   onMediaBuffered,
+  ignorePlayed = false,
 }: V8IntroVideoProps) {
   const storageKey = useMemo(() => storageKeyFor(config, siteId), [config, siteId]);
   const [shouldRender, setShouldRender] = useState(false);
@@ -128,7 +132,7 @@ export function V8IntroVideo({
       playedThisVisit.has(storageKey) ||
       failedThisVisit.has(storageKey) ||
       (storageAvailableRef.current && window.sessionStorage.getItem(storageKey) === "1");
-    if (!isForcedReplay && alreadyHandled) {
+    if (!isForcedReplay && !ignorePlayed && alreadyHandled) {
       onBlockingChange?.(false);
       return;
     }
@@ -154,7 +158,7 @@ export function V8IntroVideo({
       if (removeTimerRef.current !== null) window.clearTimeout(removeTimerRef.current);
       onBlockingChange?.(false);
     };
-  }, [config.enabled, config.skipDelayMs, config.startTimeoutMs, onBlockingChange, replaySignal, storageKey]);
+  }, [config.enabled, config.skipDelayMs, config.startTimeoutMs, ignorePlayed, onBlockingChange, replaySignal, storageKey]);
 
   if (!shouldRender) return null;
 
