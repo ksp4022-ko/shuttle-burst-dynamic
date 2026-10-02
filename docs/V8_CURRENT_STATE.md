@@ -102,6 +102,9 @@ V8TEST infrastructure:
 - V8-ISSUE-IDENTITY-TAG-POSITION — 季打/臨打 tag should sit left of the scroll (user 圖2), not below it (default X40/Y96); one shared position for both; `8e8194b` /v8test → `57a3af5` /v8 (Cfm): default X21/Y50/scale 1.36 — CLOSED (production real iPhone PASS)
 - V8-ISSUE-CLOUD-BADGE-ART-MISSING — cloud badge art missing once on production ACTIVE (text only) — CLOSED (normal again, not reproduced)
 
+### PAUSED
+- V8-INTRO-VIDEO-V2 — Gemini fight + reversed assembly Intro draft; paused by user (not required); production Intro unchanged
+
 ### IN PROGRESS / ROLLED BACK
 - P-021 / V8-ASSET-READY
   - attempted commit: `6367bbb`
