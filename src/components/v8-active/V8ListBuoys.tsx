@@ -435,9 +435,9 @@ function V8ListBuoysStyles() {
          home indicator and the rounded screen corners. Lift them by the
          safe area and fill the gap below with a deep-sea fade. Safari is untouched. The
          iPhone home-screen app reports a 0 bottom inset (real iPhone
-         readout 2026-10-03), hence the 28px floor. */
+         readout 2026-10-03), hence the 48px floor (28px looked too low on the real iPhone). */
       .v8-standalone {
-        --v8-standalone-lift: max(env(safe-area-inset-bottom, 0px), 28px);
+        --v8-standalone-lift: max(env(safe-area-inset-bottom, 0px), 48px);
       }
 
       .v8-standalone .v8-list-wave,
