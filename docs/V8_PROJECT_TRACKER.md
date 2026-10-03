@@ -199,7 +199,7 @@ Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
 - real iPhone 診斷（user 2026-10-03）：主畫面 App `safe-area-inset-bottom/top = 0`（viewport-fit=cover 已生效），innerHeight 706 / screen 874 → 第一版抬高無效；改為 `max(env(), 28px)` 固定抬高 28px，下方仍用拉長＋漸層補滿。診斷小字已移除。
 - 圖示（user 2026-10-03 提供龍虎羽球圖）：`public/v8-pwa/icon-180/192/512.png`，apple-touch-icon（/v8test only）＋manifest icons。
 - 底部補色：拉長圖案仍不自然（real iPhone）→ 改成從浪花模糊底部 22px 內開始的深藍漸層。
-- 繪馬參數比對：user 貼的 Safari 設定與 /v8test 預設相同（已報 14/32、尚缺 29/38、候補 31/38）；但實際位置由「尚缺/候補共用」(ALT SLOT) 決定，設定匯出未包含此組，待 user 提供。
+- 繪馬參數比對：user 貼的 Safari 設定與 /v8test 預設相同（已報 14/32、尚缺 29/38、候補 31/38）；實際位置由「尚缺/候補共用」(ACTIVE INFO ALT SLOT) 決定；user Safari 為 X29 Y34 Scale2 Rot2（預設 Y38）→ /v8test 預設改 Y34（/v8 仍 38，等 Cfm）。
 - 繪馬 尚缺/候補 在 App 位置不同：微調面板設定存在各自瀏覽器（App 與 Safari 儲存空間分開），App 讀到預設值（AltSlot X29 Y38 Scale2 Rot2），Safari 用 user 調過的值；需 user 提供 Safari 數值寫入預設。
 - 本機 WebKit：App 模式 class/viewport/manifest 正確、無錯誤；Safari 模式無 class、浪花 bottom 0；/v8 無 manifest、無變化；模擬 34px Home 條截圖接縫自然。
 

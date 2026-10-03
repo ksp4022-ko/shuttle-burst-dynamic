@@ -1597,6 +1597,12 @@ const v8TestActiveTuningDefaults = {
   activeInfoRegisteredTextLineHeight: 1,
   activeInfoRegisteredTextAlign: "center",
   activeInfoRegisteredTextFontWeight: 800,
+  // 尚缺/候補 shared slot as tuned on the user's Safari (2026-10-03); the
+  // home-screen app has its own storage and fell back to Y 38.
+  activeInfoAltSlotX: 29,
+  activeInfoAltSlotY: 34,
+  activeInfoAltSlotScale: 2,
+  activeInfoAltSlotRotation: 2,
   activeInfoNeededShow: true,
   activeInfoNeededX: 29,
   activeInfoNeededY: 38,
