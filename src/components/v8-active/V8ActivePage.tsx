@@ -502,6 +502,9 @@ export function V8ActivePage({
   const sunMessageControls = buildV8ActiveSunMessagesControls(tuningControls);
   const identityCardControls = buildV8ActiveIdentityCardControls(tuningControls);
   const capacityBadgeControls = buildV8ActiveCapacityBadgeControls(tuningControls);
+  // V8TEST: the 上限 cloud sits behind the red sun (user 2026-10-03), so it
+  // renders in the hero's under-sun layer instead of inside sunContent.
+  const capacityUnderSun = isV8TestRoute();
   const ropeOrnamentControls = buildV8ActiveRopeOrnamentsControls(tuningControls);
   const rosterV2Controls = buildV8ActiveRosterV2Controls(tuningControls);
   const switchArrowControls = buildV8ActiveSwitchArrowsControls(tuningControls);
@@ -659,7 +662,7 @@ export function V8ActivePage({
             hours={displayEvent.hours}
             ballType={displayEvent.ballType}
             tempFee={displayEvent.tempFee}
-            capacity={displayEvent.maxPeople}
+            capacity={capacityUnderSun ? undefined : displayEvent.maxPeople}
             badgeControls={sunBadgeControls}
             capacityBadgeControls={capacityBadgeControls}
             messageControls={sunMessageControls}
@@ -667,6 +670,11 @@ export function V8ActivePage({
             onPreviousEvent={canSwitchMeetup ? () => switchToAdjacentMeetup(-1) : undefined}
             onNextEvent={canSwitchMeetup ? () => switchToAdjacentMeetup(1) : undefined}
           />
+        }
+        sunUnderContent={
+          capacityUnderSun && typeof displayEvent.maxPeople === "number" ? (
+            <V8CapacityBadge src={assets.sunBadgeCapacity} label={`${displayEvent.maxPeople}人`} controls={capacityBadgeControls} />
+          ) : undefined
         }
         scrollContent={
           identity ? (

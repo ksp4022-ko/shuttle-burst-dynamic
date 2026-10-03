@@ -161,7 +161,12 @@ Status: CODE PASS / VERIFY（等 real iPhone，再 Cfm 才套用 /v8）
   - 新圖較扁（~3:1，舊 ~2:1）→ 顯示寬 86 → 100px（`.is-cloud-v2`），文字 inset 重新以像素掃描空白區
     （`BADGE_TEXT_INSETS_V8TEST`，往上移 ~10% 抵消既有 Text Offset Y +3/+4）。
 - /v8 不變（本機 build 確認 /v8 仍載入舊 450 版、尺寸相同）。
-- 已知：雲框變寬後「上限」雲蓋到紅日左側時間一點，位置可用 /v8test 調整台 X/Scale 微調。
+- 第 2 輪（user real iPhone 調整後）：
+  - /v8test 預設改為 user 調好的雲框參數（球種 X124/Y51/Scale1.55/Text -2,4；費用 X-29/Y97/Text -3,4；
+    場地數 X90/Y82/Text 0,3；上限 X-55/Y61/Z0/Text 1,3/Shadow 0,5）。`previewDefaults` 在 /v8test 套用
+    `v8TestCloudBadgeDefaults`，/v8 仍用原預設。
+  - 「上限」雲壓在紅日後面：V8HeroComposition 新增 `sunUnderContent`（與紅日同位置、同 z-index、在紅日之前，
+    跟著 Float 浮動），/v8test 把上限雲放這層。/v8 不變。
 
 ---
 

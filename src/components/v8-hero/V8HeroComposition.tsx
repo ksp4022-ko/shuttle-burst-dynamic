@@ -43,6 +43,10 @@ type V8HeroCompositionProps = {
   // positioned -- moving the sun carries this content with it. Replaces the
   // Opening's title/CTA in that same on-canvas spot once confirmed.
   sunContent?: ReactNode | undefined;
+  // Same box/motion as sunContent but painted UNDER the sun disc (a sibling
+  // layer before it, same z-index) -- sunContent can't go behind the disc
+  // it lives inside. V8TEST: the 上限 cloud badge.
+  sunUnderContent?: ReactNode | undefined;
   // Active-only status plaques (已報/尚缺/候補) + their shared rope,
   // rendered directly into the hero canvas's own positioned box (see
   // V8ActiveInfoCards) so their %-based x/y controls share the same
@@ -421,6 +425,7 @@ export function V8HeroComposition({
   controlOverrides,
   scrollContent,
   sunContent,
+  sunUnderContent,
   infoCardsContent,
   rosterListsContent,
   extraPreloadSrcs,
@@ -537,6 +542,40 @@ export function V8HeroComposition({
             <div style={paperStyle} />
             <DecorLayer fetchPriority={decorPriority} src={assets.frontFoam} x={controls.frontFoamX} y={controls.frontFoamY} scale={controls.frontFoamScale} rotation={controls.frontFoamRotation} opacity={controls.frontFoamOpacity} blur={decorBlur(controls.frontFoamBlur)} zIndex={2} driftClassName="v8-wave-drift-front" />
             <DecorLayer fetchPriority={decorPriority} src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
+            {sunUnderContent ? (
+              <div
+                style={
+                  {
+                    position: "absolute",
+                    aspectRatio: "1",
+                    left: `${controls.sunX}%`,
+                    top: `${controls.sunY}%`,
+                    width: `${52 * controls.sunScale}%`,
+                    zIndex: controls.sunZIndex,
+                  } as CSSProperties
+                }
+              >
+                <div
+                  className={[
+                    "v8-sun-motion-float-layer",
+                    controls.sunMotionFloatEnabled ? "v8-sun-motion-float-active" : "",
+                    controls.sunMotionPaused ? "v8-sun-motion-paused" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  style={
+                    {
+                      position: "absolute",
+                      inset: 0,
+                      "--v8-sun-float-duration": `${controls.sunMotionFloatDurationSec}s`,
+                      "--v8-sun-float-distance": `${controls.sunMotionFloatDistancePx}px`,
+                    } as CSSProperties
+                  }
+                >
+                  {sunUnderContent}
+                </div>
+              </div>
+            ) : null}
             <div
               data-v8-sun=""
               style={

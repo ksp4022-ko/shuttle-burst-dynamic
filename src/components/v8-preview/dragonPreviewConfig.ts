@@ -16,7 +16,7 @@ import type {
   V8ActiveSwitchArrowsControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
-import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
+import { isV8TestRoute, readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 
 export type PreviewControls = {
   dragonShow: boolean;
@@ -882,7 +882,7 @@ export const buildPreviewAssets = (baseUrl: string) => {
   };
 };
 
-export const previewDefaults: PreviewControls = {
+const productionPreviewDefaults: PreviewControls = {
   dragonShow: true,
   dragonX: 72,
   dragonY: 4,
@@ -1506,6 +1506,35 @@ export const previewDefaults: PreviewControls = {
   activeSwitchArrowNextOpacity: 100,
   activeSwitchArrowNextZIndex: 8,
 };
+// V8TEST cloud badges v2 (user-tuned on real iPhone 2026-10-03): the new
+// art (v8TestCloudBadgeFiles) needs its own positions, so /v8test starts
+// from these; /v8 keeps productionPreviewDefaults. Saves stay sparse
+// against whichever set the current route uses.
+const v8TestCloudBadgeDefaults: Partial<PreviewControls> = {
+  activeSunBadgeBallTypeX: 124,
+  activeSunBadgeBallTypeY: 51,
+  activeSunBadgeBallTypeScale: 1.55,
+  activeSunBadgeBallTypeTextOffsetX: -2,
+  activeSunBadgeBallTypeTextOffsetY: 4,
+  activeSunBadgeTempFeeX: -29,
+  activeSunBadgeTempFeeY: 97,
+  activeSunBadgeTempFeeTextOffsetX: -3,
+  activeSunBadgeCourtCountX: 90,
+  activeSunBadgeCourtCountY: 82,
+  activeSunBadgeCourtCountTextOffsetX: 0,
+  activeSunBadgeCourtCountTextOffsetY: 3,
+  activeSunBadgeCapacityX: -55,
+  activeSunBadgeCapacityY: 61,
+  activeSunBadgeCapacityZIndex: 0,
+  activeSunBadgeCapacityTextOffsetX: 1,
+  activeSunBadgeCapacityTextOffsetY: 3,
+  activeSunBadgeCapacityShadowX: 0,
+  activeSunBadgeCapacityShadowY: 5,
+};
+
+export const previewDefaults: PreviewControls = isV8TestRoute()
+  ? { ...productionPreviewDefaults, ...v8TestCloudBadgeDefaults }
+  : productionPreviewDefaults;
 
 
 
