@@ -187,6 +187,19 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## V8TEST-VIEW-TRANSITION-HIDDEN（紅框：View transition was skipped）
+
+Status: V8TEST DEPLOYED / VERIFY
+
+- user 2026-10-03 real iPhone（/v8test，4G）：紅框 `rejection: View transition was skipped because document visibility state is hidden`。
+- 原因：OPEN → ACTIVE 自動進場時頁面剛好在背景（切 App/分頁），Safari 跳過 view transition 並讓 `transition.ready` reject；
+  程式沒接 `ready` → 未處理的 rejection。ACTIVE 仍正常掛上（update callback 照跑），只是多一個錯誤。
+- /v8 也有同樣的未處理 rejection，但正式版沒有紅框，使用者看不到、功能不受影響。
+- 修正（/v8test only）：`transition.ready?.catch(() => {})`。
+- 本機模擬（假造被跳過的 transition）：/v8test 無 rejection、ACTIVE 正常；/v8 仍有 rejection（未改）。
+
+---
+
 ## V8TEST-SUN-SWIPE-MOTION（紅日跟手滑動切換聚會）
 
 Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）

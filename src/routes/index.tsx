@@ -43,7 +43,7 @@ import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8Intro
 import { V8OpenIntro, V8OpenIntroBoundary } from "@/components/v8-hero/V8OpenIntro";
 import { V8LoadingCover } from "@/components/v8-active/V8LoadingCover";
 import { V8TestBadge } from "@/components/v8-active/V8TestBadge";
-import { v8RouteFamilyOfBrowserPath, v8RouteFamilyOfRouterPath, v8SessionKeyPrefix } from "@/lib/v8-route-family";
+import { isV8TestRoute, v8RouteFamilyOfBrowserPath, v8RouteFamilyOfRouterPath, v8SessionKeyPrefix } from "@/lib/v8-route-family";
 import { v8IntroConfig } from "@/components/v8-active/v8IntroConfig";
 import {
   HomepageToast,
@@ -1273,7 +1273,7 @@ export function Index() {
           if (!reducedMotion) setV8Entering(true);
         };
         const doc = document as Document & {
-          startViewTransition?: (update: () => void) => { finished: Promise<void>; skipTransition?: () => void };
+          startViewTransition?: (update: () => void) => { finished: Promise<void>; ready?: Promise<void>; skipTransition?: () => void };
         };
         if (reducedMotion || typeof doc.startViewTransition !== "function") {
           confirm();
@@ -1291,6 +1291,11 @@ export function Index() {
           html.classList.add("v8-morphing");
           const transition = doc.startViewTransition!(() => flushSync(confirm));
           v8ViewTransitionRef.current = transition;
+          // V8TEST: when the page is hidden at this moment (app/tab switched
+          // during auto-enter), Safari skips the transition and rejects
+          // `ready`; ACTIVE still mounts via the update callback, so the
+          // rejection is expected -- observe it instead of leaving it unhandled.
+          if (isV8TestRoute()) transition.ready?.catch(() => {});
           void transition.finished.finally(() => {
             html.classList.remove("v8-morphing", "v8-morph-launch");
             v8ViewTransitionRef.current = null;
