@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 import type {
   V8ActiveEmaTextControls,
   V8ActiveEmaTextsControls,
@@ -203,10 +202,11 @@ const FLIP_IN_MS = 420;
 // 尚缺 and 候補. 候補's source art has a different transparent visual center;
 // this inner-only compensation preserves the old tuned visual center without
 // restoring separate outer placement controls.
-// V8TEST (2026-10-03): 6.67% left 候補 ~5.5px left of 尚缺 on a 393px phone.
-// The plaque bboxes inside the 460px art are x 166-404 (尚缺) and 116-354
-// (候補): centers 62.0% vs 51.1%, so 10.9% lines 候補 up exactly on 尚缺.
-const WAITLIST_ALT_SLOT_CONTENT_TRANSFORM = isV8TestRoute() ? "translateX(10.9%)" : "translateX(6.67%)";
+// 2026-10-03 (/v8test first, all routes since Cfm): 6.67% left 候補 ~5.5px
+// left of 尚缺 on a 393px phone. The plaque bboxes inside the 460px art are
+// x 166-404 (尚缺) and 116-354 (候補): centers 62.0% vs 51.1%, so 10.9%
+// lines 候補 up exactly on 尚缺.
+const WAITLIST_ALT_SLOT_CONTENT_TRANSFORM = "translateX(10.9%)";
 
 function V8FlipCount({ value }: { value: number }) {
   const [shown, setShown] = useState(value);
