@@ -187,6 +187,19 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## V8TEST-LIST-HINTS（名單：備取空白顯示、還有更多提示）
+
+Status: V8TEST DEPLOYED / VERIFY（等 real iPhone；user 想一起上 /v8，先 /v8test 確認）
+
+- user 2026-10-03 real iPhone 截圖：
+  1. 備取名單沒人時顯示「目前沒有人候補」→ 改成跟季打請假一樣只顯示「─」。
+  2. 正取名單名字超出可視範圍時，沒有提示下面還有 → 名單底部加「還有 N 位 ▼」小標籤（箭頭輕微上下動），
+     點它往下捲約 0.7 個高度；捲到底自動消失。N = 大半行落在底部淡出區以下的名字數。
+- 只在 /v8test；/v8 不變（本機確認 /v8 仍顯示「目前沒有人候補」、沒有提示）。
+- 本機 WebKit /v8test：正取 14 人 → 「還有 6 位 ▼」，點後捲到底、標籤消失；備取顯示「─」；無錯誤。
+
+---
+
 ## V8TEST-HELPER-DIALOG-V2（代報/代退彈窗動態，item 1–4）
 
 Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）

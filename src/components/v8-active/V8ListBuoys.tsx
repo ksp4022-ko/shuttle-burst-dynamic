@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { v8ActiveListBuoyFiles, type V8ActiveListBuoyLayerControls, type V8ActiveListBuoysControls } from "./v8ActiveConfig";
 import type { V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { useV8PageLock } from "./useV8PageLock";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // LIST-BUOYS (名單浮標): the three rosters live in a panel that rises from a
 // wave band at the bottom of the screen instead of sitting in the canvas.
@@ -84,6 +85,22 @@ export function V8ListBuoys({
   const headerAnimations = useRef<Animation[]>([]);
   const timers = useRef<number[]>([]);
   const idleTimer = useRef<number | undefined>(undefined);
+  // V8TEST: "還有 N 位 ▼" under a list whose names run past the visible area.
+  const moreHintEnabled = isV8TestRoute();
+  const areaRefs = useRef<Record<ListKey, HTMLDivElement | null>>({ leave: null, main: null, wait: null });
+  const [moreBelow, setMoreBelow] = useState<Record<ListKey, number>>({ leave: 0, main: 0, wait: 0 });
+  const measureMore = useCallback((key: ListKey) => {
+    const area = areaRefs.current[key];
+    if (!area) return;
+    // Names are counted as hidden once most of the line sits under the
+    // bottom fade (the area's own mask fades its last ~9%).
+    const visibleBottom = area.scrollTop + area.clientHeight * 0.9;
+    let hidden = 0;
+    area.querySelectorAll<HTMLElement>("li").forEach((li) => {
+      if (li.offsetTop + li.offsetHeight * 0.6 > visibleBottom) hidden += 1;
+    });
+    setMoreBelow((current) => (current[key] === hidden ? current : { ...current, [key]: hidden }));
+  }, []);
 
   // The panel art (the largest file here, ~450KB) is not fetched on mount:
   // it loads a few seconds after Active settles, or as soon as a header is
@@ -227,6 +244,18 @@ export function V8ListBuoys({
 
   const keepOpen = () => setIdleKey((key) => key + 1);
 
+  useEffect(() => {
+    if (!moreHintEnabled || phase === "collapsed") return;
+    LIST_ORDER.forEach(measureMore);
+  }, [moreHintEnabled, phase, panelArt, leave, confirmed, waiting, measureMore]);
+
+  const scrollMore = (key: ListKey) => {
+    const area = areaRefs.current[key];
+    if (!area) return;
+    keepOpen();
+    area.scrollBy({ top: area.clientHeight * 0.7, behavior: "smooth" });
+  };
+
   const panelOpen = phase !== "collapsed";
   // A cached panel image can be complete before React sees its load event.
   useLayoutEffect(() => {
@@ -335,15 +364,26 @@ export function V8ListBuoys({
                 return (
                   <div key={key} className="v8-list-area-wrap" style={areaStyle}>
                     <div
+                      ref={(el) => {
+                        areaRefs.current[key] = el;
+                      }}
                       className="v8-list-area"
                       style={textStyle}
-                      onScroll={keepOpen}
+                      onScroll={() => {
+                        keepOpen();
+                        if (moreHintEnabled) measureMore(key);
+                      }}
                       onPointerDown={keepOpen}
                       onTouchStart={keepOpen}
                     >
                       <V8ListNames listKey={key} people={lists[key]} ownSignupId={ownSignupId} />
                     </div>
                     {flashList === key ? <span className="v8-list-flash" aria-hidden="true" /> : null}
+                    {moreHintEnabled && moreBelow[key] > 0 ? (
+                      <button type="button" className="v8-list-more" onClick={() => scrollMore(key)} aria-label={`還有 ${moreBelow[key]} 位，往下看`}>
+                        還有 {moreBelow[key]} 位 <span aria-hidden="true">▼</span>
+                      </button>
+                    ) : null}
                   </div>
                 );
               })}
@@ -358,7 +398,8 @@ export function V8ListBuoys({
 
 function V8ListNames({ listKey, people, ownSignupId }: { listKey: ListKey; people: V8ActiveRosterPerson[]; ownSignupId: string | null }) {
   if (!people.length) {
-    return <p className="v8-list-empty">{listKey === "wait" ? "目前沒有人候補" : "─"}</p>;
+    // V8TEST: 備取 empty shows the same plain dash as the other lists.
+    return <p className="v8-list-empty">{listKey === "wait" && !isV8TestRoute() ? "目前沒有人候補" : "─"}</p>;
   }
   const item = (person: V8ActiveRosterPerson, index: number, numbered: boolean) => (
     <li key={person.id} className={person.id === ownSignupId ? "is-self" : undefined}>
@@ -545,6 +586,45 @@ function V8ListBuoysStyles() {
         opacity: 0.8;
       }
 
+      /* V8TEST: "還有 N 位 ▼" pill at the bottom of an overflowing list. */
+      .v8-list-more {
+        position: absolute;
+        left: 50%;
+        bottom: 1%;
+        z-index: 2;
+        transform: translateX(-50%);
+        padding: 2px 10px;
+        border: 1px solid rgba(90, 47, 14, 0.35);
+        border-radius: 999px;
+        background: rgba(255, 246, 224, 0.94);
+        color: #5a2f0e;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.5;
+        white-space: nowrap;
+        box-shadow: 0 2px 6px rgba(60, 30, 8, 0.18);
+        pointer-events: auto;
+        animation: v8-list-more-in 260ms ease-out both;
+      }
+
+      .v8-list-more span {
+        display: inline-block;
+        animation: v8-list-more-nudge 1.4s ease-in-out infinite;
+      }
+
+      @keyframes v8-list-more-in {
+        from { opacity: 0; transform: translate(-50%, 6px); }
+      }
+
+      @keyframes v8-list-more-nudge {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(2px); }
+      }
+
+      .v8-list-panel-inner.is-art-pending .v8-list-more {
+        visibility: hidden;
+      }
+
       .v8-list-flash {
         position: absolute;
         inset: -3%;
@@ -584,6 +664,7 @@ function V8ListBuoysStyles() {
         .v8-list-header img.is-bobbing { animation: none; }
         .v8-list-panel-inner.is-expanding { animation: v8-list-fade-in 240ms ease-out both; }
         .v8-list-panel-inner.is-collapsing { animation: v8-list-fade-out 240ms ease-in both; }
+        .v8-list-more, .v8-list-more span { animation: none; }
       }
     `}</style>
   );
