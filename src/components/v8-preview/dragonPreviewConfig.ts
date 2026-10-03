@@ -16,7 +16,7 @@ import type {
   V8ActiveSwitchArrowsControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
-import { isV8TestRoute, readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
+import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 
 export type PreviewControls = {
   dragonShow: boolean;
@@ -882,7 +882,7 @@ export const buildPreviewAssets = (baseUrl: string) => {
   };
 };
 
-const productionPreviewDefaults: PreviewControls = {
+export const previewDefaults: PreviewControls = {
   dragonShow: true,
   dragonX: 72,
   dragonY: 4,
@@ -1192,27 +1192,28 @@ const productionPreviewDefaults: PreviewControls = {
   activeInfoWaitlistTextAlign: "center",
   activeInfoWaitlistTextFontWeight: 800,
   activeBackgroundFade: 61,
-  // Matches v8ActiveSunBadgesDefaults in v8ActiveConfig.ts exactly.
+  // Matches v8ActiveSunBadgesDefaults in v8ActiveConfig.ts exactly. Cloud
+  // badge v2 positions: user-tuned on real iPhone 2026-10-03.
   activeSunBadgeBallTypeShow: true,
-  activeSunBadgeBallTypeX: 127,
-  activeSunBadgeBallTypeY: 26,
-  activeSunBadgeBallTypeScale: 1.53,
+  activeSunBadgeBallTypeX: 124,
+  activeSunBadgeBallTypeY: 51,
+  activeSunBadgeBallTypeScale: 1.55,
   activeSunBadgeBallTypeRotation: 0,
   activeSunBadgeBallTypeFontSize: 11,
-  activeSunBadgeBallTypeTextOffsetX: -5,
-  activeSunBadgeBallTypeTextOffsetY: 3,
+  activeSunBadgeBallTypeTextOffsetX: -2,
+  activeSunBadgeBallTypeTextOffsetY: 4,
   activeSunBadgeBallTypeShadowX: 15,
   activeSunBadgeBallTypeShadowY: 4,
   activeSunBadgeBallTypeShadowScale: 1,
   activeSunBadgeBallTypeShadowOpacity: 42,
   activeSunBadgeBallTypeShadowBlur: 5,
   activeSunBadgeTempFeeShow: true,
-  activeSunBadgeTempFeeX: -9,
-  activeSunBadgeTempFeeY: 92,
+  activeSunBadgeTempFeeX: -29,
+  activeSunBadgeTempFeeY: 97,
   activeSunBadgeTempFeeScale: 1.59,
   activeSunBadgeTempFeeRotation: -1,
   activeSunBadgeTempFeeFontSize: 12,
-  activeSunBadgeTempFeeTextOffsetX: -6,
+  activeSunBadgeTempFeeTextOffsetX: -3,
   activeSunBadgeTempFeeTextOffsetY: 4,
   activeSunBadgeTempFeeShadowX: 0,
   activeSunBadgeTempFeeShadowY: 4,
@@ -1220,13 +1221,13 @@ const productionPreviewDefaults: PreviewControls = {
   activeSunBadgeTempFeeShadowOpacity: 29,
   activeSunBadgeTempFeeShadowBlur: 6,
   activeSunBadgeCourtCountShow: true,
-  activeSunBadgeCourtCountX: 94,
-  activeSunBadgeCourtCountY: 70,
+  activeSunBadgeCourtCountX: 90,
+  activeSunBadgeCourtCountY: 82,
   activeSunBadgeCourtCountScale: 1.5,
   activeSunBadgeCourtCountRotation: 0,
   activeSunBadgeCourtCountFontSize: 12,
-  activeSunBadgeCourtCountTextOffsetX: -2,
-  activeSunBadgeCourtCountTextOffsetY: 2,
+  activeSunBadgeCourtCountTextOffsetX: 0,
+  activeSunBadgeCourtCountTextOffsetY: 3,
   activeSunBadgeCourtCountShadowX: 0,
   activeSunBadgeCourtCountShadowY: 12,
   activeSunBadgeCourtCountShadowScale: 1,
@@ -1323,17 +1324,17 @@ const productionPreviewDefaults: PreviewControls = {
   // guess, adjust visually via the console (per-badge X/Y are top-left
   // corner, same convention as the other three).
   activeSunBadgeCapacityShow: true,
-  activeSunBadgeCapacityX: -63,
-  activeSunBadgeCapacityY: 58,
+  activeSunBadgeCapacityX: -55,
+  activeSunBadgeCapacityY: 61,
   activeSunBadgeCapacityScale: 1.57,
   activeSunBadgeCapacityRotation: 0,
   activeSunBadgeCapacityOpacity: 95,
-  activeSunBadgeCapacityZIndex: 2,
+  activeSunBadgeCapacityZIndex: 0,
   activeSunBadgeCapacityFontSize: 12,
-  activeSunBadgeCapacityTextOffsetX: -3,
-  activeSunBadgeCapacityTextOffsetY: -2,
-  activeSunBadgeCapacityShadowX: -10,
-  activeSunBadgeCapacityShadowY: -3,
+  activeSunBadgeCapacityTextOffsetX: 1,
+  activeSunBadgeCapacityTextOffsetY: 3,
+  activeSunBadgeCapacityShadowX: 0,
+  activeSunBadgeCapacityShadowY: 5,
   activeSunBadgeCapacityShadowScale: 1,
   activeSunBadgeCapacityShadowOpacity: 35,
   activeSunBadgeCapacityShadowBlur: 6,
@@ -1506,35 +1507,6 @@ const productionPreviewDefaults: PreviewControls = {
   activeSwitchArrowNextOpacity: 100,
   activeSwitchArrowNextZIndex: 8,
 };
-// V8TEST cloud badges v2 (user-tuned on real iPhone 2026-10-03): the new
-// art (v8TestCloudBadgeFiles) needs its own positions, so /v8test starts
-// from these; /v8 keeps productionPreviewDefaults. Saves stay sparse
-// against whichever set the current route uses.
-const v8TestCloudBadgeDefaults: Partial<PreviewControls> = {
-  activeSunBadgeBallTypeX: 124,
-  activeSunBadgeBallTypeY: 51,
-  activeSunBadgeBallTypeScale: 1.55,
-  activeSunBadgeBallTypeTextOffsetX: -2,
-  activeSunBadgeBallTypeTextOffsetY: 4,
-  activeSunBadgeTempFeeX: -29,
-  activeSunBadgeTempFeeY: 97,
-  activeSunBadgeTempFeeTextOffsetX: -3,
-  activeSunBadgeCourtCountX: 90,
-  activeSunBadgeCourtCountY: 82,
-  activeSunBadgeCourtCountTextOffsetX: 0,
-  activeSunBadgeCourtCountTextOffsetY: 3,
-  activeSunBadgeCapacityX: -55,
-  activeSunBadgeCapacityY: 61,
-  activeSunBadgeCapacityZIndex: 0,
-  activeSunBadgeCapacityTextOffsetX: 1,
-  activeSunBadgeCapacityTextOffsetY: 3,
-  activeSunBadgeCapacityShadowX: 0,
-  activeSunBadgeCapacityShadowY: 5,
-};
-
-export const previewDefaults: PreviewControls = isV8TestRoute()
-  ? { ...productionPreviewDefaults, ...v8TestCloudBadgeDefaults }
-  : productionPreviewDefaults;
 
 
 
@@ -1659,13 +1631,26 @@ function markPreviewControlsMigration(name: string) {
   }
 }
 
+// 2026-10-03: the four sun cloud badges got new (flatter) art, so values
+// tuned for the old art no longer fit -- drop every saved activeSunBadge*
+// key once so each device picks up the new user-tuned defaults.
+const CLOUD_BADGE_V2_MIGRATION = "activeSunBadgeCloudV2";
+
 function migrateSavedControls(saved: Partial<PreviewControls>) {
-  if (hasPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION)) return saved;
+  const pending = [STATUS_MARK_POSITION_MIGRATION, CLOUD_BADGE_V2_MIGRATION].filter((name) => !hasPreviewControlsMigration(name));
+  if (pending.length === 0) return saved;
   const migrated = { ...saved };
-  for (const key of STALE_SAVED_CONTROL_KEYS) {
-    delete migrated[key];
+  if (pending.includes(STATUS_MARK_POSITION_MIGRATION)) {
+    for (const key of STALE_SAVED_CONTROL_KEYS) {
+      delete migrated[key];
+    }
   }
-  markPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION);
+  if (pending.includes(CLOUD_BADGE_V2_MIGRATION)) {
+    for (const key of Object.keys(migrated)) {
+      if (key.startsWith("activeSunBadge")) delete (migrated as Record<string, unknown>)[key];
+    }
+  }
+  for (const name of pending) markPreviewControlsMigration(name);
   try {
     window.localStorage.setItem(v8ScopedStorageKey(PREVIEW_CONTROLS_STORAGE_KEY), JSON.stringify(migrated));
   } catch {
@@ -1679,6 +1664,7 @@ export function loadSavedControls(): PreviewControls {
     const raw = readV8ScopedStorage(PREVIEW_CONTROLS_STORAGE_KEY);
     if (!raw) {
       markPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION);
+      markPreviewControlsMigration(CLOUD_BADGE_V2_MIGRATION);
       return previewDefaults;
     }
     const saved = JSON.parse(raw) as Partial<PreviewControls>;

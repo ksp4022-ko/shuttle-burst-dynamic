@@ -89,7 +89,6 @@ import { V8SunDateStretchText } from "./V8SunDateStretchText";
 import { type V8CtaGlowOutlineKey } from "./v8CtaGlowOutlines";
 import { V8CtaGlowOutline } from "./V8CtaGlowOutline";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "./v8MeetupDisplay";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
@@ -502,9 +501,6 @@ export function V8ActivePage({
   const sunMessageControls = buildV8ActiveSunMessagesControls(tuningControls);
   const identityCardControls = buildV8ActiveIdentityCardControls(tuningControls);
   const capacityBadgeControls = buildV8ActiveCapacityBadgeControls(tuningControls);
-  // V8TEST: the 上限 cloud sits behind the red sun (user 2026-10-03), so it
-  // renders in the hero's under-sun layer instead of inside sunContent.
-  const capacityUnderSun = isV8TestRoute();
   const ropeOrnamentControls = buildV8ActiveRopeOrnamentsControls(tuningControls);
   const rosterV2Controls = buildV8ActiveRosterV2Controls(tuningControls);
   const switchArrowControls = buildV8ActiveSwitchArrowsControls(tuningControls);
@@ -662,7 +658,6 @@ export function V8ActivePage({
             hours={displayEvent.hours}
             ballType={displayEvent.ballType}
             tempFee={displayEvent.tempFee}
-            capacity={capacityUnderSun ? undefined : displayEvent.maxPeople}
             badgeControls={sunBadgeControls}
             capacityBadgeControls={capacityBadgeControls}
             messageControls={sunMessageControls}
@@ -671,8 +666,10 @@ export function V8ActivePage({
             onNextEvent={canSwitchMeetup ? () => switchToAdjacentMeetup(1) : undefined}
           />
         }
+        // 上限 cloud sits behind the red sun (user 2026-10-03), so it renders
+        // in the hero's under-sun layer instead of inside sunContent.
         sunUnderContent={
-          capacityUnderSun && typeof displayEvent.maxPeople === "number" ? (
+          typeof displayEvent.maxPeople === "number" ? (
             <V8CapacityBadge src={assets.sunBadgeCapacity} label={`${displayEvent.maxPeople}人`} controls={capacityBadgeControls} />
           ) : undefined
         }
@@ -1028,22 +1025,12 @@ export function V8ActivePage({
 // roughly the same relative shape but not identical, so each gets its own
 // inset instead of sharing one. Re-run the same scan if the artwork
 // changes rather than reusing these numbers.
-const BADGE_TEXT_INSETS = {
-  ballType: { top: "39%", bottom: "36%", left: "44%", right: "18%" },
-  tempFee: { top: "40%", bottom: "31%", left: "44%", right: "16%" },
-  courtCount: { top: "36%", bottom: "34%", left: "44%", right: "21%" },
-  // Rough estimate (not yet pixel-scanned like the other three) -- the
-  // capacity badge's own "上限" label + moon icon sit top-left, blank area
-  // fills the right/lower two-thirds. Adjust via the console's Text Offset
-  // X/Y if the number sits too close to the label or the wave border.
-  capacity: { top: "40%", bottom: "20%", left: "40%", right: "10%" },
-} as const;
-
-// V8TEST cloud badges v2 (v8TestCloudBadgeFiles): pixel-scanned 2026-10-03
+//
+// Cloud badges v2 (v8ActiveCloudBadgeV2Files): pixel-scanned 2026-10-03
 // -- largest blank cream rectangle right of the baked-in label, per badge,
 // shifted up ~10% to offset the shared Text Offset Y (+3/+4px) tuned for
 // v1. The v2 art is wider/flatter (~3:1) than v1 (~2:1).
-const BADGE_TEXT_INSETS_V8TEST = {
+const BADGE_TEXT_INSETS = {
   ballType: { top: "38%", bottom: "37%", left: "30%", right: "30%" },
   tempFee: { top: "36%", bottom: "39%", left: "44%", right: "22%" },
   courtCount: { top: "42%", bottom: "38%", left: "30%", right: "27%" },
@@ -1051,10 +1038,6 @@ const BADGE_TEXT_INSETS_V8TEST = {
 } as const;
 
 type BadgeTextInset = { top: string; bottom: string; left: string; right: string };
-
-function badgeTextInsets(): Record<keyof typeof BADGE_TEXT_INSETS, BadgeTextInset> {
-  return isV8TestRoute() ? BADGE_TEXT_INSETS_V8TEST : BADGE_TEXT_INSETS;
-}
 
 function V8SunInfoBadge({
   src,
@@ -1075,7 +1058,7 @@ function V8SunInfoBadge({
   dialOrder?: number;
 }) {
   return (
-    <span className={isV8TestRoute() ? "v8-sun-info-badge is-cloud-v2" : "v8-sun-info-badge"}>
+    <span className="v8-sun-info-badge">
       {shadowControls ? <span className="v8-sun-info-badge-shadow" style={sunBadgeShadowStyle(shadowControls)} /> : null}
       <img src={src} alt="" aria-hidden="true" draggable={false} />
       {/* textOffsetX/Y (px) is a free nudge on top of textInset's safe-area
@@ -1176,7 +1159,7 @@ function V8CapacityBadge({
       <V8SunInfoBadge
         src={src}
         label={label}
-        textInset={badgeTextInsets().capacity}
+        textInset={BADGE_TEXT_INSETS.capacity}
         dialOrder={2}
         shadowControls={controls}
         textOffsetX={controls.textOffsetX}
@@ -1650,7 +1633,7 @@ export function V8ActiveSunContent({
           label={ballType}
           controls={badgeControls.ballType}
           enter={{ from: "right", order: 0 }}
-          textInset={badgeTextInsets().ballType}
+          textInset={BADGE_TEXT_INSETS.ballType}
         />
       ) : null}
       <V8SunInfoBadgeScattered
@@ -1658,7 +1641,7 @@ export function V8ActiveSunContent({
         label={`$${Number(tempFee || 0)}`}
         controls={badgeControls.tempFee}
         enter={{ from: "left", order: 3 }}
-        textInset={badgeTextInsets().tempFee}
+        textInset={BADGE_TEXT_INSETS.tempFee}
       />
       {courtTimeLabel ? (
         <V8SunInfoBadgeScattered
@@ -1666,7 +1649,7 @@ export function V8ActiveSunContent({
           label={courtTimeLabel}
           controls={badgeControls.courtCount}
           enter={{ from: "right", order: 1 }}
-          textInset={badgeTextInsets().courtCount}
+          textInset={BADGE_TEXT_INSETS.courtCount}
         />
       ) : null}
       {typeof capacity === "number" ? (
@@ -2641,19 +2624,15 @@ export function V8ActiveStyles() {
         isolation: isolate;
       }
 
+      /* 100px (was 86): the v2 cloud art is ~3:1 (v1 ~2:1), drawn wider so
+         the cloud keeps roughly its old height around the value text. */
       .v8-sun-info-badge img {
         display: block;
-        width: 86px;
+        width: 100px;
         max-width: 100%;
         height: auto;
         position: relative;
         z-index: 1;
-      }
-
-      /* V8TEST cloud badges v2 are ~3:1 (v1 ~2:1): drawn wider so the
-         cloud keeps roughly its old height around the value text. */
-      .v8-sun-info-badge.is-cloud-v2 img {
-        width: 100px;
       }
 
       .v8-sun-info-badge em {

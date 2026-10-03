@@ -1,5 +1,4 @@
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // All visual elements here are image-file-driven (PNG/SVG/WEBP), never
 // CSS-drawn shapes -- per the redesign brief, badge art must stay swappable
@@ -152,12 +151,12 @@ export type V8CtaAssemblyControls = {
 // the component baseline and doesn't have Opacity/Z-index.
 export const v8ActiveCapacityBadgeFile = "v8-cloud-limit-display-450.webp";
 
-// V8TEST cloud badges v2 (2026-10-03, /v8test only until Cfm): the user's
+// Cloud badges v2 (2026-10-03; /v8test first, all routes since Cfm 2026-10-03): the user's
 // new wave-cloud art for all four (球種/費用/場時/上限), transparent margins
 // trimmed, 450px wide lossy+alpha (~22KB each; the 2172x724 PNGs were
 // 2.6-3.4MB). New filenames, so /v8's files and caches are untouched. The
-// text insets for these live in V8ActivePage.tsx (BADGE_TEXT_INSETS_V8TEST).
-export const v8TestCloudBadgeFiles = {
+// text insets for these live in V8ActivePage.tsx (BADGE_TEXT_INSETS).
+export const v8ActiveCloudBadgeV2Files = {
   ballType: "v8-cloud-shuttle-display-v2-450.webp",
   tempFee: "v8-cloud-fee-display-v2-450.webp",
   courtCount: "v8-cloud-court-time-display-v2-450.webp",
@@ -317,9 +316,7 @@ export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
   const statusAssetBase = `${baseUrl}v8-status-assets`;
-  const cloudBadges = isV8TestRoute()
-    ? v8TestCloudBadgeFiles
-    : { ...v8ActiveSunBadgeFiles, capacity: v8ActiveCapacityBadgeFile };
+  const cloudBadges = v8ActiveCloudBadgeV2Files;
   return {
     sunInfoBadge: `${activeBase}/${v8ActiveAssetFiles.sunInfoBadge}`,
     dragonSea: `${displayBase}/${v8ActiveBackgroundFiles.dragonSea}`,
@@ -596,9 +593,9 @@ export type V8ActiveSunBadgesControls = {
 // exactly (fontSize:11 matches .v8-sun-info-scattered's old fixed 11px) --
 // this refactor only makes them tunable, not a visual change by default.
 export const v8ActiveSunBadgesDefaults: V8ActiveSunBadgesControls = {
-  ballType: { show: true, x: 127, y: 26, scale: 1.53, rotation: 0, fontSize: 11, textOffsetX: -5, textOffsetY: 3, shadowX: 15, shadowY: 4, shadowScale: 1, shadowOpacity: 42, shadowBlur: 5 },
-  tempFee: { show: true, x: -9, y: 92, scale: 1.59, rotation: -1, fontSize: 12, textOffsetX: -6, textOffsetY: 4, shadowX: 0, shadowY: 4, shadowScale: 1.34, shadowOpacity: 29, shadowBlur: 6 },
-  courtCount: { show: true, x: 94, y: 70, scale: 1.5, rotation: 0, fontSize: 12, textOffsetX: -2, textOffsetY: 2, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
+  ballType: { show: true, x: 124, y: 51, scale: 1.55, rotation: 0, fontSize: 11, textOffsetX: -2, textOffsetY: 4, shadowX: 15, shadowY: 4, shadowScale: 1, shadowOpacity: 42, shadowBlur: 5 },
+  tempFee: { show: true, x: -29, y: 97, scale: 1.59, rotation: -1, fontSize: 12, textOffsetX: -3, textOffsetY: 4, shadowX: 0, shadowY: 4, shadowScale: 1.34, shadowOpacity: 29, shadowBlur: 6 },
+  courtCount: { show: true, x: 90, y: 82, scale: 1.5, rotation: 0, fontSize: 12, textOffsetX: 0, textOffsetY: 3, shadowX: 0, shadowY: 12, shadowScale: 1, shadowOpacity: 35, shadowBlur: 6 },
 };
 
 export const v8ActiveSunBadgesRanges: Record<

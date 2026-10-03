@@ -149,9 +149,9 @@ Status: CLOSED（user 2026-10-01：雲框已正常；未再重現，判定為一
 
 ---
 
-## V8TEST-CLOUD-BADGES-V2（新雲框 4 張，/v8test only）
+## V8TEST-CLOUD-BADGES-V2（新雲框 4 張）
 
-Status: CODE PASS / VERIFY（等 real iPhone，再 Cfm 才套用 /v8）
+Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
 
 - user 2026-10-03 提供新雲框 4 張（球種 / 費用 / 場時 / 上限），2172×724 PNG，各 2.6–3.4MB。
 - 優化：裁掉透明邊 → 450px 寬 WebP（有損 + alpha），各約 21–24KB（4 張共 89KB；舊 450 版 4 張 128KB）。
@@ -167,6 +167,9 @@ Status: CODE PASS / VERIFY（等 real iPhone，再 Cfm 才套用 /v8）
     `v8TestCloudBadgeDefaults`，/v8 仍用原預設。
   - 「上限」雲壓在紅日後面：V8HeroComposition 新增 `sunUnderContent`（與紅日同位置、同 z-index、在紅日之前，
     跟著 Float 浮動），/v8test 把上限雲放這層。/v8 不變。
+- Promotion（Cfm 2026-10-03）：所有 V8 路由都用 v2 雲框、100px、新 inset、新預設、上限雲在紅日後；
+  `isV8TestRoute` 分支全部移除。新增一次性 migration `activeSunBadgeCloudV2`：清掉各裝置已存的
+  activeSunBadge* 調整值（舊圖的數值不適用新圖），改用新預設。舊雲框檔案保留未刪。
 
 ---
 
