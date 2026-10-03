@@ -390,6 +390,15 @@ export const targetControlKeys: Record<PreviewTargetId, (keyof PreviewControls)[
     "activeRosterV2B2Opacity",
     "activeRosterV2B2ZIndex",
   ],
+  "ACTIVE ROSTER V2 B3": [
+    "activeRosterV2B3Show",
+    "activeRosterV2B3X",
+    "activeRosterV2B3Y",
+    "activeRosterV2B3Scale",
+    "activeRosterV2B3Rotation",
+    "activeRosterV2B3Opacity",
+    "activeRosterV2B3ZIndex",
+  ],
   "ACTIVE LIST WAVE BAND": [
     "activeListBuoyWaveX",
     "activeListBuoyWaveY",
@@ -604,6 +613,7 @@ export const targetVisibilityKeys: Partial<Record<PreviewTargetId, PreviewBoolea
   "ACTIVE ROSTER V2 A1": "activeRosterV2A1Show",
   "ACTIVE ROSTER V2 B1": "activeRosterV2B1Show",
   "ACTIVE ROSTER V2 B2": "activeRosterV2B2Show",
+  "ACTIVE ROSTER V2 B3": "activeRosterV2B3Show",
   "ACTIVE SWITCH ICON PREV V2": "activeSwitchArrowShow",
   "ACTIVE SWITCH ICON NEXT V2": "activeSwitchArrowShow",
   "OPEN SWITCH ICON PREV V2": "openSwitchArrowShow",
@@ -975,6 +985,12 @@ export const controlRanges = {
   activeRosterV2B2Rotation: { label: "三名單v2 B2 Rotation", min: -180, max: 180 },
   activeRosterV2B2Opacity: { label: "三名單v2 B2 Opacity", min: 0, max: 100 },
   activeRosterV2B2ZIndex: { label: "三名單v2 B2 Z-Index", min: 0, max: 40 },
+  activeRosterV2B3X: { label: "三名單v2 B3 X %", min: -20, max: 120 },
+  activeRosterV2B3Y: { label: "三名單v2 B3 Y %", min: -20, max: 150 },
+  activeRosterV2B3Scale: { label: "三名單v2 B3 Scale", min: 0.2, max: 3, step: 0.01 },
+  activeRosterV2B3Rotation: { label: "三名單v2 B3 Rotation", min: -180, max: 180 },
+  activeRosterV2B3Opacity: { label: "三名單v2 B3 Opacity", min: 0, max: 100 },
+  activeRosterV2B3ZIndex: { label: "三名單v2 B3 Z-Index", min: 0, max: 40 },
   activeListBuoyWaveX: { label: "海浪帶 X px", min: -120, max: 120 },
   activeListBuoyWaveY: { label: "海浪帶 Y px（往上為負）", min: -200, max: 120 },
   activeListBuoyWaveScale: { label: "海浪帶 Scale", min: 0.5, max: 2, step: 0.01 },
@@ -1731,6 +1747,7 @@ ACTIVE ROSTER V2 (三名單v2)
 A1: Show ${controls.activeRosterV2A1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2A1X)}, Y ${Math.round(controls.activeRosterV2A1Y)}, Scale ${controls.activeRosterV2A1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2A1Rotation)}, Opacity ${Math.round(controls.activeRosterV2A1Opacity)}, Z ${Math.round(controls.activeRosterV2A1ZIndex)}, Font ${Math.round(controls.activeRosterV2A1FontSize)}, Line Height ${controls.activeRosterV2A1LineHeight.toFixed(2)}, Text Color ${controls.activeRosterV2A1TextColor}, Font Family ${controls.activeRosterV2A1FontFamily || "(default)"}, Bold ${controls.activeRosterV2A1Bold ? "ON" : "OFF"}, 季打請假 Offset ${Math.round(controls.activeRosterV2A1LeaveX)}/${Math.round(controls.activeRosterV2A1LeaveY)}, 正取名單 Offset ${Math.round(controls.activeRosterV2A1ConfirmedX)}/${Math.round(controls.activeRosterV2A1ConfirmedY)}, 備取名單 Offset ${Math.round(controls.activeRosterV2A1WaitingX)}/${Math.round(controls.activeRosterV2A1WaitingY)}
 B1: Show ${controls.activeRosterV2B1Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B1X)}, Y ${Math.round(controls.activeRosterV2B1Y)}, Scale ${controls.activeRosterV2B1Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B1Rotation)}, Opacity ${Math.round(controls.activeRosterV2B1Opacity)}, Z ${Math.round(controls.activeRosterV2B1ZIndex)}
 B2: Show ${controls.activeRosterV2B2Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B2X)}, Y ${Math.round(controls.activeRosterV2B2Y)}, Scale ${controls.activeRosterV2B2Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B2Rotation)}, Opacity ${Math.round(controls.activeRosterV2B2Opacity)}, Z ${Math.round(controls.activeRosterV2B2ZIndex)}
+B3: Show ${controls.activeRosterV2B3Show ? "ON" : "OFF"}, X ${Math.round(controls.activeRosterV2B3X)}, Y ${Math.round(controls.activeRosterV2B3Y)}, Scale ${controls.activeRosterV2B3Scale.toFixed(2)}, Rotation ${Math.round(controls.activeRosterV2B3Rotation)}, Opacity ${Math.round(controls.activeRosterV2B3Opacity)}, Z ${Math.round(controls.activeRosterV2B3ZIndex)}
 
 ACTIVE LIST BUOYS (名單浮標)
 Wave Band: X ${Math.round(controls.activeListBuoyWaveX)}, Y ${Math.round(controls.activeListBuoyWaveY)}, Scale ${controls.activeListBuoyWaveScale.toFixed(2)}, Rotation ${Math.round(controls.activeListBuoyWaveRotation)}, Opacity ${Math.round(controls.activeListBuoyWaveOpacity)}, Z ${Math.round(controls.activeListBuoyWaveZIndex)}

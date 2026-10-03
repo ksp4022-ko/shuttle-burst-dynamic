@@ -254,6 +254,7 @@ export const v8ActiveRosterV2Files = {
   a1: "dragon-triple-list-v2-a1-v1.webp",
   b1: "dragon-triple-list-v2-b1-v1.webp",
   b2: "dragon-triple-list-v2-b2-v1.webp",
+  b3: "dragon-triple-list-v2-b3-v1.webp",
 } as const;
 
 // Meetup switch arrows (‹/›) -- replaces the old CSS-drawn circle+glyph
@@ -350,6 +351,7 @@ export function buildV8ActiveAssets(baseUrl: string) {
     rosterV2A1: `${activeBase}/${v8ActiveRosterV2Files.a1}`,
     rosterV2B1: `${activeBase}/${v8ActiveRosterV2Files.b1}`,
     rosterV2B2: `${activeBase}/${v8ActiveRosterV2Files.b2}`,
+    rosterV2B3: `${activeBase}/${v8ActiveRosterV2Files.b3}`,
     sunSwitchArrowPrev: `${statusAssetBase}/${v8OptimizedStatusAssetFiles.arrowPrev}`,
     sunSwitchArrowNext: `${statusAssetBase}/${v8OptimizedStatusAssetFiles.arrowNext}`,
     sunTitleKangxuan: `${statusAssetBase}/${v8OptimizedAssetFiles.sunTitleKangxuan}`,
@@ -816,7 +818,7 @@ export type V8ActiveRopeOrnamentsControls = {
 // 三名單v2 (roster panel v2 candidate) -- same shape as
 // V8ActiveRopeOrnamentControls (plain image layer: X/Y/Scale/Rotation/
 // Opacity/Z-index + own Show), reused under a new name for clarity at call
-// sites. Each of the 3 pieces (A1 panel + B1/B2 dragon ornaments) is
+// sites. Each piece (A1 panel + B1/B2/B3 dragon ornaments) is
 // independent.
 export type V8ActiveRosterV2LayerControls = V8ActiveRopeOrnamentControls;
 
@@ -842,6 +844,7 @@ export type V8ActiveRosterV2Controls = {
   a1: V8ActiveRosterV2A1Controls;
   b1: V8ActiveRosterV2LayerControls;
   b2: V8ActiveRosterV2LayerControls;
+  b3: V8ActiveRosterV2LayerControls;
 };
 
 // Meetup switch arrows (‹/›), added 2026-09-11 -- previously two fixed CSS

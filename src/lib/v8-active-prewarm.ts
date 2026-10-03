@@ -1,6 +1,7 @@
 import { buildV8ActiveAssets, v8ActiveListBuoyFiles } from "@/components/v8-active/v8ActiveConfig";
 import { buildV8HeroAssets } from "@/components/v8-hero/v8HeroConfig";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // P-021 v2 Step 2A (V8TEST): warm ACTIVE's art while OPEN is on screen.
 // Optimization only -- nothing waits on it and it gates nothing.
@@ -69,6 +70,7 @@ export function buildV8ActivePrewarmTiers(
     a.infoCardRegistered,
     a.infoCardNeeded,
     a.rosterV2B1,
+    isV8TestRoute() ? a.rosterV2B3 : null,
     buoy(v8ActiveListBuoyFiles.waveBand),
     buoy(v8ActiveListBuoyFiles.headerLeave),
     buoy(v8ActiveListBuoyFiles.headerMain),

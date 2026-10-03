@@ -187,6 +187,7 @@ function ActiveCanvas({
     rosterV2Controls.a1.show ? assets.rosterV2A1 : null,
     rosterV2Controls.b1.show ? assets.rosterV2B1 : null,
     rosterV2Controls.b2.show ? assets.rosterV2B2 : null,
+    rosterV2Controls.b3.show ? assets.rosterV2B3 : null,
   ].filter((src): src is string => Boolean(src));
 
   return (
