@@ -1,0 +1,10 @@
+{
+  "name": "V8 康軒報名",
+  "short_name": "V8 康軒報名",
+  "start_url": "/shuttle-burst-dynamic/v8test/kangxuan/",
+  "scope": "/shuttle-burst-dynamic/v8test/",
+  "display": "standalone",
+  "background_color": "#f4e8cf",
+  "theme_color": "#0b0f19",
+  "lang": "zh-Hant-TW"
+}

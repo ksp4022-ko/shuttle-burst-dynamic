@@ -187,6 +187,19 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## V8TEST-PWA-SETUP（主畫面 App：名稱、manifest、底部浪花）
+
+Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）；圖示等 user 補圖
+
+- user 2026-10-03：App 名稱「V8 康軒報名」、加入 manifest、圖示等 user 補圖；主畫面 App 底部浪花被往下拉（壓到 Home 條與螢幕圓角），修正不可影響網頁版。
+- `public/manifest-v8test.webmanifest`：name/short_name「V8 康軒報名」，start_url `/v8test/kangxuan/`，scope `/v8test/`，standalone。
+- `__root.tsx` 內嵌 script（只在 `/v8test`）：加 manifest link、apple-mobile-web-app-title/capable；從主畫面開啟時才加 `html.v8-standalone` 並在 viewport 補 `viewport-fit=cover`（讓 safe-area 有值）。Safari 分頁不受影響；/v8 完全不變。
+- `V8ListBuoys.tsx`：`.v8-standalone` 時浪花帶與名單面板 `bottom: env(safe-area-inset-bottom)`，下方空隙用同圖最底幾行拉長＋漸層到深藍補滿。
+- 瀏海（頂部黑條＋圓角）未改，等 user 決定。
+- 本機 WebKit：App 模式 class/viewport/manifest 正確、無錯誤；Safari 模式無 class、浪花 bottom 0；/v8 無 manifest、無變化；模擬 34px Home 條截圖接縫自然。
+
+---
+
 ## V8TEST-PWA-LINE-HANDOFF（主畫面 App 的 LINE 登入接回）
 
 Status: V8TEST real iPhone PASS（user 2026-10-03）→ 等 Cfm 上 /v8

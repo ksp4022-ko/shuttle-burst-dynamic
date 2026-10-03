@@ -285,6 +285,7 @@ export function V8ListBuoys({
           transform: layerTransform(wave),
           opacity: wave.opacity / 100,
           zIndex: wave.zIndex,
+          ["--v8-standalone-fill" as string]: `url("${assetBase}${getListBuoyFiles().waveBand}")`,
         }}
       >
         <img src={`${assetBase}${getListBuoyFiles().waveBand}`} alt="" aria-hidden="true" draggable={false} />
@@ -341,6 +342,7 @@ export function V8ListBuoys({
               transform: layerTransform(panel),
               opacity: panel.opacity / 100,
               zIndex: panel.zIndex,
+              ["--v8-standalone-fill" as string]: `url("${assetBase}${getListBuoyFiles().panel}")`,
             }}
           >
             <div className={`v8-list-panel-inner is-${phase}${holdNamesForArt ? ` is-art-${panelArt}` : ""}`}>
@@ -427,6 +429,32 @@ function V8ListBuoysStyles() {
         left: 50%;
         bottom: 0;
         aspect-ratio: ${PANEL_W} / ${WAVE_H};
+        pointer-events: none;
+      }
+
+      /* Home-screen app (V8TEST, html.v8-standalone, see __root): the page
+         reaches the physical bottom, so the band and panel sat under the
+         home indicator and the rounded screen corners. Lift them by the
+         safe area and fill the gap below with their own bottom edge
+         stretched, so it reads as one wave. Safari is untouched. */
+      .v8-standalone .v8-list-wave,
+      .v8-standalone .v8-list-panel {
+        bottom: env(safe-area-inset-bottom, 0px);
+      }
+
+      .v8-standalone .v8-list-wave::after,
+      .v8-standalone .v8-list-panel::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 100%;
+        height: env(safe-area-inset-bottom, 0px);
+        /* Only the art's last few rows, stretched down: a soft streak that
+           continues the blurred bottom edge, fading to deep sea. */
+        background:
+          linear-gradient(rgba(12, 36, 72, 0.15), rgba(12, 36, 72, 0.9)),
+          var(--v8-standalone-fill) center bottom / 100% 3000% no-repeat;
         pointer-events: none;
       }
 

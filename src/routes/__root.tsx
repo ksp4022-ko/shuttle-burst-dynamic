@@ -99,6 +99,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children:
           'try{if(location.pathname.indexOf("/v8")>-1)document.documentElement.classList.add("v8-boot")}catch(e){}',
       },
+      // V8TEST only: home-screen app setup. Links the /v8test manifest and
+      // the iOS app title; when launched from the home screen, marks
+      // html.v8-standalone and lets the page reach the screen edges
+      // (viewport-fit=cover) so env(safe-area-inset-*) report the home
+      // indicator. Safari tabs are untouched.
+      {
+        children:
+          'try{var P=location.pathname,I=P.indexOf("/v8test");if(I>-1){var H=document.head,A=function(t,o){var e=document.createElement(t);for(var k in o)e.setAttribute(k,o[k]);H.appendChild(e)};A("link",{rel:"manifest",href:P.slice(0,I)+"/manifest-v8test.webmanifest"});A("meta",{name:"apple-mobile-web-app-capable",content:"yes"});A("meta",{name:"mobile-web-app-capable",content:"yes"});A("meta",{name:"apple-mobile-web-app-title",content:"V8 康軒報名"});if(navigator.standalone===true||matchMedia("(display-mode: standalone)").matches){document.documentElement.classList.add("v8-standalone");var V=document.querySelector("meta[name=viewport]");if(V&&V.content.indexOf("viewport-fit")<0)V.content+=", viewport-fit=cover"}}}catch(e){}',
+      },
       // V8TEST only: show script errors and failed script/style loads on the
       // page itself, so a blank screen on a real iPhone names its cause.
       {
