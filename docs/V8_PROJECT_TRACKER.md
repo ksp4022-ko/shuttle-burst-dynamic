@@ -149,6 +149,22 @@ Status: CLOSED（user 2026-10-01：雲框已正常；未再重現，判定為一
 
 ---
 
+## V8TEST-CLOUD-BADGES-V2（新雲框 4 張，/v8test only）
+
+Status: CODE PASS / VERIFY（等 real iPhone，再 Cfm 才套用 /v8）
+
+- user 2026-10-03 提供新雲框 4 張（球種 / 費用 / 場時 / 上限），2172×724 PNG，各 2.6–3.4MB。
+- 優化：裁掉透明邊 → 450px 寬 WebP（有損 + alpha），各約 21–24KB（4 張共 89KB；舊 450 版 4 張 128KB）。
+  新檔名 `v8-cloud-*-display-v2-450.webp`，/v8 舊檔與快取不動。
+- 只在 /v8test（`isV8TestRoute()`）：
+  - `buildV8ActiveAssets` 換成 v2 檔（prewarm 用同一個 builder，自動跟著換）。
+  - 新圖較扁（~3:1，舊 ~2:1）→ 顯示寬 86 → 100px（`.is-cloud-v2`），文字 inset 重新以像素掃描空白區
+    （`BADGE_TEXT_INSETS_V8TEST`，往上移 ~10% 抵消既有 Text Offset Y +3/+4）。
+- /v8 不變（本機 build 確認 /v8 仍載入舊 450 版、尺寸相同）。
+- 已知：雲框變寬後「上限」雲蓋到紅日左側時間一點，位置可用 /v8test 調整台 X/Scale 微調。
+
+---
+
 ## V8-INTRO-VIDEO-V2（新影片 Intro，PAUSED）
 
 Status: PAUSED（user 2026-10-02：非必須，之後有空再試）

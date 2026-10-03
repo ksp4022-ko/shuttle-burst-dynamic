@@ -1,4 +1,5 @@
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // All visual elements here are image-file-driven (PNG/SVG/WEBP), never
 // CSS-drawn shapes -- per the redesign brief, badge art must stay swappable
@@ -150,6 +151,18 @@ export type V8CtaAssemblyControls = {
 // rather than folded into the older three's shared type, which predates
 // the component baseline and doesn't have Opacity/Z-index.
 export const v8ActiveCapacityBadgeFile = "v8-cloud-limit-display-450.webp";
+
+// V8TEST cloud badges v2 (2026-10-03, /v8test only until Cfm): the user's
+// new wave-cloud art for all four (球種/費用/場時/上限), transparent margins
+// trimmed, 450px wide lossy+alpha (~22KB each; the 2172x724 PNGs were
+// 2.6-3.4MB). New filenames, so /v8's files and caches are untouched. The
+// text insets for these live in V8ActivePage.tsx (BADGE_TEXT_INSETS_V8TEST).
+export const v8TestCloudBadgeFiles = {
+  ballType: "v8-cloud-shuttle-display-v2-450.webp",
+  tempFee: "v8-cloud-fee-display-v2-450.webp",
+  courtCount: "v8-cloud-court-time-display-v2-450.webp",
+  capacity: "v8-cloud-limit-display-v2-450.webp",
+} as const;
 
 // Three rope-hanging ornaments (注連繩 decoration) threaded along the
 // red/blue rope, below the 已報/尚缺/候補 ema plaques -- purely decorative,
@@ -304,6 +317,9 @@ export function buildV8ActiveAssets(baseUrl: string) {
   const activeBase = `${baseUrl}v8-preview/active`;
   const displayBase = `${baseUrl}v8-preview/display`;
   const statusAssetBase = `${baseUrl}v8-status-assets`;
+  const cloudBadges = isV8TestRoute()
+    ? v8TestCloudBadgeFiles
+    : { ...v8ActiveSunBadgeFiles, capacity: v8ActiveCapacityBadgeFile };
   return {
     sunInfoBadge: `${activeBase}/${v8ActiveAssetFiles.sunInfoBadge}`,
     dragonSea: `${displayBase}/${v8ActiveBackgroundFiles.dragonSea}`,
@@ -314,9 +330,9 @@ export function buildV8ActiveAssets(baseUrl: string) {
     infoCardNeeded: `${activeBase}/${v8OptimizedAssetFiles.infoCardNeeded}`,
     infoCardWaitlist: `${activeBase}/${v8OptimizedAssetFiles.infoCardWaitlist}`,
     infoRope: `${activeBase}/${v8ActiveInfoCardFiles.rope}`,
-    sunBadgeBallType: `${statusAssetBase}/${v8ActiveSunBadgeFiles.ballType}`,
-    sunBadgeTempFee: `${statusAssetBase}/${v8ActiveSunBadgeFiles.tempFee}`,
-    sunBadgeCourtCount: `${statusAssetBase}/${v8ActiveSunBadgeFiles.courtCount}`,
+    sunBadgeBallType: `${statusAssetBase}/${cloudBadges.ballType}`,
+    sunBadgeTempFee: `${statusAssetBase}/${cloudBadges.tempFee}`,
+    sunBadgeCourtCount: `${statusAssetBase}/${cloudBadges.courtCount}`,
     rosterFrame: `${activeBase}/${v8ActiveRosterFrameFile}`,
     statusStampConfirmed: `${activeBase}/${v8OptimizedStatusAssetFiles.stampConfirmed}`,
     statusStampWaiting: `${activeBase}/${v8OptimizedStatusAssetFiles.stampWaiting}`,
@@ -330,7 +346,7 @@ export function buildV8ActiveAssets(baseUrl: string) {
     ctaTempSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.tempSignup}`,
     ctaHelperSignup: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperSignup}`,
     ctaHelperCancel: `${activeBase}/${v8ActiveCtaPlaqueFiles.helperCancel}`,
-    sunBadgeCapacity: `${statusAssetBase}/${v8ActiveCapacityBadgeFile}`,
+    sunBadgeCapacity: `${statusAssetBase}/${cloudBadges.capacity}`,
     ropeOrnamentA: `${activeBase}/${v8OptimizedAssetFiles.ropeOrnamentA}`,
     ropeOrnamentB: `${activeBase}/${v8OptimizedAssetFiles.ropeOrnamentB}`,
     ropeOrnamentC: `${activeBase}/${v8ActiveRopeOrnamentFiles.c}`,
