@@ -61,11 +61,8 @@ import {
 } from "./v8ActiveConfig";
 import { V8CtaAssembly, V8CtaAssemblyStyles, type V8CtaAssemblyAssets } from "./V8CtaAssembly";
 import { V8SeasonAttendance } from "./V8SeasonAttendance";
-import { V8SeasonBillingDetails } from "./V8SeasonBilling";
 import { V8BillingTestPanel } from "./V8BillingTestPanel";
-import { isP12BillingTestEnabled } from "@/lib/v8-personal-billing";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
-import { useV8SeasonPayment } from "@/hooks/use-v8-season-payment";
 import type { V8SeasonProgress } from "@/lib/database-alpha";
 import {
   SunAutoFillErrorBoundary,
@@ -195,21 +192,8 @@ export function V8ActivePage({
     groupId: selectedEvent?.groupId,
     isFixed: isSeasonMemberForAttendance,
   });
-  // P-022 季費 (read-only). Verified on /v8test, promoted to /v8 on Cfm.
-  const seasonPayment = useV8SeasonPayment({
-    token: lineAuthToken,
-    eventId: selectedEvent?.id,
-    seasonId: selectedEvent?.seasonId,
-    groupId: selectedEvent?.groupId,
-    isFixed: isSeasonMemberForAttendance,
-    enabled: true,
-  });
   const [billOpen, setBillOpen] = useState(false);
-  const [p12BillingTest, setP12BillingTest] = useState(false);
-  useEffect(() => {
-    setP12BillingTest(isP12BillingTestEnabled());
-  }, []);
-  const p12BillingSiteId = configuredSiteId();
+  const billingSiteId = configuredSiteId();
   // A different meetup closes the bill (no stale payment on screen).
   useEffect(() => {
     setBillOpen(false);
@@ -613,15 +597,13 @@ export function V8ActivePage({
     >
       <V8ActiveStyles />
       <V8CtaAssemblyStyles />
-      {p12BillingTest ? (
-        <V8BillingTestPanel
-          open={billOpen}
-          onClose={() => setBillOpen(false)}
-          token={lineAuthToken}
-          siteId={p12BillingSiteId}
-          {...(selectedEventId ? { eventId: selectedEventId } : {})}
-        />
-      ) : null}
+      <V8BillingTestPanel
+        open={billOpen}
+        onClose={() => setBillOpen(false)}
+        token={lineAuthToken}
+        siteId={billingSiteId}
+        {...(selectedEventId ? { eventId: selectedEventId } : {})}
+      />
 
       <V8HeroComposition
         confirmed
@@ -689,7 +671,7 @@ export function V8ActivePage({
                 showHelper: tuningControls.activeSeasonAttendanceShowHelper,
                 isSeasonMember: isSeasonMemberForAttendance,
               }}
-              {...(p12BillingTest || seasonPayment ? { onBill: () => setBillOpen(true) } : {})}
+              onBill={() => setBillOpen(true)}
               identityEnvelope={identityEnvelope.config}
               onStatusFeedback={handleStatusFeedback}
               onPrimaryAction={handlePrimaryAction}
@@ -793,23 +775,6 @@ export function V8ActivePage({
           identical to the identity gate since the two are mutually
           exclusive (helperMode only ever opens once identity is already
           known, so they never need to layer on top of each other). */}
-      {/* P-022 帳單 (read-only): same blur-gate card as 代報/代退.
-          Only backend values; no payment or edit actions. */}
-      {!p12BillingTest && billOpen && seasonPayment ? (
-        <div className="v8-identity-gate">
-          <div className="v8-identity-gate-card v8-helper-card">
-            <V8HelperDialogWave />
-            <div className="v8-helper-content">
-              <p className="v8-helper-title">本季帳單</p>
-              <V8SeasonBillingDetails state={seasonPayment} />
-              <button type="button" className="v8-active-helper-cancel" onClick={() => setBillOpen(false)}>
-                關閉
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {helperMode ? (
         <div className="v8-identity-gate">
           <div className="v8-identity-gate-card v8-helper-card">
@@ -1975,9 +1940,8 @@ export function V8IdentityScrollContent({
   onForget: () => void;
   onHelperSignup: () => void;
   onHelperCancel: () => void;
-  // P-022 帳單 (季打 only): enables the assembly's 帳單 plaque. Omitted
-  // otherwise (temp / non-season event / preview), which keeps the greyed
-  // placeholder.
+  // Personal billing opens for every authenticated identity; the backend
+  // decides which guest and season records belong to the current session.
   onBill?: (() => void) | undefined;
 }) {
   // SCROLL-FEEDBACK stamp: when THIS signup's status changes (same signupId,

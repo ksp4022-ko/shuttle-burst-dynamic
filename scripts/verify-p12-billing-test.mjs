@@ -25,19 +25,17 @@ try {
   const apiSource = await readFile(path.join(root, "src/lib/database-alpha.ts"), "utf8");
   const routeSource = await readFile(path.join(root, "src/routes/index.tsx"), "utf8");
 
-  assert.equal(billingModule.isP12BillingTestEnabled(""), false);
-  assert.equal(billingModule.isP12BillingTestEnabled("?p12BillingTest=0"), false);
-  assert.equal(billingModule.isP12BillingTestEnabled("?p12BillingTest=1"), true);
-  assert.match(activeSource, /p12BillingTest\s*\?\s*\(\s*<V8BillingTestPanel/);
-  assert.match(activeSource, /const \[p12BillingTest, setP12BillingTest\] = useState\(false\)/);
-  assert.match(
-    activeSource,
-    /useEffect\(\(\) => \{\s*setP12BillingTest\(isP12BillingTestEnabled\(\)\);\s*\}, \[\]\)/,
-  );
-  assert.doesNotMatch(activeSource, /useMemo\(\(\) => isP12BillingTestEnabled\(\), \[\]\)/);
+  assert.doesNotMatch(activeSource, /p12BillingTest|setP12BillingTest/);
+  assert.doesNotMatch(activeSource, /isP12BillingTestEnabled/);
   assert.match(activeSource, /<V8BillingTestPanel\s+open=\{billOpen\}/);
-  assert.match(activeSource, /!p12BillingTest && billOpen && seasonPayment/);
-  assert.match(activeSource, /p12BillingTest \|\| seasonPayment/);
+  assert.equal((activeSource.match(/<V8BillingTestPanel\b/g) || []).length, 1);
+  assert.match(activeSource, /siteId=\{billingSiteId\}/);
+  assert.match(activeSource, /const billingSiteId = configuredSiteId\(\)/);
+  assert.match(activeSource, /onBill=\{\(\) => setBillOpen\(true\)\}/);
+  assert.doesNotMatch(activeSource, /V8SeasonBillingDetails/);
+  assert.doesNotMatch(activeSource, /useV8SeasonPayment/);
+  assert.doesNotMatch(activeSource, /seasonPayment/);
+  assert.doesNotMatch(activeSource, /本季帳單/);
   assert.match(panelSource, /enabled:\s*open/);
   assert.doesNotMatch(panelSource, /P12|TEST/);
   assert.doesNotMatch(panelSource, /p12-billing-entry/);
