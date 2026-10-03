@@ -23,13 +23,17 @@ try {
     "utf8",
   );
   const apiSource = await readFile(path.join(root, "src/lib/database-alpha.ts"), "utf8");
+  const routeSource = await readFile(path.join(root, "src/routes/index.tsx"), "utf8");
 
   assert.equal(billingModule.isP12BillingTestEnabled(""), false);
   assert.equal(billingModule.isP12BillingTestEnabled("?p12BillingTest=0"), false);
   assert.equal(billingModule.isP12BillingTestEnabled("?p12BillingTest=1"), true);
   assert.match(activeSource, /p12BillingTest\s*\?\s*\(\s*<V8BillingTestPanel/);
   assert.match(activeSource, /const \[p12BillingTest, setP12BillingTest\] = useState\(false\)/);
-  assert.match(activeSource, /useEffect\(\(\) => \{\s*setP12BillingTest\(isP12BillingTestEnabled\(\)\);\s*\}, \[\]\)/);
+  assert.match(
+    activeSource,
+    /useEffect\(\(\) => \{\s*setP12BillingTest\(isP12BillingTestEnabled\(\)\);\s*\}, \[\]\)/,
+  );
   assert.doesNotMatch(activeSource, /useMemo\(\(\) => isP12BillingTestEnabled\(\), \[\]\)/);
   assert.match(activeSource, /<V8BillingTestPanel\s+open=\{billOpen\}/);
   assert.match(activeSource, /!p12BillingTest && billOpen && seasonPayment/);
@@ -37,8 +41,42 @@ try {
   assert.match(panelSource, /enabled:\s*open/);
   assert.doesNotMatch(panelSource, /P12|TEST/);
   assert.doesNotMatch(panelSource, /p12-billing-entry/);
+  assert.match(routeSource, />\s*Intro\s*<\/button>/);
+  assert.doesNotMatch(routeSource, /Replay Intro/);
+  assert.match(panelSource, /document\.body\.classList\.add\("v8-billing-open"\)/);
+  assert.match(panelSource, /document\.body\.classList\.remove\("v8-billing-open"\)/);
+  assert.match(routeSource, /body\.v8-billing-open \.v8-intro-replay-button\s*\{\s*display: none;/);
+  assert.match(panelSource, /aria-label="關閉帳務"/);
+  assert.match(panelSource, /title="關閉帳務"/);
   assert.match(panelSource, /width: calc\(100% - 44px\); max-width: 346px/);
-  assert.match(panelSource, /\.p12-current-due \{[\s\S]*?display: flex;[\s\S]*?white-space: nowrap/);
+  assert.match(
+    panelSource,
+    /\.p12-current-due \{[\s\S]*?display: flex;[\s\S]*?white-space: nowrap/,
+  );
+  assert.match(panelSource, /overflow-y: auto; overflow-x: hidden/);
+  assert.match(
+    panelSource,
+    /grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\);\s*gap: 10px/,
+  );
+  assert.match(panelSource, /\.p12-header-close \{[\s\S]*?width: 44px; height: 44px/);
+  assert.match(
+    panelSource,
+    /\.p12-payment-heading, \.p12-payment-method > button \{[\s\S]*?min-height: 48px/,
+  );
+  assert.match(panelSource, /\.p12-method-detail a, \.p12-bank-copy \{[\s\S]*?min-height: 44px/);
+  assert.match(panelSource, /\.p12-bank-account \{[\s\S]*?white-space: nowrap/);
+  assert.match(panelSource, /navigator\.clipboard\?\.writeText/);
+  assert.match(panelSource, /document\.execCommand\("copy"\)/);
+  assert.match(panelSource, /String\(summary\.totalAmountDue\)/);
+  assert.doesNotMatch(panelSource, /複製金額/);
+  assert.doesNotMatch(panelSource, /method:\s*["'](?:POST|PUT|PATCH|DELETE)["']/i);
+  assert.doesNotMatch(panelSource, /activeSection === "guest" \? "收起" : "查看"/);
+  assert.doesNotMatch(panelSource, /activeSection === "season" \? "收起" : "查看"/);
+  assert.match(panelSource, /p12-chevron/);
+  assert.match(panelSource, /grid-template-rows: 0fr/);
+  assert.match(panelSource, /grid-template-rows: 1fr/);
+  assert.match(panelSource, /prefers-reduced-motion: reduce/);
+  assert.match(panelSource, /p12-row-in/);
   assert.match(apiSource, /fetchV8PersonalBilling[\s\S]*"\/me\/billing"/);
   assert.doesNotMatch(
     apiSource,
@@ -71,6 +109,11 @@ try {
   assert.match(panelVisibleText, /我的帳務/);
   assert.match(panelVisibleText, /康軒｜帳務紀錄/);
   assert.doesNotMatch(panelVisibleText, /P12|TEST/);
+  const headerVisibleText = panelOpenHtml
+    .match(/<header>([\s\S]*?)<\/header>/)?.[1]
+    ?.replace(/<[^>]+>/g, " ");
+  assert.doesNotMatch(headerVisibleText ?? "", /關閉/);
+  assert.match(panelOpenHtml, /aria-label="關閉帳務"/);
 
   const ownUnpaid = {
     paymentId: "temp-own",
@@ -256,18 +299,36 @@ try {
       onLoadMoreSeason: () => undefined,
     }),
   );
-  for (const expected of [
-    "目前應付",
-    "$2,310",
-    "臨打帳務",
-    "$470",
-    "季費帳務",
-    "$1,840",
-  ])
+  for (const expected of ["目前應付", "$2,310", "臨打帳務", "$470", "季費帳務", "$1,840"])
     assert.match(readyHtml, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.equal((readyHtml.match(/data-ledger-tile=/g) || []).length, 2);
-  assert.doesNotMatch(readyHtml, /data-ledger-detail=/);
-  assert.doesNotMatch(readyHtml, /本人測試|代報球友|2026 第4季/);
+  assert.equal((readyHtml.match(/p12-ledger-accordion is-open/g) || []).length, 0);
+  assert.doesNotMatch(readyHtml, /p12-payment-guide is-open/);
+  assert.doesNotMatch(
+    readyHtml,
+    /data-ledger-tile="(?:guest|season)"[\s\S]*?(?:收起|>查看<)[\s\S]*?<\/button>/,
+  );
+  for (const expected of [
+    "付款方式",
+    "LINE Pay",
+    "銀行轉帳",
+    "現金",
+    "歡迎使用 LINE Pay 轉帳",
+    "完成後將由管理員確認付款。",
+    "開啟管理員 LINE",
+    "付款後系統不會立即更新",
+    "待管理員確認後將顯示為已付款",
+    "第一銀行",
+    "007",
+    "22168142043",
+    "複製帳號",
+    "現場付款後",
+    "由管理員確認並更新付款狀態",
+  ])
+    assert.match(readyHtml, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(readyHtml, /href="https:\/\/line\.me\/ti\/p\/50-eOQgbFr"/);
+  assert.match(readyHtml, /target="_blank"/);
+  assert.match(readyHtml, /rel="noopener noreferrer"/);
 
   const guestHtml = renderToStaticMarkup(
     React.createElement(panelModule.V8BillingTestContent, {
@@ -277,7 +338,7 @@ try {
     }),
   );
   assert.match(guestHtml, /data-ledger-detail="guest"/);
-  assert.doesNotMatch(guestHtml, /data-ledger-detail="season"/);
+  assert.equal((guestHtml.match(/p12-ledger-accordion is-open/g) || []).length, 1);
   assert.match(guestHtml, /代報｜代報球友/);
   assert.match(guestHtml, /已付款/);
   assert.match(guestHtml, /付款時間/);
@@ -309,7 +370,7 @@ try {
     }),
   );
   assert.match(seasonHtml, /data-ledger-detail="season"/);
-  assert.doesNotMatch(seasonHtml, /data-ledger-detail="guest"/);
+  assert.equal((seasonHtml.match(/p12-ledger-accordion is-open/g) || []).length, 1);
   for (const expected of [
     "2026 第4季",
     "2027 第1季",

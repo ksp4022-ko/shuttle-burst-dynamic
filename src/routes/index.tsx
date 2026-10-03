@@ -2499,7 +2499,7 @@ export function Index() {
               setV8IntroReplaySignal((current) => current + 1);
             }}
           >
-            Replay Intro
+            Intro
           </button>
           <style>{`
             .v8-intro-replay-button {
@@ -2518,6 +2518,9 @@ export function Index() {
               letter-spacing: 0.3px;
               backdrop-filter: blur(6px);
               -webkit-backdrop-filter: blur(6px);
+            }
+            body.v8-billing-open .v8-intro-replay-button {
+              display: none;
             }
           `}</style>
         </>
