@@ -286,7 +286,7 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ## MOTION-TRIAL（CTA / 彈窗效果比較，/v8test/motion-lab）
 
-Status: TRIAL DONE（user 選 B CSS）；套用到 ACTIVE = PENDING
+Status: TRIAL DONE（user 選 B CSS，已套用並 CLOSED）；試驗頁 `/v8test/motion-lab` 已於 2026-10-03 依 user 要求刪除（Motion 套件保留，紅日滑動在用）
 
 - 加入 `motion`（bun add；引用 `motion/react`）。bun.lock 原本落後 package.json（缺 remotion 等），一併補齊。
   注意：用 bun 重裝的 node_modules 會讓 Pages prerender 失敗（listen ::）；CI 用 npm install，正常。

@@ -105,7 +105,7 @@ V8TEST infrastructure:
 - List hints — 備取 empty shows 「─」; overflowing lists show 「還有 N 位 ▼」 (tap scrolls); promoted to `/v8` on Cfm 2026-10-03; CLOSED (production real iPhone PASS 2026-10-03)
 - Skipped view transition — observe `transition.ready` so a hidden-page auto-enter no longer leaves an unhandled rejection (promoted to `/v8` on Cfm 2026-10-03; CLOSED)
 - V8TEST sun swipe (Motion) — OPEN: whole stage, ACTIVE: top half of the screen; countdown pauses while dragging; the whole sun slides and its text dial turns with the finger (promoted to `/v8` on Cfm 2026-10-03; CLOSED (production real iPhone PASS 2026-10-03)), rubber-bands at the ends, commits on 56px or a flick, springs back otherwise (`/v8test` only, lazy; /v8 unchanged); awaiting real iPhone
-- MOTION-TRIAL — `/v8test/motion-lab` compares CTA press / 代報 dialog / seal effects: A current, B CSS, C Motion (`motion` loads only on that page; /v8 startup JS unchanged); user picked B CSS
+- MOTION-TRIAL — done (user picked B CSS); `/v8test/motion-lab` removed 2026-10-03 (Motion stays for the sun swipe)
 - V8TEST blank-screen report — `3d05337` on-page error box + 10s not-started note (`/v8test` only); Intro guarded; user reopened: normal (not reproduced), report box kept
 
 ### OPEN ISSUES（recorded 2026-10-01, not fixed yet）
