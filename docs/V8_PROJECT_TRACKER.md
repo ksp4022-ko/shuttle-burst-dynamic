@@ -189,7 +189,7 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ## V8TEST-LIST-NAMES-MOTION（名單面板名字動畫）
 
-Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
+Status: ABANDONED（user 2026-10-03 real iPhone：看不出效果、被彈窗擋住，放棄；程式已移除，回到原本名單）
 
 - 打開名單面板：名字依序淡入上浮（每個間隔 35ms，最多 0.45s），約 0.6s 全部到位。
 - 名單內容在面板開著時變動：新名字淡入、移除的淡出，其他名字滑到新位置；同一人換名單/換欄位以 layoutId 滑過去。
