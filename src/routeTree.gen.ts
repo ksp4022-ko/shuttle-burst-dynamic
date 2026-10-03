@@ -14,11 +14,14 @@ import { Route as KangxuanRouteImport } from './routes/kangxuan'
 import { Route as RianRouteImport } from './routes/rian'
 import { Route as V8RouteImport } from './routes/v8'
 import { Route as V8testRouteImport } from './routes/v8test'
+import { Route as V9RouteImport } from './routes/v9'
 import { Route as V8KangxuanRouteImport } from './routes/v8.kangxuan'
 import { Route as V8RianRouteImport } from './routes/v8.rian'
 import { Route as V8PreviewRouteImport } from './routes/v8_.preview'
 import { Route as V8testKangxuanRouteImport } from './routes/v8test.kangxuan'
 import { Route as V8testRianRouteImport } from './routes/v8test.rian'
+import { Route as V9KangxuanRouteImport } from './routes/v9.kangxuan'
+import { Route as V9RianRouteImport } from './routes/v9.rian'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,6 +46,11 @@ const V8Route = V8RouteImport.update({
 const V8testRoute = V8testRouteImport.update({
   id: '/v8test',
   path: '/v8test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V9Route = V9RouteImport.update({
+  id: '/v9',
+  path: '/v9',
   getParentRoute: () => rootRouteImport,
 } as any)
 const V8KangxuanRoute = V8KangxuanRouteImport.update({
@@ -70,6 +78,16 @@ const V8testRianRoute = V8testRianRouteImport.update({
   path: '/rian',
   getParentRoute: () => V8testRoute,
 } as any)
+const V9KangxuanRoute = V9KangxuanRouteImport.update({
+  id: '/kangxuan',
+  path: '/kangxuan',
+  getParentRoute: () => V9Route,
+} as any)
+const V9RianRoute = V9RianRouteImport.update({
+  id: '/rian',
+  path: '/rian',
+  getParentRoute: () => V9Route,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -77,11 +95,14 @@ export interface FileRoutesByFullPath {
   '/rian': typeof RianRoute
   '/v8': typeof V8RouteWithChildren
   '/v8test': typeof V8testRouteWithChildren
+  '/v9': typeof V9RouteWithChildren
   '/v8/kangxuan': typeof V8KangxuanRoute
   '/v8/rian': typeof V8RianRoute
   '/v8/preview': typeof V8PreviewRoute
   '/v8test/kangxuan': typeof V8testKangxuanRoute
   '/v8test/rian': typeof V8testRianRoute
+  '/v9/kangxuan': typeof V9KangxuanRoute
+  '/v9/rian': typeof V9RianRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -89,11 +110,14 @@ export interface FileRoutesByTo {
   '/rian': typeof RianRoute
   '/v8': typeof V8RouteWithChildren
   '/v8test': typeof V8testRouteWithChildren
+  '/v9': typeof V9RouteWithChildren
   '/v8/kangxuan': typeof V8KangxuanRoute
   '/v8/rian': typeof V8RianRoute
   '/v8/preview': typeof V8PreviewRoute
   '/v8test/kangxuan': typeof V8testKangxuanRoute
   '/v8test/rian': typeof V8testRianRoute
+  '/v9/kangxuan': typeof V9KangxuanRoute
+  '/v9/rian': typeof V9RianRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -102,11 +126,14 @@ export interface FileRoutesById {
   '/rian': typeof RianRoute
   '/v8': typeof V8RouteWithChildren
   '/v8test': typeof V8testRouteWithChildren
+  '/v9': typeof V9RouteWithChildren
   '/v8/kangxuan': typeof V8KangxuanRoute
   '/v8/rian': typeof V8RianRoute
   '/v8_/preview': typeof V8PreviewRoute
   '/v8test/kangxuan': typeof V8testKangxuanRoute
   '/v8test/rian': typeof V8testRianRoute
+  '/v9/kangxuan': typeof V9KangxuanRoute
+  '/v9/rian': typeof V9RianRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -116,11 +143,14 @@ export interface FileRouteTypes {
     | '/rian'
     | '/v8'
     | '/v8test'
+    | '/v9'
     | '/v8/kangxuan'
     | '/v8/rian'
     | '/v8/preview'
     | '/v8test/kangxuan'
     | '/v8test/rian'
+    | '/v9/kangxuan'
+    | '/v9/rian'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -128,11 +158,14 @@ export interface FileRouteTypes {
     | '/rian'
     | '/v8'
     | '/v8test'
+    | '/v9'
     | '/v8/kangxuan'
     | '/v8/rian'
     | '/v8/preview'
     | '/v8test/kangxuan'
     | '/v8test/rian'
+    | '/v9/kangxuan'
+    | '/v9/rian'
   id:
     | '__root__'
     | '/'
@@ -140,11 +173,14 @@ export interface FileRouteTypes {
     | '/rian'
     | '/v8'
     | '/v8test'
+    | '/v9'
     | '/v8/kangxuan'
     | '/v8/rian'
     | '/v8_/preview'
     | '/v8test/kangxuan'
     | '/v8test/rian'
+    | '/v9/kangxuan'
+    | '/v9/rian'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -153,6 +189,7 @@ export interface RootRouteChildren {
   RianRoute: typeof RianRoute
   V8Route: typeof V8RouteWithChildren
   V8testRoute: typeof V8testRouteWithChildren
+  V9Route: typeof V9RouteWithChildren
   V8PreviewRoute: typeof V8PreviewRoute
 }
 
@@ -193,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V8testRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v9': {
+      id: '/v9'
+      path: '/v9'
+      fullPath: '/v9'
+      preLoaderRoute: typeof V9RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v8/kangxuan': {
       id: '/v8/kangxuan'
       path: '/kangxuan'
@@ -228,6 +272,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V8testRianRouteImport
       parentRoute: typeof V8testRoute
     }
+    '/v9/kangxuan': {
+      id: '/v9/kangxuan'
+      path: '/kangxuan'
+      fullPath: '/v9/kangxuan'
+      preLoaderRoute: typeof V9KangxuanRouteImport
+      parentRoute: typeof V9Route
+    }
+    '/v9/rian': {
+      id: '/v9/rian'
+      path: '/rian'
+      fullPath: '/v9/rian'
+      preLoaderRoute: typeof V9RianRouteImport
+      parentRoute: typeof V9Route
+    }
   }
 }
 
@@ -256,12 +314,25 @@ const V8testRouteChildren: V8testRouteChildren = {
 const V8testRouteWithChildren =
   V8testRoute._addFileChildren(V8testRouteChildren)
 
+interface V9RouteChildren {
+  V9KangxuanRoute: typeof V9KangxuanRoute
+  V9RianRoute: typeof V9RianRoute
+}
+
+const V9RouteChildren: V9RouteChildren = {
+  V9KangxuanRoute: V9KangxuanRoute,
+  V9RianRoute: V9RianRoute,
+}
+
+const V9RouteWithChildren = V9Route._addFileChildren(V9RouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   KangxuanRoute: KangxuanRoute,
   RianRoute: RianRoute,
   V8Route: V8RouteWithChildren,
   V8testRoute: V8testRouteWithChildren,
+  V9Route: V9RouteWithChildren,
   V8PreviewRoute: V8PreviewRoute,
 }
 export const routeTree = rootRouteImport
