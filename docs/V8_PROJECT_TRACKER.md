@@ -187,6 +187,20 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## MOTION-TRIAL（CTA / 彈窗效果比較，/v8test/motion-lab）
+
+Status: V8TEST DEPLOYED / VERIFY（等 user real iPhone 比較 A/B/C）
+
+- 加入 `motion`（bun add；引用 `motion/react`）。bun.lock 原本落後 package.json（缺 remotion 等），一併補齊。
+  注意：用 bun 重裝的 node_modules 會讓 Pages prerender 失敗（listen ::）；CI 用 npm install，正常。
+- 新頁 `/v8test/motion-lab`（`src/routes/v8test_.motion-lab.tsx`，不掛在 /v8test 底下）：
+  同一顆告假牌、代報牌、代報彈窗，三組效果切換：A 現在 / B 純 CSS / C Motion；可模擬送出失敗；不打後端。
+- Bundle：Motion 只在試驗頁的 chunk（140KB raw / 45KB gzip，含試驗頁本身）。
+  /v8 啟動 JS 前後相同（WebKit 實測 911KB）。試驗頁不可 import v8ActiveConfig（會打亂正式 chunk）。
+- ACTIVE / OPEN / /v8 沒有任何改動。
+
+---
+
 ## V8-INTRO-VIDEO-V2（新影片 Intro，PAUSED）
 
 Status: PAUSED（user 2026-10-02：非必須，之後有空再試）

@@ -19,6 +19,7 @@ import { Route as V8RianRouteImport } from './routes/v8.rian'
 import { Route as V8PreviewRouteImport } from './routes/v8_.preview'
 import { Route as V8testKangxuanRouteImport } from './routes/v8test.kangxuan'
 import { Route as V8testRianRouteImport } from './routes/v8test.rian'
+import { Route as V8testMotionLabRouteImport } from './routes/v8test_.motion-lab'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,11 @@ const V8testRianRoute = V8testRianRouteImport.update({
   path: '/rian',
   getParentRoute: () => V8testRoute,
 } as any)
+const V8testMotionLabRoute = V8testMotionLabRouteImport.update({
+  id: '/v8test_/motion-lab',
+  path: '/v8test/motion-lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/v8/preview': typeof V8PreviewRoute
   '/v8test/kangxuan': typeof V8testKangxuanRoute
   '/v8test/rian': typeof V8testRianRoute
+  '/v8test/motion-lab': typeof V8testMotionLabRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/v8/preview': typeof V8PreviewRoute
   '/v8test/kangxuan': typeof V8testKangxuanRoute
   '/v8test/rian': typeof V8testRianRoute
+  '/v8test/motion-lab': typeof V8testMotionLabRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/v8_/preview': typeof V8PreviewRoute
   '/v8test/kangxuan': typeof V8testKangxuanRoute
   '/v8test/rian': typeof V8testRianRoute
+  '/v8test_/motion-lab': typeof V8testMotionLabRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/v8/preview'
     | '/v8test/kangxuan'
     | '/v8test/rian'
+    | '/v8test/motion-lab'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/v8/preview'
     | '/v8test/kangxuan'
     | '/v8test/rian'
+    | '/v8test/motion-lab'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/v8_/preview'
     | '/v8test/kangxuan'
     | '/v8test/rian'
+    | '/v8test_/motion-lab'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   V8Route: typeof V8RouteWithChildren
   V8testRoute: typeof V8testRouteWithChildren
   V8PreviewRoute: typeof V8PreviewRoute
+  V8testMotionLabRoute: typeof V8testMotionLabRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -228,6 +241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V8testRianRouteImport
       parentRoute: typeof V8testRoute
     }
+    '/v8test_/motion-lab': {
+      id: '/v8test_/motion-lab'
+      path: '/v8test/motion-lab'
+      fullPath: '/v8test/motion-lab'
+      preLoaderRoute: typeof V8testMotionLabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -263,6 +283,7 @@ const rootRouteChildren: RootRouteChildren = {
   V8Route: V8RouteWithChildren,
   V8testRoute: V8testRouteWithChildren,
   V8PreviewRoute: V8PreviewRoute,
+  V8testMotionLabRoute: V8testMotionLabRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
