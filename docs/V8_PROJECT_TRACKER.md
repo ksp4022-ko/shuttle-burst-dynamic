@@ -187,6 +187,19 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## V8TEST-LIST-NAMES-MOTION（名單面板名字動畫）
+
+Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
+
+- 打開名單面板：名字依序淡入上浮（每個間隔 35ms，最多 0.45s），約 0.6s 全部到位。
+- 名單內容在面板開著時變動：新名字淡入、移除的淡出，其他名字滑到新位置；同一人換名單/換欄位以 layoutId 滑過去。
+  註：V8 目前面板開著時不會重新抓名單（輪詢只在舊版 phase=active），所以這部分平常看不到；程式已就緒，未實測。
+- 只在 /v8test：`V8ListNamesMotion` 在 ACTIVE 掛上時背景先下載（React.lazy 會先閃一次一般名單，已改掉）；
+  /v8 不下載。減少動態效果時不做動畫。
+- 本機 WebKit：打開正取名單 → 0ms 全為 0，140ms 起由上往下依序出現，630ms 全部 1.0；無錯誤。
+
+---
+
 ## V8TEST-VIEW-TRANSITION-HIDDEN（紅框：View transition was skipped）
 
 Status: V8TEST DEPLOYED / VERIFY
@@ -202,7 +215,7 @@ Status: V8TEST DEPLOYED / VERIFY
 
 ## V8TEST-SUN-SWIPE-MOTION（紅日跟手滑動切換聚會）
 
-Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
+Status: V8TEST REAL DEVICE PASS — user 確認 2026-10-03；套用 /v8 等 user 指示（「稍後更新到 /v8」，連同 V8TEST-VIEW-TRANSITION-HIDDEN）
 
 - 整顆紅日（圓盤＋雲框＋紅日後的上限雲）跟著手指左右滑（手指位移 ×0.45），文字轉盤同時轉（0.28°/px，轉越多越淡）。
   沒有上一場/下一場的方向有橡皮筋阻力（最多約 32px 手指位移 → 紅日約 14px、文字約 9°）。

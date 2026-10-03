@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type CSSProperties } from "react";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 import { v8ActiveListBuoyFiles, type V8ActiveListBuoyLayerControls, type V8ActiveListBuoysControls } from "./v8ActiveConfig";
 import type { V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { useV8PageLock } from "./useV8PageLock";
@@ -21,6 +22,27 @@ const IDLE_COLLAPSE_MS = 6000;
 const FLASH_MS = 1400;
 
 type ListKey = "leave" | "main" | "wait";
+
+type ListNamesProps = { listKey: ListKey; people: V8ActiveRosterPerson[]; ownSignupId: string | null };
+
+// V8TEST: names animated with Motion (stagger in, glide on roster changes).
+// Fetched in the background as soon as ACTIVE mounts, so the panel opens
+// straight into it (a React.lazy boundary flashed the plain list first);
+// /v8 never downloads it, and the plain list stands in until it arrives.
+function useMotionListNames() {
+  const [impl, setImpl] = useState<ComponentType<ListNamesProps> | null>(null);
+  useEffect(() => {
+    if (!isV8TestRoute()) return;
+    let alive = true;
+    void import("./V8ListNamesMotion").then((module) => {
+      if (alive) setImpl(() => module.default);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return impl;
+}
 
 const LIST_ORDER: ListKey[] = ["leave", "main", "wait"];
 const HEADER_LABELS: Record<ListKey, string> = { leave: "季打請假名單", main: "正取名單", wait: "備取名單" };
@@ -76,6 +98,7 @@ export function V8ListBuoys({
   collapseSignal?: number;
 }) {
   useV8PageLock();
+  const MotionListNames = useMotionListNames();
   const [phase, setPhase] = useState<Phase>("collapsed");
   const [flashList, setFlashList] = useState<ListKey | null>(null);
   const [idleKey, setIdleKey] = useState(0);
@@ -341,7 +364,11 @@ export function V8ListBuoys({
                       onPointerDown={keepOpen}
                       onTouchStart={keepOpen}
                     >
-                      <V8ListNames listKey={key} people={lists[key]} ownSignupId={ownSignupId} />
+                      {MotionListNames ? (
+                        <MotionListNames listKey={key} people={lists[key]} ownSignupId={ownSignupId} />
+                      ) : (
+                        <V8ListNames listKey={key} people={lists[key]} ownSignupId={ownSignupId} />
+                      )}
                     </div>
                     {flashList === key ? <span className="v8-list-flash" aria-hidden="true" /> : null}
                   </div>
@@ -356,7 +383,7 @@ export function V8ListBuoys({
   );
 }
 
-function V8ListNames({ listKey, people, ownSignupId }: { listKey: ListKey; people: V8ActiveRosterPerson[]; ownSignupId: string | null }) {
+function V8ListNames({ listKey, people, ownSignupId }: ListNamesProps) {
   if (!people.length) {
     return <p className="v8-list-empty">{listKey === "wait" ? "目前沒有人候補" : "─"}</p>;
   }
