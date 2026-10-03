@@ -248,7 +248,7 @@ export function V8RosterV2Layers({
   waiting,
   controls,
 }: {
-  assets: { rosterV2A1: string; rosterV2B1: string; rosterV2B2: string };
+  assets: { rosterV2A1: string; rosterV2B1: string; rosterV2B2: string; rosterV2B3: string };
   confirmed: V8ActiveRosterPerson[];
   leave: V8ActiveRosterPerson[];
   waiting: V8ActiveRosterPerson[];
@@ -259,6 +259,7 @@ export function V8RosterV2Layers({
       <V8RosterV2A1 src={assets.rosterV2A1} confirmed={confirmed} leave={leave} waiting={waiting} controls={controls.a1} />
       <V8RosterV2Layer src={assets.rosterV2B1} controls={controls.b1} baseWidth={30} />
       <V8RosterV2Layer src={assets.rosterV2B2} controls={controls.b2} baseWidth={30} />
+      <V8RosterV2Layer src={assets.rosterV2B3} controls={controls.b3} baseWidth={30} />
     </>
   );
 }

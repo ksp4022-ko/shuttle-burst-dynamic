@@ -16,7 +16,7 @@ import type {
   V8ActiveSwitchArrowsControls,
 } from "@/components/v8-active/v8ActiveConfig";
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
-import { readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
+import { isV8TestRoute, readV8ScopedStorage, v8ScopedStorageKey } from "@/lib/v8-route-family";
 
 export type PreviewControls = {
   dragonShow: boolean;
@@ -568,6 +568,13 @@ export type PreviewControls = {
   activeRosterV2B2Rotation: number;
   activeRosterV2B2Opacity: number;
   activeRosterV2B2ZIndex: number;
+  activeRosterV2B3Show: boolean;
+  activeRosterV2B3X: number;
+  activeRosterV2B3Y: number;
+  activeRosterV2B3Scale: number;
+  activeRosterV2B3Rotation: number;
+  activeRosterV2B3Opacity: number;
+  activeRosterV2B3ZIndex: number;
   // LIST-BUOYS (名單浮標, 2026-09-24): bottom wave band + three floating
   // headers + the expandable three-list panel. Defaults come from the
   // handoff's layout.json. See V8ListBuoys.tsx.
@@ -743,6 +750,7 @@ export type PreviewTargetId =
   | "ACTIVE ROSTER V2 A1"
   | "ACTIVE ROSTER V2 B1"
   | "ACTIVE ROSTER V2 B2"
+  | "ACTIVE ROSTER V2 B3"
   | "ACTIVE LIST WAVE BAND"
   | "ACTIVE LIST HEADER LEAVE"
   | "ACTIVE LIST HEADER MAIN"
@@ -822,6 +830,7 @@ export const activeTargetOrder: PreviewTargetId[] = [
   "ACTIVE ROSTER V2 A1",
   "ACTIVE ROSTER V2 B1",
   "ACTIVE ROSTER V2 B2",
+  "ACTIVE ROSTER V2 B3",
   "ACTIVE SWITCH ICON PREV V2",
   "ACTIVE SWITCH ICON NEXT V2",
   "ACTIVE MEETUP PICKER",
@@ -1406,6 +1415,13 @@ export const previewDefaults: PreviewControls = {
   activeRosterV2B2Rotation: -9,
   activeRosterV2B2Opacity: 99,
   activeRosterV2B2ZIndex: 19,
+  activeRosterV2B3Show: false,
+  activeRosterV2B3X: 20,
+  activeRosterV2B3Y: 70,
+  activeRosterV2B3Scale: 2.84,
+  activeRosterV2B3Rotation: -21,
+  activeRosterV2B3Opacity: 100,
+  activeRosterV2B3ZIndex: 19,
   activeListBuoyWaveX: 0,
   activeListBuoyWaveY: 0,
   activeListBuoyWaveScale: 1,
@@ -1508,7 +1524,15 @@ export const previewDefaults: PreviewControls = {
   activeSwitchArrowNextZIndex: 8,
 };
 
+export const v8TestPreviewDefaults: PreviewControls = {
+  ...previewDefaults,
+  activeRosterV2B1Show: false,
+  activeRosterV2B3Show: true,
+};
 
+export function getPreviewDefaults(): PreviewControls {
+  return isV8TestRoute() ? v8TestPreviewDefaults : previewDefaults;
+}
 
 export const bagBaseBaseline = { left: 63.0859375, top: 12.2395833, width: 40.0390625, rotation: -7 } as const;
 export const bagStrapBaseline = { left: 57.6171875, top: 18.4895833, width: 20.80078125, rotation: 2 } as const;
@@ -1661,23 +1685,30 @@ function migrateSavedControls(saved: Partial<PreviewControls>) {
 
 export function loadSavedControls(): PreviewControls {
   try {
+    const defaults = getPreviewDefaults();
     const raw = readV8ScopedStorage(PREVIEW_CONTROLS_STORAGE_KEY);
     if (!raw) {
       markPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION);
       markPreviewControlsMigration(CLOUD_BADGE_V2_MIGRATION);
-      return previewDefaults;
+      return defaults;
     }
-    const saved = JSON.parse(raw) as Partial<PreviewControls>;
-    return { ...previewDefaults, ...migrateSavedControls(saved) };
+    const saved = migrateSavedControls(JSON.parse(raw) as Partial<PreviewControls>);
+    const merged = { ...defaults, ...saved };
+    if (isV8TestRoute() && !("activeRosterV2B3Show" in saved)) {
+      merged.activeRosterV2B1Show = false;
+      merged.activeRosterV2B3Show = true;
+    }
+    return merged;
   } catch {
-    return previewDefaults;
+    return getPreviewDefaults();
   }
 }
 
 function withoutDefaultValues(values: Partial<PreviewControls>): Partial<PreviewControls> {
+  const defaults = getPreviewDefaults();
   const sparse: Partial<PreviewControls> = {};
   for (const key of Object.keys(values) as (keyof PreviewControls)[]) {
-    if (values[key] !== previewDefaults[key]) (sparse as Record<string, unknown>)[key] = values[key];
+    if (values[key] !== defaults[key]) (sparse as Record<string, unknown>)[key] = values[key];
   }
   return sparse;
 }
@@ -2402,6 +2433,15 @@ export function buildV8ActiveRosterV2Controls(controls: PreviewControls): V8Acti
       rotation: controls.activeRosterV2B2Rotation,
       opacity: controls.activeRosterV2B2Opacity,
       zIndex: controls.activeRosterV2B2ZIndex,
+    },
+    b3: {
+      show: controls.activeRosterV2B3Show,
+      x: controls.activeRosterV2B3X,
+      y: controls.activeRosterV2B3Y,
+      scale: controls.activeRosterV2B3Scale,
+      rotation: controls.activeRosterV2B3Rotation,
+      opacity: controls.activeRosterV2B3Opacity,
+      zIndex: controls.activeRosterV2B3ZIndex,
     },
   };
 }

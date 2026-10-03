@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, Dispatch, MouseEvent, PointerEvent, ReactNode, SetStateAction, TouchEvent } from "react";
 import {
   clearSavedControls,
+  getPreviewDefaults,
   pickScopedControls,
   type ControlsScope,
   getButtonStep,
@@ -142,6 +143,7 @@ export function V8TuningPanel({
   const [internalMotionPreviewLab, setInternalMotionPreviewLab] = useState<MotionPreviewLabState>(motionPreviewLabDefaults);
   const effectiveMotionPreviewLab = motionPreviewLab ?? internalMotionPreviewLab;
   const setMotionPreviewLab = onMotionPreviewLabChange ?? setInternalMotionPreviewLab;
+  const defaultControls = getPreviewDefaults();
   const panelRef = useRef<HTMLElement | null>(null);
   // Browser timer ids (window.setTimeout returns a number here; with Node's
   // typings also loaded, ReturnType<typeof window.setTimeout> resolved to
@@ -158,7 +160,7 @@ export function V8TuningPanel({
     setControls((current) => {
       const next = { ...current };
       for (const key of targetControlKeys[selectedTarget]) {
-        next[key] = previewDefaults[key] as never;
+        next[key] = defaultControls[key] as never;
       }
       return next;
     });
@@ -791,9 +793,9 @@ export function V8TuningPanel({
               type="button"
               onClick={() => {
                 if (controlsScope) {
-                  setControls((current) => ({ ...current, ...pickScopedControls(previewDefaults, controlsScope) }));
+                  setControls((current) => ({ ...current, ...pickScopedControls(defaultControls, controlsScope) }));
                 } else {
-                  setControls(previewDefaults);
+                  setControls(defaultControls);
                   clearSavedControls();
                 }
               }}
