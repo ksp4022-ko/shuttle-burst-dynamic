@@ -97,7 +97,7 @@ V8TEST infrastructure:
 - V8TEST video Intro restored — `984fab9` (user decision); 程式 Intro only via `?intro=code` on `/v8test`
 - V8TEST ACTIVE red sun Auto-Fill — `ce9eb2d` OPEN sun layout by default, v2 key, error fallback not saved (`/v8test` only); real iPhone PASS (user) → promoted to `/v8` on Cfm (`bdbbb21`); CLOSED (production real iPhone PASS)
 - Cloud badges v2 — new 球種/費用/場時/上限 cloud art (450px WebP ~22KB each), user-tuned defaults, 上限 behind the red sun; /v8test real iPhone PASS → promoted to `/v8` on Cfm 2026-10-03 (saved badge tuning reset once); awaiting production real iPhone
-- V8TEST ACTIVE viewport clip — page clipped to 100svh so a reload can no longer scroll to the art below the list band (`/v8test` only); awaiting real iPhone
+- ACTIVE viewport clip — page clipped to 100svh so a reload can no longer scroll to the art below the list band; /v8test real iPhone PASS → promoted to `/v8` on Cfm 2026-10-03; awaiting production real iPhone
 - V8TEST blank-screen report — `3d05337` on-page error box + 10s not-started note (`/v8test` only); Intro guarded; user reopened: normal (not reproduced), report box kept
 
 ### OPEN ISSUES（recorded 2026-10-01, not fixed yet）
