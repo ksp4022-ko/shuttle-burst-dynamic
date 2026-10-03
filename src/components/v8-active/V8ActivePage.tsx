@@ -86,7 +86,6 @@ import { V8SunDateStretchText } from "./V8SunDateStretchText";
 import { type V8CtaGlowOutlineKey } from "./v8CtaGlowOutlines";
 import { V8CtaGlowOutline } from "./V8CtaGlowOutline";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "./v8MeetupDisplay";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
@@ -201,9 +200,11 @@ export function V8ActivePage({
   }, [selectedEvent?.id]);
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
-  // V8TEST dialog v2 (代報/代退): slide in/out, light backdrop, seal on the
+  // Dialog v2 (代報/代退): slide in/out, light backdrop, seal on the
   // confirm button, a short "完成" hold before closing, shake on failure.
-  const dlgV2 = isV8TestRoute();
+  // /v8test first; all routes since Cfm 2026-10-03 (the pre-v2 branches
+  // below are kept for reference until the next cleanup).
+  const dlgV2 = true;
   const [helperShown, setHelperShown] = useState<HelperMode>(null);
   const [helperResult, setHelperResult] = useState<"done" | "fail" | null>(null);
   const [struckCancelId, setStruckCancelId] = useState<string | null>(null);
@@ -472,7 +473,7 @@ export function V8ActivePage({
     if (result.ok) await refreshCancellableTempSignups();
   });
 
-  // V8TEST dialog v2: stamp 完成 and hold briefly before the dialog closes,
+  // Dialog v2: stamp 完成 and hold briefly before the dialog closes,
   // or shake it (and keep it open) on failure.
   const showHelperResult = async (ok: boolean, holdMs = 520) => {
     setHelperResult(ok ? "done" : "fail");
@@ -788,7 +789,7 @@ export function V8ActivePage({
       {busy ? (
         <div
           className={`v8-pending-overlay${flow.motionMode === "reduced" ? " is-reduced" : ""}${
-            // V8TEST dialog v2: the seal on the dialog's button shows 送出中;
+            // Dialog v2: the seal on the dialog's button shows 送出中;
             // keep blocking taps but don't wash over the dialog.
             dlgV2 && dialogMode ? " is-clear" : ""
           }`}
@@ -1404,8 +1405,8 @@ function switchArrowStyle(c: V8ActiveSwitchArrowLayerControls): CSSProperties {
   };
 }
 
-// V8TEST: finger-following sun swipe (Motion springs). Lazy so /v8 never
-// downloads Motion; the plain swipe zone stands in while it loads.
+// Finger-following sun swipe (Motion springs). Lazy so Motion stays out of
+// the startup bundle; the plain swipe zone stands in while it loads.
 const V8SunSwipeMotion = lazy(() => import("./V8SunSwipeMotion"));
 
 function V8SunMeetupSwitcher({
@@ -1423,7 +1424,7 @@ function V8SunMeetupSwitcher({
   onNextEvent: () => void;
   hasPrevious?: boolean;
   hasNext?: boolean;
-  // V8TEST: the dial wrapper the finger-following swipe turns.
+  // The dial wrapper the finger-following swipe turns.
   dragTargetRef?: RefObject<HTMLDivElement | null> | undefined;
 }) {
   // Decided while the finger moves (not only on release): a mostly
@@ -1643,9 +1644,10 @@ export function V8ActiveSunContent({
     note: eventNote || "",
   };
   const dial = useActiveSunDial(dialText, `${eventDate}|${eventKey || ""}`);
-  // V8TEST: wrapper the finger-following swipe turns (see V8SunSwipeMotion).
+  // Wrapper the finger-following swipe turns (see V8SunSwipeMotion);
+  // /v8test first, all routes since Cfm 2026-10-03.
   const sunDragRef = useRef<HTMLDivElement>(null);
-  const sunDragEnabled = isV8TestRoute();
+  const sunDragEnabled = true;
   const dialing = Boolean(dial?.outgoing);
   const dirStyle = { "--dial-dir": dial?.dir ?? 1 } as CSSProperties;
 
@@ -1923,7 +1925,7 @@ const NAME_SHADOW_LAYERS = [
   { x: 0, y: 9, blur: 10, color: "rgba(0,0,0,0.18)" },
 ] as const;
 
-// V8TEST dialog v2: a vermilion seal on the confirm button -- turns while
+// Dialog v2: a vermilion seal on the confirm button -- turns while
 // sending, stamps 完成 on success; nothing on failure (the dialog shakes).
 function V8HelperSeal({ sending, result }: { sending: boolean; result: "done" | "fail" | null }) {
   if (result === "done") return <span className="v8-helper-seal is-done" aria-hidden="true">完成</span>;
@@ -3088,7 +3090,7 @@ export function V8ActiveStyles() {
         overflow: hidden;
       }
 
-      /* V8TEST: turned by the finger-following sun swipe. */
+      /* Turned by the finger-following sun swipe. */
       .v8-sun-drag {
         position: absolute;
         inset: 0;
@@ -3965,7 +3967,7 @@ ${V8MeetupPickerStyles({ prefix: "v8" })}
         opacity: 0.5;
       }
 
-      /* ---- V8TEST dialog v2 (代報/代退) ---------------------------- */
+      /* ---- Dialog v2 (代報/代退) ----------------------------------- */
       .v8-active.is-dlg-v2 .v8-helper-gate {
         -webkit-backdrop-filter: none;
         backdrop-filter: none;

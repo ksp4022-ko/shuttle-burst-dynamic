@@ -189,7 +189,7 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ## V8TEST-HELPER-DIALOG-V2（代報/代退彈窗動態，item 1–4）
 
-Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
+Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
 
 只在 /v8test（`.v8-active.is-dlg-v2`）；/v8 不變（本機確認：/v8 仍瞬開、blur 14px）。後端、取消規則不變。
 1. 開關：卡片由下滑入帶彈性（300ms）、關閉滑出（190ms，關閉中仍保留卡片，不閃）；背景去掉 blur(14px)，改半透明 0.42。
@@ -220,7 +220,7 @@ Status: ABANDONED（user 2026-10-03 real iPhone：看不出效果、被彈窗擋
 
 ## V8TEST-VIEW-TRANSITION-HIDDEN（紅框：View transition was skipped）
 
-Status: V8TEST DEPLOYED / VERIFY
+Status: PRODUCTION DEPLOYED（Cfm 2026-10-03 套用 /v8；本機模擬 /v8 無 rejection）
 
 - user 2026-10-03 real iPhone（/v8test，4G）：紅框 `rejection: View transition was skipped because document visibility state is hidden`。
 - 原因：OPEN → ACTIVE 自動進場時頁面剛好在背景（切 App/分頁），Safari 跳過 view transition 並讓 `transition.ready` reject；
@@ -233,7 +233,7 @@ Status: V8TEST DEPLOYED / VERIFY
 
 ## V8TEST-SUN-SWIPE-MOTION（紅日跟手滑動切換聚會）
 
-Status: V8TEST REAL DEVICE PASS — user 確認 2026-10-03；套用 /v8 等 user 指示（「稍後更新到 /v8」，連同 V8TEST-VIEW-TRANSITION-HIDDEN）
+Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
 
 - 整顆紅日（圓盤＋雲框＋紅日後的上限雲）跟著手指左右滑（手指位移 ×0.45），文字轉盤同時轉（0.28°/px，轉越多越淡）。
   沒有上一場/下一場的方向有橡皮筋阻力（最多約 32px 手指位移 → 紅日約 14px、文字約 9°）。
@@ -248,7 +248,7 @@ Status: V8TEST REAL DEVICE PASS — user 確認 2026-10-03；套用 /v8 等 user
   - OPEN 拖曳中暫停 9 秒倒數（`openSunDragging`），放開後從剩餘秒數繼續。
   - 本機 WebKit：OPEN 在 y=560（老虎上）滑 → 換場；拖住 12 秒不會自動進 ACTIVE，放開後倒數走完才進；
     ACTIVE y=280 滑 → 換場，y=500（下半部）滑 → 不換；點 1/14 開選單、點進入戰局 正常。
-- 只在 /v8test：`V8SunSwipeMotion` 用 React.lazy 載入，載入前用舊的滑動區；/v8 不下載 Motion
+- Cfm 2026-10-03：套用到所有 V8 路由（/v8 現在也會在進入後 lazy 下載 Motion ~22KB gzip）。原本：只在 /v8test：`V8SunSwipeMotion` 用 React.lazy 載入，載入前用舊的滑動區；/v8 不下載 Motion
   （本機實測 /v8 啟動 JS 前後皆 911KB）。/v8test 多 ~22KB gzip（Motion 共用 chunk 16.6KB + 滑動 5.9KB）。
 - prefers-reduced-motion：不跟手、不彈簧，只保留切換。
 - 本機 WebKit（滑鼠模擬）：30px 彈回不切換（紅日 13.5px）；80px 切換到 2/14（紅日 36px）；反向切回 1/14；第一場往前拖只有橡皮筋。

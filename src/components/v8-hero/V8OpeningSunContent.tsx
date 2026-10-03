@@ -1,5 +1,4 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject, type TouchEvent } from "react";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 import { v8OptimizedAssetFiles, v8OptimizedStatusAssetFiles, type V8SunDotsControls } from "@/components/v8-active/v8ActiveConfig";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
@@ -297,8 +296,8 @@ function useOpeningSunDial(text: OpeningDialText, order: string) {
   return dial;
 }
 
-// V8TEST: finger-following swipe anywhere on the OPEN stage (shared with
-// ACTIVE, see V8SunSwipeMotion). Lazy so /v8 never downloads Motion.
+// Finger-following swipe anywhere on the OPEN stage (shared with ACTIVE,
+// see V8SunSwipeMotion). Lazy so Motion stays out of the startup bundle.
 const V8SunSwipeMotion = lazy(() => import("@/components/v8-active/V8SunSwipeMotion"));
 
 function V8OpeningSunSwitcher({
@@ -447,12 +446,13 @@ export function V8OpeningSunContent({
   dotsControls?: V8SunDotsControls;
   // Bumped when a switch hits the first/last meetup (spring-back turn).
   bump?: { n: number; dir: 1 | -1 } | undefined;
-  // V8TEST: true while a finger is dragging the sun (pauses the countdown).
+  // True while a finger is dragging the sun (pauses the countdown).
   onSwipeDragChange?: ((active: boolean) => void) | undefined;
 }) {
-  // V8TEST: wrapper the finger-following swipe turns (see V8SunSwipeMotion).
+  // Wrapper the finger-following swipe turns (see V8SunSwipeMotion);
+  // /v8test first, all routes since Cfm 2026-10-03.
   const sunDragRef = useRef<HTMLDivElement>(null);
-  const sunDragEnabled = isV8TestRoute();
+  const sunDragEnabled = true;
   const assets = useMemo(() => buildV8OpeningSunAssets(import.meta.env.BASE_URL), []);
   const eventDisplay = event ? parseV8MeetupDisplay(event.name) : null;
   const dialText: OpeningDialText = {
@@ -606,7 +606,7 @@ export function V8OpeningSunStyles() {
         overflow: hidden;
       }
 
-      /* V8TEST: turned by the finger-following sun swipe. */
+      /* Turned by the finger-following sun swipe. */
       .v8-opening-sun-drag {
         position: absolute;
         inset: 0;

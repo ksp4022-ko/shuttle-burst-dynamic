@@ -1,13 +1,14 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { animate, type AnimationPlaybackControls } from "motion/react";
 
-// V8TEST (2026-10-03): the sun's meetup switch follows the finger. While
+// (2026-10-03) the sun's meetup switch follows the finger. While
 // dragging, the whole sun (disc, clouds, the 上限 cloud behind it) slides
 // with it and its text dial turns (rubber-banded where there is no meetup
 // in that direction); on release a far-enough drag or a quick flick
 // switches meetups, anything else springs back -- both carrying the
-// finger's release velocity (Motion springs). Loaded lazily and only on
-// /v8test, so /v8 never downloads Motion.
+// finger's release velocity (Motion springs). Loaded lazily (the plain
+// swipe zone stands in until it arrives). /v8test first; all V8 routes
+// since Cfm 2026-10-03.
 //
 // The gesture is caught on the whole hero stage, not just the sun: OPEN
 // takes a swipe anywhere on the stage, ACTIVE anywhere in the top half of
