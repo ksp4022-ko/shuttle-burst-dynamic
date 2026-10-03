@@ -187,6 +187,20 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## V8TEST-SUN-SWIPE-MOTION（紅日跟手滑動切換聚會）
+
+Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
+
+- 紅日上的文字轉盤跟著手指轉（0.28°/px，最多約 ±25° 時淡出）；沒有上一場/下一場的方向有橡皮筋阻力（約 9°）。
+- 放開：拖超過 56px 或快速甩（≥420px/s 同方向）→ 切換；否則以放開速度彈簧回正（Motion `animate` spring）。
+  拖超過 120px 時在移動中就切換（避免 Safari 中途 pointercancel 吃掉手勢）。方向同舊版：左→右 = 下一場。
+- 只在 /v8test：`V8SunSwipeMotion` 用 React.lazy 載入，載入前用舊的滑動區；/v8 不下載 Motion
+  （本機實測 /v8 啟動 JS 前後皆 911KB）。/v8test 多 ~22KB gzip（Motion 共用 chunk 16.6KB + 滑動 5.9KB）。
+- prefers-reduced-motion：不跟手、不彈簧，只保留切換。
+- 本機 WebKit（滑鼠模擬）：30px 彈回不切換；80px 切換到 2/14；反向切回 1/14；第一場往前拖只有橡皮筋。
+
+---
+
 ## MOTION-TRIAL（CTA / 彈窗效果比較，/v8test/motion-lab）
 
 Status: TRIAL DONE（user 選 B CSS）；套用到 ACTIVE = PENDING
