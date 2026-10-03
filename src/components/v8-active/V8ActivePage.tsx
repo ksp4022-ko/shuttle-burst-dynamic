@@ -86,6 +86,7 @@ import { V8SunDateStretchText } from "./V8SunDateStretchText";
 import { type V8CtaGlowOutlineKey } from "./v8CtaGlowOutlines";
 import { V8CtaGlowOutline } from "./V8CtaGlowOutline";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "./v8MeetupDisplay";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
@@ -205,6 +206,9 @@ export function V8ActivePage({
   // /v8test first; all routes since Cfm 2026-10-03 (the pre-v2 branches
   // below are kept for reference until the next cleanup).
   const dlgV2 = true;
+  // V8TEST: the main plaque's own seal says 送出中 (the page wash goes clear
+  // but still blocks taps) and a failed action shakes the plaque.
+  const ctaFeelV2 = isV8TestRoute();
   const [helperShown, setHelperShown] = useState<HelperMode>(null);
   const [helperResult, setHelperResult] = useState<"done" | "fail" | null>(null);
   const [struckCancelId, setStruckCancelId] = useState<string | null>(null);
@@ -382,6 +386,16 @@ export function V8ActivePage({
   // 送出中 only for the CTA's own submit -- a meetup switch just disables it.
   const ctaPending = ownSubmit === "cta";
 
+  // V8TEST: a failed main action shakes the plaque (WAAPI `translate`, so
+  // the drum's CSS transform is untouched).
+  const shakeMainPlaque = () => {
+    if (!ctaFeelV2 || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    document.querySelector<HTMLElement>(".v8-asm-main .v8-asm-plaque")?.animate(
+      [{ translate: "0" }, { translate: "-6px" }, { translate: "5px" }, { translate: "-3px" }, { translate: "1px" }, { translate: "0" }],
+      { duration: 420, easing: "ease-out" },
+    );
+  };
+
   const runAction = (action: "fixed-leave" | "fixed-return" | "cancel-temp") =>
     withActionLock("cta", async () => {
       if (!identity || !lineAuthToken) return;
@@ -390,6 +404,7 @@ export function V8ActivePage({
       const ok = await flow.runIdentityAction(action, { id: signupId, name }, lineAuthToken);
       if (!ok) {
         returnFeedbackRef.current = null;
+        shakeMainPlaque();
         return;
       }
       // A waitlisted 季打 held no 正取 slot, so nothing was released.
@@ -471,6 +486,7 @@ export function V8ActivePage({
       lineIdentity.identityType === "temp" ? { selfSignup: true } : {},
     );
     if (result.ok) await refreshCancellableTempSignups();
+    else shakeMainPlaque();
   });
 
   // Dialog v2: stamp 完成 and hold briefly before the dialog closes,
@@ -791,7 +807,7 @@ export function V8ActivePage({
           className={`v8-pending-overlay${flow.motionMode === "reduced" ? " is-reduced" : ""}${
             // Dialog v2: the seal on the dialog's button shows 送出中;
             // keep blocking taps but don't wash over the dialog.
-            dlgV2 && dialogMode ? " is-clear" : ""
+            (dlgV2 && dialogMode) || (ctaFeelV2 && ownSubmit === "cta") ? " is-clear" : ""
           }`}
         >
           {ripplePoint ? (

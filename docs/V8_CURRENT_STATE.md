@@ -99,6 +99,7 @@ V8TEST infrastructure:
 - Cloud badges v2 — new 球種/費用/場時/上限 cloud art (450px WebP ~22KB each), user-tuned defaults, 上限 behind the red sun; /v8test real iPhone PASS → promoted to `/v8` on Cfm 2026-10-03 (saved badge tuning reset once) (`87f2d25`); CLOSED (production real iPhone PASS)
 - ACTIVE viewport clip — page clipped to 100svh so a reload can no longer scroll to the art below the list band; /v8test real iPhone PASS → promoted to `/v8` on Cfm 2026-10-03 (`eb3af67`); CLOSED (production real iPhone PASS)
 - V8TEST 代報/代退 dialog v2 — slide in/out, light backdrop, seal on the confirm button (送出中 → 完成), shake on failure, 代退 row stamp/strike, drifting waves (promoted to `/v8` on Cfm 2026-10-03; CLOSED); CLOSED (production real iPhone PASS 2026-10-03)
+- V8TEST CTA press + seal — main/helper plaques press down while held and overshoot on release; a turning seal replaces 送出中 and the page wash goes clear; failure shakes the plaque (`/v8test` only); awaiting real iPhone
 - List hints — 備取 empty shows 「─」; overflowing lists show 「還有 N 位 ▼」 (tap scrolls); promoted to `/v8` on Cfm 2026-10-03; CLOSED (production real iPhone PASS 2026-10-03)
 - Skipped view transition — observe `transition.ready` so a hidden-page auto-enter no longer leaves an unhandled rejection (promoted to `/v8` on Cfm 2026-10-03; CLOSED)
 - V8TEST sun swipe (Motion) — OPEN: whole stage, ACTIVE: top half of the screen; countdown pauses while dragging; the whole sun slides and its text dial turns with the finger (promoted to `/v8` on Cfm 2026-10-03; CLOSED (production real iPhone PASS 2026-10-03)), rubber-bands at the ends, commits on 56px or a flick, springs back otherwise (`/v8test` only, lazy; /v8 unchanged); awaiting real iPhone
@@ -121,7 +122,6 @@ V8TEST infrastructure:
   - future v2 should be scoped and tested through V8TEST
 
 ### PENDING (user)
-- V8-CTA-DIALOG-CSS — apply lab variant B to ACTIVE (CTA press-on-touch + overshoot, seal on button instead of page wash, dialogs slide in/out with light backdrop, no blur); recorded only, not implemented (user 2026-10-03)
 - DEV-ENV-ACCESS
   - Network access opened 2026-10-03 (github.io / workers.dev reachable); WebKit still installed per session (no setup script)
   - steps in `V8_PROJECT_TRACKER.md`

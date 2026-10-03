@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { v8CtaAssemblyLayout as L, type V8CtaAssemblyControls, type V8CtaAssemblyRect } from "./v8ActiveConfig";
 import { V8CtaGlowOutline } from "./V8CtaGlowOutline";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // CTA-ASSEMBLY (2026-09-25): the identity scroll's buttons as ONE piece of
 // art instead of separately positioned plaques. Bottom to top: the base
@@ -32,6 +33,11 @@ export type V8CtaAssemblyAssets = {
 // small ones at ~77x33 on a 390px-wide phone.
 const ASSEMBLY_WIDTH_PCT = 61;
 const PRESS_MS = 280;
+// V8TEST press v2: the plaque stays down while the finger does (shown for
+// at least this long so a quick tap still reads), and its release plays a
+// SETTLE_MS overshoot (1.04 -> 0.99 -> 1, WAAPI) while the drum waits.
+const HOLD_MIN_MS = 90;
+const SETTLE_MS = 420;
 const TEXT_FADE_MS = 200;
 
 type PressKey = "main" | "helperSignup" | "helperCancel" | "bill";
@@ -112,8 +118,61 @@ export function V8CtaAssembly({
   const textLayers = useTextCrossfade(mainText);
   const [pressed, setPressed] = useState<PressKey | null>(null);
   const pressTimerRef = useRef<number | undefined>(undefined);
+  // V8TEST press v2 (see HOLD_MIN_MS): held while the finger is down,
+  // settling while the release overshoot plays.
+  const feelV2 = isV8TestRoute();
+  const [held, setHeld] = useState<PressKey | null>(null);
+  const [settling, setSettling] = useState<PressKey | null>(null);
+  const heldAtRef = useRef(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const releaseTimerRef = useRef<number | undefined>(undefined);
+  const settleTimerRef = useRef<number | undefined>(undefined);
 
-  useEffect(() => () => window.clearTimeout(pressTimerRef.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(pressTimerRef.current);
+      window.clearTimeout(releaseTimerRef.current);
+      window.clearTimeout(settleTimerRef.current);
+    },
+    [],
+  );
+
+  // The finger can leave the plaque or the page before lifting; any
+  // pointerup/cancel anywhere releases the held plaque.
+  useEffect(() => {
+    if (!held) return;
+    const release = () => {
+      const key = held;
+      const wait = Math.max(0, HOLD_MIN_MS - (performance.now() - heldAtRef.current));
+      window.clearTimeout(releaseTimerRef.current);
+      releaseTimerRef.current = window.setTimeout(() => {
+        // The overshoot runs as a WAAPI animation: a CSS animation added on
+        // this class change sat at currentTime 0 on the busy ACTIVE page.
+        const motion = rootRef.current?.querySelector<HTMLElement>(".v8-asm-hit.is-held .v8-asm-motion");
+        if (motion && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+          motion.animate(
+            [
+              { transform: "scale(0.92) translateY(2%)" },
+              { transform: "scale(1.04)", offset: 0.45 },
+              { transform: "scale(0.99)", offset: 0.75 },
+              { transform: "scale(1)" },
+            ],
+            { duration: SETTLE_MS, easing: "ease-out" },
+          );
+        }
+        setHeld(null);
+        setSettling(key);
+        window.clearTimeout(settleTimerRef.current);
+        settleTimerRef.current = window.setTimeout(() => setSettling(null), SETTLE_MS);
+      }, wait);
+    };
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+    };
+  }, [held]);
 
   const warmKey = warmTexts.join("|");
   useEffect(() => {
@@ -131,16 +190,24 @@ export function V8CtaAssembly({
   // 1 -> 0.94 -> 1 curve; only the pressed plaque moves.
   const press = (key: PressKey, disabled: boolean) => {
     if (disabled) return;
+    if (feelV2) {
+      window.clearTimeout(releaseTimerRef.current);
+      heldAtRef.current = performance.now();
+      setHeld(key);
+      return;
+    }
     window.clearTimeout(pressTimerRef.current);
     setPressed(key);
     pressTimerRef.current = window.setTimeout(() => setPressed(null), PRESS_MS);
   };
 
-  const hitClass = (key: PressKey) => "v8-asm-hit" + (pressed === key ? " is-pressed" : "");
+  const hitClass = (key: PressKey) =>
+    "v8-asm-hit" + (pressed === key ? " is-pressed" : "") + (held === key ? " is-held" : "") + (settling === key ? " is-settling" : "");
 
   return (
     <div
-      className="v8-asm"
+      ref={rootRef}
+      className={feelV2 ? "v8-asm is-feel-v2" : "v8-asm"}
       style={{
         position: "absolute",
         left: `${controls.x}%`,
@@ -229,7 +296,16 @@ export function V8CtaAssembly({
             </span>
             {mainDisabled ? null : <V8CtaGlowOutline outlineKey="assemblyMain" />}
           </span>
-          {pending ? <span className="v8-cta-sending">{pending}</span> : null}
+          {pending ? (
+            feelV2 ? (
+              // V8TEST: a turning vermilion seal says 送出中 on the plaque.
+              <span className="v8-asm-seal" role="status" aria-label="送出中">
+                送
+              </span>
+            ) : (
+              <span className="v8-cta-sending">{pending}</span>
+            )
+          ) : null}
         </span>
       </button>
 
@@ -367,7 +443,53 @@ export function V8CtaAssemblyStyles() {
         pointer-events: none;
       }
 
+      /* V8TEST press v2: down while held, overshoot on release; the drum
+         stays out of the way for both. */
+      .v8-asm.is-feel-v2 .v8-asm-hit.is-held .v8-asm-motion {
+        transform: scale(0.92) translateY(2%);
+        transition: transform 80ms ease-out;
+      }
+
+      .v8-asm.is-feel-v2 .v8-asm-hit.is-held .v8-asm-art {
+        filter: brightness(0.94);
+      }
+
+      .v8-asm.is-feel-v2 .v8-asm-hit.is-held .v8-asm-motion.is-drum {
+        animation: none;
+      }
+
+      /* The release overshoot itself is a WAAPI animation (see release()). */
+      .v8-asm.is-feel-v2 .v8-asm-hit.is-settling .v8-asm-motion.is-drum {
+        animation: none;
+      }
+
+      .v8-asm-seal {
+        position: absolute;
+        right: -9%;
+        top: -26%;
+        z-index: 3;
+        width: 34%;
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        border: 3px dashed #b3261e;
+        color: #b3261e;
+        background: rgba(255, 246, 228, 0.95);
+        font-size: 15px;
+        font-weight: 900;
+        line-height: 1;
+        box-shadow: 0 0 0 2px rgba(179, 38, 30, 0.18), 0 3px 8px rgba(40, 20, 5, 0.25);
+        pointer-events: none;
+        animation: v8-asm-seal-in 220ms ease-out both, v8-asm-seal-spin 1.1s linear infinite;
+      }
+
+      @keyframes v8-asm-seal-in { from { opacity: 0; scale: 0.6; } }
+      @keyframes v8-asm-seal-spin { to { rotate: 360deg; } }
+
       @media (prefers-reduced-motion: reduce) {
+        .v8-asm.is-feel-v2 .v8-asm-hit.is-held .v8-asm-motion { transition: none; }
+        .v8-asm-seal { animation: none; }
         .v8-asm-motion.is-drum,
         .v8-asm-art img.is-in {
           animation: none;

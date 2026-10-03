@@ -187,6 +187,22 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## V8TEST-CTA-PRESS-SEAL（主要按鈕按壓手感＋送出朱印，V8-CTA-DIALOG-CSS 的 CTA 部分）
+
+Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
+
+只在 /v8test（`.v8-asm.is-feel-v2`、`ctaFeelV2`）；/v8 不變（本機確認 /v8 仍是舊按壓、送出中標籤＋整頁藍色遮罩）。後端不變。
+- 按壓：手指按下就壓下（scale .92＋微下沉、稍暗，80ms），按住期間維持；放開（任何地方 pointerup）回彈
+  1.04 → 0.99 → 1（420ms，WAAPI；CSS 動畫在 ACTIVE 頁上卡在 currentTime 0，改用 WAAPI）；快點也至少顯示壓下 90ms；
+  按住與回彈時擊鼓晃動暫停。適用告假/歸隊/臨打報名/取消、代報、代退、帳單牌。
+- 送出中：主按鈕右上角朱印「送」轉動，取代「送出中」小標籤；整頁藍色遮罩改透明（仍擋誤點）。
+- 成功：沿用現有狀態印章回饋（正取/休 等），不另加「完成」。失敗：主按鈕輕搖（WAAPI translate）。
+- 本機 WebKit（假造登入、寫入請求在瀏覽器內回應）：按住 300ms 為 0.92；放開回彈 1.034 → 0.992 → 1；
+  送出中有朱印、遮罩 is-clear、無舊標籤；失敗時按鈕有搖晃動畫；無錯誤。
+  模擬器在真的送出時回彈開頭約 0.1s 停頓（同時在更新畫面），需實機確認。
+
+---
+
 ## V8TEST-LIST-HINTS（名單：備取空白顯示、還有更多提示）
 
 Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → production real iPhone PASS 2026-10-03）
@@ -280,7 +296,7 @@ Status: TRIAL DONE（user 選 B CSS）；套用到 ACTIVE = PENDING
   /v8 啟動 JS 前後相同（WebKit 實測 911KB）。試驗頁不可 import v8ActiveConfig（會打亂正式 chunk）。
 - ACTIVE / OPEN / /v8 沒有任何改動。
 - 結果（user real iPhone 2026-10-03）：選 **B CSS**。
-- V8-CTA-DIALOG-CSS（user：先記錄、不實作）；其中代報/代退彈窗部分已做 → 見 V8TEST-HELPER-DIALOG-V2：
+- V8-CTA-DIALOG-CSS：彈窗部分 → V8TEST-HELPER-DIALOG-V2（CLOSED）；CTA 部分 → V8TEST-CTA-PRESS-SEAL：
   - CTA（告假/代報/代退/帳單）：按住即壓下（scale .92 + 下沉，80ms），放開 overshoot 回彈（320ms cubic-bezier(.34,1.56,.64,1)）。
   - 送出中：按鈕上朱印轉動 → 成功蓋「完成」、失敗輕搖；取代整頁藍色遮罩。
   - 彈窗（代報/代退/帳單/身份確認）：滑入/滑出 + 退場動畫；背景改輕遮罩，拿掉 blur(14px)。
