@@ -1169,7 +1169,8 @@ export const previewDefaults: PreviewControls = {
   activeInfoWaitlistScale: 2,
   activeInfoWaitlistRotation: 2,
   activeInfoAltSlotX: 29,
-  activeInfoAltSlotY: 38,
+  // Y 38 -> 34 (user-tuned value; Cfm 2026-10-03 with the home-screen app).
+  activeInfoAltSlotY: 34,
   activeInfoAltSlotScale: 2,
   activeInfoAltSlotRotation: 2,
   // Ema count text (2026-09-11) -- FontSize 20/MaxWidth 60/Align center/

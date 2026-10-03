@@ -17,7 +17,6 @@ import {
   saveV8LineToken,
   type V8LineIdentity,
 } from "@/lib/v8-line-auth-storage";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // Marks a login started from the home-screen web app (PWA), so the page
 // that receives the LINE callback in Safari can point back to the app.
@@ -269,7 +268,7 @@ export function useV8LineAuth() {
   }, [loading, token]);
 
   const startLogin = () => {
-    if (!isV8TestRoute() || !isV8StandaloneApp()) {
+    if (!isV8StandaloneApp()) {
       window.location.href = getV8LineLoginStartUrl(window.location.href);
       return;
     }

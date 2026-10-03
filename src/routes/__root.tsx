@@ -99,14 +99,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children:
           'try{if(location.pathname.indexOf("/v8")>-1)document.documentElement.classList.add("v8-boot")}catch(e){}',
       },
-      // V8TEST only: home-screen app setup. Links the /v8test manifest and
+      // V8 home-screen app setup (/v8test first; /v8 since Cfm 2026-10-03).
+      // Links the route's manifest (/v8test keeps its own) and
       // the iOS app title; when launched from the home screen, marks
       // html.v8-standalone and lets the page reach the screen edges
       // (viewport-fit=cover) so env(safe-area-inset-*) report the home
       // indicator. Safari tabs are untouched.
       {
         children:
-          'try{var P=location.pathname,I=P.indexOf("/v8test");if(I>-1){var H=document.head,A=function(t,o){var e=document.createElement(t);for(var k in o)e.setAttribute(k,o[k]);H.appendChild(e)};A("link",{rel:"manifest",href:P.slice(0,I)+"/manifest-v8test.webmanifest"});A("link",{rel:"apple-touch-icon",href:P.slice(0,I)+"/v8-pwa/icon-180.png"});A("meta",{name:"apple-mobile-web-app-capable",content:"yes"});A("meta",{name:"mobile-web-app-capable",content:"yes"});A("meta",{name:"apple-mobile-web-app-title",content:"V8 康軒報名"});if(navigator.standalone===true||matchMedia("(display-mode: standalone)").matches){document.documentElement.classList.add("v8-standalone");var V=document.querySelector("meta[name=viewport]");if(V&&V.content.indexOf("viewport-fit")<0)V.content+=", viewport-fit=cover"}}}catch(e){}',
+          'try{var P=location.pathname,M=/\\/v8(test)?\\//.exec(P);if(M){var I=M.index,F=M[1]?"manifest-v8test":"manifest-v8";var H=document.head,A=function(t,o){var e=document.createElement(t);for(var k in o)e.setAttribute(k,o[k]);H.appendChild(e)};A("link",{rel:"manifest",href:P.slice(0,I)+"/"+F+".webmanifest"});A("link",{rel:"apple-touch-icon",href:P.slice(0,I)+"/v8-pwa/icon-180.png"});A("meta",{name:"apple-mobile-web-app-capable",content:"yes"});A("meta",{name:"mobile-web-app-capable",content:"yes"});A("meta",{name:"apple-mobile-web-app-title",content:"V8 康軒報名"});if(navigator.standalone===true||matchMedia("(display-mode: standalone)").matches){document.documentElement.classList.add("v8-standalone");var V=document.querySelector("meta[name=viewport]");if(V&&V.content.indexOf("viewport-fit")<0)V.content+=", viewport-fit=cover"}}}catch(e){}',
       },
       // V8TEST only: show script errors and failed script/style loads on the
       // page itself, so a blank screen on a real iPhone names its cause.
