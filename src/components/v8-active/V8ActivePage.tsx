@@ -201,6 +201,38 @@ export function V8ActivePage({
   }, [selectedEvent?.id]);
   const [helperName, setHelperName] = useState("");
   const [helperMode, setHelperMode] = useState<HelperMode>(null);
+  // V8TEST dialog v2 (代報/代退): slide in/out, light backdrop, seal on the
+  // confirm button, a short "完成" hold before closing, shake on failure.
+  const dlgV2 = isV8TestRoute();
+  const [helperShown, setHelperShown] = useState<HelperMode>(null);
+  const [helperResult, setHelperResult] = useState<"done" | "fail" | null>(null);
+  const [struckCancelId, setStruckCancelId] = useState<string | null>(null);
+  const lastCancelPersonRef = useRef<AlphaSignup | null>(null);
+  useEffect(() => {
+    if (helperMode) {
+      setHelperShown(helperMode);
+      return;
+    }
+    // Result/strike stay visible through the exit, then reset.
+    const finish = () => {
+      setHelperShown(null);
+      setHelperResult(null);
+      setStruckCancelId(null);
+      lastCancelPersonRef.current = null;
+    };
+    if (!dlgV2 || !helperShown) {
+      finish();
+      return;
+    }
+    const timer = window.setTimeout(finish, 190);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [helperMode]);
+  // v2: the dialog stays mounted through its 190ms exit after helperMode
+  // clears -- helperShown keeps the last mode until then, so it never
+  // unmounts for a frame and remounts just to play the exit.
+  const dialogMode: HelperMode = helperMode ?? (dlgV2 ? helperShown : null);
+  const dialogClosing = dlgV2 && !helperMode && Boolean(helperShown);
   const [heightGuides, setHeightGuides] = useState(false);
   // SCROLL-FEEDBACK: one action in flight at a time. flow's own
   // pendingAction check reads React state, so two taps inside the same frame
@@ -440,10 +472,29 @@ export function V8ActivePage({
     if (result.ok) await refreshCancellableTempSignups();
   });
 
+  // V8TEST dialog v2: stamp 完成 and hold briefly before the dialog closes,
+  // or shake it (and keep it open) on failure.
+  const showHelperResult = async (ok: boolean, holdMs = 520) => {
+    setHelperResult(ok ? "done" : "fail");
+    if (ok) {
+      await new Promise((resolve) => window.setTimeout(resolve, holdMs));
+    } else {
+      // WAAPI on `translate`, so the card's CSS slide-in isn't replayed.
+      if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        document.querySelector<HTMLElement>(".v8-helper-gate .v8-helper-card")?.animate(
+          [{ translate: "0" }, { translate: "-9px" }, { translate: "8px" }, { translate: "-4px" }, { translate: "2px" }, { translate: "0" }],
+          { duration: 420, easing: "ease-out" },
+        );
+      }
+      window.setTimeout(() => setHelperResult((current) => (current === "fail" ? null : current)), 460);
+    }
+  };
+
   const submitHelperSignup = () => withActionLock("helper", async () => {
     if (!lineAuthToken) return;
     const name = helperName.trim();
     const result = await flow.submitSignup(helperName, lineAuthToken);
+    if (dlgV2) await showHelperResult(result.ok);
     if (result.ok) {
       // 正取／候補第 N 位 straight from the API response.
       if (result.position) {
@@ -466,6 +517,10 @@ export function V8ActivePage({
   const cancelForSomeoneElse = (person: AlphaSignup) => withActionLock("helper", async () => {
     if (!lineAuthToken) return;
     const ok = await flow.runIdentityAction("cancel-temp", { id: person.id, name: person.name }, lineAuthToken);
+    if (dlgV2) {
+      if (ok) setStruckCancelId(person.id);
+      await showHelperResult(ok, ok ? 650 : undefined);
+    }
     // On failure keep the modal and the selection so the admin can retry.
     if (ok) {
       flow.setNotice(`${person.name} 已代退`);
@@ -585,6 +640,7 @@ export function V8ActivePage({
     <div
       className={[
         "v8-active",
+        dlgV2 ? "is-dlg-v2" : "",
         entering ? "is-entering" : "",
         ownSubmit ? "is-submitting" : "",
         helperMode ? "is-modal-open" : "",
@@ -730,7 +786,13 @@ export function V8ActivePage({
           it appears with zero perceived delay regardless of how long the
           network round-trip takes. */}
       {busy ? (
-        <div className={`v8-pending-overlay${flow.motionMode === "reduced" ? " is-reduced" : ""}`}>
+        <div
+          className={`v8-pending-overlay${flow.motionMode === "reduced" ? " is-reduced" : ""}${
+            // V8TEST dialog v2: the seal on the dialog's button shows 送出中;
+            // keep blocking taps but don't wash over the dialog.
+            dlgV2 && dialogMode ? " is-clear" : ""
+          }`}
+        >
           {ripplePoint ? (
             <span
               className="v8-pending-ripple"
@@ -776,12 +838,12 @@ export function V8ActivePage({
           identical to the identity gate since the two are mutually
           exclusive (helperMode only ever opens once identity is already
           known, so they never need to layer on top of each other). */}
-      {helperMode ? (
-        <div className="v8-identity-gate">
+      {dialogMode ? (
+        <div className={["v8-identity-gate", dlgV2 ? "v8-helper-gate" : "", dialogClosing ? "is-closing" : ""].filter(Boolean).join(" ")}>
           <div className="v8-identity-gate-card v8-helper-card">
             <V8HelperDialogWave />
             <div className="v8-helper-content">
-              {helperMode === "signup" ? (
+              {dialogMode === "signup" ? (
                 <div className="v8-helper-signup">
                   <p className="v8-helper-title">幫誰報名？</p>
                   <p className="v8-helper-copy">輸入要代報的臨打名稱。</p>
@@ -798,11 +860,24 @@ export function V8ActivePage({
                   />
                   <button
                     type="button"
-                    className="v8-helper-cta"
+                    className={
+                      "v8-helper-cta" +
+                      (dlgV2 && helperName.trim() ? " is-ready" : "") +
+                      (dlgV2 && ownSubmit === "helper" ? " is-sending" : "")
+                    }
                     disabled={!helperName.trim() || busy}
                     onClick={() => void submitHelperSignup()}
                   >
-                    {ownSubmit === "helper" ? <V8SendingLabel /> : "確認報名"}
+                    {dlgV2 ? (
+                      <>
+                        {ownSubmit === "helper" && !helperResult ? "送出中…" : "確認報名"}
+                        <V8HelperSeal sending={ownSubmit === "helper"} result={helperResult} />
+                      </>
+                    ) : ownSubmit === "helper" ? (
+                      <V8SendingLabel />
+                    ) : (
+                      "確認報名"
+                    )}
                   </button>
                   <button type="button" className="v8-active-helper-cancel" onClick={() => setHelperMode(null)}>
                     取消
@@ -813,7 +888,7 @@ export function V8ActivePage({
                   <p className="v8-helper-title">幫誰取消？</p>
                   <p className="v8-helper-copy">先選擇一位臨打或候補，再確認取消。</p>
                   {tempCandidates.length ? (
-                    <div className="v8-helper-person-list">
+                    <div className={"v8-helper-person-list" + (dlgV2 && selectedCancelPerson ? " has-selection" : "")}>
                       {tempConfirmedCandidates.length ? (
                         <>
                           <p className="v8-helper-group-label">臨打</p>
@@ -823,7 +898,8 @@ export function V8ActivePage({
                               type="button"
                               className={
                                 "v8-helper-person-row" +
-                                (selectedCancelPerson?.id === person.id ? " is-selected" : "")
+                                (selectedCancelPerson?.id === person.id ? " is-selected" : "") +
+                                (struckCancelId === person.id ? " is-struck" : "")
                               }
                               disabled={busy}
                               onClick={() => setSelectedCancelPerson(person)}
@@ -843,7 +919,8 @@ export function V8ActivePage({
                               type="button"
                               className={
                                 "v8-helper-person-row" +
-                                (selectedCancelPerson?.id === person.id ? " is-selected" : "")
+                                (selectedCancelPerson?.id === person.id ? " is-selected" : "") +
+                                (struckCancelId === person.id ? " is-struck" : "")
                               }
                               disabled={busy}
                               onClick={() => setSelectedCancelPerson(person)}
@@ -858,7 +935,29 @@ export function V8ActivePage({
                   ) : (
                     <p className="sd-empty v8-helper-empty">目前沒有臨打報名可取消</p>
                   )}
-                  {selectedCancelPerson ? (
+                  {dlgV2 ? (
+                    (() => {
+                      if (selectedCancelPerson) lastCancelPersonRef.current = selectedCancelPerson;
+                      const shown = selectedCancelPerson ?? lastCancelPersonRef.current;
+                      if (!shown) return null;
+                      return (
+                        <div className={"v8-helper-confirm-slot" + (selectedCancelPerson ? " is-open" : "")}>
+                          <div className="v8-helper-confirm-inner">
+                            <button
+                              type="button"
+                              className={"v8-helper-cta v8-helper-cta-danger" + (ownSubmit === "helper" ? " is-sending" : "")}
+                              disabled={busy || !selectedCancelPerson}
+                              tabIndex={selectedCancelPerson ? 0 : -1}
+                              onClick={() => selectedCancelPerson && void cancelForSomeoneElse(selectedCancelPerson)}
+                            >
+                              {ownSubmit === "helper" && !helperResult ? "送出中…" : `確認取消 ${shown.name}`}
+                              <V8HelperSeal sending={ownSubmit === "helper"} result={helperResult} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()
+                  ) : selectedCancelPerson ? (
                     <button
                       type="button"
                       className="v8-helper-cta v8-helper-cta-danger"
@@ -1824,6 +1923,14 @@ const NAME_SHADOW_LAYERS = [
   { x: 0, y: 9, blur: 10, color: "rgba(0,0,0,0.18)" },
 ] as const;
 
+// V8TEST dialog v2: a vermilion seal on the confirm button -- turns while
+// sending, stamps 完成 on success; nothing on failure (the dialog shakes).
+function V8HelperSeal({ sending, result }: { sending: boolean; result: "done" | "fail" | null }) {
+  if (result === "done") return <span className="v8-helper-seal is-done" aria-hidden="true">完成</span>;
+  if (sending && !result) return <span className="v8-helper-seal is-sending" aria-hidden="true">送</span>;
+  return null;
+}
+
 // Spinner + 送出中, shared by the CTA overlay and the 代報/代退 confirm buttons.
 function V8SendingLabel() {
   return (
@@ -2697,6 +2804,14 @@ export function V8ActiveStyles() {
         background: rgba(255, 255, 255, 0.55);
         box-shadow: 0 0 0 1px rgba(21, 89, 168, 0.35);
         animation: v8-pending-ripple-life 0.6s ease-out forwards;
+      }
+
+      .v8-pending-overlay.is-clear {
+        background: transparent;
+      }
+
+      .v8-pending-overlay.is-clear .v8-pending-ripple {
+        display: none;
       }
 
       .v8-pending-overlay.is-reduced {
@@ -3848,6 +3963,176 @@ ${V8MeetupPickerStyles({ prefix: "v8" })}
 
       .v8-helper-cta:disabled {
         opacity: 0.5;
+      }
+
+      /* ---- V8TEST dialog v2 (代報/代退) ---------------------------- */
+      .v8-active.is-dlg-v2 .v8-helper-gate {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        background: rgba(20, 15, 10, 0.42);
+        animation: v8-dlg2-fade-in 200ms ease-out both;
+      }
+
+      .v8-active.is-dlg-v2 .v8-helper-gate.is-closing {
+        animation: v8-dlg2-fade-out 190ms ease-in both;
+        pointer-events: none;
+      }
+
+      .v8-active.is-dlg-v2 .v8-helper-gate .v8-helper-card {
+        animation: v8-dlg2-in 300ms cubic-bezier(.2, .9, .3, 1.15) both;
+      }
+
+      .v8-active.is-dlg-v2 .v8-helper-gate.is-closing .v8-helper-card {
+        animation: v8-dlg2-out 190ms ease-in both;
+      }
+
+      @keyframes v8-dlg2-fade-in { from { opacity: 0; } }
+      @keyframes v8-dlg2-fade-out { to { opacity: 0; } }
+      @keyframes v8-dlg2-in { from { opacity: 0; transform: translateY(28px) scale(.96); } }
+      @keyframes v8-dlg2-out { to { opacity: 0; transform: translateY(20px) scale(.97); } }
+
+      .v8-active.is-dlg-v2 .v8-helper-cta {
+        position: relative;
+        transition: opacity 180ms ease, transform 320ms cubic-bezier(.34, 1.56, .64, 1);
+      }
+
+      /* Sending: the seal says it, so the button isn't dimmed as disabled. */
+      .v8-active.is-dlg-v2 .v8-helper-cta.is-sending:disabled {
+        opacity: 1;
+      }
+
+      .v8-active.is-dlg-v2 .v8-helper-cta.is-ready {
+        animation: v8-dlg2-ready 340ms cubic-bezier(.34, 1.56, .64, 1);
+      }
+
+      @keyframes v8-dlg2-ready { 40% { transform: scale(1.05); } }
+
+      .v8-active.is-dlg-v2 .v8-helper-cta:not(:disabled):active {
+        transform: scale(.95) translateY(1px);
+        transition-duration: 80ms;
+      }
+
+      .v8-helper-seal {
+        position: absolute;
+        right: -6px;
+        top: -14px;
+        z-index: 3;
+        width: 46px;
+        height: 46px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        border: 3px solid #b3261e;
+        color: #b3261e;
+        background: rgba(255, 246, 228, 0.95);
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        pointer-events: none;
+        box-shadow: 0 0 0 2px rgba(179, 38, 30, 0.18);
+      }
+
+      .v8-helper-seal.is-sending {
+        border-style: dashed;
+        animation: v8-dlg2-spin 1.1s linear infinite;
+      }
+
+      .v8-helper-seal.is-done {
+        animation: v8-dlg2-stamp 300ms cubic-bezier(.2, .9, .3, 1.3) both;
+      }
+
+      @keyframes v8-dlg2-spin { to { rotate: 360deg; } }
+      @keyframes v8-dlg2-stamp {
+        0% { opacity: 0; scale: 2.3; rotate: -14deg; }
+        100% { opacity: 1; scale: 1; rotate: -8deg; }
+      }
+
+      /* 代退: the picked row gets a 選 stamp, the rest dim; the confirm
+         button slides in/out; a cancelled name is inked out. */
+      .v8-active.is-dlg-v2 .v8-helper-person-row {
+        position: relative;
+        transition: opacity 200ms ease, background-color 200ms ease;
+      }
+
+      .v8-active.is-dlg-v2 .v8-helper-person-list.has-selection .v8-helper-person-row:not(.is-selected) {
+        opacity: 0.45;
+      }
+
+      .v8-active.is-dlg-v2 .v8-helper-person-row.is-selected::after {
+        content: "選";
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        width: 30px;
+        height: 30px;
+        margin-top: -15px;
+        display: grid;
+        place-items: center;
+        border: 2px solid #b3261e;
+        border-radius: 50%;
+        color: #b3261e;
+        font-size: 13px;
+        font-weight: 900;
+        rotate: -10deg;
+        animation: v8-dlg2-stamp-row 260ms cubic-bezier(.2, .9, .3, 1.3) both;
+      }
+
+      @keyframes v8-dlg2-stamp-row {
+        0% { opacity: 0; scale: 2; }
+        100% { opacity: 1; scale: 1; }
+      }
+
+      .v8-active.is-dlg-v2 .v8-helper-person-row.is-struck .v8-helper-person-name {
+        background: linear-gradient(#20150d, #20150d) left 55% / 0% 2px no-repeat;
+        animation: v8-dlg2-strike 420ms ease-out forwards;
+      }
+
+      .v8-active.is-dlg-v2 .v8-helper-person-row.is-struck {
+        animation: v8-dlg2-ink-out 300ms ease-in 380ms forwards;
+      }
+
+      @keyframes v8-dlg2-strike { to { background-size: 100% 2px; } }
+      @keyframes v8-dlg2-ink-out { to { opacity: 0.25; } }
+
+      .v8-helper-confirm-slot {
+        display: grid;
+        grid-template-rows: 0fr;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: grid-template-rows 240ms ease, opacity 200ms ease, transform 260ms cubic-bezier(.2, .9, .3, 1.15);
+      }
+
+      .v8-helper-confirm-inner {
+        min-height: 0;
+      }
+
+      .v8-helper-confirm-slot.is-open {
+        grid-template-rows: 1fr;
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .v8-helper-confirm-slot:not(.is-open) .v8-helper-confirm-inner {
+        overflow: hidden;
+      }
+
+      /* The bottom waves drift slowly while the dialog is open. */
+      .v8-active.is-dlg-v2 .v8-helper-wave {
+        animation: v8-dlg2-wave 7s ease-in-out infinite alternate;
+      }
+
+      @keyframes v8-dlg2-wave {
+        from { translate: -7px 0; }
+        to { translate: 7px 0; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .v8-active.is-dlg-v2 .v8-helper-gate,
+        .v8-active.is-dlg-v2 .v8-helper-gate *,
+        .v8-active.is-dlg-v2 .v8-helper-gate *::after {
+          animation: none !important;
+          transition: none !important;
+        }
       }
 
       .v8-helper-cta-danger {

@@ -187,6 +187,24 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## V8TEST-HELPER-DIALOG-V2（代報/代退彈窗動態，item 1–4）
+
+Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
+
+只在 /v8test（`.v8-active.is-dlg-v2`）；/v8 不變（本機確認：/v8 仍瞬開、blur 14px）。後端、取消規則不變。
+1. 開關：卡片由下滑入帶彈性（300ms）、關閉滑出（190ms，關閉中仍保留卡片，不閃）；背景去掉 blur(14px)，改半透明 0.42。
+2. 代報：有輸入名字時「確認報名」輕彈一下；送出中按鈕上朱印轉動（按鈕不淡化、整頁藍色遮罩改透明但仍擋點擊）；
+   成功蓋「完成」停 0.52s 後滑出；失敗卡片左右輕搖（WAAPI translate，不重播滑入），保留輸入。
+3. 代退：選中那列蓋「選」、其他列變淡；「確認取消 ○○」從下方滑出、按「重新選擇」收回；
+   成功時該名字被劃掉並淡出，蓋「完成」停 0.65s 後關閉；失敗輕搖、保留選擇。
+4. 彈窗底部浪花左右緩慢飄動（整塊 translate ±7px，7s）。
+- 減少動態效果：全部不動。
+- 本機 WebKit（測試瀏覽器內假造登入與 API，寫入請求全在瀏覽器內回應、未送到後端）：
+  代報 送出中 → 完成 → 帶著完成滑出 → 關閉；代退 失敗搖晃且保持開啟、成功 劃掉 → 完成 → 關閉；
+  重新選擇後確認鈕高度 0；無錯誤。
+
+---
+
 ## V8TEST-LIST-NAMES-MOTION（名單面板名字動畫）
 
 Status: ABANDONED（user 2026-10-03 real iPhone：看不出效果、被彈窗擋住，放棄；程式已移除，回到原本名單）
@@ -249,7 +267,7 @@ Status: TRIAL DONE（user 選 B CSS）；套用到 ACTIVE = PENDING
   /v8 啟動 JS 前後相同（WebKit 實測 911KB）。試驗頁不可 import v8ActiveConfig（會打亂正式 chunk）。
 - ACTIVE / OPEN / /v8 沒有任何改動。
 - 結果（user real iPhone 2026-10-03）：選 **B CSS**。
-- PENDING（user：先記錄、不實作）— V8-CTA-DIALOG-CSS，套用 B 到 ACTIVE（先 /v8test）：
+- V8-CTA-DIALOG-CSS（user：先記錄、不實作）；其中代報/代退彈窗部分已做 → 見 V8TEST-HELPER-DIALOG-V2：
   - CTA（告假/代報/代退/帳單）：按住即壓下（scale .92 + 下沉，80ms），放開 overshoot 回彈（320ms cubic-bezier(.34,1.56,.64,1)）。
   - 送出中：按鈕上朱印轉動 → 成功蓋「完成」、失敗輕搖；取代整頁藍色遮罩。
   - 彈窗（代報/代退/帳單/身份確認）：滑入/滑出 + 退場動畫；背景改輕遮罩，拿掉 blur(14px)。
