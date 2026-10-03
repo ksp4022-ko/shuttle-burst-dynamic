@@ -1,4 +1,5 @@
 import { v8HeroDefaults, type V8HeroControls } from "@/components/v8-hero/v8HeroConfig";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // All visual elements here are image-file-driven (PNG/SVG/WEBP), never
 // CSS-drawn shapes -- per the redesign brief, badge art must stay swappable
@@ -249,6 +250,15 @@ export const v8ActiveListBuoyFiles = {
   headerWait: "list-buoy-header-wait-v1.webp",
   panel: "list-buoy-body-1448-v1.webp",
 } as const;
+
+// P-021 asset Batch 4 (V8TEST, 2026-10-03): the wave band and panel art at
+// 1080px wide (~2.5x the 430px stage; were 1448px), 452+152KB -> 158+62KB.
+// New filenames, so /v8's files and caches are untouched.
+export function getListBuoyFiles(): Record<keyof typeof v8ActiveListBuoyFiles, string> {
+  return isV8TestRoute()
+    ? { ...v8ActiveListBuoyFiles, waveBand: "list-buoy-wave-band-1080-v2.webp", panel: "list-buoy-body-1080-v2.webp" }
+    : v8ActiveListBuoyFiles;
+}
 
 export const v8ActiveRosterV2Files = {
   a1: "dragon-triple-list-v2-a1-v1.webp",

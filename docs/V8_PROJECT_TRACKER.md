@@ -187,6 +187,20 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## P-021 ASSET BATCH 4（名單浮標＋Toast 浪花，/v8test）
+
+Status: V8TEST DEPLOYED / VERIFY（等 real iPhone，Cfm 後上 /v8）
+
+- 2026-10-03 重新量測（430px×3 模擬）：背景圖（前浪/山/金墨/雲/後浪/老虎卷軸/B3 龍）尺寸已在 3 倍以內，縮圖只能靠降畫質（-9～18%），不做。
+- 範圍（user 確認）：
+  - 名單浮標面板 1448 → 1080px：`list-buoy-body-1080-v2.webp` 452 → 158KB；浪花帶 `list-buoy-wave-band-1080-v2.webp` 152 → 62KB（1080 ≈ 430px 舞台 ×2.5）。
+  - Toast 浪花同尺寸重壓：`toast-wave-main-display-v2.webp` 284 → 196KB、`toast-wave-foam-display-v2.webp` 237 → 172KB；
+    預載從 4 秒改成 9 秒後的閒置時間（requestIdleCallback，最多再等 3 秒），不跟 ACTIVE 圖搶頻寬。
+- 只在 /v8test（`getListBuoyFiles()`、V8Toast 的 BATCH4）；新檔名，/v8 檔案與快取不動。
+- 本機 WebKit：/v8test 圖片 3580 → 3043KB（-537KB）；Toast 浪花 6.5s → 11.4s 才載入；面板圖 1080px 正常顯示；/v8 仍載入舊檔。
+
+---
+
 ## V8TEST-CTA-PRESS-SEAL（主要按鈕按壓手感＋送出朱印，V8-CTA-DIALOG-CSS 的 CTA 部分）
 
 Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → production real iPhone PASS 2026-10-03）

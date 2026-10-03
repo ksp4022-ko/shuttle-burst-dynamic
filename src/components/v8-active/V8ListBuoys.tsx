@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { v8ActiveListBuoyFiles, type V8ActiveListBuoyLayerControls, type V8ActiveListBuoysControls } from "./v8ActiveConfig";
+import { getListBuoyFiles, v8ActiveListBuoyFiles, type V8ActiveListBuoyLayerControls, type V8ActiveListBuoysControls } from "./v8ActiveConfig";
 import type { V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { useV8PageLock } from "./useV8PageLock";
 
@@ -127,7 +127,7 @@ export function V8ListBuoys({
         };
         image.onload = done;
         image.onerror = done;
-        image.src = `${assetBase}${v8ActiveListBuoyFiles.panel}`;
+        image.src = `${assetBase}${getListBuoyFiles().panel}`;
       });
     }
     return panelPromiseRef.current;
@@ -287,7 +287,7 @@ export function V8ListBuoys({
           zIndex: wave.zIndex,
         }}
       >
-        <img src={`${assetBase}${v8ActiveListBuoyFiles.waveBand}`} alt="" aria-hidden="true" draggable={false} />
+        <img src={`${assetBase}${getListBuoyFiles().waveBand}`} alt="" aria-hidden="true" draggable={false} />
         {LIST_ORDER.map((key) => {
           const header = controls.headers[key];
           return (
@@ -346,7 +346,7 @@ export function V8ListBuoys({
             <div className={`v8-list-panel-inner is-${phase}${holdNamesForArt ? ` is-art-${panelArt}` : ""}`}>
               <img
                 ref={panelImageRef}
-                src={`${assetBase}${v8ActiveListBuoyFiles.panel}`}
+                src={`${assetBase}${getListBuoyFiles().panel}`}
                 alt=""
                 aria-hidden="true"
                 draggable={false}

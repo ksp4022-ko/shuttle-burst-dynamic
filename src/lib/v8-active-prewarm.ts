@@ -1,4 +1,4 @@
-import { buildV8ActiveAssets, v8ActiveListBuoyFiles } from "@/components/v8-active/v8ActiveConfig";
+import { buildV8ActiveAssets, getListBuoyFiles, v8ActiveListBuoyFiles } from "@/components/v8-active/v8ActiveConfig";
 import { buildV8HeroAssets } from "@/components/v8-hero/v8HeroConfig";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 
@@ -69,7 +69,7 @@ export function buildV8ActivePrewarmTiers(
     a.infoCardRegistered,
     a.infoCardNeeded,
     a.rosterV2B3,
-    buoy(v8ActiveListBuoyFiles.waveBand),
+    buoy(getListBuoyFiles().waveBand),
     buoy(v8ActiveListBuoyFiles.headerLeave),
     buoy(v8ActiveListBuoyFiles.headerMain),
     buoy(v8ActiveListBuoyFiles.headerWait),
