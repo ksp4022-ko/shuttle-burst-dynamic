@@ -615,6 +615,8 @@ export function V8ActivePage({
       <V8CtaAssemblyStyles />
       {p12BillingTest ? (
         <V8BillingTestPanel
+          open={billOpen}
+          onClose={() => setBillOpen(false)}
           token={lineAuthToken}
           siteId={p12BillingSiteId}
           {...(selectedEventId ? { eventId: selectedEventId } : {})}
@@ -681,7 +683,7 @@ export function V8ActivePage({
                 showHelper: tuningControls.activeSeasonAttendanceShowHelper,
                 isSeasonMember: isSeasonMemberForAttendance,
               }}
-              {...(seasonPayment ? { onBill: () => setBillOpen(true) } : {})}
+              {...(p12BillingTest || seasonPayment ? { onBill: () => setBillOpen(true) } : {})}
               identityEnvelope={identityEnvelope.config}
               onStatusFeedback={handleStatusFeedback}
               onPrimaryAction={handlePrimaryAction}
@@ -787,7 +789,7 @@ export function V8ActivePage({
           known, so they never need to layer on top of each other). */}
       {/* P-022 帳單 (read-only): same blur-gate card as 代報/代退.
           Only backend values; no payment or edit actions. */}
-      {billOpen && seasonPayment ? (
+      {!p12BillingTest && billOpen && seasonPayment ? (
         <div className="v8-identity-gate">
           <div className="v8-identity-gate-card v8-helper-card">
             <V8HelperDialogWave />
