@@ -189,7 +189,7 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ## V8TEST-PWA-SETUP（主畫面 App：名稱、manifest、底部浪花）
 
-Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
+Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 `f0ff77e` → production real iPhone PASS 2026-10-03）
 
 - /v8 套用：`public/manifest-v8.webmanifest`（start `/v8/kangxuan/`、scope `/v8/`）；head script 改為 /v8 與 /v8test 都套用（各自 manifest）；浪花抬高 78px 同步；`activeInfoAltSlotY` production 預設 38 → 34。
 
@@ -209,7 +209,7 @@ Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-
 
 ## V8TEST-PWA-LINE-HANDOFF（主畫面 App 的 LINE 登入接回）
 
-Status: PRODUCTION DEPLOYED / VERIFY（Cfm 2026-10-03：handoff 不再限 /v8test，所有 V8 路由的主畫面 App 都啟用；等 production real iPhone）
+Status: CLOSED（Cfm 2026-10-03：handoff 所有 V8 路由的主畫面 App 都啟用；production real iPhone PASS 2026-10-03）
 
 - real iPhone（user）：LINE 授權後 App 內仍停在 LINE 自己的登入頁（iOS 限制，網頁無法關閉）；使用者關掉該頁即為已登入。user 決定不加提示（方案 C 不改）。
 
