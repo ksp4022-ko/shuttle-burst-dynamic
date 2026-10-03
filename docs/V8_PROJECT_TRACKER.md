@@ -189,7 +189,7 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ## V8TEST-CTA-PRESS-SEAL（主要按鈕按壓手感＋送出朱印，V8-CTA-DIALOG-CSS 的 CTA 部分）
 
-Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
+Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
 
 只在 /v8test（`.v8-asm.is-feel-v2`、`ctaFeelV2`）；/v8 不變（本機確認 /v8 仍是舊按壓、送出中標籤＋整頁藍色遮罩）。後端不變。
 - 按壓：手指按下就壓下（scale .92＋微下沉、稍暗，80ms），按住期間維持；放開（任何地方 pointerup）回彈

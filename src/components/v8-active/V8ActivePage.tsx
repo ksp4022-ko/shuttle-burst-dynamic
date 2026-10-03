@@ -86,7 +86,6 @@ import { V8SunDateStretchText } from "./V8SunDateStretchText";
 import { type V8CtaGlowOutlineKey } from "./v8CtaGlowOutlines";
 import { V8CtaGlowOutline } from "./V8CtaGlowOutline";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "./v8MeetupDisplay";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
@@ -206,9 +205,10 @@ export function V8ActivePage({
   // /v8test first; all routes since Cfm 2026-10-03 (the pre-v2 branches
   // below are kept for reference until the next cleanup).
   const dlgV2 = true;
-  // V8TEST: the main plaque's own seal says 送出中 (the page wash goes clear
-  // but still blocks taps) and a failed action shakes the plaque.
-  const ctaFeelV2 = isV8TestRoute();
+  // The main plaque's own seal says 送出中 (the page wash goes clear but
+  // still blocks taps) and a failed action shakes the plaque.
+  // /v8test first, all routes since Cfm 2026-10-03.
+  const ctaFeelV2 = true;
   const [helperShown, setHelperShown] = useState<HelperMode>(null);
   const [helperResult, setHelperResult] = useState<"done" | "fail" | null>(null);
   const [struckCancelId, setStruckCancelId] = useState<string | null>(null);
@@ -386,7 +386,7 @@ export function V8ActivePage({
   // 送出中 only for the CTA's own submit -- a meetup switch just disables it.
   const ctaPending = ownSubmit === "cta";
 
-  // V8TEST: a failed main action shakes the plaque (WAAPI `translate`, so
+  // A failed main action shakes the plaque (WAAPI `translate`, so
   // the drum's CSS transform is untouched).
   const shakeMainPlaque = () => {
     if (!ctaFeelV2 || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;

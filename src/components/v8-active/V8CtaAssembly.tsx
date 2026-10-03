@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { v8CtaAssemblyLayout as L, type V8CtaAssemblyControls, type V8CtaAssemblyRect } from "./v8ActiveConfig";
 import { V8CtaGlowOutline } from "./V8CtaGlowOutline";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // CTA-ASSEMBLY (2026-09-25): the identity scroll's buttons as ONE piece of
 // art instead of separately positioned plaques. Bottom to top: the base
@@ -33,7 +32,7 @@ export type V8CtaAssemblyAssets = {
 // small ones at ~77x33 on a 390px-wide phone.
 const ASSEMBLY_WIDTH_PCT = 61;
 const PRESS_MS = 280;
-// V8TEST press v2: the plaque stays down while the finger does (shown for
+// Press v2 (/v8test first, all routes since Cfm 2026-10-03): the plaque stays down while the finger does (shown for
 // at least this long so a quick tap still reads), and its release plays a
 // SETTLE_MS overshoot (1.04 -> 0.99 -> 1, WAAPI) while the drum waits.
 const HOLD_MIN_MS = 90;
@@ -118,9 +117,9 @@ export function V8CtaAssembly({
   const textLayers = useTextCrossfade(mainText);
   const [pressed, setPressed] = useState<PressKey | null>(null);
   const pressTimerRef = useRef<number | undefined>(undefined);
-  // V8TEST press v2 (see HOLD_MIN_MS): held while the finger is down,
+  // Press v2 (see HOLD_MIN_MS): held while the finger is down,
   // settling while the release overshoot plays.
-  const feelV2 = isV8TestRoute();
+  const feelV2 = true; // /v8test first, all routes since Cfm 2026-10-03
   const [held, setHeld] = useState<PressKey | null>(null);
   const [settling, setSettling] = useState<PressKey | null>(null);
   const heldAtRef = useRef(0);
@@ -298,7 +297,7 @@ export function V8CtaAssembly({
           </span>
           {pending ? (
             feelV2 ? (
-              // V8TEST: a turning vermilion seal says 送出中 on the plaque.
+              // A turning vermilion seal says 送出中 on the plaque.
               <span className="v8-asm-seal" role="status" aria-label="送出中">
                 送
               </span>
@@ -443,7 +442,7 @@ export function V8CtaAssemblyStyles() {
         pointer-events: none;
       }
 
-      /* V8TEST press v2: down while held, overshoot on release; the drum
+      /* Press v2: down while held, overshoot on release; the drum
          stays out of the way for both. */
       .v8-asm.is-feel-v2 .v8-asm-hit.is-held .v8-asm-motion {
         transform: scale(0.92) translateY(2%);
