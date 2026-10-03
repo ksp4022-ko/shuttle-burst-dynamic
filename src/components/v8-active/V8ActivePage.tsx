@@ -1386,6 +1386,7 @@ function V8SunMeetupSwitcher({
             onNextEvent={onNextEvent}
             hasPrevious={hasPrevious}
             hasNext={hasNext}
+            area="upper-half"
           />
         </Suspense>
       ) : (

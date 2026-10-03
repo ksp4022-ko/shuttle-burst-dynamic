@@ -99,7 +99,7 @@ V8TEST infrastructure:
 - Cloud badges v2 — new 球種/費用/場時/上限 cloud art (450px WebP ~22KB each), user-tuned defaults, 上限 behind the red sun; /v8test real iPhone PASS → promoted to `/v8` on Cfm 2026-10-03 (saved badge tuning reset once) (`87f2d25`); CLOSED (production real iPhone PASS)
 - ACTIVE viewport clip — page clipped to 100svh so a reload can no longer scroll to the art below the list band; /v8test real iPhone PASS → promoted to `/v8` on Cfm 2026-10-03 (`eb3af67`); CLOSED (production real iPhone PASS)
 - V8TEST skipped view transition — observe `transition.ready` so a hidden-page auto-enter no longer leaves an unhandled rejection (`/v8test` only)
-- V8TEST sun swipe (Motion) — the whole sun slides and its text dial turns with the finger, rubber-bands at the ends, commits on 56px or a flick, springs back otherwise (`/v8test` only, lazy; /v8 unchanged); awaiting real iPhone
+- V8TEST sun swipe (Motion) — OPEN: whole stage, ACTIVE: top half of the screen; countdown pauses while dragging; the whole sun slides and its text dial turns with the finger, rubber-bands at the ends, commits on 56px or a flick, springs back otherwise (`/v8test` only, lazy; /v8 unchanged); awaiting real iPhone
 - MOTION-TRIAL — `/v8test/motion-lab` compares CTA press / 代報 dialog / seal effects: A current, B CSS, C Motion (`motion` loads only on that page; /v8 startup JS unchanged); user picked B CSS
 - V8TEST blank-screen report — `3d05337` on-page error box + 10s not-started note (`/v8test` only); Intro guarded; user reopened: normal (not reproduced), report box kept
 

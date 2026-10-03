@@ -209,6 +209,14 @@ Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
   （第 2 版，user：以為紅日本身也會位移；V8HeroComposition 的紅日後層加 `data-v8-sun-under` 標記，/v8 畫面不變。）
 - 放開：拖超過 56px 或快速甩（≥420px/s 同方向）→ 切換；否則以放開速度彈簧回正（Motion `animate` spring）。
   拖超過 120px 時在移動中就切換（避免 Safari 中途 pointercancel 吃掉手勢）。方向同舊版：左→右 = 下一場。
+- 第 3 版（user）：滑動判定擴大 + 加到 OPEN + 拖曳時暫停倒數：
+  - 手勢改掛在整個舞台（`[data-v8-hero-stage]`）：OPEN 整個畫面、ACTIVE 螢幕上半部（clientY ≤ 視窗高 / 2）。
+    點按（沒有水平移動）照常點到按鈕；拖曳後的那次 click 會被吞掉，避免從按鈕開始滑也按到按鈕。
+    輸入框、對話框、身份確認、`[data-no-sun-swipe]` 不起算；場次選單是 portal，不在舞台內。
+  - OPEN 共用同一個 `V8SunSwipeMotion`（lazy，只在 /v8test）。
+  - OPEN 拖曳中暫停 9 秒倒數（`openSunDragging`），放開後從剩餘秒數繼續。
+  - 本機 WebKit：OPEN 在 y=560（老虎上）滑 → 換場；拖住 12 秒不會自動進 ACTIVE，放開後倒數走完才進；
+    ACTIVE y=280 滑 → 換場，y=500（下半部）滑 → 不換；點 1/14 開選單、點進入戰局 正常。
 - 只在 /v8test：`V8SunSwipeMotion` 用 React.lazy 載入，載入前用舊的滑動區；/v8 不下載 Motion
   （本機實測 /v8 啟動 JS 前後皆 911KB）。/v8test 多 ~22KB gzip（Motion 共用 chunk 16.6KB + 滑動 5.9KB）。
 - prefers-reduced-motion：不跟手、不彈簧，只保留切換。

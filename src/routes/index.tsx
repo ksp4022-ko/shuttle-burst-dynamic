@@ -753,6 +753,8 @@ export function Index() {
   const [spotlightRect, setSpotlightRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [frontCardRect, setFrontCardRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [countdownRemainingMs, setCountdownRemainingMs] = useState<number | null>(null);
+  // V8TEST: a finger dragging the OPEN sun pauses the auto-enter countdown.
+  const [openSunDragging, setOpenSunDragging] = useState(false);
   const [countdownKey, setCountdownKey] = useState(0);
   const countdownRemainingMsRef = useRef<number | null>(null);
   const [openMeetupPickerOpen, setOpenMeetupPickerOpen] = useState(false);
@@ -1684,7 +1686,7 @@ export function Index() {
       resetCountdownRemaining();
       return;
     }
-    if (openMeetupPickerOpen) {
+    if (openMeetupPickerOpen || openSunDragging) {
       return;
     }
     const seconds = Math.max(0, Math.round(effectiveCountdownSeconds));
@@ -1722,6 +1724,7 @@ export function Index() {
     openCountdownAssetsReady,
     openMeetupPickerOpen,
     openOnlyEffectsActive,
+    openSunDragging,
     resetCountdownRemaining,
     tutorialOpen,
     v8IntroBlocking,
@@ -2172,6 +2175,7 @@ export function Index() {
                   onPickerOpenChange={setOpenMeetupPickerOpen}
                   dotsControls={buildV8SunDotsControls(openTuningControls, "open")}
                   bump={openDialBump}
+                  onSwipeDragChange={setOpenSunDragging}
                 />
               }
             />

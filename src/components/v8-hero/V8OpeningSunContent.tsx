@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject, type TouchEvent } from "react";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 import { v8OptimizedAssetFiles, v8OptimizedStatusAssetFiles, type V8SunDotsControls } from "@/components/v8-active/v8ActiveConfig";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
@@ -296,6 +297,10 @@ function useOpeningSunDial(text: OpeningDialText, order: string) {
   return dial;
 }
 
+// V8TEST: finger-following swipe anywhere on the OPEN stage (shared with
+// ACTIVE, see V8SunSwipeMotion). Lazy so /v8 never downloads Motion.
+const V8SunSwipeMotion = lazy(() => import("@/components/v8-active/V8SunSwipeMotion"));
+
 function V8OpeningSunSwitcher({
   assets,
   controls,
@@ -303,6 +308,8 @@ function V8OpeningSunSwitcher({
   onNextEvent,
   hasPrevious,
   hasNext,
+  dragTargetRef,
+  onDragActiveChange,
 }: {
   assets: { sunSwitchArrowPrev: string; sunSwitchArrowNext: string };
   controls: SwitchArrowControls;
@@ -310,6 +317,8 @@ function V8OpeningSunSwitcher({
   onNextEvent: () => void;
   hasPrevious: boolean;
   hasNext: boolean;
+  dragTargetRef?: RefObject<HTMLDivElement | null> | undefined;
+  onDragActiveChange?: ((active: boolean) => void) | undefined;
 }) {
   // Decided while the finger moves (not only on release): a mostly
   // horizontal move past the threshold switches once per gesture. Safari
@@ -349,16 +358,34 @@ function V8OpeningSunSwitcher({
     startRef.current = null;
   };
 
+  const plainZone = (
+    <div
+      className="v8-opening-sun-swipe-zone"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+      aria-hidden="true"
+    />
+  );
+
   return (
     <>
-      <div
-        className="v8-opening-sun-swipe-zone"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchCancel}
-        aria-hidden="true"
-      />
+      {dragTargetRef ? (
+        <Suspense fallback={plainZone}>
+          <V8SunSwipeMotion
+            targetRef={dragTargetRef}
+            onPreviousEvent={onPreviousEvent}
+            onNextEvent={onNextEvent}
+            hasPrevious={hasPrevious}
+            hasNext={hasNext}
+            area="stage"
+            onDragActiveChange={onDragActiveChange}
+          />
+        </Suspense>
+      ) : (
+        plainZone
+      )}
       {controls.show ? (
         <>
           <button type="button" className={hasPrevious ? "v8-opening-sun-switch-arrow" : "v8-opening-sun-switch-arrow is-end"} style={switchArrowStyle(controls.prev)} aria-disabled={!hasPrevious} disabled={!hasPrevious} onClick={onPreviousEvent} aria-label="上一場聚會">
@@ -400,6 +427,7 @@ export function V8OpeningSunContent({
   onPickerOpenChange,
   dotsControls,
   bump,
+  onSwipeDragChange,
 }: {
   event: AlphaEvent | null | undefined;
   controls?: V8OpeningSunControls;
@@ -419,7 +447,12 @@ export function V8OpeningSunContent({
   dotsControls?: V8SunDotsControls;
   // Bumped when a switch hits the first/last meetup (spring-back turn).
   bump?: { n: number; dir: 1 | -1 } | undefined;
+  // V8TEST: true while a finger is dragging the sun (pauses the countdown).
+  onSwipeDragChange?: ((active: boolean) => void) | undefined;
 }) {
+  // V8TEST: wrapper the finger-following swipe turns (see V8SunSwipeMotion).
+  const sunDragRef = useRef<HTMLDivElement>(null);
+  const sunDragEnabled = isV8TestRoute();
   const assets = useMemo(() => buildV8OpeningSunAssets(import.meta.env.BASE_URL), []);
   const eventDisplay = event ? parseV8MeetupDisplay(event.name) : null;
   const dialText: OpeningDialText = {
@@ -469,6 +502,19 @@ export function V8OpeningSunContent({
   // Active's own courtTimeLabel logic.
   const courtTimeLabel = event.courtCount ? (event.hours ? `${event.courtCount}場/${event.hours}hr` : `${event.courtCount}場`) : null;
 
+  const dialGroups = (
+    <>
+      {dial?.outgoing ? (
+        <div className="v8-opening-sun-dial-group is-out" style={dirStyle} aria-hidden="true">
+          {renderMessages(dial.outgoing)}
+        </div>
+      ) : null}
+      <div key={dial?.n ?? 0} className={dial ? "v8-opening-sun-dial-group is-in" : "v8-opening-sun-dial-group"} style={dirStyle}>
+        {renderMessages(dialText)}
+      </div>
+    </>
+  );
+
   return (
     <>
       {dialing ? (
@@ -484,6 +530,8 @@ export function V8OpeningSunContent({
           onNextEvent={onNextEvent}
           hasPrevious={hasPrevious}
           hasNext={hasNext}
+          dragTargetRef={sunDragEnabled ? sunDragRef : undefined}
+          onDragActiveChange={onSwipeDragChange}
         />
       ) : null}
       {/* Clipped to the sun's circle only while the dial turns. */}
@@ -492,14 +540,13 @@ export function V8OpeningSunContent({
         className={["v8-opening-sun-dial-clip", dialing ? "is-dialing" : "", bump ? "is-bump" : ""].filter(Boolean).join(" ")}
         style={{ "--bump-dir": bump?.dir ?? 1 } as CSSProperties}
       >
-        {dial?.outgoing ? (
-          <div className="v8-opening-sun-dial-group is-out" style={dirStyle} aria-hidden="true">
-            {renderMessages(dial.outgoing)}
+        {sunDragEnabled ? (
+          <div ref={sunDragRef} className="v8-opening-sun-drag">
+            {dialGroups}
           </div>
-        ) : null}
-        <div key={dial?.n ?? 0} className={dial ? "v8-opening-sun-dial-group is-in" : "v8-opening-sun-dial-group"} style={dirStyle}>
-          {renderMessages(dialText)}
-        </div>
+        ) : (
+          dialGroups
+        )}
       </div>
       {SHOW_INFO_BADGES && event.ballType ? (
         <V8SunInfoBadgeScattered src={assets.sunBadgeBallType} label={event.ballType} config={BALL_TYPE_BADGE} textInset={BADGE_TEXT_INSETS.ballType} />
@@ -557,6 +604,13 @@ export function V8OpeningSunStyles() {
       .v8-opening-sun-dial-clip.is-dialing {
         border-radius: 50%;
         overflow: hidden;
+      }
+
+      /* V8TEST: turned by the finger-following sun swipe. */
+      .v8-opening-sun-drag {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 50%;
       }
 
       .v8-opening-sun-dial-group {
