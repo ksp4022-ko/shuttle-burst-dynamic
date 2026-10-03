@@ -195,7 +195,9 @@ Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）；圖示等 user 補圖
 - `public/manifest-v8test.webmanifest`：name/short_name「V8 康軒報名」，start_url `/v8test/kangxuan/`，scope `/v8test/`，standalone。
 - `__root.tsx` 內嵌 script（只在 `/v8test`）：加 manifest link、apple-mobile-web-app-title/capable；從主畫面開啟時才加 `html.v8-standalone` 並在 viewport 補 `viewport-fit=cover`（讓 safe-area 有值）。Safari 分頁不受影響；/v8 完全不變。
 - `V8ListBuoys.tsx`：`.v8-standalone` 時浪花帶與名單面板 `bottom: env(safe-area-inset-bottom)`，下方空隙用同圖最底幾行拉長＋漸層到深藍補滿。
-- 瀏海（頂部黑條＋圓角）未改，等 user 決定。
+- 瀏海：user 選 C 不改。
+- real iPhone 診斷（user 2026-10-03）：主畫面 App `safe-area-inset-bottom/top = 0`（viewport-fit=cover 已生效），innerHeight 706 / screen 874 → 第一版抬高無效；改為 `max(env(), 28px)` 固定抬高 28px，下方仍用拉長＋漸層補滿。診斷小字已移除。
+- 繪馬 尚缺/候補 在 App 位置不同：微調面板設定存在各自瀏覽器（App 與 Safari 儲存空間分開），App 讀到預設值（AltSlot X29 Y38 Scale2 Rot2），Safari 用 user 調過的值；需 user 提供 Safari 數值寫入預設。
 - 本機 WebKit：App 模式 class/viewport/manifest 正確、無錯誤；Safari 模式無 class、浪花 bottom 0；/v8 無 manifest、無變化；模擬 34px Home 條截圖接縫自然。
 
 ---

@@ -436,10 +436,16 @@ function V8ListBuoysStyles() {
          reaches the physical bottom, so the band and panel sat under the
          home indicator and the rounded screen corners. Lift them by the
          safe area and fill the gap below with their own bottom edge
-         stretched, so it reads as one wave. Safari is untouched. */
+         stretched, so it reads as one wave. Safari is untouched. The
+         iPhone home-screen app reports a 0 bottom inset (real iPhone
+         readout 2026-10-03), hence the 28px floor. */
+      .v8-standalone {
+        --v8-standalone-lift: max(env(safe-area-inset-bottom, 0px), 28px);
+      }
+
       .v8-standalone .v8-list-wave,
       .v8-standalone .v8-list-panel {
-        bottom: env(safe-area-inset-bottom, 0px);
+        bottom: var(--v8-standalone-lift);
       }
 
       .v8-standalone .v8-list-wave::after,
@@ -449,7 +455,7 @@ function V8ListBuoysStyles() {
         left: 0;
         right: 0;
         top: 100%;
-        height: env(safe-area-inset-bottom, 0px);
+        height: var(--v8-standalone-lift);
         /* Only the art's last few rows, stretched down: a soft streak that
            continues the blurred bottom edge, fading to deep sea. */
         background:
