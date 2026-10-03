@@ -98,7 +98,7 @@ V8TEST infrastructure:
 - V8TEST ACTIVE red sun Auto-Fill — `ce9eb2d` OPEN sun layout by default, v2 key, error fallback not saved (`/v8test` only); real iPhone PASS (user) → promoted to `/v8` on Cfm (`bdbbb21`); CLOSED (production real iPhone PASS)
 - Cloud badges v2 — new 球種/費用/場時/上限 cloud art (450px WebP ~22KB each), user-tuned defaults, 上限 behind the red sun; /v8test real iPhone PASS → promoted to `/v8` on Cfm 2026-10-03 (saved badge tuning reset once) (`87f2d25`); CLOSED (production real iPhone PASS)
 - ACTIVE viewport clip — page clipped to 100svh so a reload can no longer scroll to the art below the list band; /v8test real iPhone PASS → promoted to `/v8` on Cfm 2026-10-03 (`eb3af67`); CLOSED (production real iPhone PASS)
-- MOTION-TRIAL — `/v8test/motion-lab` compares CTA press / 代報 dialog / seal effects: A current, B CSS, C Motion (`motion` loads only on that page; /v8 startup JS unchanged); awaiting real iPhone comparison
+- MOTION-TRIAL — `/v8test/motion-lab` compares CTA press / 代報 dialog / seal effects: A current, B CSS, C Motion (`motion` loads only on that page; /v8 startup JS unchanged); user picked B CSS
 - V8TEST blank-screen report — `3d05337` on-page error box + 10s not-started note (`/v8test` only); Intro guarded; user reopened: normal (not reproduced), report box kept
 
 ### OPEN ISSUES（recorded 2026-10-01, not fixed yet）
@@ -117,6 +117,7 @@ V8TEST infrastructure:
   - future v2 should be scoped and tested through V8TEST
 
 ### PENDING (user)
+- V8-CTA-DIALOG-CSS — apply lab variant B to ACTIVE (CTA press-on-touch + overshoot, seal on button instead of page wash, dialogs slide in/out with light backdrop, no blur); recorded only, not implemented (user 2026-10-03)
 - DEV-ENV-ACCESS
   - Network access opened 2026-10-03 (github.io / workers.dev reachable); WebKit still installed per session (no setup script)
   - steps in `V8_PROJECT_TRACKER.md`

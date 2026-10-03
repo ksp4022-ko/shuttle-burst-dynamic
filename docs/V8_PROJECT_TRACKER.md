@@ -189,7 +189,7 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ## MOTION-TRIAL（CTA / 彈窗效果比較，/v8test/motion-lab）
 
-Status: V8TEST DEPLOYED / VERIFY（等 user real iPhone 比較 A/B/C）
+Status: TRIAL DONE（user 選 B CSS）；套用到 ACTIVE = PENDING
 
 - 加入 `motion`（bun add；引用 `motion/react`）。bun.lock 原本落後 package.json（缺 remotion 等），一併補齊。
   注意：用 bun 重裝的 node_modules 會讓 Pages prerender 失敗（listen ::）；CI 用 npm install，正常。
@@ -198,6 +198,13 @@ Status: V8TEST DEPLOYED / VERIFY（等 user real iPhone 比較 A/B/C）
 - Bundle：Motion 只在試驗頁的 chunk（140KB raw / 45KB gzip，含試驗頁本身）。
   /v8 啟動 JS 前後相同（WebKit 實測 911KB）。試驗頁不可 import v8ActiveConfig（會打亂正式 chunk）。
 - ACTIVE / OPEN / /v8 沒有任何改動。
+- 結果（user real iPhone 2026-10-03）：選 **B CSS**。
+- PENDING（user：先記錄、不實作）— V8-CTA-DIALOG-CSS，套用 B 到 ACTIVE（先 /v8test）：
+  - CTA（告假/代報/代退/帳單）：按住即壓下（scale .92 + 下沉，80ms），放開 overshoot 回彈（320ms cubic-bezier(.34,1.56,.64,1)）。
+  - 送出中：按鈕上朱印轉動 → 成功蓋「完成」、失敗輕搖；取代整頁藍色遮罩。
+  - 彈窗（代報/代退/帳單/身份確認）：滑入/滑出 + 退場動畫；背景改輕遮罩，拿掉 blur(14px)。
+- Motion 套件與試驗頁暫時保留（B 不需要 Motion；之後若不用可移除）。
+  Motion 較適合：紅日跟手滑動切換聚會（慣性/回彈）、名單增減補位動畫。
 
 ---
 
