@@ -54,6 +54,11 @@ jobs:
           cp dist/client/index.html dist/client/v8test/index.html
           cp dist/client/index.html dist/client/v8test/rian/index.html
           cp dist/client/index.html dist/client/v8test/kangxuan/index.html
+          # /v9/* = V9 minimal UI over the V8 API (see docs/V9_BASELINE.md).
+          mkdir -p dist/client/v9 dist/client/v9/rian dist/client/v9/kangxuan
+          cp dist/client/index.html dist/client/v9/index.html
+          cp dist/client/index.html dist/client/v9/rian/index.html
+          cp dist/client/index.html dist/client/v9/kangxuan/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

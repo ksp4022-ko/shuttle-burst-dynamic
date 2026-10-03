@@ -1,5 +1,8 @@
 # V8 Development Rules
 
+> V9 (`/v9/*`) has its own section at the end of this file. The V8 rules
+> below still apply in full to `/v8/*` and `/v8test/*`.
+
 ## Truth
 - Source code = implementation truth.
 - `docs/V8_SYSTEM_DESIGN.md` = architecture truth.
@@ -69,3 +72,13 @@ Reply format (user preference):
 - If there is a NEXT STEP with a checklist the user must do (e.g. real-iPhone test items),
   put the checklist OUTSIDE the code block, as normal text after it.
   Inside the block, NEXT STEP keeps only a one-line summary.
+
+## V9 Rules
+- Baseline: `docs/V9_BASELINE.md` (V9 truth for scope and decisions).
+- Routes: `/v9/`, `/v9/kangxuan/`, `/v9/rian/`. Until V9 launches, `/v9` is the development route and shows the `V9 PREVIEW` badge; after launch add `/v9test` and lock `/v9` like V8.
+- V9 changes presentation only. Reuse the existing hooks/lib (`useV8LineAuth`, `database-alpha`, `useV8PersonalBillingTest`, etc.) without changing their behavior; no new billing math, no new business rules.
+- Isolation: V9 code lives in `src/components/v9/` and `src/lib/v9-*`. Never import V8 hero/active/preview/tuning components or legacy homepage UI into V9; never import V9 code into V8/V7. Pure data helpers with no UI (e.g. `parseV8MeetupDisplay`) may be reused read-only.
+- Any edit to a shared file (`database-alpha.ts`, `__root.tsx`, `routeTree.gen.ts`, hooks, workflow) must be called out in the report as "影響共用檔", with `/v8` regression checks.
+- `/v9` uses the official backend: signup / leave / proxy actions are real.
+- Storage: V9-owned keys use the `v9:` prefix (`v9StorageKey`). LINE token/identity are shared with V8.
+- Verification and report format: same as V8 above.
