@@ -151,7 +151,7 @@ Status: CLOSED（user 2026-10-01：雲框已正常；未再重現，判定為一
 
 ## V8TEST-CLOUD-BADGES-V2（新雲框 4 張）
 
-Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
+Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → production real iPhone PASS 2026-10-03）
 
 - user 2026-10-03 提供新雲框 4 張（球種 / 費用 / 場時 / 上限），2172×724 PNG，各 2.6–3.4MB。
 - 優化：裁掉透明邊 → 450px 寬 WebP（有損 + alpha），各約 21–24KB（4 張共 89KB；舊 450 版 4 張 128KB）。
@@ -175,7 +175,7 @@ Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-
 
 ## V8TEST-ACTIVE-VIEWPORT-CLIP（重整後下方版面被拉開）
 
-Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
+Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → production real iPhone PASS 2026-10-03）
 
 - user 2026-10-03：ACTIVE 重整後頁面往下捲，名單浪下方露出龍尾/浪花（未完成的版面）。
 - 原因：ACTIVE 舞台 390/800（393 寬 → 806px）比 iPhone 可視高度（約 660）高；平常靠 page lock
