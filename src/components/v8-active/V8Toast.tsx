@@ -26,7 +26,8 @@ type NoticeTone = "success" | "error";
 // read as a success.
 const SUCCESS_NOTICE_MARKERS = ["已完成報名", "已請假", "已消假", "已取消報名", "已取消", "已代報", "已代退"];
 // Single-line notices that are not errors.
-const NEUTRAL_NOTICES = new Set(["已切換聚會", "已是第一場", "已是最後一場"]);
+export const V8_LINE_HANDOFF_BROWSER_NOTICE = "LINE 登入完成，可回到主畫面 App";
+const NEUTRAL_NOTICES = new Set(["已切換聚會", "已是第一場", "已是最後一場", V8_LINE_HANDOFF_BROWSER_NOTICE]);
 let toastWaveAssetsPreloaded = false;
 
 function noticeTone(message: string): NoticeTone {

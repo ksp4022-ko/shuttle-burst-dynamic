@@ -187,6 +187,18 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
+## V8TEST-PWA-LINE-HANDOFF（主畫面 App 的 LINE 登入接回）
+
+Status: V8TEST DEPLOYED / 等 Worker 部署（user 手動 wrangler deploy）→ real iPhone
+
+- 問題（user 2026-10-03）：加到主畫面後按 LINE 登入，LINE App 授權完開在 Safari，登入存進 Safari；主畫面 App（儲存空間分開）仍未登入。
+- user 選方案 B（改後端、自動接回）。不改 D1 schema。
+- Worker（badminton-signup `2c6ac0a`，未部署）：`/auth/line/start` 接受 `handoff=<sha256 hex>`，放進 state；callback 額外用該 hash 存一組一次性 auth code（同表、同 5 分鐘、單次使用）。不帶 handoff 時行為不變。
+- 前端（/v8test only，主畫面 App 模式才啟用）：App 產生密鑰存 localStorage，只送 hash；回到 App 每 2.5 秒（可見時）用密鑰呼叫 `POST /auth/session`，成功即登入，6 分鐘逾時。Safari 收到帶 `line_handoff=1` 的回傳仍照常登入，並顯示 Toast「LINE 登入完成，可回到主畫面 App」。
+- 本機驗證：Worker 假 D1 流程（有 handoff：密鑰 200、重用 401、Safari 碼 200；無 handoff：同舊行為）；WebKit 模擬 App（等待→接回登入→停止輪詢）、Safari Toast、/v8 不帶 handoff。
+
+---
+
 ## P-021 ASSET BATCH 4（名單浮標＋Toast 浪花）
 
 Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → production real iPhone PASS 2026-10-03）

@@ -1,13 +1,28 @@
 import { useEffect, useState } from "react";
-import { exchangeV8LineAuthCode, fetchV8AuthMe, getV8LineLoginStartUrl } from "@/lib/v8-line-auth";
 import {
+  createV8LineHandoff,
+  exchangeV8LineAuthCode,
+  fetchV8AuthMe,
+  getV8LineLoginStartUrl,
+  isV8StandaloneApp,
+} from "@/lib/v8-line-auth";
+import {
+  clearV8LineHandoff,
   clearV8LineSessionOnly,
+  loadV8LineHandoff,
   loadV8LineIdentity,
   loadV8LineToken,
+  saveV8LineHandoff,
   saveV8LineIdentity,
   saveV8LineToken,
   type V8LineIdentity,
 } from "@/lib/v8-line-auth-storage";
+import { isV8TestRoute } from "@/lib/v8-route-family";
+
+// Marks a login started from the home-screen web app (PWA), so the page
+// that receives the LINE callback in Safari can point back to the app.
+const LINE_HANDOFF_RETURN_PARAM = "line_handoff";
+const LINE_HANDOFF_POLL_MS = 2500;
 
 export type V8LineAuthDiagnostic = {
   status:
@@ -20,7 +35,9 @@ export type V8LineAuthDiagnostic = {
     | "exchange-failed"
     | "storage-unavailable"
     | "refresh-failed"
-    | "auth-error";
+    | "auth-error"
+    | "handoff-waiting"
+    | "handoff-browser";
   message: string;
   detail?: string;
 };
@@ -56,6 +73,14 @@ export function useV8LineAuth() {
       const authCode = url.searchParams.get("auth");
       const authError = url.searchParams.get("auth_error");
       const authErrorDetail = url.searchParams.get("auth_error_detail");
+      const fromHandoff = url.searchParams.has(LINE_HANDOFF_RETURN_PARAM);
+      if (fromHandoff) {
+        url.searchParams.delete(LINE_HANDOFF_RETURN_PARAM);
+        window.history.replaceState(null, "", url.toString());
+      }
+      // The callback reached this app itself: its own pending handoff (if
+      // any) is no longer needed.
+      if (authCode || authError) clearV8LineHandoff();
 
       if (authCode) {
         if (!cancelled) {
@@ -80,7 +105,12 @@ export function useV8LineAuth() {
           setIdentity(session.identity);
           const savedToken = loadV8LineToken();
           setDiagnostic(
-            savedToken === session.token
+            fromHandoff && !isV8StandaloneApp()
+              ? {
+                  status: "handoff-browser",
+                  message: "LINE 登入完成，可回到主畫面的 App 繼續（App 會自動登入）。",
+                }
+              : savedToken === session.token
               ? {
                   status: "session-ready",
                   message: "LINE 登入成功，30 天登入狀態已保存。",
@@ -185,8 +215,75 @@ export function useV8LineAuth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // PWA handoff: while a login started here is pending and this app has no
+  // session yet, keep trying to redeem the handoff secret (the LINE callback
+  // may have finished in Safari instead of here).
+  useEffect(() => {
+    if (loading || token || !loadV8LineHandoff()) return;
+    let cancelled = false;
+    let busy = false;
+    setDiagnostic({
+      status: "handoff-waiting",
+      message: "等待 LINE 登入完成……若跳到 Safari，完成後回到這裡會自動登入。",
+    });
+    const poll = async () => {
+      if (busy || cancelled || document.visibilityState !== "visible") return;
+      const handoff = loadV8LineHandoff();
+      if (!handoff) {
+        stop();
+        if (!cancelled) setDiagnostic({ status: "signed-out", message: "LINE 登入逾時，請重新登入。" });
+        return;
+      }
+      busy = true;
+      try {
+        const session = await exchangeV8LineAuthCode(handoff.secret);
+        if (cancelled) return;
+        clearV8LineHandoff();
+        saveV8LineToken(session.token, session.expiresAt);
+        saveV8LineIdentity(session.identity);
+        setToken(session.token);
+        setIdentity(session.identity);
+        setDiagnostic({ status: "session-ready", message: "LINE 登入成功，30 天登入狀態已保存。" });
+        stop();
+      } catch {
+        // Not redeemable yet (401 until the callback stores it) or a
+        // transient error -- try again on the next tick.
+      } finally {
+        busy = false;
+      }
+    };
+    const onVisible = () => void poll();
+    const timer = window.setInterval(onVisible, LINE_HANDOFF_POLL_MS);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    function stop() {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    }
+    void poll();
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [loading, token]);
+
   const startLogin = () => {
-    window.location.href = getV8LineLoginStartUrl(window.location.href);
+    if (!isV8TestRoute() || !isV8StandaloneApp()) {
+      window.location.href = getV8LineLoginStartUrl(window.location.href);
+      return;
+    }
+    void (async () => {
+      const handoff = await createV8LineHandoff();
+      if (!handoff) {
+        window.location.href = getV8LineLoginStartUrl(window.location.href);
+        return;
+      }
+      saveV8LineHandoff(handoff.secret);
+      const returnTo = new URL(window.location.href);
+      returnTo.searchParams.set(LINE_HANDOFF_RETURN_PARAM, "1");
+      window.location.href = getV8LineLoginStartUrl(returnTo.toString(), handoff.hash);
+    })();
   };
 
   const updateIdentity = (nextIdentity: V8LineIdentity) => {

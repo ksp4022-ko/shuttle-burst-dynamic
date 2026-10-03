@@ -23,11 +23,35 @@ export type V8ProfileIdentityType = "fixed" | "temp";
 // Full-page redirect, not a fetch -- LINE itself needs to render the
 // consent screen, so this URL is meant for `window.location.href =`, not
 // an XHR/fetch call.
-export function getV8LineLoginStartUrl(returnTo?: string): string {
+export function getV8LineLoginStartUrl(returnTo?: string, handoffHash?: string): string {
   const url = new URL(`${configuredApiBase()}/auth/line/start`);
   const cleanReturnTo = returnTo?.trim();
   if (cleanReturnTo) url.searchParams.set("returnTo", cleanReturnTo);
+  if (handoffHash) url.searchParams.set("handoff", handoffHash);
   return url.toString();
+}
+
+// Home-screen web app (PWA) login handoff. On iOS the LINE app finishes
+// login in Safari, whose storage is separate from the PWA's, so the PWA
+// keeps a random secret, sends only its sha256 to /auth/line/start, and
+// polls POST /auth/session with the secret until the Worker has stored a
+// one-time code under that hash (or it expires, 5 min on the Worker).
+export function isV8StandaloneApp(): boolean {
+  if (typeof window === "undefined") return false;
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  return nav.standalone === true || (window.matchMedia?.("(display-mode: standalone)").matches ?? false);
+}
+
+export async function createV8LineHandoff(): Promise<{ secret: string; hash: string } | null> {
+  try {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const secret = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
+    const hash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    return { secret, hash };
+  } catch {
+    return null;
+  }
 }
 
 // POST /auth/session with the one-time `auth` code from the callback

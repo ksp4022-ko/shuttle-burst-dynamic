@@ -108,3 +108,42 @@ export function clearV8LineSessionOnly() {
     // ignore
   }
 }
+
+// Pending PWA login handoff (see createV8LineHandoff). Kept apart from
+// V8_LINE_AUTH_STORAGE_KEYS: it is a short-lived login attempt, not a session.
+const V8_LINE_HANDOFF_STORAGE_KEY = "shuttle-v8-line-handoff-v1";
+export const V8_LINE_HANDOFF_TTL_MS = 6 * 60 * 1000;
+
+export type V8LineHandoff = { secret: string; startedAt: number };
+
+export function saveV8LineHandoff(secret: string) {
+  try {
+    window.localStorage.setItem(V8_LINE_HANDOFF_STORAGE_KEY, JSON.stringify({ secret, startedAt: Date.now() }));
+  } catch {
+    // Without storage the PWA can't redeem the handoff; login still lands in Safari.
+  }
+}
+
+export function loadV8LineHandoff(): V8LineHandoff | null {
+  try {
+    const raw = window.localStorage.getItem(V8_LINE_HANDOFF_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<V8LineHandoff>;
+    if (typeof parsed.secret !== "string" || typeof parsed.startedAt !== "number") return null;
+    if (Date.now() - parsed.startedAt > V8_LINE_HANDOFF_TTL_MS) {
+      clearV8LineHandoff();
+      return null;
+    }
+    return { secret: parsed.secret, startedAt: parsed.startedAt };
+  } catch {
+    return null;
+  }
+}
+
+export function clearV8LineHandoff() {
+  try {
+    window.localStorage.removeItem(V8_LINE_HANDOFF_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}

@@ -79,7 +79,7 @@ import {
 } from "./V8IdentityEnvelopeExperiment";
 import { V8ActiveInfoCards } from "./V8ActiveInfoCards";
 import { V8ActiveRosterLists, V8RosterV2Layers, type V8ActiveRosterPerson } from "./V8ActiveRosterLists";
-import { V8Toast } from "./V8Toast";
+import { V8_LINE_HANDOFF_BROWSER_NOTICE, V8Toast } from "./V8Toast";
 import { V8HeightGuides } from "./V8HeightGuides";
 import { V8ListBuoys } from "./V8ListBuoys";
 import { V8SunDateStretchText } from "./V8SunDateStretchText";
@@ -165,6 +165,12 @@ export function V8ActivePage({
     updateIdentity: updateLineIdentity,
     refreshIdentity: refreshLineIdentity,
   } = useV8LineAuth();
+  // Login started from the home-screen app but finished here in Safari:
+  // point the user back to the app (it signs itself in).
+  const { setNotice: setFlowNotice } = flow;
+  useEffect(() => {
+    if (lineAuthDiagnostic.status === "handoff-browser") setFlowNotice(V8_LINE_HANDOFF_BROWSER_NOTICE);
+  }, [lineAuthDiagnostic.status, setFlowNotice]);
   const [identityResetDraft, setIdentityResetDraft] = useState<V8LineIdentity | null>(null);
   const effectiveLineIdentity = identityResetDraft || lineIdentity;
   const {
