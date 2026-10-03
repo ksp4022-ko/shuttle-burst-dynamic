@@ -1,6 +1,5 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import type { MotionMode } from "@/hooks/use-homepage-flow";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // V8-only counterpart to HomepageToast (src/components/homepage/HomepageToast.tsx)
 // -- the user asked for the V8 experience's own toast to match the ukiyo-e/
@@ -10,10 +9,10 @@ import { isV8TestRoute } from "@/lib/v8-route-family";
 // one instead when isV8Route, both driven by the same flow.notice/setNotice
 // state so no new state plumbing was needed.
 const TOAST_LIFETIME_MS = 4070;
-// P-021 asset Batch 4 (V8TEST, 2026-10-03): same 960px waves re-encoded,
-// 284+237KB -> 196+172KB, and preloaded later (see V8Toast) so they no
-// longer compete with ACTIVE's own art. New filenames; /v8 untouched.
-const BATCH4 = isV8TestRoute();
+// P-021 asset Batch 4 (/v8test first, all routes since Cfm 2026-10-03): same
+// 960px waves re-encoded, 284+237KB -> 196+172KB, and preloaded later (see
+// V8Toast) so they no longer compete with ACTIVE's own art.
+const BATCH4 = true;
 const TOAST_WAVE_MAIN_ASSET = BATCH4 ? "toast-wave-main-display-v2.webp" : "toast-wave-main-display.webp";
 const TOAST_WAVE_FOAM_ASSET = BATCH4 ? "toast-wave-foam-display-v2.webp" : "toast-wave-foam-display.webp";
 const TOAST_PRELOAD_DELAY_MS = BATCH4 ? 9000 : 4000;
@@ -65,7 +64,7 @@ export function V8Toast({
 
   // Deferred so the two wave images (~520KB) don't compete with the page's
   // first paint; still well before a typical first toast.
-  // V8TEST: 9s, then the next idle moment, so ACTIVE's art goes first even
+  // 9s, then the next idle moment, so ACTIVE's art goes first even
   // on a slow connection (a toast before then loads its waves on demand).
   useEffect(() => {
     let idle: number | undefined;

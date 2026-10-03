@@ -187,9 +187,9 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ---
 
-## P-021 ASSET BATCH 4（名單浮標＋Toast 浪花，/v8test）
+## P-021 ASSET BATCH 4（名單浮標＋Toast 浪花）
 
-Status: V8TEST DEPLOYED / VERIFY（等 real iPhone，Cfm 後上 /v8）
+Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
 
 - 2026-10-03 重新量測（430px×3 模擬）：背景圖（前浪/山/金墨/雲/後浪/老虎卷軸/B3 龍）尺寸已在 3 倍以內，縮圖只能靠降畫質（-9～18%），不做。
 - 範圍（user 確認）：
