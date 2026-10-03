@@ -1819,7 +1819,10 @@ const v8TestActiveTuningDefaults = {
   activeRosterV2B3Scale: 1.8,
   activeRosterV2B3Rotation: -16,
   activeRosterV2B3Opacity: 100,
-  activeRosterV2B3ZIndex: 19,
+  // Above the tiger scroll (9) and every ema plaque (已報 20; 尚缺/候補 are
+  // fixed at 37 in V8ActiveInfoCards); the list wave band stays above it
+  // from its own stacking context (.v8-list-wave z 20 vs the hero's 12).
+  activeRosterV2B3ZIndex: 38,
   activeListBuoyWaveX: 0,
   activeListBuoyWaveY: 0,
   activeListBuoyWaveScale: 1,
