@@ -89,6 +89,7 @@ import { V8SunDateStretchText } from "./V8SunDateStretchText";
 import { type V8CtaGlowOutlineKey } from "./v8CtaGlowOutlines";
 import { V8CtaGlowOutline } from "./V8CtaGlowOutline";
 import { formatV8MeetupDate, parseV8MeetupDisplay } from "./v8MeetupDisplay";
+import { isV8TestRoute } from "@/lib/v8-route-family";
 
 function primaryActionLabel(identity: CurrentIdentity) {
   if (identity.signupType === "fixed") {
@@ -600,6 +601,8 @@ export function V8ActivePage({
     <div
       className={[
         "v8-active",
+        // V8TEST: no page height below the visible screen (see CSS).
+        isV8TestRoute() ? "is-viewport-clip" : "",
         entering ? "is-entering" : "",
         ownSubmit ? "is-submitting" : "",
         helperMode ? "is-modal-open" : "",
@@ -2499,6 +2502,16 @@ export function V8ActiveStyles() {
         width: 100%;
         color: #20150d;
         touch-action: pan-y;
+      }
+
+      /* V8TEST (2026-10-03): the 390/800 stage is taller than an iPhone's
+         visible screen (806px vs ~660 on a 393-wide phone); the page lock
+         keeps it at the top, but after a reload Safari showed it scrolled,
+         exposing the unfinished art below the list band. Clip the page to
+         the screen so there is nothing below to scroll to. */
+      .v8-active.is-viewport-clip {
+        max-height: 100svh;
+        overflow: clip;
       }
 
       .v8-sun-info-scattered {

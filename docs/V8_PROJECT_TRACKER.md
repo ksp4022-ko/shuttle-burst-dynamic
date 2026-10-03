@@ -173,6 +173,19 @@ Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-
 
 ---
 
+## V8TEST-ACTIVE-VIEWPORT-CLIP（重整後下方版面被拉開）
+
+Status: CODE PASS / VERIFY（/v8test only，等 real iPhone）
+
+- user 2026-10-03：ACTIVE 重整後頁面往下捲，名單浪下方露出龍尾/浪花（未完成的版面）。
+- 原因：ACTIVE 舞台 390/800（393 寬 → 806px）比 iPhone 可視高度（約 660）高；平常靠 page lock
+  停在頂部，重整時 Safari 捲動了頁面（WebKit 模擬未重現捲動本身，只確認下方有 ~150px 可捲）。
+- 修正（/v8test only）：`.v8-active.is-viewport-clip { max-height: 100svh; overflow: clip }`，
+  頁面高度 = 螢幕高度，下面沒有東西可捲。本機：/v8test scrollHeight 659 = 視窗；/v8 仍 806。
+- 另：重整時的「app not started after 10s」紅框（/v8test 診斷）出現在載入中畫面，先記錄。
+
+---
+
 ## V8-INTRO-VIDEO-V2（新影片 Intro，PAUSED）
 
 Status: PAUSED（user 2026-10-02：非必須，之後有空再試）
