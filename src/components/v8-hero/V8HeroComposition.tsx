@@ -544,6 +544,7 @@ export function V8HeroComposition({
             <DecorLayer fetchPriority={decorPriority} src={assets.goldInk} x={controls.goldInkX} y={controls.goldInkY} scale={controls.goldInkScale} rotation={controls.goldInkRotation} opacity={controls.goldInkOpacity} blur={decorBlur(controls.goldInkBlur)} zIndex={3} />
             {sunUnderContent ? (
               <div
+                data-v8-sun-under=""
                 style={
                   {
                     position: "absolute",

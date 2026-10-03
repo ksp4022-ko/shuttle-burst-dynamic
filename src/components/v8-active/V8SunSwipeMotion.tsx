@@ -2,8 +2,9 @@ import { useEffect, useRef, type PointerEvent as ReactPointerEvent, type RefObje
 import { animate, type AnimationPlaybackControls } from "motion/react";
 
 // V8TEST (2026-10-03): the sun's meetup switch follows the finger. While
-// dragging, the sun's text dial turns with it (rubber-banded where there is
-// no meetup in that direction); on release a far-enough drag or a quick
+// dragging, the whole sun (disc, clouds, the 上限 cloud behind it) slides
+// with it and its text dial turns (rubber-banded where there is no meetup
+// in that direction); on release a far-enough drag or a quick
 // flick switches meetups, anything else springs back -- both carrying the
 // finger's release velocity (Motion springs). Loaded lazily and only on
 // /v8test, so /v8 never downloads Motion.
@@ -12,6 +13,10 @@ import { animate, type AnimationPlaybackControls } from "motion/react";
 // meetup (the dial turns clockwise), right-to-left = previous.
 
 const DEG_PER_PX = 0.28;
+// How far the sun itself slides per px of finger travel.
+const SUN_FOLLOW = 0.45;
+// Rubber-band reach (px of finger offset) where there is no meetup.
+const RUBBER_PX = 32;
 const COMMIT_PX = 56;
 const FLICK_PX_PER_S = 420;
 // Past this the switch fires during the move, so a Safari pointercancel
@@ -37,41 +42,53 @@ export default function V8SunSwipeMotion({
   hasNext: boolean;
 }) {
   const gesture = useRef<{ id: number; x: number; y: number; axis: "x" | "y" | null; fired: boolean; samples: Sample[] } | null>(null);
-  const rotation = useRef(0);
+  const offset = useRef(0);
   const spring = useRef<AnimationPlaybackControls | null>(null);
   const reduceMotion = useRef(false);
 
   useEffect(() => {
     reduceMotion.current = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    return () => spring.current?.stop();
+    return () => {
+      spring.current?.stop();
+      // Never leave the sun shifted if this unmounts mid-gesture.
+      document.querySelectorAll<HTMLElement>("[data-v8-sun], [data-v8-sun-under]").forEach((el) => {
+        el.style.transform = "";
+      });
+    };
   }, []);
 
-  const paint = (deg: number) => {
-    rotation.current = deg;
+  // px = finger offset after rubber-banding; drives both the sun's slide
+  // and the text dial's turn.
+  const paint = (px: number) => {
+    offset.current = px;
     const el = targetRef.current;
     if (!el) return;
+    const shift = px ? `translateX(${(px * SUN_FOLLOW).toFixed(2)}px)` : "";
+    const sun = el.closest<HTMLElement>("[data-v8-sun]");
+    if (sun) sun.style.transform = shift;
+    const under = document.querySelector<HTMLElement>("[data-v8-sun-under]");
+    if (under) under.style.transform = shift;
+    const deg = px * DEG_PER_PX;
     el.style.transform = deg ? `rotate(${deg.toFixed(2)}deg)` : "";
     el.style.opacity = deg ? String(Math.max(0.55, 1 - Math.abs(deg) / 90)) : "";
     // Clip to the sun's circle while turned, like the dial itself.
     el.parentElement?.classList.toggle("is-dialing", deg !== 0 || el.parentElement.querySelector(".is-out") !== null);
   };
 
-  const settle = (velocityDegPerS: number) => {
+  const settle = (velocityPxPerS: number) => {
     spring.current?.stop();
     if (reduceMotion.current) {
       paint(0);
       return;
     }
-    spring.current = animate(rotation.current, 0, { ...SPRING, velocity: velocityDegPerS, onUpdate: paint });
+    spring.current = animate(offset.current, 0, { ...SPRING, velocity: velocityPxPerS, onUpdate: paint });
   };
 
   // Rubber band: full follow where a meetup exists, a short stiff pull where not.
-  const dragDegrees = (dx: number) => {
+  const dragOffset = (dx: number) => {
     const allowed = dx > 0 ? hasNext : hasPrevious;
-    const raw = dx * DEG_PER_PX;
-    if (allowed) return raw;
-    const limit = 9;
-    return Math.sign(raw) * limit * (1 - Math.exp(-Math.abs(raw) / limit));
+    if (allowed) return dx;
+    return Math.sign(dx) * RUBBER_PX * (1 - Math.exp(-Math.abs(dx) / RUBBER_PX));
   };
 
   const fire = (dx: number) => {
@@ -109,10 +126,10 @@ export default function V8SunSwipeMotion({
     if (g.samples.length > 8) g.samples.shift();
     if (Math.abs(dx) >= AUTO_COMMIT_PX && fire(dx)) {
       g.fired = true;
-      settle(velocityOf(g.samples) * DEG_PER_PX);
+      settle(velocityOf(g.samples));
       return;
     }
-    paint(reduceMotion.current ? 0 : dragDegrees(dx));
+    paint(reduceMotion.current ? 0 : dragOffset(dx));
   };
 
   const end = (event: ReactPointerEvent<HTMLDivElement>, cancelled: boolean) => {
@@ -127,7 +144,7 @@ export default function V8SunSwipeMotion({
     const flick = !cancelled && Math.abs(velocity) >= FLICK_PX_PER_S && Math.sign(velocity) === Math.sign(dx);
     const commit = Math.abs(dx) >= COMMIT_PX || flick;
     if (commit) fire(dx);
-    settle(velocity * DEG_PER_PX);
+    settle(velocity);
   };
 
   return (

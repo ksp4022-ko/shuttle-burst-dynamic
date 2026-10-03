@@ -191,13 +191,15 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
 
-- 紅日上的文字轉盤跟著手指轉（0.28°/px，最多約 ±25° 時淡出）；沒有上一場/下一場的方向有橡皮筋阻力（約 9°）。
+- 整顆紅日（圓盤＋雲框＋紅日後的上限雲）跟著手指左右滑（手指位移 ×0.45），文字轉盤同時轉（0.28°/px，轉越多越淡）。
+  沒有上一場/下一場的方向有橡皮筋阻力（最多約 32px 手指位移 → 紅日約 14px、文字約 9°）。
+  （第 2 版，user：以為紅日本身也會位移；V8HeroComposition 的紅日後層加 `data-v8-sun-under` 標記，/v8 畫面不變。）
 - 放開：拖超過 56px 或快速甩（≥420px/s 同方向）→ 切換；否則以放開速度彈簧回正（Motion `animate` spring）。
   拖超過 120px 時在移動中就切換（避免 Safari 中途 pointercancel 吃掉手勢）。方向同舊版：左→右 = 下一場。
 - 只在 /v8test：`V8SunSwipeMotion` 用 React.lazy 載入，載入前用舊的滑動區；/v8 不下載 Motion
   （本機實測 /v8 啟動 JS 前後皆 911KB）。/v8test 多 ~22KB gzip（Motion 共用 chunk 16.6KB + 滑動 5.9KB）。
 - prefers-reduced-motion：不跟手、不彈簧，只保留切換。
-- 本機 WebKit（滑鼠模擬）：30px 彈回不切換；80px 切換到 2/14；反向切回 1/14；第一場往前拖只有橡皮筋。
+- 本機 WebKit（滑鼠模擬）：30px 彈回不切換（紅日 13.5px）；80px 切換到 2/14（紅日 36px）；反向切回 1/14；第一場往前拖只有橡皮筋。
 
 ---
 
