@@ -189,7 +189,7 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ## V8TEST-PWA-SETUP（主畫面 App：名稱、manifest、底部浪花）
 
-Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）；圖示等 user 補圖
+Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）
 
 - user 2026-10-03：App 名稱「V8 康軒報名」、加入 manifest、圖示等 user 補圖；主畫面 App 底部浪花被往下拉（壓到 Home 條與螢幕圓角），修正不可影響網頁版。
 - `public/manifest-v8test.webmanifest`：name/short_name「V8 康軒報名」，start_url `/v8test/kangxuan/`，scope `/v8test/`，standalone。
@@ -197,6 +197,9 @@ Status: V8TEST DEPLOYED / VERIFY（等 real iPhone）；圖示等 user 補圖
 - `V8ListBuoys.tsx`：`.v8-standalone` 時浪花帶與名單面板 `bottom: env(safe-area-inset-bottom)`，下方空隙用同圖最底幾行拉長＋漸層到深藍補滿。
 - 瀏海：user 選 C 不改。
 - real iPhone 診斷（user 2026-10-03）：主畫面 App `safe-area-inset-bottom/top = 0`（viewport-fit=cover 已生效），innerHeight 706 / screen 874 → 第一版抬高無效；改為 `max(env(), 28px)` 固定抬高 28px，下方仍用拉長＋漸層補滿。診斷小字已移除。
+- 圖示（user 2026-10-03 提供龍虎羽球圖）：`public/v8-pwa/icon-180/192/512.png`，apple-touch-icon（/v8test only）＋manifest icons。
+- 底部補色：拉長圖案仍不自然（real iPhone）→ 改成從浪花模糊底部 22px 內開始的深藍漸層。
+- 繪馬參數比對：user 貼的 Safari 設定與 /v8test 預設相同（已報 14/32、尚缺 29/38、候補 31/38）；但實際位置由「尚缺/候補共用」(ALT SLOT) 決定，設定匯出未包含此組，待 user 提供。
 - 繪馬 尚缺/候補 在 App 位置不同：微調面板設定存在各自瀏覽器（App 與 Safari 儲存空間分開），App 讀到預設值（AltSlot X29 Y38 Scale2 Rot2），Safari 用 user 調過的值；需 user 提供 Safari 數值寫入預設。
 - 本機 WebKit：App 模式 class/viewport/manifest 正確、無錯誤；Safari 模式無 class、浪花 bottom 0；/v8 無 manifest、無變化；模擬 34px Home 條截圖接縫自然。
 
