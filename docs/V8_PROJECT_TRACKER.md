@@ -189,7 +189,9 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ## V8TEST-PWA-LINE-HANDOFF（主畫面 App 的 LINE 登入接回）
 
-Status: V8TEST DEPLOYED / Worker DEPLOYED（V6-022，version 3a5711bb）→ 等 real iPhone
+Status: V8TEST real iPhone PASS（user 2026-10-03）→ 等 Cfm 上 /v8
+
+- real iPhone（user）：LINE 授權後 App 內仍停在 LINE 自己的登入頁（iOS 限制，網頁無法關閉）；使用者關掉該頁即為已登入。user 決定不加提示（方案 C 不改）。
 
 - Worker 部署（Codex V6-022 deploy-lite，HEAD 2c6ac0a，無 migration）：health 200；帶 handoff 的 state payload 正確。6c「舊行為」檢查判 FAIL 是驗證條件寫錯：Worker 原本就只接受 \`/v8\` 底下的 returnTo，\`/v8test\` 的 returnTo 會被丟掉、state 只剩 nonce（部署前即如此，非回歸）。影響：/v8test 測試時 Safari 會回到 /v8（看不到「回到主畫面 App」Toast）；App 接回不受影響（hash 在 state）。上 /v8 後 Toast 會正常出現。
 
