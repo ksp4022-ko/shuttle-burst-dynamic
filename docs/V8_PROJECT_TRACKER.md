@@ -189,7 +189,7 @@ Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → prod
 
 ## V8TEST-LIST-HINTS（名單：備取空白顯示、還有更多提示）
 
-Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
+Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → production real iPhone PASS 2026-10-03）
 
 - user 2026-10-03 real iPhone 截圖：
   1. 備取名單沒人時顯示「目前沒有人候補」→ 改成跟季打請假一樣只顯示「─」。
@@ -202,7 +202,7 @@ Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-
 
 ## V8TEST-HELPER-DIALOG-V2（代報/代退彈窗動態，item 1–4）
 
-Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
+Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → production real iPhone PASS 2026-10-03）
 
 只在 /v8test（`.v8-active.is-dlg-v2`）；/v8 不變（本機確認：/v8 仍瞬開、blur 14px）。後端、取消規則不變。
 1. 開關：卡片由下滑入帶彈性（300ms）、關閉滑出（190ms，關閉中仍保留卡片，不閃）；背景去掉 blur(14px)，改半透明 0.42。
@@ -233,7 +233,7 @@ Status: ABANDONED（user 2026-10-03 real iPhone：看不出效果、被彈窗擋
 
 ## V8TEST-VIEW-TRANSITION-HIDDEN（紅框：View transition was skipped）
 
-Status: PRODUCTION DEPLOYED（Cfm 2026-10-03 套用 /v8；本機模擬 /v8 無 rejection）
+Status: CLOSED（Cfm 2026-10-03 套用 /v8；本機模擬 /v8 無 rejection；production real iPhone 正常 2026-10-03）
 
 - user 2026-10-03 real iPhone（/v8test，4G）：紅框 `rejection: View transition was skipped because document visibility state is hidden`。
 - 原因：OPEN → ACTIVE 自動進場時頁面剛好在背景（切 App/分頁），Safari 跳過 view transition 並讓 `transition.ready` reject；
@@ -246,7 +246,7 @@ Status: PRODUCTION DEPLOYED（Cfm 2026-10-03 套用 /v8；本機模擬 /v8 無 r
 
 ## V8TEST-SUN-SWIPE-MOTION（紅日跟手滑動切換聚會）
 
-Status: PRODUCTION DEPLOYED / VERIFY（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8，等 production real iPhone）
+Status: CLOSED（/v8test real iPhone PASS → Cfm 2026-10-03 套用 /v8 → production real iPhone PASS 2026-10-03）
 
 - 整顆紅日（圓盤＋雲框＋紅日後的上限雲）跟著手指左右滑（手指位移 ×0.45），文字轉盤同時轉（0.28°/px，轉越多越淡）。
   沒有上一場/下一場的方向有橡皮筋阻力（最多約 32px 手指位移 → 紅日約 14px、文字約 9°）。
