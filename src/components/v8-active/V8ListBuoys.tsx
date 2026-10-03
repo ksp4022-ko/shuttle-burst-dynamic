@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { v8ActiveListBuoyFiles, type V8ActiveListBuoyLayerControls, type V8ActiveListBuoysControls } from "./v8ActiveConfig";
 import type { V8ActiveRosterPerson } from "./V8ActiveRosterLists";
 import { useV8PageLock } from "./useV8PageLock";
-import { isV8TestRoute } from "@/lib/v8-route-family";
 
 // LIST-BUOYS (名單浮標): the three rosters live in a panel that rises from a
 // wave band at the bottom of the screen instead of sitting in the canvas.
@@ -85,8 +84,9 @@ export function V8ListBuoys({
   const headerAnimations = useRef<Animation[]>([]);
   const timers = useRef<number[]>([]);
   const idleTimer = useRef<number | undefined>(undefined);
-  // V8TEST: "還有 N 位 ▼" under a list whose names run past the visible area.
-  const moreHintEnabled = isV8TestRoute();
+  // "還有 N 位 ▼" under a list whose names run past the visible area
+  // (/v8test first, all routes since Cfm 2026-10-03).
+  const moreHintEnabled = true;
   const areaRefs = useRef<Record<ListKey, HTMLDivElement | null>>({ leave: null, main: null, wait: null });
   const [moreBelow, setMoreBelow] = useState<Record<ListKey, number>>({ leave: 0, main: 0, wait: 0 });
   const measureMore = useCallback((key: ListKey) => {
@@ -398,8 +398,8 @@ export function V8ListBuoys({
 
 function V8ListNames({ listKey, people, ownSignupId }: { listKey: ListKey; people: V8ActiveRosterPerson[]; ownSignupId: string | null }) {
   if (!people.length) {
-    // V8TEST: 備取 empty shows the same plain dash as the other lists.
-    return <p className="v8-list-empty">{listKey === "wait" && !isV8TestRoute() ? "目前沒有人候補" : "─"}</p>;
+    // 備取 empty shows the same plain dash as the other lists (Cfm 2026-10-03).
+    return <p className="v8-list-empty">─</p>;
   }
   const item = (person: V8ActiveRosterPerson, index: number, numbered: boolean) => (
     <li key={person.id} className={person.id === ownSignupId ? "is-self" : undefined}>
@@ -586,7 +586,7 @@ function V8ListBuoysStyles() {
         opacity: 0.8;
       }
 
-      /* V8TEST: "還有 N 位 ▼" pill at the bottom of an overflowing list. */
+      /* "還有 N 位 ▼" pill at the bottom of an overflowing list. */
       .v8-list-more {
         position: absolute;
         left: 50%;
