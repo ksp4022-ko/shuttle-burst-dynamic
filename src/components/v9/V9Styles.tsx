@@ -159,8 +159,22 @@ const V9_CSS = `
 .v9-hero-message { display: grid; justify-items: center; gap: 8px; text-align: center; padding: 28px 18px; }
 .v9-hero-message::before { display: none; }
 .v9-hero-message h2 { margin: 0; font-size: 18px; font-weight: 900; }
-.v9-skeleton { min-height: 420px; background: linear-gradient(90deg,#fff3d6 0%,#fffaf0 50%,#fff3d6 100%); background-size: 200% 100%; animation: v9-shimmer 1.2s linear infinite; }
-.v9-skeleton::before { display: none; }
+/* ---------- Loading (rally) ---------- */
+.v9-busy-card { min-height: 420px; align-content: center; }
+.v9-busy { display: grid; justify-items: center; gap: 14px; }
+.v9-busy-art { position: relative; width: 280px; height: 120px; }
+.v9-busy-dragon, .v9-busy-tiger { position: absolute; bottom: 0; height: 120px; width: auto; transform-origin: 50% 100%; }
+.v9-busy-dragon { left: 0; animation: v9-rally-hit-dragon 1.6s ease-out infinite; }
+.v9-busy-tiger { right: 0; animation: v9-rally-hit-tiger 1.6s ease-out -.8s infinite; }
+/* Racket heads sit at (104, 34) and (182, 34); the shuttle flies a
+   parabola between them (46px high), turning to lead with its cork. */
+.v9-busy-x { position: absolute; left: 0; top: 0; animation: v9-rally-move 1.6s linear infinite; }
+.v9-busy-shuttle { display: block; width: 40px; height: auto; margin: -17px 0 0 -20px; animation: v9-rally-turn 1.6s linear infinite; }
+.v9-busy-label { margin: 0; font-size: 15px; font-weight: 900; color: var(--v9-muted); }
+@keyframes v9-rally-move { 0% { transform: translate(104.0px, 34.0px); } 5% { transform: translate(111.8px, 17.4px); } 10% { transform: translate(119.6px, 4.6px); } 15% { transform: translate(127.4px, -4.6px); } 20% { transform: translate(135.2px, -10.2px); } 25% { transform: translate(143.0px, -12.0px); } 30% { transform: translate(150.8px, -10.2px); } 35% { transform: translate(158.6px, -4.6px); } 40% { transform: translate(166.4px, 4.6px); } 45% { transform: translate(174.2px, 17.4px); } 50% { transform: translate(182.0px, 34.0px); } 55% { transform: translate(174.2px, 17.4px); } 60% { transform: translate(166.4px, 4.6px); } 65% { transform: translate(158.6px, -4.6px); } 70% { transform: translate(150.8px, -10.2px); } 75% { transform: translate(143.0px, -12.0px); } 80% { transform: translate(135.2px, -10.2px); } 85% { transform: translate(127.4px, -4.6px); } 90% { transform: translate(119.6px, 4.6px); } 95% { transform: translate(111.8px, 17.4px); } 100% { transform: translate(104.0px, 34.0px); } }
+@keyframes v9-rally-turn { 0% { transform: scaleX(1) rotate(-60deg); } 5% { transform: scaleX(1) rotate(-60deg); } 10% { transform: scaleX(1) rotate(-55deg); } 15% { transform: scaleX(1) rotate(-43deg); } 20% { transform: scaleX(1) rotate(-25deg); } 25% { transform: scaleX(1) rotate(-0deg); } 30% { transform: scaleX(1) rotate(25deg); } 35% { transform: scaleX(1) rotate(43deg); } 40% { transform: scaleX(1) rotate(55deg); } 45% { transform: scaleX(1) rotate(60deg); } 49.9% { transform: scaleX(1) rotate(60deg); } 50% { transform: scaleX(1) rotate(60deg); } 55% { transform: scaleX(-1) rotate(-60deg); } 60% { transform: scaleX(-1) rotate(-55deg); } 65% { transform: scaleX(-1) rotate(-43deg); } 70% { transform: scaleX(-1) rotate(-25deg); } 75% { transform: scaleX(-1) rotate(-0deg); } 80% { transform: scaleX(-1) rotate(25deg); } 85% { transform: scaleX(-1) rotate(43deg); } 90% { transform: scaleX(-1) rotate(55deg); } 95% { transform: scaleX(-1) rotate(60deg); } 100% { transform: scaleX(-1) rotate(60deg); } }
+@keyframes v9-rally-hit-dragon { 0% { transform: rotate(-5deg); } 12%, 100% { transform: rotate(0); } }
+@keyframes v9-rally-hit-tiger { 0% { transform: rotate(5deg); } 12%, 100% { transform: rotate(0); } }
 
 /* ---------- Bento ---------- */
 .v9-bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 74px; gap: 10px; }
@@ -376,7 +390,6 @@ const V9_CSS = `
 @keyframes v9-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes v9-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes v9-bob { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-3deg) translateY(-1px); } }
-@keyframes v9-shimmer { to { background-position: -200% 0; } }
 @keyframes v9-sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
 @keyframes v9-sprite { to { background-position: var(--v9-sprite-end) 0; } }
 @keyframes v9-celebrate-pop { 0% { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }

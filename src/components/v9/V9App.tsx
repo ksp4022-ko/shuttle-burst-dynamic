@@ -5,6 +5,7 @@ import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-id
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
+import { V9Busy } from "./V9Busy";
 import { V9Logo } from "./V9Logo";
 import { V9Styles } from "./V9Styles";
 import { V9Bento, V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
@@ -333,7 +334,9 @@ export function V9App() {
 
       {loading && (
         <main className="v9-main">
-          <section className="v9-hero v9-skeleton" aria-busy="true" />
+          <section className="v9-hero v9-hero-message v9-busy-card" aria-busy="true">
+            <V9Busy />
+          </section>
         </main>
       )}
 
