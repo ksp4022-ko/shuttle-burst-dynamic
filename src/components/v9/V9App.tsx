@@ -1,29 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { configuredSiteId, type AlphaEvent, type AlphaSignup } from "@/lib/database-alpha";
+import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { useHomepageFlow } from "@/hooks/use-homepage-flow";
-import { useCurrentIdentity } from "@/hooks/use-current-identity";
+import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Logo } from "./V9Logo";
 import { V9Styles } from "./V9Styles";
-import { V9MyStatus } from "./V9MyStatus";
-import { V9Actions, type V9HelperMode } from "./V9Actions";
-import { V9HelperDialog } from "./V9HelperDialog";
-import { V9Roster } from "./V9Roster";
-import { V9Billing } from "./V9Billing";
+import { V9Bento, V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
+import { V9_STATUS_LABEL, v9ShortDate, v9Weekday } from "@/lib/v9-display";
+import { V9Sheet } from "./V9Sheet";
+import { V9RosterContent, type V9RosterTab } from "./V9RosterSheet";
+import { V9BillingContent } from "./V9BillingSheet";
+import { V9ProxyContent, type V9ProxyTab } from "./V9ProxySheet";
+import { V9Icon } from "./V9Icons";
 import { V9Toast } from "./V9Toast";
 
-// V9 Shuttle -- single-page minimal UI over the V8 API (docs/V9_BASELINE.md).
+// V9 Shuttle -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
-// (useHomepageFlow / useCurrentIdentity / useV8LineAuth); V9 only renders.
+// (useHomepageFlow / useCurrentIdentity / useV8LineAuth /
+// useV8PersonalBillingTest); V9 only renders. The home shows the summary;
+// details live in bottom sheets.
 
 const SITE_NAMES: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 
-function shortDate(value: string) {
-  const [, month = "", day = ""] = String(value || "").split("-");
-  return month && day ? `${month}/${day}` : value;
-}
+type SheetKind = "roster" | "bill" | "proxy" | "meetup" | "me";
 
 function selectedEventKey(siteId: string) {
   return v9StorageKey(`${siteId}:selected-event`);
@@ -52,8 +53,33 @@ function v8PathForCurrentPage() {
   return window.location.pathname.replace(/\/v9(?=\/|$)/, "/v8");
 }
 
-function prefersReducedMotion() {
-  return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+// Same mapping as V8 ACTIVE's main CTA (only the wording is V9's).
+function ctaFor(identity: CurrentIdentity): { label: string; tone: string } {
+  if (identity.signupType === "fixed") {
+    return identity.status === "leave"
+      ? { label: "取消請假", tone: "is-green" }
+      : {
+          label: identity.status === "waiting" ? "我要告假（退出備取）" : "我要告假",
+          tone: "is-red",
+        };
+  }
+  return identity.status === "unregistered"
+    ? { label: "我要報名", tone: "is-orange" }
+    : { label: "取消報名", tone: "is-red" };
+}
+
+// 排位 = the row's place in the API-ordered list (same as V8's 備取第 N 位).
+function rankOf(
+  identity: CurrentIdentity | null,
+  confirmed: AlphaSignup[],
+  waiting: AlphaSignup[],
+) {
+  if (!identity) return null;
+  const list =
+    identity.status === "confirmed" ? confirmed : identity.status === "waiting" ? waiting : null;
+  if (!list) return null;
+  const index = list.findIndex((person) => person.id === identity.signupId);
+  return index >= 0 ? index + 1 : null;
 }
 
 export function V9App() {
@@ -86,11 +112,11 @@ export function V9App() {
       eventId: selectedEventId,
     });
 
-  const [helperMode, setHelperMode] = useState<V9HelperMode>(null);
-  const [billOpen, setBillOpen] = useState(false);
+  const [sheet, setSheet] = useState<SheetKind | null>(null);
+  const [rosterTab, setRosterTab] = useState<V9RosterTab>("confirmed");
+  const [proxyTab, setProxyTab] = useState<V9ProxyTab>("signup");
   const actionLockRef = useRef(false);
   const returnFeedbackRef = useRef<{ signupId: string; name: string } | null>(null);
-  const billRef = useRef<HTMLElement | null>(null);
 
   // V9 has no intro: go straight to the flow's "active" phase so its roster
   // polling runs.
@@ -102,10 +128,9 @@ export function V9App() {
     if (selectedEventId) saveSelectedEventId(siteId, selectedEventId);
   }, [siteId, selectedEventId]);
 
-  // A different meetup closes the bill and any helper dialog.
+  // A different meetup closes any open sheet (no stale bill / roster).
   useEffect(() => {
-    setBillOpen(false);
-    setHelperMode(null);
+    setSheet(null);
   }, [selectedEventId]);
 
   useEffect(() => {
@@ -216,26 +241,13 @@ export function V9App() {
       return true;
     });
 
-  // Stable, so a re-render (roster poll) doesn't restart the toast timer.
-  const clearNotice = useCallback(() => setNotice(""), [setNotice]);
-
-  const toggleBill = () => {
-    if (billOpen) {
-      setBillOpen(false);
+  const selectEvent = async (eventId: string) => {
+    if (pendingAction || actionLockRef.current) return;
+    if (eventId === selectedEventId) {
+      setSheet(null);
       return;
     }
-    setBillOpen(true);
-    window.requestAnimationFrame(() =>
-      billRef.current?.scrollIntoView({
-        behavior: prefersReducedMotion() ? "auto" : "smooth",
-        block: "start",
-      }),
-    );
-  };
-
-  const selectEvent = (eventId: string) => {
-    if (pendingAction || actionLockRef.current || eventId === selectedEventId) return;
-    void flow.switchMeetup(eventId, { enterActiveOnSuccess: false });
+    await flow.switchMeetup(eventId, { enterActiveOnSuccess: false });
   };
 
   // A 季打 row shows the member's confirmed LINE name (same as V8 ACTIVE).
@@ -252,169 +264,315 @@ export function V9App() {
     );
   };
 
+  const closeSheet = useCallback(() => setSheet(null), []);
+  // Stable, so a re-render (roster poll) doesn't restart the toast timer.
+  const clearNotice = useCallback(() => setNotice(""), [setNotice]);
+
+  const openRoster = (tab: V9RosterTab) => {
+    setRosterTab(tab);
+    setSheet("roster");
+  };
+  const onDock = (key: V9DockKey) => {
+    if (sheet === key) {
+      setSheet(null);
+      return;
+    }
+    if (key === "roster") setRosterTab("confirmed");
+    setSheet(key);
+  };
+
   const userName = lineIdentity?.confirmedName || lineIdentity?.displayName || "";
   const busy = Boolean(pendingAction);
   const loading = phase === "loading-particles";
   const signedIn = Boolean(lineIdentity && lineToken);
   const profileComplete = Boolean(lineIdentity?.profileComplete);
+  const ready = signedIn && profileComplete && Boolean(identity);
+  const rank = rankOf(identity, confirmed, waiting);
+  const cta: V9Cta = auth.loading
+    ? { kind: "loading" }
+    : !signedIn
+      ? { kind: "login" }
+      : !profileComplete || !identity
+        ? { kind: "profile", href: v8PathForCurrentPage() }
+        : { kind: "action", ...ctaFor(identity) };
+  const siteName = SITE_NAMES[siteId] ?? siteId;
+  const dockActive: V9DockKey | null =
+    sheet === "meetup" || sheet === "roster" || sheet === "proxy" || sheet === "bill"
+      ? sheet
+      : null;
 
   return (
     <div className="v9-app">
       <V9Styles />
-      <header className="v9-header">
-        <div className="v9-brand">
-          <V9Logo />
-          <div>
-            <p className="v9-brand-name">
-              V9 Shuttle{" "}
-              <span className="v9-preview-badge" data-v9-preview-badge>
-                PREVIEW
-              </span>
-            </p>
-            <p className="v9-site-name">{SITE_NAMES[siteId] ?? siteId} 羽球</p>
-          </div>
-        </div>
-        <div className="v9-user">
-          {auth.loading ? (
-            <span className="v9-badge is-muted">確認中…</span>
-          ) : lineIdentity ? (
-            <>
-              <span className="v9-user-name">{userName}</span>
-              <span className="v9-badge is-green">LINE 已登入</span>
-            </>
-          ) : (
-            <button type="button" className="v9-btn is-small is-green" onClick={auth.startLogin}>
-              LINE 登入
-            </button>
-          )}
-        </div>
-      </header>
 
-      <main className="v9-main">
-        {loading && <section className="v9-card v9-skeleton" aria-busy="true" />}
+      {loading && (
+        <main className="v9-main">
+          <section className="v9-hero v9-skeleton" aria-busy="true" />
+        </main>
+      )}
 
-        {phase === "load-error" && (
-          <section className="v9-card">
-            <h2 className="v9-card-title">讀取聚會失敗</h2>
+      {phase === "load-error" && (
+        <main className="v9-main">
+          <section className="v9-hero v9-hero-message">
+            <V9Logo size={56} />
+            <h2>讀取聚會失敗</h2>
             <p className="v9-muted">{flow.error}</p>
-            <button type="button" className="v9-btn" onClick={() => window.location.reload()}>
+            <button
+              type="button"
+              className="v9-cta is-paper"
+              onClick={() => window.location.reload()}
+            >
               重新整理
             </button>
           </section>
-        )}
+        </main>
+      )}
 
-        {!loading && phase !== "load-error" && events.length === 0 && (
-          <section className="v9-card v9-empty">
+      {!loading && phase !== "load-error" && events.length === 0 && (
+        <main className="v9-main">
+          <section className="v9-hero v9-hero-message">
             <V9Logo size={56} />
-            <p>目前沒有開放中的聚會</p>
+            <h2>目前沒有開放中的聚會</h2>
           </section>
-        )}
+        </main>
+      )}
 
-        {events.length > 1 && (
-          <nav className="v9-switch" aria-label="聚會切換">
-            {events.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`v9-chip${item.id === selectedEventId ? " is-active" : ""}`}
-                aria-pressed={item.id === selectedEventId}
-                disabled={busy}
-                onClick={() => selectEvent(item.id)}
-              >
-                {shortDate(item.eventDate)}
-              </button>
-            ))}
-          </nav>
-        )}
-
-        {selectedEvent && roster && (
-          <>
-            <V9EventSummary
-              key={selectedEvent.id}
+      {selectedEvent && roster && (
+        <>
+          <main className="v9-main has-dock">
+            <V9Hero
+              siteName={siteName}
               event={selectedEvent}
+              eventCount={events.length}
               confirmedCount={roster.summary.confirmedCount}
-            />
-            <V9MyStatus
+              userName={userName}
               authLoading={auth.loading}
               signedIn={signedIn}
-              profileComplete={profileComplete}
-              identity={identity}
-              event={selectedEvent}
-              confirmed={confirmed}
-              waiting={waiting}
-              v8Path={v8PathForCurrentPage()}
-              onLogin={auth.startLogin}
-            />
-            <V9Actions
-              identity={identity}
-              enabled={signedIn && profileComplete}
+              identity={ready ? identity : null}
+              rank={ready ? rank : null}
+              cta={cta}
               busy={busy}
               pendingLabel={pendingAction?.label}
-              billOpen={billOpen}
-              onPrimary={() => void handlePrimaryAction()}
-              onHelper={setHelperMode}
-              onBill={toggleBill}
+              onLogin={auth.startLogin}
+              onCta={() => void handlePrimaryAction()}
+              onMeetup={() => setSheet("meetup")}
+              onRoster={() => openRoster("confirmed")}
+              onFee={() => setSheet("bill")}
+              onMe={() => setSheet("me")}
             />
-            <V9Roster
-              key={`roster-${selectedEvent.id}`}
+            <V9Bento
+              confirmedCount={roster.summary.confirmedCount}
+              maxPeople={selectedEvent.maxPeople}
+              remainCount={roster.summary.remainCount}
+              waitingCount={waiting.length}
+              leaveCount={(roster.fixedLeave || []).length}
+              identity={ready ? identity : null}
+              rank={ready ? rank : null}
+              signedIn={signedIn}
+              onRoster={openRoster}
+              onMe={() => setSheet("me")}
+              onBill={() => setSheet("bill")}
+            />
+          </main>
+          <V9Dock active={dockActive} onSelect={onDock} />
+
+          <V9Sheet
+            open={sheet === "roster"}
+            title="名單"
+            subtitle={`${v9ShortDate(selectedEvent.eventDate)} ${v9Weekday(selectedEvent.eventDate)}`}
+            onClose={closeSheet}
+          >
+            <V9RosterContent
+              tab={rosterTab}
+              onTab={setRosterTab}
               confirmed={confirmed}
               waiting={waiting}
               leave={roster.fixedLeave || []}
-              mySignupId={identity?.signupId || ""}
+              mySignupId={ready ? identity?.signupId || "" : ""}
               displayName={displayName}
             />
-            {billOpen && (
-              <V9Billing
-                ref={billRef}
-                token={lineToken}
-                siteId={siteId}
-                eventId={selectedEventId}
-                name={userName}
-                onClose={() => setBillOpen(false)}
-              />
-            )}
-          </>
-        )}
-      </main>
+          </V9Sheet>
 
-      <V9HelperDialog
-        mode={helperMode}
-        busy={busy}
-        candidates={cancellableTempSignups}
-        candidatesLoading={cancellableLoading}
-        onClose={() => setHelperMode(null)}
-        onSignup={submitHelperSignup}
-        onCancel={submitHelperCancel}
-      />
+          <V9Sheet
+            open={sheet === "bill"}
+            title="費用與帳單"
+            subtitle={userName || undefined}
+            onClose={closeSheet}
+          >
+            <dl className="v9-fee-strip">
+              <div>
+                <dt>本場臨打費</dt>
+                <dd>
+                  {typeof selectedEvent.tempFee === "number" ? `$${selectedEvent.tempFee}` : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt>場地</dt>
+                <dd>
+                  {typeof selectedEvent.courtCount === "number"
+                    ? `${selectedEvent.courtCount}場`
+                    : "—"}
+                  {typeof selectedEvent.hours === "number" ? ` · ${selectedEvent.hours}小時` : ""}
+                </dd>
+              </div>
+            </dl>
+            {selectedEvent.eventNote ? (
+              // The backend note can carry a literal "\n" for a line break.
+              <p className="v9-sheet-note">{selectedEvent.eventNote.replace(/\\n/g, "\n")}</p>
+            ) : null}
+            {signedIn && profileComplete ? (
+              <V9BillingContent token={lineToken} siteId={siteId} eventId={selectedEventId} />
+            ) : (
+              <div className="v9-sheet-empty">
+                <p className="v9-muted">LINE 登入並完成身份確認後即可查看個人帳單。</p>
+                {!signedIn && (
+                  <button type="button" className="v9-cta is-green" onClick={auth.startLogin}>
+                    LINE 登入
+                  </button>
+                )}
+              </div>
+            )}
+          </V9Sheet>
+
+          <V9Sheet
+            open={sheet === "proxy"}
+            title="代報 · 代退"
+            subtitle="幫朋友報名或取消臨打"
+            onClose={closeSheet}
+          >
+            <V9ProxyContent
+              key={selectedEventId}
+              tab={proxyTab}
+              onTab={setProxyTab}
+              enabled={signedIn && profileComplete}
+              busy={busy}
+              candidates={cancellableTempSignups}
+              candidatesLoading={cancellableLoading}
+              onSignup={submitHelperSignup}
+              onCancel={submitHelperCancel}
+              onDone={closeSheet}
+            />
+          </V9Sheet>
+
+          <V9Sheet
+            open={sheet === "meetup"}
+            title="切換聚會"
+            subtitle={`共 ${events.length} 場`}
+            onClose={closeSheet}
+          >
+            <ul className="v9-meetup-list">
+              {events.map((item) => {
+                const itemDisplay = parseV8MeetupDisplay(item.name);
+                const current = item.id === selectedEventId;
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className={`v9-meetup-row${current ? " is-current" : ""}`}
+                      aria-current={current}
+                      disabled={busy}
+                      onClick={() => void selectEvent(item.id)}
+                    >
+                      <span className="v9-meetup-date">
+                        {v9ShortDate(item.eventDate)}
+                        <small>{v9Weekday(item.eventDate)}</small>
+                      </span>
+                      <span className="v9-meetup-info">
+                        <strong>{itemDisplay.displayName || item.name}</strong>
+                        <small>
+                          {[
+                            itemDisplay.timeLabel,
+                            item.ballType,
+                            typeof item.tempFee === "number" ? `$${item.tempFee}` : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </small>
+                      </span>
+                      {current ? (
+                        <span className="v9-badge is-orange">目前</span>
+                      ) : (
+                        <V9Icon name="chevron" size={18} />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </V9Sheet>
+
+          <V9Sheet open={sheet === "me"} title="我的報名" subtitle={siteName} onClose={closeSheet}>
+            {auth.loading ? (
+              <p className="v9-muted">確認 LINE 登入中…</p>
+            ) : !signedIn ? (
+              <div className="v9-sheet-empty">
+                <p className="v9-muted">使用 LINE 登入後即可報名、請假與查看帳單。</p>
+                <button type="button" className="v9-cta is-green" onClick={auth.startLogin}>
+                  LINE 登入
+                </button>
+              </div>
+            ) : !ready || !identity ? (
+              <div className="v9-sheet-empty">
+                <p className="v9-muted">請先在 V8 完成身份確認（季打／臨打），再回到 V9 使用。</p>
+                <a className="v9-cta is-blue" href={v8PathForCurrentPage()}>
+                  前往 V8 確認身份
+                </a>
+              </div>
+            ) : (
+              <dl className="v9-me-list">
+                <div>
+                  <dt>名稱</dt>
+                  <dd>{identity.name}</dd>
+                </div>
+                <div>
+                  <dt>LINE</dt>
+                  <dd>
+                    <span className="v9-badge is-green">已登入</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>身分</dt>
+                  <dd>
+                    <span
+                      className={`v9-badge ${identity.signupType === "fixed" ? "is-blue" : "is-paper"}`}
+                    >
+                      {identity.signupType === "fixed" ? "季打" : "臨打"}
+                    </span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>本場狀態</dt>
+                  <dd>
+                    <span className={`v9-chip-status is-${identity.status}`}>
+                      {V9_STATUS_LABEL[identity.status]}
+                    </span>
+                  </dd>
+                </div>
+                <div>
+                  <dt>順位</dt>
+                  <dd>
+                    {rank
+                      ? `${identity.status === "confirmed" ? "正取" : "備取"}第 ${rank} 位`
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>本次費用</dt>
+                  <dd>
+                    {identity.signupType === "fixed"
+                      ? "季費"
+                      : typeof selectedEvent.tempFee === "number"
+                        ? `$${selectedEvent.tempFee}`
+                        : "—"}
+                  </dd>
+                </div>
+              </dl>
+            )}
+          </V9Sheet>
+        </>
+      )}
+
       <V9Toast message={flow.notice} onDone={clearNotice} />
     </div>
-  );
-}
-
-// 人數 uses the roster summary (refreshed after every action and poll), the
-// same counts V8 ACTIVE shows; the event list is only loaded once.
-function V9EventSummary({ event, confirmedCount }: { event: AlphaEvent; confirmedCount: number }) {
-  const display = parseV8MeetupDisplay(event.name);
-  const rows: Array<[string, string]> = [
-    ["日期", shortDate(event.eventDate)],
-    ["時間", display.timeLabel || "—"],
-    ["球種", event.ballType || "—"],
-    ["費用", typeof event.tempFee === "number" ? `$${event.tempFee}` : "—"],
-    ["場地", typeof event.courtCount === "number" ? `${event.courtCount}場` : "—"],
-    ["人數", `${confirmedCount} / ${event.maxPeople}`],
-  ];
-
-  return (
-    <section className="v9-card v9-summary" aria-label="聚會摘要">
-      <h2 className="v9-card-title">{display.displayName || event.name}</h2>
-      <dl className="v9-summary-grid">
-        {rows.map(([label, value]) => (
-          <div key={label} className="v9-field">
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
   );
 }

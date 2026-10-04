@@ -1,8 +1,8 @@
-import type { ReactNode, Ref } from "react";
+import type { ReactNode } from "react";
 import { useV8PersonalBillingTest } from "@/hooks/use-v8-personal-billing-test";
 import type { V8BillingGuestItem, V8BillingRefundSource } from "@/lib/v8-personal-billing";
 
-// 帳單: the same hook and GET /me/billing data as the official V8 bill (B3).
+// 帳單 sheet body: the same hook and GET /me/billing data as the official V8 bill (B3).
 // Display only -- every amount and status is the backend's value; V9 never
 // adds, subtracts or derives anything.
 
@@ -89,20 +89,14 @@ function BillLine({
   );
 }
 
-export function V9Billing({
-  ref,
+export function V9BillingContent({
   token,
   siteId,
   eventId,
-  name,
-  onClose,
 }: {
-  ref?: Ref<HTMLElement>;
   token: string | null;
   siteId: string;
   eventId: string;
-  name: string;
-  onClose: () => void;
 }) {
   const billing = useV8PersonalBillingTest({
     enabled: true,
@@ -200,15 +194,5 @@ export function V9Billing({
     );
   }
 
-  return (
-    <section ref={ref} className="v9-card v9-bill" aria-label="帳單">
-      <div className="v9-status-head">
-        <h2 className="v9-card-title">{name ? `${name} 帳單` : "我的帳單"}</h2>
-        <button type="button" className="v9-btn is-small" onClick={onClose}>
-          收起
-        </button>
-      </div>
-      {body}
-    </section>
-  );
+  return <div className="v9-bill">{body}</div>;
 }
