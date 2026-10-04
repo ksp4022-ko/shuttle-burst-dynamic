@@ -49,13 +49,12 @@ const V9_CSS = `
 }
 .v9-hero > * { position: relative; }
 .v9-hero-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.v9-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .v9-logo { flex: none; }
 .v9-brand-name { margin: 0; line-height: 0; }
 .v9-lockup { display: block; height: 44px; width: auto; }
-.v9-site-name { margin: 2px 0 0 4px; font-size: 12px; color: var(--v9-muted); font-weight: 700; white-space: nowrap; }
+.v9-site-name { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 13px; color: var(--v9-muted); font-weight: 800; white-space: nowrap; }
 .v9-preview-badge {
-  display: inline-block; vertical-align: 1px; padding: 0 6px; border-radius: 999px; border: 2px solid var(--v9-ink);
+  display: inline-block; padding: 0 6px; border-radius: 999px; border: 2px solid var(--v9-ink);
   background: var(--v9-blue); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .06em;
 }
 .v9-user-chip {
@@ -72,7 +71,7 @@ const V9_CSS = `
 .v9-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v9-line-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--v9-green); border: 2px solid var(--v9-ink); }
 
-.v9-hero-stage { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; margin: 12px 0 10px; min-height: 84px; }
+.v9-hero-stage { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; margin: 8px 0 10px; min-height: 84px; }
 .v9-hero-meetup { display: grid; gap: 2px; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; min-width: 0; }
 .v9-hero-date { font-size: 46px; line-height: .95; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .v9-hero-date small { font-size: 16px; font-weight: 900; margin-left: 6px; letter-spacing: 0; }

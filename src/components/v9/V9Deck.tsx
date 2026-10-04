@@ -88,19 +88,9 @@ export function V9Hero({
   return (
     <section className="v9-hero" aria-label="聚會控制台">
       <div className="v9-hero-top">
-        <div className="v9-brand">
-          <div>
-            <h1 className="v9-brand-name">
-              <V9Lockup height={44} />
-            </h1>
-            <p className="v9-site-name">
-              {siteName}羽球{" "}
-              <span className="v9-preview-badge" data-v9-preview-badge>
-                PREVIEW
-              </span>
-            </p>
-          </div>
-        </div>
+        <h1 className="v9-brand-name">
+          <V9Lockup height={44} />
+        </h1>
         {authLoading ? (
           <span className="v9-user-chip is-muted">確認中…</span>
         ) : signedIn ? (
@@ -120,6 +110,12 @@ export function V9Hero({
 
       <div className="v9-hero-stage">
         <button type="button" className="v9-hero-meetup" onClick={onMeetup} aria-label="切換聚會">
+          <span className="v9-site-name">
+            {siteName}羽球
+            <span className="v9-preview-badge" data-v9-preview-badge>
+              PREVIEW
+            </span>
+          </span>
           <span className="v9-hero-date">
             {v9ShortDate(event.eventDate)}
             <small>{v9Weekday(event.eventDate)}</small>
