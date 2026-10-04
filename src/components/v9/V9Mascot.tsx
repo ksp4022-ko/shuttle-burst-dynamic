@@ -2,6 +2,7 @@
 // art). Mood follows the viewer's status: happy (正取), wait (備取 / 尚未報名),
 // rest (請假).
 
+import { useEffect, useState, type CSSProperties } from "react";
 import type { V9MascotMood } from "@/lib/v9-display";
 
 function Eyes({ cx, mood }: { cx: [number, number]; mood: V9MascotMood }) {
@@ -177,5 +178,57 @@ export function V9Mascot({ mood = "happy", size = 112 }: { mood?: V9MascotMood; 
         <Mouth x={93} y={64} mood={mood} />
       </g>
     </svg>
+  );
+}
+
+// Sticker-art animation (docs/V9_MASCOT_BRIEF.md): a 6-frame sprite sheet
+// played with CSS steps(). The CSS/SVG duo above shows until the sheet has
+// loaded; with reduced motion only the first frame shows.
+export type V9MascotSprite = "confirmed";
+
+const SPRITE_FRAMES = 6;
+const SPRITE_W = 106;
+const SPRITE_H = 120;
+
+export function V9MascotArt({
+  sprite,
+  mood,
+  size = 104,
+}: {
+  sprite: V9MascotSprite | null;
+  mood: V9MascotMood;
+  size?: number;
+}) {
+  const src = sprite ? `${import.meta.env.BASE_URL}v9/mascot/${sprite}.webp` : "";
+  const [loadedSrc, setLoadedSrc] = useState("");
+
+  useEffect(() => {
+    if (!src) return;
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (!cancelled) setLoadedSrc(src);
+    };
+    image.src = src;
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  if (!src || loadedSrc !== src) return <V9Mascot mood={mood} size={size} />;
+  return (
+    <span
+      className="v9-sprite"
+      role="presentation"
+      style={
+        {
+          width: SPRITE_W,
+          height: SPRITE_H,
+          backgroundImage: `url(${src})`,
+          backgroundSize: `${SPRITE_W * SPRITE_FRAMES}px ${SPRITE_H}px`,
+          "--v9-sprite-end": `-${SPRITE_W * SPRITE_FRAMES}px`,
+        } as CSSProperties
+      }
+    />
   );
 }

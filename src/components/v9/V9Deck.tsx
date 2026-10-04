@@ -3,7 +3,7 @@ import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V9Icon, type V9IconName } from "./V9Icons";
 import { V9Logo } from "./V9Logo";
-import { V9Mascot } from "./V9Mascot";
+import { V9MascotArt } from "./V9Mascot";
 import { v9MascotMood, v9ShortDate, v9StatusLine, v9Weekday } from "@/lib/v9-display";
 import type { V9RosterTab } from "./V9RosterSheet";
 
@@ -126,7 +126,10 @@ export function V9Hero({
           </span>
         </button>
         <div className="v9-hero-mascot">
-          <V9Mascot mood={v9MascotMood(identity)} size={104} />
+          <V9MascotArt
+            sprite={identity?.status === "confirmed" ? "confirmed" : null}
+            mood={v9MascotMood(identity)}
+          />
         </div>
       </div>
 
