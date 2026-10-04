@@ -95,13 +95,14 @@ const V9_CSS = `
   background: #fff; border: var(--v9-line); border-radius: 20px; overflow: hidden;
 }
 .v9-rail-item {
-  display: grid; grid-template-columns: 26px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 8px;
+  display: grid; grid-template-columns: 36px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 8px;
   min-width: 0; padding: 7px 10px; background: none; border: 0; text-align: left;
   border-bottom: 2px dashed #eadfca;
 }
 .v9-rail-item:nth-child(odd) { border-right: 2px dashed #eadfca; }
 .v9-rail-item:nth-last-child(-n+2) { border-bottom: 0; }
-.v9-rail-icon { grid-row: span 2; color: var(--v9-ink); opacity: .85; }
+.v9-rail-icon { grid-row: span 2; display: grid; place-items: center; width: 36px; height: 36px; }
+.v9-rail-icon img { display: block; width: 36px; height: 36px; }
 .v9-rail-item dt { font-size: 11px; line-height: 1.2; color: var(--v9-muted); font-weight: 700; white-space: nowrap; }
 .v9-rail-item dd { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 

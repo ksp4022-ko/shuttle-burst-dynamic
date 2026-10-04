@@ -24,7 +24,8 @@ export type V9Cta =
   | { kind: "profile"; href: string }
   | { kind: "action"; label: string; tone: string };
 
-type RailItem = { icon: V9IconName; label: string; value: string };
+// Sticker icons in public/v9/icons/*.webp (96px, shown at 36px).
+type RailItem = { icon: "time" | "shuttle" | "fee" | "court"; label: string; value: string };
 
 // 場地: "2面 / 2時" (hours only when the event has them).
 function courtLabel(event: AlphaEvent) {
@@ -140,7 +141,13 @@ export function V9Hero({
         {rail.map((item) => (
           <div key={item.label} className="v9-rail-item">
             <span className="v9-rail-icon">
-              <V9Icon name={item.icon} size={22} />
+              <img
+                src={`${import.meta.env.BASE_URL}v9/icons/${item.icon}.webp`}
+                alt=""
+                width={36}
+                height={36}
+                decoding="async"
+              />
             </span>
             <dt>{item.label}</dt>
             <dd>{item.value}</dd>
