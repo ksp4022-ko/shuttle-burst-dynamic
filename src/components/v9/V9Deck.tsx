@@ -2,7 +2,7 @@ import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V9Icon, type V9IconName } from "./V9Icons";
-import { V9Logo } from "./V9Logo";
+import { V9Lockup } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
 import {
   v9MascotMood,
@@ -89,9 +89,10 @@ export function V9Hero({
     <section className="v9-hero" aria-label="聚會控制台">
       <div className="v9-hero-top">
         <div className="v9-brand">
-          <V9Logo size={30} />
           <div>
-            <p className="v9-brand-name">OnCourt</p>
+            <h1 className="v9-brand-name">
+              <V9Lockup height={44} />
+            </h1>
             <p className="v9-site-name">
               {siteName}羽球{" "}
               <span className="v9-preview-badge" data-v9-preview-badge>

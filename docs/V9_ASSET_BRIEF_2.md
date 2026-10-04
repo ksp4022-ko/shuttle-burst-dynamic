@@ -13,10 +13,10 @@
 
 | Step | 檔名 | 狀態 |
 |---|---|---|
-| 1 | v9-logo.png | ⏳ 待交辦 |
-| 2 | v9-app-icon.png | ⏳ |
-| 3 | v9-lockup.png | ⏳ |
-| 4 | mascot-busy.png | ⏳ |
+| 1 | v9-logo.png | ✅ 第 2 版採用 → `public/v9/brand/logo.webp`（空狀態、讀取失敗畫面） |
+| 2 | v9-app-icon.png | ✅ 不採用 ChatGPT 版（重畫了角色、安全區不足）；Claude 用 STEP 1 合成 `icon-180/192/512.png`（88%）、`icon-maskable-512.png`（80%）、`favicon-32.png` |
+| 3 | v9-lockup.png | ✅ → `public/v9/brand/lockup.webp`，Hero 左上顯示 44px 高 |
+| 4 | mascot-busy.png | ⏳ 下一張 |
 | 5 | state-error.png | ⏳ |
 | 6 | state-empty.png | ⏳ （可改用現成的鞋子＋球袋貼紙，視情況跳過） |
 | 7 | dock-meetup.png | ⏳ |

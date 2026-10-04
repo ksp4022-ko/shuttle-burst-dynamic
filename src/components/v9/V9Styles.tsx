@@ -51,8 +51,9 @@ const V9_CSS = `
 .v9-hero-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .v9-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .v9-logo { flex: none; }
-.v9-brand-name { margin: 0; font-weight: 900; font-size: 15px; line-height: 1.1; white-space: nowrap; }
-.v9-site-name { margin: 1px 0 0; font-size: 12px; color: var(--v9-muted); font-weight: 700; white-space: nowrap; }
+.v9-brand-name { margin: 0; line-height: 0; }
+.v9-lockup { display: block; height: 44px; width: auto; }
+.v9-site-name { margin: 2px 0 0 4px; font-size: 12px; color: var(--v9-muted); font-weight: 700; white-space: nowrap; }
 .v9-preview-badge {
   display: inline-block; vertical-align: 1px; padding: 0 6px; border-radius: 999px; border: 2px solid var(--v9-ink);
   background: var(--v9-blue); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .06em;
