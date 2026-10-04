@@ -1,11 +1,10 @@
-import { useEffect, useRef } from "react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V9Icon, type V9IconName } from "./V9Icons";
 import { V9Lockup } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
-import { V9MeetupNav, useV9HeroSwipe, type V9SwitchMode } from "./V9MeetupNav";
+import { V9MeetupNav } from "./V9MeetupNav";
 import { v9MascotMood, v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
 import type { V9RosterTab } from "./V9RosterSheet";
 
@@ -37,7 +36,6 @@ export function V9Hero({
   events,
   index,
   switching,
-  switchMode,
   onGo,
   userName,
   authLoading,
@@ -58,7 +56,6 @@ export function V9Hero({
   index: number;
   // The hero already shows another meetup whose roster is still loading.
   switching: boolean;
-  switchMode: V9SwitchMode;
   onGo: (index: number) => void;
   userName: string;
   authLoading: boolean;
@@ -80,13 +77,6 @@ export function V9Hero({
   const go = (next: number) => {
     if (next >= 0 && next < events.length && next !== index) onGo(next);
   };
-  const swipe = useV9HeroSwipe(switchMode === "swipe", (step) => go(index + step));
-  // Slide direction for the swipe mode's enter animation.
-  const lastIndex = useRef(index);
-  const direction = index >= lastIndex.current ? "next" : "prev";
-  useEffect(() => {
-    lastIndex.current = index;
-  }, [index]);
   const rail: RailItem[] = [
     { icon: "time", label: "時間", value: display.timeLabel || "—" },
     { icon: "shuttle", label: "球種", value: event.ballType || "—" },
@@ -123,16 +113,7 @@ export function V9Hero({
         )}
       </div>
 
-      <div
-        key={switchMode === "swipe" ? event.id : undefined}
-        className={`v9-hero-body${switchMode === "swipe" ? ` is-swipe is-from-${direction}` : ""}`}
-        style={
-          swipe.offset
-            ? { transform: `translateX(${swipe.offset}px)`, animation: "none", transition: "none" }
-            : undefined
-        }
-        {...swipe.handlers}
-      >
+      <div className="v9-hero-body">
         <div className="v9-hero-stage">
           <div className="v9-hero-meetup">
             <span className="v9-site-name">
@@ -141,13 +122,7 @@ export function V9Hero({
                 PREVIEW
               </span>
             </span>
-            <V9MeetupNav
-              mode={switchMode}
-              events={events}
-              index={index}
-              onGo={go}
-              onList={onMeetup}
-            />
+            <V9MeetupNav events={events} index={index} onGo={go} onList={onMeetup} />
             {showMeetupName && <span className="v9-hero-name">{meetupName}</span>}
           </div>
           <div className="v9-hero-mascot">

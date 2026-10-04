@@ -77,85 +77,35 @@ const V9_CSS = `
 .v9-hero-date small { font-size: 16px; font-weight: 900; margin-left: 6px; letter-spacing: 0; }
 .v9-hero-name { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 17px; font-weight: 900; }
 
-/* ---------- Meetup switcher (trial: ?switch=swipe|ruler|calendar) ---------- */
-.v9-nav { display: grid; gap: 8px; min-width: 0; }
-.v9-nav-date { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 4px 8px; background: none; border: 0; padding: 0; text-align: left; color: inherit; cursor: pointer; }
-.v9-rel-badge {
-  margin-bottom: 3px; padding: 1px 8px; border-radius: 999px; border: 2px solid var(--v9-ink);
-  background: var(--v9-orange); color: #fff; font-size: 12px; font-weight: 900; white-space: nowrap;
-}
-.v9-rel-badge.is-past { background: #d9d2c3; color: var(--v9-ink); }
+/* ---------- Meetup switcher: tear-off calendar ---------- */
 .v9-main.is-switching .v9-bento { opacity: .5; transition: opacity .2s; }
-
-/* swipe: the hero body follows the finger, then slides the new meetup in */
-.v9-hero-body.is-swipe { touch-action: pan-y; transition: transform .2s ease-out; }
-.v9-hero-body.is-from-next { animation: v9-slide-from-right .32s ease-out; }
-.v9-hero-body.is-from-prev { animation: v9-slide-from-left .32s ease-out; }
-.v9-dots-row { display: flex; align-items: center; gap: 4px; }
-.v9-dots-arrow {
-  display: grid; place-items: center; flex: none; width: 26px; height: 26px; padding: 0; border-radius: 50%;
-  border: 2px solid var(--v9-ink); background: #fff; color: var(--v9-ink); box-shadow: 0 2px 0 var(--v9-ink); cursor: pointer;
+.v9-cal {
+  position: relative; display: block; width: 116px; padding: 8px 0 0; margin-top: 2px;
+  background: none; border: 0; color: inherit; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
 }
-.v9-dots-arrow:first-child svg { transform: rotate(180deg); }
-.v9-dots-arrow:disabled { opacity: .3; box-shadow: none; cursor: default; }
-.v9-dots { display: flex; align-items: center; gap: 6px; padding: 0 3px; }
-.v9-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--v9-ink); opacity: .3; }
-.v9-dot.is-past { background: #a89f90; opacity: .5; }
-.v9-dot-shuttle { width: 18px; height: auto; animation: v9-pop .35s ease-out; }
-
-/* ruler: ticks scroll under a fixed shuttle marker */
-.v9-ruler { position: relative; width: 100%; max-width: 180px; padding-top: 14px; }
-.v9-ruler-marker {
-  position: absolute; left: 50%; top: -6px; z-index: 1; width: 22px; height: auto;
-  transform: translateX(-50%) rotate(90deg); animation: v9-marker-drop .3s ease-out;
+.v9-cal:active { cursor: grabbing; }
+.v9-cal-rings { position: absolute; top: 0; left: 0; right: 0; z-index: 4; display: flex; justify-content: space-between; padding: 0 24px; pointer-events: none; }
+.v9-cal-rings i { width: 9px; height: 16px; border: 2.5px solid var(--v9-ink); border-radius: 6px; background: var(--v9-paper); }
+.v9-cal-stack { position: relative; display: grid; }
+.v9-cal-edge {
+  position: absolute; left: 4px; right: 4px; height: 10px; bottom: -6px;
+  border: 2.5px solid var(--v9-ink); border-top: 0; border-radius: 0 0 10px 10px; background: #fff;
 }
-.v9-ruler-track {
-  display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
-  border-top: 2.5px solid var(--v9-ink);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
-}
-.v9-ruler-track::-webkit-scrollbar { display: none; }
-.v9-ruler-track::before, .v9-ruler-track::after { content: ""; flex: none; width: calc(50% - 27px); }
-.v9-tick {
-  flex: none; display: grid; justify-items: center; gap: 2px; width: 54px; padding: 0 0 2px; scroll-snap-align: center;
-  background: none; border: 0; color: var(--v9-muted); font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; cursor: pointer;
-}
-.v9-tick-mark { width: 2.5px; height: 8px; border-radius: 2px; background: var(--v9-ink); transition: height .15s; }
-.v9-tick.is-active { color: var(--v9-ink); font-size: 12px; font-weight: 900; }
-.v9-tick.is-active .v9-tick-mark { width: 4px; height: 14px; background: var(--v9-orange); }
-.v9-tick.is-past { opacity: .45; }
-
-/* calendar: a tear-off desk calendar page */
-.v9-cal-nav { grid-template-columns: auto auto; align-items: center; justify-content: start; column-gap: 8px; row-gap: 4px; }
-.v9-cal { position: relative; display: block; width: 116px; padding: 9px 0 0; background: none; border: 0; color: inherit; cursor: grab; touch-action: none; }
-.v9-cal-rings { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; justify-content: space-between; padding: 0 24px; }
-.v9-cal-rings i { width: 10px; height: 18px; border: 2.5px solid var(--v9-ink); border-radius: 6px; background: var(--v9-paper); }
-.v9-cal-stack { position: relative; display: grid; perspective: 420px; }
+.v9-cal-edge.is-2 { left: 9px; right: 9px; bottom: -11px; background: #f3ece0; }
 .v9-cal-page {
-  grid-area: 1 / 1; display: grid; justify-items: center; overflow: hidden; background: #fff;
-  border: 2.5px solid var(--v9-ink); border-radius: 12px; box-shadow: 0 4px 0 var(--v9-ink);
-  transform-origin: 50% 0; backface-visibility: hidden;
+  grid-area: 1 / 1; position: relative; display: grid; justify-items: center; overflow: hidden;
+  background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 12px;
+  transform-origin: 50% 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
 }
-.v9-cal-head { width: 100%; padding: 7px 0 3px; border-bottom: 2.5px solid var(--v9-ink); background: var(--v9-red); color: #fff; font-size: 12px; font-weight: 900; text-align: center; }
+.v9-cal-page.is-top { z-index: 2; }
+.v9-cal-page.is-back { z-index: 3; }
+.v9-cal-head {
+  width: 100%; padding: 4px 0 2px; border-bottom: 2.5px solid var(--v9-ink); background: var(--v9-red);
+  color: #fff; font-size: 12px; font-weight: 900; text-align: center; white-space: nowrap;
+}
 .v9-cal-head.is-past { background: #a89f90; }
-.v9-cal-date { padding-top: 3px; font-size: 34px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.v9-cal-week { padding-bottom: 6px; color: var(--v9-muted); font-size: 13px; font-weight: 900; }
-.v9-cal-page.is-tearing { z-index: 2; animation: v9-cal-tear .45s ease-in forwards; }
-.v9-cal-page.is-dropping { animation: v9-cal-drop .45s ease-out; }
-.v9-cal-steps { display: grid; gap: 8px; }
-.v9-cal-steps button {
-  width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 2px solid var(--v9-ink); background: #fff;
-  color: var(--v9-ink); font-size: 11px; box-shadow: 0 2px 0 var(--v9-ink); cursor: pointer;
-}
-.v9-cal-steps button:disabled { opacity: .3; box-shadow: none; cursor: default; }
-.v9-cal-hint { grid-column: 1 / -1; color: var(--v9-muted); font-size: 11px; font-weight: 800; }
-@keyframes v9-slide-from-right { from { opacity: .2; transform: translateX(48px); } to { opacity: 1; transform: none; } }
-@keyframes v9-slide-from-left { from { opacity: .2; transform: translateX(-48px); } to { opacity: 1; transform: none; } }
-@keyframes v9-pop { 0% { transform: scale(.4) rotate(-30deg); } 70% { transform: scale(1.2); } 100% { transform: none; } }
-@keyframes v9-marker-drop { from { transform: translate(-50%, -8px) rotate(90deg); } to { transform: translateX(-50%) rotate(90deg); } }
-@keyframes v9-cal-tear { to { transform: rotateX(130deg) translateY(-4px); opacity: 0; } }
-@keyframes v9-cal-drop { from { transform: rotateX(130deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.v9-cal-date { padding: 1px 0 3px; font-size: 31px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.v9-cal-shade { position: absolute; inset: 0; background: var(--v9-ink); pointer-events: none; }
 /* The pair stands just behind the info rail: feet tuck 10px under its top
    edge (the stage keeps a 10px gap above the rail), and the rail sits on top. */
 .v9-hero-mascot { flex: none; position: relative; z-index: 1; margin: 0 -6px -22px 0; }

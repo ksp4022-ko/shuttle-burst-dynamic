@@ -16,7 +16,6 @@ import { V9BillingContent } from "./V9BillingSheet";
 import { V9ProxyContent, type V9ProxyTab } from "./V9ProxySheet";
 import { V9Icon } from "./V9Icons";
 import { V9Toast } from "./V9Toast";
-import { v9SwitchModeFromUrl, type V9SwitchMode } from "./V9MeetupNav";
 import { V9Celebrate } from "./V9Celebrate";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
@@ -94,11 +93,6 @@ function rankOf(
 
 export function V9App() {
   const [siteId] = useState(() => configuredSiteId());
-  // Meetup switcher trial: /v9/...?switch=swipe|ruler|calendar.
-  const [switchMode, setSwitchMode] = useState<V9SwitchMode>("swipe");
-  useEffect(() => {
-    setSwitchMode(v9SwitchModeFromUrl(window.location.search));
-  }, []);
   const auth = useV8LineAuth();
   const flow = useHomepageFlow({
     preHoldMs: 0,
@@ -278,7 +272,7 @@ export function V9App() {
 
   // Meetup switching: the hero shows the target meetup at once (date and
   // rail come from the event list) while its roster loads; quick repeated
-  // swipes just move the target, and the flow follows one switch at a time.
+  // flips just move the target, and the flow follows one switch at a time.
   const [targetEventId, setTargetEventId] = useState<string | null>(null);
   const [switchRound, setSwitchRound] = useState(0);
   const switchingRef = useRef(false);
@@ -408,7 +402,6 @@ export function V9App() {
               events={events}
               index={shownIndex}
               switching={switching}
-              switchMode={switchMode}
               onGo={(next) => {
                 const item = events[next];
                 if (item) selectEvent(item.id);

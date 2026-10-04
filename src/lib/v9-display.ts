@@ -31,10 +31,6 @@ export function v9Relative(value: string, now = new Date()) {
   return weeks === 0 ? "本週" : weeks === 1 ? "下週" : `${weeks} 週後`;
 }
 
-export function v9IsPast(value: string, now = new Date()) {
-  return v9Relative(value, now) === "已結束";
-}
-
 export const V9_STATUS_LABEL: Record<CurrentIdentity["status"], string> = {
   confirmed: "正取",
   waiting: "備取",
