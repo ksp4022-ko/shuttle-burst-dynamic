@@ -42,9 +42,10 @@ export function v9StatusLine(identity: CurrentIdentity, rank: number | null) {
 // the CSS/SVG duo until that state's art is ready.
 export function v9MascotSprite(
   identity: CurrentIdentity | null,
-): "confirmed" | "open" | "waiting" | null {
+): "confirmed" | "open" | "waiting" | "leave" | null {
   if (identity?.status === "confirmed") return "confirmed";
   if (identity?.status === "waiting") return "waiting";
+  if (identity?.status === "leave") return "leave";
   if (identity?.status === "unregistered") return "open";
   return null;
 }

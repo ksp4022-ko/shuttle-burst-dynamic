@@ -193,6 +193,9 @@ const SPRITES = {
   // 備取: sitting with a sweat drop, blink on frame 5; the eyes barely move
   // at this size, so a slow CSS sway adds the fidgety waiting feel.
   waiting: { frames: 6, width: 122, height: 100, duration: 2.4, sway: true },
+  // 已請假: asleep together, Z's float up; taller box because the Z's rise
+  // well above the heads.
+  leave: { frames: 6, width: 102, height: 132, duration: 3 },
 } as const satisfies Record<
   string,
   { frames: number; width: number; height: number; duration: number; sway?: boolean }
