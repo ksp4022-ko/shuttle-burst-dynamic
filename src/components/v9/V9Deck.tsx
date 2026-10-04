@@ -1,14 +1,13 @@
-import type { ReactNode } from "react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V9Icon, type V9IconName } from "./V9Icons";
 import { V9Logo } from "./V9Logo";
 import { V9Mascot } from "./V9Mascot";
-import { V9_STATUS_LABEL, v9MascotMood, v9ShortDate, v9Weekday } from "@/lib/v9-display";
+import { v9MascotMood, v9ShortDate, v9StatusLine, v9Weekday } from "@/lib/v9-display";
 import type { V9RosterTab } from "./V9RosterSheet";
 
-// Home Control Deck: Hero (meetup + 6-item rail + my status + ONE CTA),
+// Home Control Deck: Hero (meetup + 4-item rail + 本場狀態 + ONE CTA),
 // a few uneven Bento tiles, and the sticky Dock. Every number is read from
 // the event / roster / identity the shared hooks resolved; details open in
 // bottom sheets.
@@ -19,13 +18,20 @@ export type V9Cta =
   | { kind: "profile"; href: string }
   | { kind: "action"; label: string; tone: string };
 
-type RailItem = { icon: V9IconName; label: string; value: string; onClick?: () => void };
+type RailItem = { icon: V9IconName; label: string; value: string };
+
+// 場地: "2面 / 2時" (hours only when the event has them).
+function courtLabel(event: AlphaEvent) {
+  if (typeof event.courtCount !== "number") return "—";
+  return typeof event.hours === "number"
+    ? `${event.courtCount}面 / ${event.hours}時`
+    : `${event.courtCount}面`;
+}
 
 export function V9Hero({
   siteName,
   event,
   eventCount,
-  confirmedCount,
   userName,
   authLoading,
   signedIn,
@@ -33,18 +39,15 @@ export function V9Hero({
   rank,
   cta,
   busy,
-  pendingLabel,
+  busyLabel,
   onLogin,
   onCta,
   onMeetup,
-  onRoster,
-  onFee,
   onMe,
 }: {
   siteName: string;
   event: AlphaEvent;
   eventCount: number;
-  confirmedCount: number;
   userName: string;
   authLoading: boolean;
   signedIn: boolean;
@@ -52,37 +55,28 @@ export function V9Hero({
   rank: number | null;
   cta: V9Cta;
   busy: boolean;
-  pendingLabel: string | undefined;
+  busyLabel: string;
   onLogin: () => void;
   onCta: () => void;
   onMeetup: () => void;
-  onRoster: () => void;
-  onFee: () => void;
   onMe: () => void;
 }) {
   const display = parseV8MeetupDisplay(event.name);
+  const meetupName = display.displayName || event.name;
+  // "康軒" next to "康軒羽球" says nothing new; only special names show.
+  const showMeetupName = Boolean(meetupName) && meetupName !== siteName;
   const rail: RailItem[] = [
-    { icon: "date", label: "日期", value: v9ShortDate(event.eventDate), onClick: onMeetup },
     { icon: "time", label: "時間", value: display.timeLabel || "—" },
     { icon: "shuttle", label: "球種", value: event.ballType || "—" },
     {
       icon: "fee",
       label: "費用",
       value: typeof event.tempFee === "number" ? `$${event.tempFee}` : "—",
-      onClick: onFee,
     },
-    {
-      icon: "court",
-      label: "場地",
-      value: typeof event.courtCount === "number" ? `${event.courtCount}場` : "—",
-    },
-    {
-      icon: "people",
-      label: "人數",
-      value: `${confirmedCount}/${event.maxPeople}`,
-      onClick: onRoster,
-    },
+    { icon: "court", label: "場地", value: courtLabel(event) },
   ];
+  const statusHint =
+    identity?.signupType === "fixed" && identity.status === "waiting" ? "請假會退出備取" : "";
 
   return (
     <section className="v9-hero" aria-label="聚會控制台">
@@ -123,7 +117,7 @@ export function V9Hero({
             <small>{v9Weekday(event.eventDate)}</small>
           </span>
           <span className="v9-hero-name">
-            {display.displayName || event.name}
+            {showMeetupName && meetupName}
             {eventCount > 1 && (
               <span className="v9-hero-switch">
                 共 {eventCount} 場 <V9Icon name="chevron" size={14} />
@@ -137,57 +131,35 @@ export function V9Hero({
       </div>
 
       <dl className="v9-rail">
-        {rail.map((item) => {
-          const body: ReactNode = (
-            <>
-              <span className="v9-rail-icon">
-                <V9Icon name={item.icon} size={22} />
-              </span>
-              <dt>{item.label}</dt>
-              <dd>{item.value}</dd>
-            </>
-          );
-          return item.onClick ? (
-            <button
-              key={item.label}
-              type="button"
-              className="v9-rail-item is-link"
-              onClick={item.onClick}
-            >
-              {body}
-            </button>
-          ) : (
-            <div key={item.label} className="v9-rail-item">
-              {body}
-            </div>
-          );
-        })}
+        {rail.map((item) => (
+          <div key={item.label} className="v9-rail-item">
+            <span className="v9-rail-icon">
+              <V9Icon name={item.icon} size={22} />
+            </span>
+            <dt>{item.label}</dt>
+            <dd>{item.value}</dd>
+          </div>
+        ))}
       </dl>
 
-      <button type="button" className="v9-hero-status" onClick={onMe} aria-label="我的報名資訊">
-        {identity ? (
-          <>
-            <span className={`v9-chip-status is-${identity.status}`}>
-              {V9_STATUS_LABEL[identity.status]}
-              {rank ? ` #${rank}` : ""}
-            </span>
-            <span className="v9-chip-soft">
-              {identity.signupType === "fixed" ? "季打" : "臨打"}
-            </span>
-            <span className="v9-chip-soft">
-              {identity.signupType === "fixed"
-                ? "季費"
-                : typeof event.tempFee === "number"
-                  ? `$${event.tempFee}`
-                  : "—"}
-            </span>
-          </>
-        ) : (
-          <span className="v9-chip-soft">{signedIn ? "身份尚未確認" : "登入後顯示我的狀態"}</span>
-        )}
-        <span className="v9-hero-status-more">
-          我的 <V9Icon name="chevron" size={14} />
+      <button
+        type="button"
+        className="v9-hero-status"
+        onClick={onMe}
+        aria-label="本場狀態，查看我的報名"
+      >
+        <span className="v9-status-label">本場狀態</span>
+        <span className="v9-status-main">
+          <span
+            className={`v9-status-dot is-${identity ? identity.status : "none"}`}
+            aria-hidden="true"
+          />
+          <span className="v9-status-text">
+            {identity ? v9StatusLine(identity, rank) : signedIn ? "身份尚未確認" : "登入後顯示"}
+            {statusHint && <small>{statusHint}</small>}
+          </span>
         </span>
+        <V9Icon name="chevron" size={16} />
       </button>
 
       {cta.kind === "loading" ? (
@@ -210,7 +182,7 @@ export function V9Hero({
           aria-busy={busy}
           onClick={onCta}
         >
-          {busy ? pendingLabel || "送出中…" : cta.label}
+          {busy ? busyLabel : cta.label}
         </button>
       )}
     </section>
@@ -223,11 +195,8 @@ export function V9Bento({
   remainCount,
   waitingCount,
   leaveCount,
-  identity,
-  rank,
   signedIn,
   onRoster,
-  onMe,
   onBill,
 }: {
   confirmedCount: number;
@@ -235,11 +204,8 @@ export function V9Bento({
   remainCount: number;
   waitingCount: number;
   leaveCount: number;
-  identity: CurrentIdentity | null;
-  rank: number | null;
   signedIn: boolean;
   onRoster: (tab: V9RosterTab) => void;
-  onMe: () => void;
   onBill: () => void;
 }) {
   const fill = maxPeople > 0 ? Math.min(100, (confirmedCount / maxPeople) * 100) : 0;
@@ -254,7 +220,6 @@ export function V9Bento({
         <span className="v9-meter" aria-hidden="true">
           <span style={{ width: `${fill}%` }} />
         </span>
-        <span className="v9-tile-foot">剩餘名額 {remainCount}</span>
       </button>
       <button type="button" className="v9-tile is-waiting" onClick={() => onRoster("waiting")}>
         <span className="v9-tile-label">備取</span>
@@ -264,9 +229,9 @@ export function V9Bento({
         <span className="v9-tile-label">請假</span>
         <span className="v9-tile-mid">{leaveCount}</span>
       </button>
-      <button type="button" className="v9-tile is-rank" onClick={onMe}>
-        <span className="v9-tile-label">我的順位</span>
-        <span className="v9-tile-mid">{identity && rank ? `#${rank}` : "—"}</span>
+      <button type="button" className="v9-tile is-remain" onClick={() => onRoster("confirmed")}>
+        <span className="v9-tile-label">剩餘名額</span>
+        <span className="v9-tile-mid">{remainCount}</span>
       </button>
       <button type="button" className="v9-tile is-bill" onClick={onBill}>
         <span className="v9-tile-icon">
@@ -282,13 +247,13 @@ export function V9Bento({
   );
 }
 
-export type V9DockKey = "meetup" | "roster" | "proxy" | "bill";
+export type V9DockKey = "meetup" | "roster" | "proxy" | "me";
 
 const DOCK: Array<{ key: V9DockKey; icon: V9IconName; label: string }> = [
   { key: "meetup", icon: "date", label: "聚會" },
   { key: "roster", icon: "list", label: "名單" },
   { key: "proxy", icon: "proxy", label: "代報" },
-  { key: "bill", icon: "bill", label: "帳單" },
+  { key: "me", icon: "me", label: "我的" },
 ];
 
 export function V9Dock({

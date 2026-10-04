@@ -98,26 +98,30 @@ const V9_CSS = `
 }
 .v9-rail-item:nth-child(odd) { border-right: 2px dashed #eadfca; }
 .v9-rail-item:nth-last-child(-n+2) { border-bottom: 0; }
-.v9-rail-item.is-link { cursor: pointer; }
-.v9-rail-item.is-link dd::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--v9-orange); vertical-align: 2px; }
 .v9-rail-icon { grid-row: span 2; color: var(--v9-ink); opacity: .85; }
 .v9-rail-item dt { font-size: 11px; line-height: 1.2; color: var(--v9-muted); font-weight: 700; white-space: nowrap; }
 .v9-rail-item dd { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 
 .v9-hero-status {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; margin: 10px 0 0; padding: 0;
-  background: none; border: 0; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 10px; width: 100%; margin: 10px 0 0; padding: 9px 10px 9px 14px;
+  background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 16px; cursor: pointer; text-align: left;
 }
-.v9-chip-status, .v9-chip-soft {
-  display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 999px; border: 2.5px solid var(--v9-ink);
-  font-size: 14px; font-weight: 900; white-space: nowrap; background: #fff;
+.v9-status-label { flex: none; font-size: 12px; font-weight: 800; color: var(--v9-muted); }
+.v9-status-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.v9-status-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--v9-ink); background: #fff; }
+.v9-status-dot.is-confirmed { background: var(--v9-green); }
+.v9-status-dot.is-waiting { background: var(--v9-orange); }
+.v9-status-dot.is-leave { background: var(--v9-red); }
+.v9-status-text { min-width: 0; display: grid; font-size: 16px; font-weight: 900; line-height: 1.25; }
+.v9-status-text small { font-size: 12px; font-weight: 700; color: var(--v9-muted); }
+.v9-chip-status {
+  display: inline-flex; align-items: center; padding: 3px 11px; border-radius: 999px; border: 2.5px solid var(--v9-ink);
+  font-size: 13px; font-weight: 900; white-space: nowrap; background: #fff;
 }
 .v9-chip-status.is-confirmed { background: var(--v9-green); color: #fff; }
 .v9-chip-status.is-waiting { background: var(--v9-orange); }
 .v9-chip-status.is-leave { background: var(--v9-red); color: #fff; }
-.v9-chip-status.is-unregistered { background: #fff; color: var(--v9-muted); }
-.v9-chip-soft { font-weight: 800; font-size: 13px; border-width: 2px; }
-.v9-hero-status-more { margin-left: auto; display: inline-flex; align-items: center; font-size: 13px; font-weight: 800; color: var(--v9-muted); }
+.v9-chip-status.is-unregistered { color: var(--v9-muted); }
 
 .v9-cta {
   display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 12px;
@@ -160,8 +164,8 @@ const V9_CSS = `
 .v9-tile.is-confirmed { grid-column: span 2; grid-row: span 2; background: var(--v9-green); color: #fff; animation-delay: .04s; }
 .v9-tile.is-waiting { grid-column: span 2; background: var(--v9-yellow); animation-delay: .08s; }
 .v9-tile.is-leave { background: var(--v9-rose); animation-delay: .12s; }
-.v9-tile.is-rank { background: var(--v9-sky); animation-delay: .16s; }
-.v9-tile.is-leave .v9-tile-mid, .v9-tile.is-rank .v9-tile-mid { font-size: 24px; }
+.v9-tile.is-remain { background: var(--v9-sky); animation-delay: .16s; }
+.v9-tile.is-leave .v9-tile-mid, .v9-tile.is-remain .v9-tile-mid { font-size: 24px; }
 .v9-tile.is-bill {
   grid-column: span 4; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px;
   background: var(--v9-ink); color: #fff; box-shadow: 0 4px 0 #8a7b6c; animation-delay: .2s;
@@ -255,11 +259,7 @@ const V9_CSS = `
 .v9-badge.is-muted { color: var(--v9-muted); }
 
 /* fee / billing */
-.v9-fee-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 4px; }
-.v9-fee-strip div { padding: 10px 12px; border: 2.5px solid var(--v9-ink); border-radius: 16px; background: #fff; }
-.v9-fee-strip dt { font-size: 12px; color: var(--v9-muted); font-weight: 700; }
-.v9-fee-strip dd { margin: 2px 0 0; font-size: 18px; font-weight: 900; }
-.v9-bill { margin-top: 12px; padding: 4px 14px 14px; background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 20px; }
+.v9-bill { margin-top: 4px; padding: 4px 14px 14px; background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 20px; }
 .v9-bill-lines { display: grid; }
 .v9-bill-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 2px dashed #eadfca; font-weight: 700; }
 .v9-bill-line strong { font-variant-numeric: tabular-nums; }

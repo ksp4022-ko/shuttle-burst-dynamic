@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
-import { useHomepageFlow } from "@/hooks/use-homepage-flow";
+import { useHomepageFlow, type PendingAction } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
@@ -53,15 +53,22 @@ function v8PathForCurrentPage() {
   return window.location.pathname.replace(/\/v9(?=\/|$)/, "/v8");
 }
 
+// V9 wording for the shared flow's pending label (取消請假 instead of 消假).
+function busyLabelFor(pending: PendingAction | null) {
+  if (!pending) return "送出中…";
+  if (pending.type === "fixed-leave") return "請假中…";
+  if (pending.type === "fixed-return") return "取消請假中…";
+  if (pending.type === "cancel-temp") return "取消中…";
+  return `${pending.label}…`;
+}
+
 // Same mapping as V8 ACTIVE's main CTA (only the wording is V9's).
 function ctaFor(identity: CurrentIdentity): { label: string; tone: string } {
   if (identity.signupType === "fixed") {
     return identity.status === "leave"
       ? { label: "取消請假", tone: "is-green" }
-      : {
-          label: identity.status === "waiting" ? "我要告假（退出備取）" : "我要告假",
-          tone: "is-red",
-        };
+      : // 備取 too: the status line says 請假會退出備取.
+        { label: "我要請假", tone: "is-red" };
   }
   return identity.status === "unregistered"
     ? { label: "我要報名", tone: "is-orange" }
@@ -153,11 +160,11 @@ export function V9App() {
       const index = waiting.findIndex((person) => person.id === pending.signupId);
       setNotice(
         index >= 0
-          ? `${pending.name} 已消假，備取第 ${index + 1} 位`
-          : `${pending.name} 已消假，排入備取`,
+          ? `${pending.name} 已取消請假，備取第 ${index + 1} 位`
+          : `${pending.name} 已取消請假，排入備取`,
       );
     } else if (identity.status === "confirmed") {
-      setNotice(`${pending.name} 已消假，回到正取`);
+      setNotice(`${pending.name} 已取消請假，回到正取`);
     }
   }, [identity, waiting, setNotice]);
 
@@ -207,6 +214,10 @@ export function V9App() {
       if (action === "fixed-leave") {
         setNotice(status === "waiting" ? `${name} 已請假，退出備取` : `${name} 已請假，名額已釋出`);
       }
+      // Replaces the shared flow's 已消假 / 已取消 wording; the 取消請假
+      // effect above refines it with the position once the roster lands.
+      if (action === "fixed-return" && returnFeedbackRef.current) setNotice(`${name} 已取消請假`);
+      if (action === "cancel-temp") setNotice(`${name} 已取消報名`);
       await refreshCancellableTempSignups();
       return true;
     });
@@ -297,9 +308,7 @@ export function V9App() {
         : { kind: "action", ...ctaFor(identity) };
   const siteName = SITE_NAMES[siteId] ?? siteId;
   const dockActive: V9DockKey | null =
-    sheet === "meetup" || sheet === "roster" || sheet === "proxy" || sheet === "bill"
-      ? sheet
-      : null;
+    sheet === "meetup" || sheet === "roster" || sheet === "proxy" || sheet === "me" ? sheet : null;
 
   return (
     <div className="v9-app">
@@ -344,7 +353,6 @@ export function V9App() {
               siteName={siteName}
               event={selectedEvent}
               eventCount={events.length}
-              confirmedCount={roster.summary.confirmedCount}
               userName={userName}
               authLoading={auth.loading}
               signedIn={signedIn}
@@ -352,12 +360,10 @@ export function V9App() {
               rank={ready ? rank : null}
               cta={cta}
               busy={busy}
-              pendingLabel={pendingAction?.label}
+              busyLabel={busyLabelFor(pendingAction)}
               onLogin={auth.startLogin}
               onCta={() => void handlePrimaryAction()}
               onMeetup={() => setSheet("meetup")}
-              onRoster={() => openRoster("confirmed")}
-              onFee={() => setSheet("bill")}
               onMe={() => setSheet("me")}
             />
             <V9Bento
@@ -366,11 +372,8 @@ export function V9App() {
               remainCount={roster.summary.remainCount}
               waitingCount={waiting.length}
               leaveCount={(roster.fixedLeave || []).length}
-              identity={ready ? identity : null}
-              rank={ready ? rank : null}
               signedIn={signedIn}
               onRoster={openRoster}
-              onMe={() => setSheet("me")}
               onBill={() => setSheet("bill")}
             />
           </main>
@@ -395,31 +398,10 @@ export function V9App() {
 
           <V9Sheet
             open={sheet === "bill"}
-            title="費用與帳單"
+            title="我的帳單"
             subtitle={userName || undefined}
             onClose={closeSheet}
           >
-            <dl className="v9-fee-strip">
-              <div>
-                <dt>本場臨打費</dt>
-                <dd>
-                  {typeof selectedEvent.tempFee === "number" ? `$${selectedEvent.tempFee}` : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt>場地</dt>
-                <dd>
-                  {typeof selectedEvent.courtCount === "number"
-                    ? `${selectedEvent.courtCount}場`
-                    : "—"}
-                  {typeof selectedEvent.hours === "number" ? ` · ${selectedEvent.hours}小時` : ""}
-                </dd>
-              </div>
-            </dl>
-            {selectedEvent.eventNote ? (
-              // The backend note can carry a literal "\n" for a line break.
-              <p className="v9-sheet-note">{selectedEvent.eventNote.replace(/\\n/g, "\n")}</p>
-            ) : null}
             {signedIn && profileComplete ? (
               <V9BillingContent token={lineToken} siteId={siteId} eventId={selectedEventId} />
             ) : (
@@ -560,7 +542,7 @@ export function V9App() {
                   <dt>本次費用</dt>
                   <dd>
                     {identity.signupType === "fixed"
-                      ? "季費"
+                      ? "含在季費內"
                       : typeof selectedEvent.tempFee === "number"
                         ? `$${selectedEvent.tempFee}`
                         : "—"}

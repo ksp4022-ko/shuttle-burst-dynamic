@@ -28,3 +28,12 @@ export function v9MascotMood(identity: CurrentIdentity | null): V9MascotMood {
   if (identity.status === "leave") return "rest";
   return identity.status === "confirmed" ? "happy" : "wait";
 }
+
+// 本場狀態 line, e.g. "正取第 1 位 · 季打". 排位 is the row's place in the
+// API-ordered list.
+export function v9StatusLine(identity: CurrentIdentity, rank: number | null) {
+  const role = identity.signupType === "fixed" ? "季打" : "臨打";
+  if (identity.status === "confirmed") return `${rank ? `正取第 ${rank} 位` : "正取"} · ${role}`;
+  if (identity.status === "waiting") return `${rank ? `備取第 ${rank} 位` : "備取"} · ${role}`;
+  return `${V9_STATUS_LABEL[identity.status]} · ${role}`;
+}
