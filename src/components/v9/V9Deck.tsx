@@ -252,12 +252,7 @@ export function V9Bento({
       </button>
       <button type="button" className="v9-tile is-bill" onClick={onBill}>
         <span className="v9-tile-icon">
-          <img
-            src={`${import.meta.env.BASE_URL}v9/icons/gear-pouch.webp`}
-            alt=""
-            width={38}
-            height={38}
-          />
+          <img src={`${import.meta.env.BASE_URL}v9/icons/fee.webp`} alt="" width={48} height={48} />
         </span>
         <span className="v9-tile-text">
           <span className="v9-tile-label">我的帳單</span>

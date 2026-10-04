@@ -80,8 +80,9 @@ const V9_CSS = `
   display: inline-flex; align-items: center; gap: 1px; padding: 1px 6px 1px 9px; border-radius: 999px;
   border: 2px solid var(--v9-ink); background: #fff; font-size: 12px; font-weight: 800;
 }
-/* Feet stand on the info rail's top edge (the stage keeps a 10px gap above it). */
-.v9-hero-mascot { flex: none; position: relative; z-index: 1; margin: 0 -6px -12px 0; }
+/* The pair stands just behind the info rail: feet tuck 10px under its top
+   edge (the stage keeps a 10px gap above the rail), and the rail sits on top. */
+.v9-hero-mascot { flex: none; position: relative; z-index: 1; margin: 0 -6px -22px 0; }
 .v9-mascot { display: block; overflow: visible; }
 .v9-mascot-frame { position: relative; display: block; }
 .v9-mascot-fallback { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); }
@@ -100,6 +101,7 @@ const V9_CSS = `
 .v9-mascot.is-rest .v9-mascot-dragon, .v9-mascot.is-rest .v9-mascot-tiger { animation-duration: 5s; }
 
 .v9-rail {
+  position: relative; z-index: 2;
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 0;
   background: #fff; border: var(--v9-line); border-radius: 20px; overflow: hidden;
 }
@@ -184,8 +186,8 @@ const V9_CSS = `
   background: var(--v9-ink); color: #fff; box-shadow: 0 4px 0 #8a7b6c; animation-delay: .2s;
 }
 .v9-tile.is-bill:active { box-shadow: 0 0 0 #8a7b6c; }
-.v9-tile-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: var(--v9-cream); border: 2.5px solid #fff; flex: none; }
-.v9-tile-icon img { display: block; width: 38px; height: 38px; }
+.v9-tile-icon { display: grid; place-items: center; width: 48px; height: 48px; flex: none; }
+.v9-tile-icon img { display: block; width: 48px; height: 48px; }
 .v9-tile-text { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .v9-tile.is-bill .v9-tile-label { font-size: 16px; font-weight: 900; }
 .v9-tile-sub { font-size: 12px; opacity: .8; font-weight: 700; }
