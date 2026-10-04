@@ -134,7 +134,7 @@ export function V9Hero({
         </button>
         <div className="v9-hero-mascot">
           <V9MascotArt
-            sprite={v9MascotSprite(identity)}
+            sprite={!authLoading && !signedIn ? "guest" : v9MascotSprite(identity)}
             mood={v9MascotMood(identity)}
             badge={identity?.status === "waiting" && rank ? `#${rank}` : undefined}
           />

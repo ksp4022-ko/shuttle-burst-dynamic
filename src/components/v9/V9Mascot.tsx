@@ -205,6 +205,9 @@ const SPRITES = {
   // 已請假: asleep together, Z's float up; taller box because the Z's rise
   // well above the heads.
   leave: { frames: 6, width: 102, height: 132, duration: 3 },
+  // 未登入: waving hello, frames 1-2-6-2 of the sheet (3-5 changed pose /
+  // drifted sideways).
+  guest: { frames: 4, width: 127, height: 104, duration: 1.4 },
 } as const satisfies Record<
   string,
   {
