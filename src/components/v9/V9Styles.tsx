@@ -337,7 +337,23 @@ const V9_CSS = `
 .v9-toast-region { position: fixed; left: 0; right: 0; bottom: calc(max(12px, env(safe-area-inset-bottom)) + var(--v9-dock-h) + 14px); z-index: 60; display: flex; justify-content: center; pointer-events: none; padding: 0 16px; }
 .v9-toast { max-width: 440px; padding: 10px 18px; border: var(--v9-line); border-radius: 999px; background: var(--v9-ink); color: #fff; font-weight: 800; box-shadow: 0 4px 0 rgba(0,0,0,.25); animation: v9-toast .28s cubic-bezier(.3,1.4,.5,1) both; }
 
-@media (min-width: 560px) {
+/* 操作成功 celebration */
+.v9-celebrate {
+  position: fixed; inset: 0; z-index: 70; display: grid; place-items: center;
+  background: rgba(31, 26, 23, .32); animation: v9-fade .16s ease-out both; cursor: pointer;
+}
+.v9-celebrate.is-leaving { animation: v9-fade-out .26s ease-in both; }
+.v9-celebrate-art { position: relative; margin-bottom: 12vh; }
+.v9-celebrate-art img { display: block; width: 100%; height: 100%; animation: v9-celebrate-pop .48s cubic-bezier(.2,1.5,.4,1) both; transform-origin: 50% 90%; }
+.v9-confetti {
+  position: absolute; display: block; width: 7px; height: 13px; border-radius: 2px;
+  border: 1.5px solid var(--v9-ink); opacity: 0; pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation-name: v9-confetti; animation-timing-function: cubic-bezier(.12,.75,.35,1); animation-fill-mode: both;
+}
+.v9-confetti.is-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+
   .v9-app { padding-top: 24px; }
   .v9-sheet { border-bottom: var(--v9-line); border-radius: 28px; margin-bottom: 24px; }
 }
@@ -351,6 +367,12 @@ const V9_CSS = `
 @keyframes v9-shimmer { to { background-position: -200% 0; } }
 @keyframes v9-sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
 @keyframes v9-sprite { to { background-position: var(--v9-sprite-end) 0; } }
+@keyframes v9-celebrate-pop { 0% { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes v9-confetti {
+  0% { opacity: 1; transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(.5); }
+  55% { opacity: 1; transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--dx), calc(var(--dy) + 150px)) rotate(calc(var(--rot) * 2)) scale(.9); }
+}
 @keyframes v9-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes v9-fade-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes v9-sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -358,6 +380,7 @@ const V9_CSS = `
 @keyframes v9-toast { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes v9-shake { 0%,100% { translate: 0; } 20% { translate: -8px; } 45% { translate: 7px; } 70% { translate: -4px; } 85% { translate: 2px; } }
 @media (prefers-reduced-motion: reduce) {
+  .v9-confetti { display: none; }
   .v9-app *, .v9-app *::before, .v9-app *::after { animation: none !important; transition: none !important; }
 }
 `;

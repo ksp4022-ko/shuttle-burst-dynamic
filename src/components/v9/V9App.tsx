@@ -15,6 +15,7 @@ import { V9BillingContent } from "./V9BillingSheet";
 import { V9ProxyContent, type V9ProxyTab } from "./V9ProxySheet";
 import { V9Icon } from "./V9Icons";
 import { V9Toast } from "./V9Toast";
+import { V9Celebrate } from "./V9Celebrate";
 
 // V9 Shuttle -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
@@ -122,6 +123,9 @@ export function V9App() {
   const [sheet, setSheet] = useState<SheetKind | null>(null);
   const [rosterTab, setRosterTab] = useState<V9RosterTab>("confirmed");
   const [proxyTab, setProxyTab] = useState<V9ProxyTab>("signup");
+  // 操作成功 celebration: bumped only when the viewer lands in 正取.
+  const [celebrateKey, setCelebrateKey] = useState(0);
+  const celebrate = useCallback(() => setCelebrateKey((key) => key + 1), []);
   const actionLockRef = useRef(false);
   const returnFeedbackRef = useRef<{ signupId: string; name: string } | null>(null);
 
@@ -165,8 +169,17 @@ export function V9App() {
       );
     } else if (identity.status === "confirmed") {
       setNotice(`${pending.name} 已取消請假，回到正取`);
+      celebrate();
     }
-  }, [identity, waiting, setNotice]);
+  }, [identity, waiting, setNotice, celebrate]);
+
+  // Design preview: /v9/...?celebrate=1 plays the celebration once the page
+  // has loaded, without signing up for real.
+  const pageReady = Boolean(roster);
+  useEffect(() => {
+    if (!pageReady) return;
+    if (new URLSearchParams(window.location.search).has("celebrate")) celebrate();
+  }, [pageReady, celebrate]);
 
   // One submit at a time, so a result can only land on the meetup it was
   // sent for.
@@ -194,7 +207,11 @@ export function V9App() {
           lineToken,
           lineIdentity.identityType === "temp" ? { selfSignup: true } : {},
         );
-        if (result.ok) await refreshCancellableTempSignups();
+        if (result.ok) {
+          // Celebrate a 正取 seat only; landing on 備取 just gets the toast.
+          if (result.status === "confirmed") celebrate();
+          await refreshCancellableTempSignups();
+        }
         return result.ok;
       }
       const action =
@@ -555,6 +572,7 @@ export function V9App() {
       )}
 
       <V9Toast message={flow.notice} onDone={clearNotice} />
+      <V9Celebrate playKey={celebrateKey} />
     </div>
   );
 }
