@@ -6,8 +6,8 @@ import { V9App } from "@/components/v9/V9App";
 export const Route = createFileRoute("/v9/kangxuan")({
   head: () => ({
     meta: [
-      { title: "V9 康軒羽球報名" },
-      { name: "description", content: "V9 Shuttle 極簡報名頁。" },
+      { title: "OnCourt 康軒羽球報名" },
+      { name: "description", content: "OnCourt 羽球報名。" },
     ],
   }),
   component: V9App,

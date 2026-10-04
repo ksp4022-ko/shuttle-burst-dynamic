@@ -91,7 +91,7 @@ export function V9Hero({
         <div className="v9-brand">
           <V9Logo size={30} />
           <div>
-            <p className="v9-brand-name">V9 Shuttle</p>
+            <p className="v9-brand-name">OnCourt</p>
             <p className="v9-site-name">
               {siteName}羽球{" "}
               <span className="v9-preview-badge" data-v9-preview-badge>

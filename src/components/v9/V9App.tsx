@@ -17,7 +17,7 @@ import { V9Icon } from "./V9Icons";
 import { V9Toast } from "./V9Toast";
 import { V9Celebrate } from "./V9Celebrate";
 
-// V9 Shuttle -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
+// OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
 // (useHomepageFlow / useCurrentIdentity / useV8LineAuth /
 // useV8PersonalBillingTest); V9 only renders. The home shows the summary;

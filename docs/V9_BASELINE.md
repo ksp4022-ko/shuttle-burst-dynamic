@@ -5,6 +5,10 @@ Repo: `ksp4022-ko/shuttle-burst-dynamic`（frontend）／`ksp4022-ko/badminton-s
 
 ---
 
+## 0. 產品名稱
+
+2026-10-05 決定：對外名稱 **OnCourt**（只用英文）。「V9」保留為內部版本代號（`/v9` 路由、程式命名）。龍虎維持品牌角色與 Logo 圖示。
+
 ## 1. 定位
 
 V9 Shuttle：保留 V8 的功能與品牌角色，拿掉大型劇場式素材，改成
