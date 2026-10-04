@@ -16,6 +16,7 @@ import { V9BillingContent } from "./V9BillingSheet";
 import { V9ProxyContent, type V9ProxyTab } from "./V9ProxySheet";
 import { V9Icon } from "./V9Icons";
 import { V9Toast } from "./V9Toast";
+import { v9SwitchModeFromUrl, type V9SwitchMode } from "./V9MeetupNav";
 import { V9Celebrate } from "./V9Celebrate";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
@@ -93,6 +94,11 @@ function rankOf(
 
 export function V9App() {
   const [siteId] = useState(() => configuredSiteId());
+  // Meetup switcher trial: /v9/...?switch=swipe|ruler|calendar.
+  const [switchMode, setSwitchMode] = useState<V9SwitchMode>("swipe");
+  useEffect(() => {
+    setSwitchMode(v9SwitchModeFromUrl(window.location.search));
+  }, []);
   const auth = useV8LineAuth();
   const flow = useHomepageFlow({
     preHoldMs: 0,
@@ -270,13 +276,29 @@ export function V9App() {
       return true;
     });
 
-  const selectEvent = async (eventId: string) => {
+  // Meetup switching: the hero shows the target meetup at once (date and
+  // rail come from the event list) while its roster loads; quick repeated
+  // swipes just move the target, and the flow follows one switch at a time.
+  const [targetEventId, setTargetEventId] = useState<string | null>(null);
+  const [switchRound, setSwitchRound] = useState(0);
+  const switchingRef = useRef(false);
+  const switchingMeetup = pendingAction?.label === "切換聚會中";
+  const { switchMeetup } = flow;
+  useEffect(() => {
+    if (!targetEventId || targetEventId === selectedEventId || switchingRef.current) return;
     if (pendingAction || actionLockRef.current) return;
-    if (eventId === selectedEventId) {
-      setSheet(null);
-      return;
-    }
-    await flow.switchMeetup(eventId, { enterActiveOnSuccess: false });
+    switchingRef.current = true;
+    void switchMeetup(targetEventId, { enterActiveOnSuccess: false }).then((ok) => {
+      switchingRef.current = false;
+      if (!ok) setTargetEventId(null);
+      setSwitchRound((round) => round + 1);
+    });
+  }, [targetEventId, selectedEventId, pendingAction, switchMeetup, switchRound]);
+
+  const selectEvent = (eventId: string) => {
+    if ((pendingAction && !switchingMeetup) || actionLockRef.current) return;
+    setSheet(null);
+    setTargetEventId(eventId);
   };
 
   // A 季打 row shows the member's confirmed LINE name (same as V8 ACTIVE).
@@ -296,6 +318,10 @@ export function V9App() {
   const closeSheet = useCallback(() => setSheet(null), []);
   // Stable, so a re-render (roster poll) doesn't restart the toast timer.
   const clearNotice = useCallback(() => setNotice(""), [setNotice]);
+  // The hero itself changing is the feedback for a switch; no toast.
+  useEffect(() => {
+    if (flow.notice === "已切換聚會") clearNotice();
+  }, [flow.notice, clearNotice]);
 
   const openRoster = (tab: V9RosterTab) => {
     setRosterTab(tab);
@@ -325,6 +351,13 @@ export function V9App() {
         ? { kind: "profile", href: v8PathForCurrentPage() }
         : { kind: "action", ...ctaFor(identity) };
   const siteName = SITE_NAMES[siteId] ?? siteId;
+  const shownEventId = targetEventId ?? selectedEventId;
+  const shownIndex = Math.max(
+    0,
+    events.findIndex((item) => item.id === shownEventId),
+  );
+  const shownEvent = events[shownIndex] ?? selectedEvent;
+  const switching = Boolean(shownEvent && shownEvent.id !== selectedEventId);
   const dockActive: V9DockKey | null =
     sheet === "meetup" || sheet === "roster" || sheet === "proxy" || sheet === "me" ? sheet : null;
 
@@ -368,11 +401,18 @@ export function V9App() {
 
       {selectedEvent && roster && (
         <>
-          <main className="v9-main has-dock">
+          <main className={`v9-main has-dock${switching ? " is-switching" : ""}`}>
             <V9Hero
               siteName={siteName}
-              event={selectedEvent}
-              eventCount={events.length}
+              event={shownEvent ?? selectedEvent}
+              events={events}
+              index={shownIndex}
+              switching={switching}
+              switchMode={switchMode}
+              onGo={(next) => {
+                const item = events[next];
+                if (item) selectEvent(item.id);
+              }}
               userName={userName}
               authLoading={auth.loading}
               signedIn={signedIn}
@@ -473,7 +513,7 @@ export function V9App() {
                       className={`v9-meetup-row${current ? " is-current" : ""}`}
                       aria-current={current}
                       disabled={busy}
-                      onClick={() => void selectEvent(item.id)}
+                      onClick={() => selectEvent(item.id)}
                     >
                       <span className="v9-meetup-date">
                         {v9ShortDate(item.eventDate)}
@@ -574,7 +614,7 @@ export function V9App() {
         </>
       )}
 
-      <V9Toast message={flow.notice} onDone={clearNotice} />
+      <V9Toast message={flow.notice === "已切換聚會" ? "" : flow.notice} onDone={clearNotice} />
       <V9Celebrate playKey={celebrateKey} />
     </div>
   );

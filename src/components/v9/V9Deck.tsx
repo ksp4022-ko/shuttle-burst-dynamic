@@ -1,16 +1,12 @@
+import { useEffect, useRef } from "react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V9Icon, type V9IconName } from "./V9Icons";
 import { V9Lockup } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
-import {
-  v9MascotMood,
-  v9MascotSprite,
-  v9ShortDate,
-  v9StatusLine,
-  v9Weekday,
-} from "@/lib/v9-display";
+import { V9MeetupNav, useV9HeroSwipe, type V9SwitchMode } from "./V9MeetupNav";
+import { v9MascotMood, v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
 import type { V9RosterTab } from "./V9RosterSheet";
 
 // Home Control Deck: Hero (meetup + 4-item rail + 本場狀態 + ONE CTA),
@@ -38,7 +34,11 @@ function courtLabel(event: AlphaEvent) {
 export function V9Hero({
   siteName,
   event,
-  eventCount,
+  events,
+  index,
+  switching,
+  switchMode,
+  onGo,
   userName,
   authLoading,
   signedIn,
@@ -54,7 +54,12 @@ export function V9Hero({
 }: {
   siteName: string;
   event: AlphaEvent;
-  eventCount: number;
+  events: AlphaEvent[];
+  index: number;
+  // The hero already shows another meetup whose roster is still loading.
+  switching: boolean;
+  switchMode: V9SwitchMode;
+  onGo: (index: number) => void;
   userName: string;
   authLoading: boolean;
   signedIn: boolean;
@@ -72,6 +77,16 @@ export function V9Hero({
   const meetupName = display.displayName || event.name;
   // "康軒" next to "康軒羽球" says nothing new; only special names show.
   const showMeetupName = Boolean(meetupName) && meetupName !== siteName;
+  const go = (next: number) => {
+    if (next >= 0 && next < events.length && next !== index) onGo(next);
+  };
+  const swipe = useV9HeroSwipe(switchMode === "swipe", (step) => go(index + step));
+  // Slide direction for the swipe mode's enter animation.
+  const lastIndex = useRef(index);
+  const direction = index >= lastIndex.current ? "next" : "prev";
+  useEffect(() => {
+    lastIndex.current = index;
+  }, [index]);
   const rail: RailItem[] = [
     { icon: "time", label: "時間", value: display.timeLabel || "—" },
     { icon: "shuttle", label: "球種", value: event.ballType || "—" },
@@ -108,53 +123,60 @@ export function V9Hero({
         )}
       </div>
 
-      <div className="v9-hero-stage">
-        <button type="button" className="v9-hero-meetup" onClick={onMeetup} aria-label="切換聚會">
-          <span className="v9-site-name">
-            {siteName}羽球
-            <span className="v9-preview-badge" data-v9-preview-badge>
-              PREVIEW
-            </span>
-          </span>
-          <span className="v9-hero-date">
-            {v9ShortDate(event.eventDate)}
-            <small>{v9Weekday(event.eventDate)}</small>
-          </span>
-          <span className="v9-hero-name">
-            {showMeetupName && meetupName}
-            {eventCount > 1 && (
-              <span className="v9-hero-switch">
-                共 {eventCount} 場 <V9Icon name="chevron" size={14} />
+      <div
+        key={switchMode === "swipe" ? event.id : undefined}
+        className={`v9-hero-body${switchMode === "swipe" ? ` is-swipe is-from-${direction}` : ""}`}
+        style={
+          swipe.offset
+            ? { transform: `translateX(${swipe.offset}px)`, animation: "none", transition: "none" }
+            : undefined
+        }
+        {...swipe.handlers}
+      >
+        <div className="v9-hero-stage">
+          <div className="v9-hero-meetup">
+            <span className="v9-site-name">
+              {siteName}羽球
+              <span className="v9-preview-badge" data-v9-preview-badge>
+                PREVIEW
               </span>
-            )}
-          </span>
-        </button>
-        <div className="v9-hero-mascot">
-          <V9MascotArt
-            sprite={identity ? v9MascotSprite(identity) : "guest"}
-            mood={v9MascotMood(identity)}
-            badge={identity?.status === "waiting" && rank ? `#${rank}` : undefined}
-          />
-        </div>
-      </div>
-
-      <dl className="v9-rail">
-        {rail.map((item) => (
-          <div key={item.label} className="v9-rail-item">
-            <span className="v9-rail-icon">
-              <img
-                src={`${import.meta.env.BASE_URL}v9/icons/${item.icon}.webp`}
-                alt=""
-                width={36}
-                height={36}
-                decoding="async"
-              />
             </span>
-            <dt>{item.label}</dt>
-            <dd>{item.value}</dd>
+            <V9MeetupNav
+              mode={switchMode}
+              events={events}
+              index={index}
+              onGo={go}
+              onList={onMeetup}
+            />
+            {showMeetupName && <span className="v9-hero-name">{meetupName}</span>}
           </div>
-        ))}
-      </dl>
+          <div className="v9-hero-mascot">
+            <V9MascotArt
+              sprite={identity && !switching ? v9MascotSprite(identity) : "guest"}
+              mood={v9MascotMood(switching ? null : identity)}
+              badge={!switching && identity?.status === "waiting" && rank ? `#${rank}` : undefined}
+            />
+          </div>
+        </div>
+
+        <dl className="v9-rail">
+          {rail.map((item) => (
+            <div key={item.label} className="v9-rail-item">
+              <span className="v9-rail-icon">
+                <img
+                  src={`${import.meta.env.BASE_URL}v9/icons/${item.icon}.webp`}
+                  alt=""
+                  width={36}
+                  height={36}
+                  decoding="async"
+                />
+              </span>
+              <dt>{item.label}</dt>
+              <dd>{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
 
       <button
         type="button"
@@ -165,18 +187,28 @@ export function V9Hero({
         <span className="v9-status-label">本場狀態</span>
         <span className="v9-status-main">
           <span
-            className={`v9-status-dot is-${identity ? identity.status : "none"}`}
+            className={`v9-status-dot is-${identity && !switching ? identity.status : "none"}`}
             aria-hidden="true"
           />
           <span className="v9-status-text">
-            {identity ? v9StatusLine(identity, rank) : signedIn ? "身份尚未確認" : "登入後顯示"}
-            {statusHint && <small>{statusHint}</small>}
+            {switching
+              ? "讀取中…"
+              : identity
+                ? v9StatusLine(identity, rank)
+                : signedIn
+                  ? "身份尚未確認"
+                  : "登入後顯示"}
+            {!switching && statusHint && <small>{statusHint}</small>}
           </span>
         </span>
         <V9Icon name="chevron" size={16} />
       </button>
 
-      {cta.kind === "loading" ? (
+      {switching && cta.kind === "action" ? (
+        <button type="button" className="v9-cta is-paper" disabled aria-busy="true">
+          切換中…
+        </button>
+      ) : cta.kind === "loading" ? (
         <button type="button" className="v9-cta is-paper" disabled>
           確認登入中…
         </button>

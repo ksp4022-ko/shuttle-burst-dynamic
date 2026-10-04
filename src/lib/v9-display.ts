@@ -14,6 +14,27 @@ export function v9Weekday(value: string) {
   return Number.isNaN(date.getTime()) ? "" : `週${WEEKDAYS[date.getDay()]}`;
 }
 
+const DAY_MS = 86_400_000;
+
+// Where a meetup sits relative to today (local time, weeks start on
+// Sunday): 已結束 / 今天 / 明天 / 本週 / 下週 / N 週後.
+export function v9Relative(value: string, now = new Date()) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((date.getTime() - today.getTime()) / DAY_MS);
+  if (days < 0) return "已結束";
+  if (days === 0) return "今天";
+  if (days === 1) return "明天";
+  const weekStart = today.getTime() - today.getDay() * DAY_MS;
+  const weeks = Math.floor((date.getTime() - weekStart) / (7 * DAY_MS));
+  return weeks === 0 ? "本週" : weeks === 1 ? "下週" : `${weeks} 週後`;
+}
+
+export function v9IsPast(value: string, now = new Date()) {
+  return v9Relative(value, now) === "已結束";
+}
+
 export const V9_STATUS_LABEL: Record<CurrentIdentity["status"], string> = {
   confirmed: "正取",
   waiting: "備取",
