@@ -52,13 +52,13 @@ const V9_CSS = `
 .v9-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .v9-logo { flex: none; }
 .v9-brand-name { margin: 0; font-weight: 900; font-size: 15px; line-height: 1.1; white-space: nowrap; }
-.v9-site-name { margin: 1px 0 0; font-size: 12px; color: var(--v9-muted); font-weight: 700; }
+.v9-site-name { margin: 1px 0 0; font-size: 12px; color: var(--v9-muted); font-weight: 700; white-space: nowrap; }
 .v9-preview-badge {
   display: inline-block; vertical-align: 1px; padding: 0 6px; border-radius: 999px; border: 2px solid var(--v9-ink);
   background: var(--v9-blue); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .06em;
 }
 .v9-user-chip {
-  display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 52%;
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 62%;
   padding: 3px 10px 3px 3px; border: 2.5px solid var(--v9-ink); border-radius: 999px; background: #fff;
   font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 2px 0 var(--v9-ink);
 }
@@ -82,7 +82,12 @@ const V9_CSS = `
 }
 .v9-hero-mascot { flex: none; margin: -6px -4px -8px 0; }
 .v9-mascot { display: block; overflow: visible; }
-.v9-sprite-sway { display: block; transform-origin: 50% 100%; animation: v9-sway 2.2s ease-in-out infinite alternate; }
+.v9-sprite-box { position: relative; display: block; }
+.v9-sprite-box.is-sway { transform-origin: 50% 100%; animation: v9-sway 2.2s ease-in-out infinite alternate; }
+.v9-sprite-badge {
+  position: absolute; transform: translate(-50%, -50%); font-size: 11px; font-weight: 900; line-height: 1;
+  color: var(--v9-ink); letter-spacing: -.02em; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
 .v9-sprite {
   display: block; background-repeat: no-repeat; background-position: 0 0;
 }

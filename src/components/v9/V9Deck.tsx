@@ -91,13 +91,13 @@ export function V9Hero({
         <div className="v9-brand">
           <V9Logo size={30} />
           <div>
-            <p className="v9-brand-name">
-              V9 Shuttle{" "}
+            <p className="v9-brand-name">V9 Shuttle</p>
+            <p className="v9-site-name">
+              {siteName}羽球{" "}
               <span className="v9-preview-badge" data-v9-preview-badge>
                 PREVIEW
               </span>
             </p>
-            <p className="v9-site-name">{siteName}羽球</p>
           </div>
         </div>
         {authLoading ? (
@@ -133,7 +133,11 @@ export function V9Hero({
           </span>
         </button>
         <div className="v9-hero-mascot">
-          <V9MascotArt sprite={v9MascotSprite(identity)} mood={v9MascotMood(identity)} />
+          <V9MascotArt
+            sprite={v9MascotSprite(identity)}
+            mood={v9MascotMood(identity)}
+            badge={identity?.status === "waiting" && rank ? `#${rank}` : undefined}
+          />
         </div>
       </div>
 

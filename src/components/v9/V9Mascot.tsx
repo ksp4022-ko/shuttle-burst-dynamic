@@ -192,13 +192,29 @@ const SPRITES = {
   open: { frames: 4, width: 130, height: 104, duration: 1.2 },
   // 備取: sitting with a sweat drop, blink on frame 5; the eyes barely move
   // at this size, so a slow CSS sway adds the fidgety waiting feel.
-  waiting: { frames: 6, width: 122, height: 100, duration: 2.4, sway: true },
+  // The number card is drawn blank so one strip serves every rank; the
+  // real 備取 position is laid over it (card centre in % of the frame).
+  waiting: {
+    frames: 6,
+    width: 122,
+    height: 100,
+    duration: 2.4,
+    sway: true,
+    badgeAt: { x: 35.3, y: 60.8 },
+  },
   // 已請假: asleep together, Z's float up; taller box because the Z's rise
   // well above the heads.
   leave: { frames: 6, width: 102, height: 132, duration: 3 },
 } as const satisfies Record<
   string,
-  { frames: number; width: number; height: number; duration: number; sway?: boolean }
+  {
+    frames: number;
+    width: number;
+    height: number;
+    duration: number;
+    sway?: boolean;
+    badgeAt?: { x: number; y: number };
+  }
 >;
 
 export type V9MascotSprite = keyof typeof SPRITES;
@@ -206,10 +222,13 @@ export type V9MascotSprite = keyof typeof SPRITES;
 export function V9MascotArt({
   sprite,
   mood,
+  badge,
   size = 104,
 }: {
   sprite: V9MascotSprite | null;
   mood: V9MascotMood;
+  // Text laid over the sprite's blank card (e.g. "#3"), if it has one.
+  badge?: string | undefined;
   size?: number;
 }) {
   const src = sprite ? `${import.meta.env.BASE_URL}v9/mascot/${sprite}.webp` : "";
@@ -248,5 +267,16 @@ export function V9MascotArt({
       }}
     />
   );
-  return "sway" in config && config.sway ? <span className="v9-sprite-sway">{strip}</span> : strip;
+  const sway = "sway" in config && config.sway;
+  const badgeAt = "badgeAt" in config ? config.badgeAt : null;
+  return (
+    <span className={`v9-sprite-box${sway ? " is-sway" : ""}`}>
+      {strip}
+      {badge && badgeAt ? (
+        <span className="v9-sprite-badge" style={{ left: `${badgeAt.x}%`, top: `${badgeAt.y}%` }}>
+          {badge}
+        </span>
+      ) : null}
+    </span>
+  );
 }
