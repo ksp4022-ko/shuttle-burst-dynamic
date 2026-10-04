@@ -134,7 +134,7 @@ export function V9Hero({
         </button>
         <div className="v9-hero-mascot">
           <V9MascotArt
-            sprite={!authLoading && !signedIn ? "guest" : v9MascotSprite(identity)}
+            sprite={identity ? v9MascotSprite(identity) : "guest"}
             mood={v9MascotMood(identity)}
             badge={identity?.status === "waiting" && rank ? `#${rank}` : undefined}
           />
@@ -252,7 +252,12 @@ export function V9Bento({
       </button>
       <button type="button" className="v9-tile is-bill" onClick={onBill}>
         <span className="v9-tile-icon">
-          <V9Icon name="bill" size={26} />
+          <img
+            src={`${import.meta.env.BASE_URL}v9/icons/gear-pouch.webp`}
+            alt=""
+            width={38}
+            height={38}
+          />
         </span>
         <span className="v9-tile-text">
           <span className="v9-tile-label">我的帳單</span>

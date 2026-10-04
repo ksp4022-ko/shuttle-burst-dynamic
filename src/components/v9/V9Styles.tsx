@@ -80,7 +80,8 @@ const V9_CSS = `
   display: inline-flex; align-items: center; gap: 1px; padding: 1px 6px 1px 9px; border-radius: 999px;
   border: 2px solid var(--v9-ink); background: #fff; font-size: 12px; font-weight: 800;
 }
-.v9-hero-mascot { flex: none; position: relative; z-index: 1; margin: 0 -6px -4px 0; }
+/* Feet stand on the info rail's top edge (the stage keeps a 10px gap above it). */
+.v9-hero-mascot { flex: none; position: relative; z-index: 1; margin: 0 -6px -12px 0; }
 .v9-mascot { display: block; overflow: visible; }
 .v9-mascot-frame { position: relative; display: block; }
 .v9-mascot-fallback { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); }
@@ -183,7 +184,8 @@ const V9_CSS = `
   background: var(--v9-ink); color: #fff; box-shadow: 0 4px 0 #8a7b6c; animation-delay: .2s;
 }
 .v9-tile.is-bill:active { box-shadow: 0 0 0 #8a7b6c; }
-.v9-tile-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--v9-orange); color: var(--v9-ink); border: 2.5px solid #fff; flex: none; }
+.v9-tile-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: var(--v9-cream); border: 2.5px solid #fff; flex: none; }
+.v9-tile-icon img { display: block; width: 38px; height: 38px; }
 .v9-tile-text { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .v9-tile.is-bill .v9-tile-label { font-size: 16px; font-weight: 900; }
 .v9-tile-sub { font-size: 12px; opacity: .8; font-weight: 700; }
@@ -244,7 +246,8 @@ const V9_CSS = `
 
 /* roster */
 .v9-roster-panel { margin-top: 12px; animation: v9-fade .2s ease-out both; }
-.v9-roster-empty { padding: 24px 4px; text-align: center; }
+.v9-roster-empty { display: grid; justify-items: center; gap: 6px; padding: 18px 4px 22px; text-align: center; }
+.v9-roster-empty img { display: block; width: 72px; height: 72px; animation: v9-float 2.6s ease-in-out infinite; }
 .v9-roster-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .v9-roster-row {
   display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 8px 7px 7px;
@@ -351,7 +354,14 @@ const V9_CSS = `
   transform: translate(-50%, -50%);
   animation-name: v9-confetti; animation-timing-function: cubic-bezier(.12,.75,.35,1); animation-fill-mode: both;
 }
-.v9-confetti.is-dot { width: 9px; height: 9px; border-radius: 50%; }
+.v9-confetti.is-dot, .v9-confetti-rain.is-dot { width: 9px; height: 9px; border-radius: 50%; }
+.v9-confetti.is-ribbon, .v9-confetti-rain.is-ribbon { width: 5px; height: 20px; border-radius: 3px; }
+.v9-celebrate { overflow: hidden; }
+.v9-confetti-rain {
+  position: absolute; top: -24px; display: block; width: 7px; height: 13px; border-radius: 2px;
+  border: 1.5px solid var(--v9-ink); opacity: 0; pointer-events: none;
+  animation-name: v9-confetti-rain; animation-timing-function: cubic-bezier(.3,.1,.6,1); animation-fill-mode: both;
+}
 
 
   .v9-app { padding-top: 24px; }
@@ -373,6 +383,11 @@ const V9_CSS = `
   55% { opacity: 1; transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--dx), calc(var(--dy) + 150px)) rotate(calc(var(--rot) * 2)) scale(.9); }
 }
+@keyframes v9-confetti-rain {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--sway), 78vh) rotate(var(--rot)); }
+}
 @keyframes v9-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes v9-fade-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes v9-sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -380,7 +395,7 @@ const V9_CSS = `
 @keyframes v9-toast { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes v9-shake { 0%,100% { translate: 0; } 20% { translate: -8px; } 45% { translate: 7px; } 70% { translate: -4px; } 85% { translate: 2px; } }
 @media (prefers-reduced-motion: reduce) {
-  .v9-confetti { display: none; }
+  .v9-confetti, .v9-confetti-rain { display: none; }
   .v9-app *, .v9-app *::before, .v9-app *::after { animation: none !important; transition: none !important; }
 }
 `;

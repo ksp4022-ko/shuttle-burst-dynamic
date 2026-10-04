@@ -6,10 +6,12 @@ import type { AlphaSignup } from "@/lib/database-alpha";
 export type V9RosterTab = "confirmed" | "waiting" | "leave";
 
 const TAB_KEYS: V9RosterTab[] = ["confirmed", "waiting", "leave"];
-const TABS: Record<V9RosterTab, { label: string; tone: string }> = {
-  confirmed: { label: "正取", tone: "is-green" },
-  waiting: { label: "備取", tone: "is-orange" },
-  leave: { label: "請假", tone: "is-red" },
+const TABS: Record<V9RosterTab, { label: string; tone: string; emptyArt: string }> = {
+  confirmed: { label: "正取", tone: "is-green", emptyArt: "gear-racket" },
+  // Shuttlecocks lined up = an empty queue.
+  waiting: { label: "備取", tone: "is-orange", emptyArt: "gear-holder" },
+  // Water bottle = everyone's playing, nobody resting.
+  leave: { label: "請假", tone: "is-red", emptyArt: "gear-bottle" },
 };
 
 export function V9RosterContent({
@@ -60,7 +62,15 @@ export function V9RosterContent({
         className="v9-roster-panel"
       >
         {people.length === 0 ? (
-          <p className="v9-muted v9-roster-empty">目前沒有{active.label}名單</p>
+          <div className="v9-roster-empty">
+            <img
+              src={`${import.meta.env.BASE_URL}v9/icons/${active.emptyArt}.webp`}
+              alt=""
+              width={72}
+              height={72}
+            />
+            <p className="v9-muted">目前沒有{active.label}名單</p>
+          </div>
         ) : (
           <ol className="v9-roster-list">
             {people.map((person, index) => (
