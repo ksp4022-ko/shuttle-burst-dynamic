@@ -4,7 +4,13 @@ import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { V9Icon, type V9IconName } from "./V9Icons";
 import { V9Logo } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
-import { v9MascotMood, v9ShortDate, v9StatusLine, v9Weekday } from "@/lib/v9-display";
+import {
+  v9MascotMood,
+  v9MascotSprite,
+  v9ShortDate,
+  v9StatusLine,
+  v9Weekday,
+} from "@/lib/v9-display";
 import type { V9RosterTab } from "./V9RosterSheet";
 
 // Home Control Deck: Hero (meetup + 4-item rail + 本場狀態 + ONE CTA),
@@ -126,10 +132,7 @@ export function V9Hero({
           </span>
         </button>
         <div className="v9-hero-mascot">
-          <V9MascotArt
-            sprite={identity?.status === "confirmed" ? "confirmed" : null}
-            mood={v9MascotMood(identity)}
-          />
+          <V9MascotArt sprite={v9MascotSprite(identity)} mood={v9MascotMood(identity)} />
         </div>
       </div>
 

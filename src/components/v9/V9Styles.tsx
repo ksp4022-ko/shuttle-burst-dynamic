@@ -84,7 +84,6 @@ const V9_CSS = `
 .v9-mascot { display: block; overflow: visible; }
 .v9-sprite {
   display: block; background-repeat: no-repeat; background-position: 0 0;
-  animation: v9-sprite 1.2s steps(6) infinite;
 }
 .v9-mascot-dragon { animation: v9-bob 3.4s ease-in-out infinite; transform-origin: 35px 80px; }
 .v9-mascot-tiger { animation: v9-bob 3.4s ease-in-out -1.7s infinite; transform-origin: 93px 80px; }

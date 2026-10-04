@@ -37,3 +37,11 @@ export function v9StatusLine(identity: CurrentIdentity, rank: number | null) {
   if (identity.status === "waiting") return `${rank ? `備取第 ${rank} 位` : "備取"} · ${role}`;
   return `${V9_STATUS_LABEL[identity.status]} · ${role}`;
 }
+
+// Which sticker animation (public/v9/mascot/*.webp) a status uses; null keeps
+// the CSS/SVG duo until that state's art is ready.
+export function v9MascotSprite(identity: CurrentIdentity | null): "confirmed" | "open" | null {
+  if (identity?.status === "confirmed") return "confirmed";
+  if (identity?.status === "unregistered") return "open";
+  return null;
+}

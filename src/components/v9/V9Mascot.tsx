@@ -2,7 +2,7 @@
 // art). Mood follows the viewer's status: happy (正取), wait (備取 / 尚未報名),
 // rest (請假).
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import type { V9MascotMood } from "@/lib/v9-display";
 
 function Eyes({ cx, mood }: { cx: [number, number]; mood: V9MascotMood }) {
@@ -181,14 +181,18 @@ export function V9Mascot({ mood = "happy", size = 112 }: { mood?: V9MascotMood; 
   );
 }
 
-// Sticker-art animation (docs/V9_MASCOT_BRIEF.md): a 6-frame sprite sheet
-// played with CSS steps(). The CSS/SVG duo above shows until the sheet has
-// loaded; with reduced motion only the first frame shows.
-export type V9MascotSprite = "confirmed";
+// Sticker-art animations (docs/V9_MASCOT_BRIEF.md): horizontal WebP strips
+// made by scripts/v9-mascot-sprite.py, played with CSS steps(). The CSS/SVG
+// duo above shows until the strip has loaded; with reduced motion only the
+// first frame shows.
+const SPRITES = {
+  // 正取: high five + jump, 6 frames.
+  confirmed: { frames: 6, width: 106, height: 120, duration: 1.2 },
+  // 尚未報名: beckoning wave, frames 1-2-3-2 of the sheet.
+  open: { frames: 4, width: 130, height: 104, duration: 1.2 },
+} as const;
 
-const SPRITE_FRAMES = 6;
-const SPRITE_W = 106;
-const SPRITE_H = 120;
+export type V9MascotSprite = keyof typeof SPRITES;
 
 export function V9MascotArt({
   sprite,
@@ -215,20 +219,23 @@ export function V9MascotArt({
     };
   }, [src]);
 
-  if (!src || loadedSrc !== src) return <V9Mascot mood={mood} size={size} />;
+  if (!sprite || loadedSrc !== src) return <V9Mascot mood={mood} size={size} />;
+  const { frames, width, height, duration } = SPRITES[sprite];
   return (
     <span
+      key={sprite}
       className="v9-sprite"
       role="presentation"
-      style={
-        {
-          width: SPRITE_W,
-          height: SPRITE_H,
-          backgroundImage: `url(${src})`,
-          backgroundSize: `${SPRITE_W * SPRITE_FRAMES}px ${SPRITE_H}px`,
-          "--v9-sprite-end": `-${SPRITE_W * SPRITE_FRAMES}px`,
-        } as CSSProperties
-      }
+      style={{
+        width,
+        height,
+        backgroundImage: `url(${src})`,
+        backgroundSize: `${width * frames}px ${height}px`,
+        // steps() count can't come from a custom property reliably, so the
+        // whole shorthand is set per sprite.
+        animation: `v9-sprite ${duration}s steps(${frames}) infinite`,
+        ["--v9-sprite-end" as string]: `-${width * frames}px`,
+      }}
     />
   );
 }
