@@ -1,4 +1,4 @@
-# V9 圖像第二批交辦（給 ChatGPT）v1
+# V9 圖像第二批交辦（給 ChatGPT）v1.1
 
 接續 `docs/V9_MASCOT_BRIEF.md`（第一批：5 個狀態動圖＋慶祝拉炮圖，已全部上線）。
 這一批是 Logo / App icon、載入動圖、空狀態插圖、Dock 小 icon。
@@ -41,6 +41,17 @@ B1. Logo 與 App icon（2 張）
 2) v9-app-icon.png
    - 1024×1024，**不透明**，整張滿版米黃底 #FFF3D6（不要圓角，系統會自己切）
    - 圖案和 v9-logo 一樣，但所有重要內容放在中間 80% 的範圍內（四周 10% 留白，避免被切到）
+
+3) v9-lockup.png（橫式品牌標誌：圖示＋文字合成一張）
+   - 用途：網頁左上角，取代「圖示＋V9 Shuttle 文字」，顯示高度約 36px、寬度最多約 150px
+   - 1600×400（4:1），透明背景
+   - 左邊：和 v9-logo 同一個龍虎頭圓形貼紙（縮小放在左側，高度約佔整張 90%）
+   - 右邊：文字「V9 Shuttle」，貼紙風圓胖粗體字（像卡通標題字），白色描邊＋粗黑外框，
+     字的顏色可用深色 #1F1A17 為主，「V9」可用橘 #F59A3C 或綠 #4CB782 點綴
+   - 文字高度至少佔整張高度的 55%，縮到 36px 高時字還要清楚可讀
+   - 只放「V9 Shuttle」這幾個字，**不要**放「康軒」「羽球」「PREVIEW」或其他字
+     （場地名稱會依網址切換，由網頁另外顯示在標誌下方）
+   - 文字一定要拼字正確：V9 Shuttle（大寫 V、大寫 S）
 
 ━━━━━━━━━━━━━━━━━━
 B2. 載入中動圖（1 張 sprite sheet）
@@ -90,7 +101,8 @@ B4. 底部選單小 icon（4 張）
   □ 尺寸正確
   □ 背景真的透明（B1 的 v9-app-icon 除外，那張要滿版米黃）
   □ 龍虎長相、配色和正取那張一致
-  □ 縮小到實際顯示尺寸（Logo 32px、Dock 24px）還看得清楚
+  □ 縮小到實際顯示尺寸（Logo 32px、lockup 36px 高、Dock 24px）還看得清楚
+  □ v9-lockup 的文字拼字正確「V9 Shuttle」
   □ B2：6 格位置固定、沒有跨格、球每格都在
 - 有問題直接重畫，不用問我
 
@@ -102,6 +114,7 @@ B4. 底部選單小 icon（4 張）
 |---|---|---|---|---|
 | B1 | v9-logo.png | | ✅/⚠️ | |
 | B1 | v9-app-icon.png | | | |
+| B1 | v9-lockup.png | | | |
 | B2 | mascot-busy.png | | | |
 | B3 | state-error.png | | | |
 | B3 | state-empty.png | | | |
@@ -119,6 +132,7 @@ B4. 底部選單小 icon（4 張）
 | # | 檔案 | 接到哪裡 |
 |---|---|---|
 | B1 | v9-logo.png → `public/v9/brand/logo.webp` | Hero 左上角 Logo、空狀態，取代 `V9Logo.tsx` 的 CSS 圓圈 |
+| B1 | v9-lockup.png → `public/v9/brand/lockup.webp` | Hero 左上角，取代「圖示＋V9 Shuttle」；下方保留「康軒羽球 PREVIEW」網頁文字 |
 | B1 | v9-app-icon.png → 180 / 192 / 512 px 等尺寸 | `/v9` 的 PWA manifest、apple-touch-icon、favicon（baseline 第 6 階段） |
 | B2 | mascot-busy.png → `public/v9/mascot/busy.webp` | 載入畫面中央，取代米色閃爍卡片（用 `scripts/v9-mascot-sprite.py --body 192` 轉檔） |
 | B3 | state-error / state-empty → `public/v9/state/*.webp` | 讀取失敗、沒有開放中聚會的畫面 |
