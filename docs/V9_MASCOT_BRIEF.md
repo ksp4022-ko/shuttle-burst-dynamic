@@ -150,7 +150,7 @@
 |---|---|---|
 | 正取 | `public/v9/mascot/confirmed.webp` | ✅ 已上線（2026-10-04，實機確認） |
 | 尚未報名 | `public/v9/mascot/open.webp` | ✅ 已上線（2026-10-04，使用原圖第 1-2-3-2 格；第 4 格球拍消失未採用） |
-| 備取 | `mascot-waiting` | 待生成 |
+| 備取 | `public/v9/mascot/waiting.webp` | ✅ 已上線（2026-10-04，6 格；眼珠移動太小看不出，另加 CSS 輕微搖擺。可再請 ChatGPT 改成「整顆頭左右轉」後替換） |
 | 已請假 | `mascot-leave` | 待生成 |
 | 未登入 | `mascot-guest` | 待生成 |
 | 送出中（選做） | `mascot-busy` | 待生成 |

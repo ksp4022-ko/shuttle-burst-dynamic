@@ -40,8 +40,11 @@ export function v9StatusLine(identity: CurrentIdentity, rank: number | null) {
 
 // Which sticker animation (public/v9/mascot/*.webp) a status uses; null keeps
 // the CSS/SVG duo until that state's art is ready.
-export function v9MascotSprite(identity: CurrentIdentity | null): "confirmed" | "open" | null {
+export function v9MascotSprite(
+  identity: CurrentIdentity | null,
+): "confirmed" | "open" | "waiting" | null {
   if (identity?.status === "confirmed") return "confirmed";
+  if (identity?.status === "waiting") return "waiting";
   if (identity?.status === "unregistered") return "open";
   return null;
 }

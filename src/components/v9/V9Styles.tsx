@@ -82,6 +82,7 @@ const V9_CSS = `
 }
 .v9-hero-mascot { flex: none; margin: -6px -4px -8px 0; }
 .v9-mascot { display: block; overflow: visible; }
+.v9-sprite-sway { display: block; transform-origin: 50% 100%; animation: v9-sway 2.2s ease-in-out infinite alternate; }
 .v9-sprite {
   display: block; background-repeat: no-repeat; background-position: 0 0;
 }
@@ -341,6 +342,7 @@ const V9_CSS = `
 @keyframes v9-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes v9-bob { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-3deg) translateY(-1px); } }
 @keyframes v9-shimmer { to { background-position: -200% 0; } }
+@keyframes v9-sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
 @keyframes v9-sprite { to { background-position: var(--v9-sprite-end) 0; } }
 @keyframes v9-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes v9-fade-out { from { opacity: 1; } to { opacity: 0; } }

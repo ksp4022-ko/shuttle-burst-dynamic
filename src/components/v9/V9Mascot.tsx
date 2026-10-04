@@ -190,7 +190,13 @@ const SPRITES = {
   confirmed: { frames: 6, width: 106, height: 120, duration: 1.2 },
   // 尚未報名: beckoning wave, frames 1-2-3-2 of the sheet.
   open: { frames: 4, width: 130, height: 104, duration: 1.2 },
-} as const;
+  // 備取: sitting with a sweat drop, blink on frame 5; the eyes barely move
+  // at this size, so a slow CSS sway adds the fidgety waiting feel.
+  waiting: { frames: 6, width: 122, height: 100, duration: 2.4, sway: true },
+} as const satisfies Record<
+  string,
+  { frames: number; width: number; height: number; duration: number; sway?: boolean }
+>;
 
 export type V9MascotSprite = keyof typeof SPRITES;
 
@@ -220,8 +226,9 @@ export function V9MascotArt({
   }, [src]);
 
   if (!sprite || loadedSrc !== src) return <V9Mascot mood={mood} size={size} />;
-  const { frames, width, height, duration } = SPRITES[sprite];
-  return (
+  const config = SPRITES[sprite];
+  const { frames, width, height, duration } = config;
+  const strip = (
     <span
       key={sprite}
       className="v9-sprite"
@@ -238,4 +245,5 @@ export function V9MascotArt({
       }}
     />
   );
+  return "sway" in config && config.sway ? <span className="v9-sprite-sway">{strip}</span> : strip;
 }
