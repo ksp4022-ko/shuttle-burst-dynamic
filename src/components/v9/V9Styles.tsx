@@ -382,11 +382,68 @@ const V9_CSS = `
 .v9-meetup-info small { font-size: 12px; color: var(--v9-muted); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* my status */
-.v9-me-list { margin: 0; display: grid; background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 20px; overflow: hidden; }
-.v9-me-list div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 2px dashed #eadfca; }
-.v9-me-list div:last-child { border-bottom: 0; }
-.v9-me-list dt { font-size: 14px; color: var(--v9-muted); font-weight: 700; }
-.v9-me-list dd { margin: 0; font-weight: 900; }
+/* ---------- 我的球員卡 ---------- */
+.v9-pc { display: grid; gap: 12px; }
+.v9-pc-section { background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 20px; padding: 12px 14px; box-shadow: 0 3px 0 var(--v9-ink); }
+.v9-pc-id {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 2.5px solid var(--v9-ink); border-radius: 22px;
+  background: linear-gradient(135deg, var(--v9-mint) 0 55%, #c9ecd6 55% 100%); box-shadow: 0 3px 0 var(--v9-ink);
+}
+.v9-pc-jersey { flex: none; width: 76px; height: 76px; filter: drop-shadow(0 2px 0 rgba(31,26,23,.25)); }
+.v9-pc-jersey.is-temp { filter: hue-rotate(-115deg) saturate(1.4) drop-shadow(0 2px 0 rgba(31,26,23,.25)); }
+.v9-pc-who { display: grid; gap: 4px; min-width: 0; }
+.v9-pc-name { margin: 0; font-size: 22px; font-weight: 900; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v9-pc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.v9-pc-switch { display: inline-flex; align-items: center; gap: 2px; color: var(--v9-muted); font-size: 12px; font-weight: 800; text-decoration: none; }
+.v9-pc-now { display: grid; gap: 8px; }
+.v9-pc-now-date { margin: 0; color: var(--v9-muted); font-size: 13px; font-weight: 800; }
+.v9-pc-now-date strong { color: var(--v9-ink); font-size: 16px; }
+.v9-pc-now-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.v9-pc-fee { font-weight: 900; }
+.v9-pc-link {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 14px; border: 2.5px solid var(--v9-ink); border-radius: 18px;
+  background: #fff; color: var(--v9-ink); font-size: 15px; font-weight: 900; text-align: left; box-shadow: 0 3px 0 var(--v9-ink); cursor: pointer;
+}
+.v9-pc-link span { flex: 1; }
+
+/* 本季出席 stamp card: one row per month, day numbers under the stamps */
+.v9-season { display: grid; gap: 10px; }
+.v9-season-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.v9-season-head h3 { margin: 0; font-size: 16px; font-weight: 900; }
+.v9-season-cheer { margin: 2px 0 0; color: var(--v9-muted); font-size: 13px; font-weight: 800; }
+.v9-season-count { margin: 0; line-height: 1; font-variant-numeric: tabular-nums; }
+.v9-season-count strong { font-size: 34px; font-weight: 900; color: var(--v9-red); }
+.v9-season-count span { font-size: 16px; font-weight: 900; color: var(--v9-muted); }
+.v9-stamp-card {
+  display: grid; gap: 6px; padding: 10px 8px; border-radius: 14px; border: 2px dashed #e3d6bd;
+  background: repeating-linear-gradient(0deg, var(--v9-paper) 0 26px, #f3ead9 26px 27px);
+}
+.v9-stamp-row { display: flex; align-items: flex-start; gap: 6px; }
+.v9-stamp-month { flex: none; width: 34px; padding-top: 12px; color: var(--v9-muted); font-size: 12px; font-weight: 900; text-align: right; }
+.v9-stamp-cells { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); flex: 1; gap: 2px; }
+.v9-stamp-cell { display: grid; justify-items: center; gap: 1px; padding: 2px 0; border: 0; border-radius: 12px; background: none; color: var(--v9-ink); cursor: pointer; }
+.v9-stamp-cell.is-picked { background: rgba(245, 154, 60, .18); }
+.v9-stamp-slot { display: grid; place-items: center; width: 40px; height: 40px; }
+.v9-stamp-day { font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--v9-muted); }
+.v9-stamp-cell.is-picked .v9-stamp-day { color: var(--v9-ink); }
+.v9-stamp {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  font-size: 15px; font-weight: 900; font-style: normal; line-height: 1;
+}
+.v9-stamp.is-attended { border: 3px double var(--v9-red); background: rgba(226, 85, 75, .1); }
+.v9-stamp.is-attended img { width: 20px; height: auto; transform: rotate(-35deg); }
+.v9-stamp.is-leave { border: 3px double #6b7f99; background: rgba(107, 127, 153, .14); color: #4f6077; }
+.v9-stamp.is-today { border: 3px dashed #e6a81e; background: rgba(255, 212, 92, .3); animation: v9-today-pulse 1.4s ease-in-out infinite; }
+.v9-stamp.is-future { border: 2px dashed #cdbfa6; }
+.v9-stamp.is-mini { display: inline-grid; width: 16px; height: 16px; border-width: 2px; font-size: 9px; vertical-align: -3px; animation: none; }
+.v9-stamp-detail { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; }
+.v9-stamp-tag { padding: 1px 8px; border-radius: 999px; border: 2px solid var(--v9-ink); font-size: 12px; font-weight: 900; }
+.v9-stamp-tag.is-attended { background: var(--v9-rose); }
+.v9-stamp-tag.is-leave { background: #dfe6ef; }
+.v9-stamp-tag.is-today { background: var(--v9-yellow); }
+.v9-stamp-tag.is-future { background: var(--v9-paper); }
+.v9-stamp-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; color: var(--v9-muted); font-size: 12px; font-weight: 800; }
+@keyframes v9-today-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 
 /* toast */
 .v9-toast-region { position: fixed; left: 0; right: 0; bottom: calc(max(12px, env(safe-area-inset-bottom)) + var(--v9-dock-h) + 14px); z-index: 60; display: flex; justify-content: center; pointer-events: none; padding: 0 16px; }

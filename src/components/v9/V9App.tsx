@@ -3,13 +3,14 @@ import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
 import { useHomepageFlow, type PendingAction } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
+import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Busy } from "./V9Busy";
 import { V9Logo } from "./V9Logo";
 import { V9Styles } from "./V9Styles";
 import { V9Bento, V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
-import { V9_STATUS_LABEL, v9ShortDate, v9Weekday } from "@/lib/v9-display";
+import { v9ShortDate, v9Weekday } from "@/lib/v9-display";
 import { V9Sheet } from "./V9Sheet";
 import { V9RosterContent, type V9RosterTab } from "./V9RosterSheet";
 import { V9BillingContent } from "./V9BillingSheet";
@@ -17,6 +18,7 @@ import { V9ProxyContent, type V9ProxyTab } from "./V9ProxySheet";
 import { V9Icon } from "./V9Icons";
 import { V9Toast } from "./V9Toast";
 import { V9Celebrate } from "./V9Celebrate";
+import { V9PlayerCard } from "./V9PlayerCard";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
@@ -120,6 +122,15 @@ export function V9App() {
       lineAuthToken: lineToken,
       eventId: selectedEventId,
     });
+
+  // 本季出席 (same fail-soft shared hook as V8 ACTIVE): 季打 only.
+  const { progress: seasonProgress, refresh: refreshSeasonProgress } = useV8SeasonProgress({
+    token: lineToken,
+    eventId: selectedEventId,
+    seasonId: flow.selectedEvent?.seasonId,
+    groupId: flow.selectedEvent?.groupId,
+    isFixed: Boolean(lineIdentity?.identityType === "fixed" && lineIdentity.claimedMemberId),
+  });
 
   const [sheet, setSheet] = useState<SheetKind | null>(null);
   const [rosterTab, setRosterTab] = useState<V9RosterTab>("confirmed");
@@ -236,6 +247,7 @@ export function V9App() {
       // effect above refines it with the position once the roster lands.
       if (action === "fixed-return" && returnFeedbackRef.current) setNotice(`${name} 已取消請假`);
       if (action === "cancel-temp") setNotice(`${name} 已取消報名`);
+      else refreshSeasonProgress();
       await refreshCancellableTempSignups();
       return true;
     });
@@ -536,7 +548,12 @@ export function V9App() {
             </ul>
           </V9Sheet>
 
-          <V9Sheet open={sheet === "me"} title="我的報名" subtitle={siteName} onClose={closeSheet}>
+          <V9Sheet
+            open={sheet === "me"}
+            title="我的球員卡"
+            subtitle={`${siteName}羽球`}
+            onClose={closeSheet}
+          >
             {auth.loading ? (
               <p className="v9-muted">確認 LINE 登入中…</p>
             ) : !signedIn ? (
@@ -554,54 +571,14 @@ export function V9App() {
                 </a>
               </div>
             ) : (
-              <dl className="v9-me-list">
-                <div>
-                  <dt>名稱</dt>
-                  <dd>{identity.name}</dd>
-                </div>
-                <div>
-                  <dt>LINE</dt>
-                  <dd>
-                    <span className="v9-badge is-green">已登入</span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>身分</dt>
-                  <dd>
-                    <span
-                      className={`v9-badge ${identity.signupType === "fixed" ? "is-blue" : "is-paper"}`}
-                    >
-                      {identity.signupType === "fixed" ? "季打" : "臨打"}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>本場狀態</dt>
-                  <dd>
-                    <span className={`v9-chip-status is-${identity.status}`}>
-                      {V9_STATUS_LABEL[identity.status]}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>順位</dt>
-                  <dd>
-                    {rank
-                      ? `${identity.status === "confirmed" ? "正取" : "備取"}第 ${rank} 位`
-                      : "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>本次費用</dt>
-                  <dd>
-                    {identity.signupType === "fixed"
-                      ? "含在季費內"
-                      : typeof selectedEvent.tempFee === "number"
-                        ? `$${selectedEvent.tempFee}`
-                        : "—"}
-                  </dd>
-                </div>
-              </dl>
+              <V9PlayerCard
+                identity={identity}
+                rank={rank}
+                event={selectedEvent}
+                progress={seasonProgress}
+                v8Href={v8PathForCurrentPage()}
+                onBill={() => setSheet("bill")}
+              />
             )}
           </V9Sheet>
         </>
