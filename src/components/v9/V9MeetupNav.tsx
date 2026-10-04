@@ -11,11 +11,12 @@ import {
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { v9Relative, v9ShortDate, v9Weekday } from "@/lib/v9-display";
 
-// Meetup switcher: a tear-off desk calendar the size of the old date block.
-// Drag the page up and it lifts with the finger (hinged at the rings); let
-// go past the threshold and it tears away to the next meetup, otherwise it
-// springs back. Dragging down pulls the previous page back over the top.
-// Tap opens the full list.
+// Meetup switcher: a tear-off desk calendar (site name on its red header,
+// date, then weekday · 本週). Drag the page up and it lifts with the finger
+// (hinged at the rings); let go past the threshold and it tears away to the
+// next meetup, otherwise it springs back. Dragging down pulls the previous
+// page back over the top. The ▲ ▼ buttons play the same flips; tapping the
+// page opens the full list.
 
 const PAGE_TRAVEL = 110; // px of drag for a full flip
 const COMMIT = 0.35; // fraction of a flip that commits on release
@@ -24,11 +25,13 @@ const HINT_KEY = "v9:calendar-hint";
 const SPRING = { type: "spring", stiffness: 320, damping: 30 } as const;
 
 function CalendarPage({
+  siteLabel,
   event,
   rotate,
   shade,
   className = "",
 }: {
+  siteLabel: string;
   event: AlphaEvent | undefined;
   rotate?: MotionValue<number>;
   shade?: MotionValue<number>;
@@ -41,21 +44,24 @@ function CalendarPage({
       className={`v9-cal-page ${className}`}
       style={rotate ? { rotateX: rotate, transformPerspective: 360 } : {}}
     >
-      <span className={`v9-cal-head${relative === "已結束" ? " is-past" : ""}`}>
-        {relative} · {v9Weekday(event.eventDate)}
-      </span>
+      <span className={`v9-cal-head${relative === "已結束" ? " is-past" : ""}`}>{siteLabel}</span>
       <span className="v9-cal-date">{v9ShortDate(event.eventDate)}</span>
+      <span className="v9-cal-foot">
+        {v9Weekday(event.eventDate)} · {relative}
+      </span>
       {shade && <motion.span className="v9-cal-shade" style={{ opacity: shade }} />}
     </motion.span>
   );
 }
 
 export function V9MeetupNav({
+  siteLabel,
   events,
   index,
   onGo,
   onList,
 }: {
+  siteLabel: string;
   events: AlphaEvent[];
   index: number;
   onGo: (index: number) => void;
@@ -135,40 +141,71 @@ export function V9MeetupNav({
     }
   };
 
+  // ▲ ▼ (and arrow keys) play the same tear / fall-back as a full drag.
+  const step = (dir: 1 | -1) => {
+    if (committing.current || (dir === 1 ? !hasNext : !hasPrev)) return;
+    settle(dir === 1 ? lift : drop, true, dir);
+  };
+
   const event = events[index];
   if (!event) return null;
   return (
-    <motion.button
-      type="button"
-      className="v9-cal"
-      aria-label={`${v9ShortDate(event.eventDate)}，上下滑換場，點一下看全部聚會`}
-      onTapStart={() => (panned.current = false)}
-      onPanStart={() => (panned.current = true)}
-      onPan={onPan}
-      onPanEnd={onPanEnd}
-      onTap={() => {
-        if (!panned.current) onList();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "ArrowUp" && hasNext) onGo(index + 1);
-        if (e.key === "ArrowDown" && hasPrev) onGo(index - 1);
-      }}
-    >
-      <span className="v9-cal-rings" aria-hidden="true">
-        <i />
-        <i />
+    <div className="v9-cal-nav">
+      <motion.button
+        type="button"
+        className="v9-cal"
+        aria-label={`${v9ShortDate(event.eventDate)}，上下滑換場，點一下看全部聚會`}
+        onTapStart={() => (panned.current = false)}
+        onPanStart={() => (panned.current = true)}
+        onPan={onPan}
+        onPanEnd={onPanEnd}
+        onTap={() => {
+          if (!panned.current) onList();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowUp") step(1);
+          if (e.key === "ArrowDown") step(-1);
+        }}
+      >
+        <span className="v9-cal-rings" aria-hidden="true">
+          <i />
+          <i />
+        </span>
+        <span className="v9-cal-stack" aria-hidden="true">
+          <span className="v9-cal-edge is-2" />
+          <span className="v9-cal-edge is-1" />
+          {/* Underneath: the next meetup, revealed as the top page lifts. */}
+          <CalendarPage
+            siteLabel={siteLabel}
+            event={events[index + 1] ?? event}
+            className="is-under"
+          />
+          <CalendarPage
+            siteLabel={siteLabel}
+            event={event}
+            rotate={liftRotate}
+            shade={liftShade}
+            className="is-top"
+          />
+          {/* The previous meetup, folded back above the rings until pulled down. */}
+          {hasPrev && (
+            <CalendarPage
+              siteLabel={siteLabel}
+              event={events[index - 1]}
+              rotate={dropRotate}
+              className="is-back"
+            />
+          )}
+        </span>
+      </motion.button>
+      <span className="v9-cal-steps">
+        <button type="button" aria-label="下一場" disabled={!hasNext} onClick={() => step(1)}>
+          ▲
+        </button>
+        <button type="button" aria-label="上一場" disabled={!hasPrev} onClick={() => step(-1)}>
+          ▼
+        </button>
       </span>
-      <span className="v9-cal-stack" aria-hidden="true">
-        <span className="v9-cal-edge is-2" />
-        <span className="v9-cal-edge is-1" />
-        {/* Underneath: the next meetup, revealed as the top page lifts. */}
-        <CalendarPage event={events[index + 1] ?? event} className="is-under" />
-        <CalendarPage event={event} rotate={liftRotate} shade={liftShade} className="is-top" />
-        {/* The previous meetup, folded back above the rings until pulled down. */}
-        {hasPrev && (
-          <CalendarPage event={events[index - 1]} rotate={dropRotate} className="is-back" />
-        )}
-      </span>
-    </motion.button>
+    </div>
   );
 }

@@ -93,9 +93,15 @@ export function V9Hero({
   return (
     <section className="v9-hero" aria-label="聚會控制台">
       <div className="v9-hero-top">
-        <h1 className="v9-brand-name">
-          <V9Lockup height={44} />
-        </h1>
+        <div className="v9-brand">
+          <h1 className="v9-brand-name">
+            <V9Lockup height={44} />
+          </h1>
+          {/* Dev route marker until V9 launches (CLAUDE.md). */}
+          <span className="v9-preview-badge" data-v9-preview-badge>
+            PREVIEW
+          </span>
+        </div>
         {authLoading ? (
           <span className="v9-user-chip is-muted">確認中…</span>
         ) : signedIn ? (
@@ -116,13 +122,13 @@ export function V9Hero({
       <div className="v9-hero-body">
         <div className="v9-hero-stage">
           <div className="v9-hero-meetup">
-            <span className="v9-site-name">
-              {siteName}羽球
-              <span className="v9-preview-badge" data-v9-preview-badge>
-                PREVIEW
-              </span>
-            </span>
-            <V9MeetupNav events={events} index={index} onGo={go} onList={onMeetup} />
+            <V9MeetupNav
+              siteLabel={`${siteName}羽球`}
+              events={events}
+              index={index}
+              onGo={go}
+              onList={onMeetup}
+            />
             {showMeetupName && <span className="v9-hero-name">{meetupName}</span>}
           </div>
           <div className="v9-hero-mascot">

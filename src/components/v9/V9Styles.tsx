@@ -50,9 +50,9 @@ const V9_CSS = `
 .v9-hero > * { position: relative; }
 .v9-hero-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .v9-logo { flex: none; }
+.v9-brand { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .v9-brand-name { margin: 0; line-height: 0; }
 .v9-lockup { display: block; height: 44px; width: auto; }
-.v9-site-name { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 13px; color: var(--v9-muted); font-weight: 800; white-space: nowrap; }
 .v9-preview-badge {
   display: inline-block; padding: 0 6px; border-radius: 999px; border: 2px solid var(--v9-ink);
   background: var(--v9-blue); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .06em;
@@ -79,8 +79,17 @@ const V9_CSS = `
 
 /* ---------- Meetup switcher: tear-off calendar ---------- */
 .v9-main.is-switching .v9-bento { opacity: .5; transition: opacity .2s; }
+.v9-cal-nav { display: flex; align-items: center; gap: 10px; }
+.v9-cal-steps { display: grid; gap: 10px; }
+.v9-cal-steps button {
+  display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: 50%;
+  border: 2.5px solid var(--v9-ink); background: #fff; color: var(--v9-ink); font-size: 12px;
+  box-shadow: 0 2px 0 var(--v9-ink); cursor: pointer;
+}
+.v9-cal-steps button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+.v9-cal-steps button:disabled { opacity: .3; box-shadow: none; cursor: default; }
 .v9-cal {
-  position: relative; display: block; width: 116px; padding: 8px 0 0; margin-top: 2px;
+  position: relative; display: block; flex: none; width: 128px; padding: 8px 0 0; margin-top: 2px;
   background: none; border: 0; color: inherit; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
 }
 .v9-cal:active { cursor: grabbing; }
@@ -104,7 +113,8 @@ const V9_CSS = `
   color: #fff; font-size: 12px; font-weight: 900; text-align: center; white-space: nowrap;
 }
 .v9-cal-head.is-past { background: #a89f90; }
-.v9-cal-date { padding: 1px 0 3px; font-size: 31px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.v9-cal-date { padding: 2px 0 0; font-size: 36px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.v9-cal-foot { padding: 0 0 6px; color: var(--v9-muted); font-size: 12px; font-weight: 900; white-space: nowrap; }
 .v9-cal-shade { position: absolute; inset: 0; background: var(--v9-ink); pointer-events: none; }
 /* The pair stands just behind the info rail: feet tuck 10px under its top
    edge (the stage keeps a 10px gap above the rail), and the rail sits on top. */
