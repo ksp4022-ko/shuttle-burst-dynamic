@@ -48,7 +48,7 @@ const V9_CSS = `
   background: var(--v9-yellow); border: 3px solid var(--v9-ink); opacity: .9;
 }
 .v9-hero > * { position: relative; }
-.v9-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.v9-hero-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .v9-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .v9-logo { flex: none; }
 .v9-brand-name { margin: 0; font-weight: 900; font-size: 15px; line-height: 1.1; white-space: nowrap; }
@@ -80,9 +80,11 @@ const V9_CSS = `
   display: inline-flex; align-items: center; gap: 1px; padding: 1px 6px 1px 9px; border-radius: 999px;
   border: 2px solid var(--v9-ink); background: #fff; font-size: 12px; font-weight: 800;
 }
-.v9-hero-mascot { flex: none; margin: -6px -4px -8px 0; }
+.v9-hero-mascot { flex: none; position: relative; z-index: 1; margin: 0 -6px -4px 0; }
 .v9-mascot { display: block; overflow: visible; }
-.v9-sprite-box { position: relative; display: block; }
+.v9-mascot-frame { position: relative; display: block; }
+.v9-mascot-fallback { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); }
+.v9-sprite-box { position: absolute; display: block; }
 .v9-sprite-box.is-sway { transform-origin: 50% 100%; animation: v9-sway 2.2s ease-in-out infinite alternate; }
 .v9-sprite-badge {
   position: absolute; transform: translate(-50%, -50%); font-size: 11px; font-weight: 900; line-height: 1;

@@ -2,16 +2,20 @@
 """Clean a ChatGPT mascot sheet into a V9 sprite (docs/V9_MASCOT_BRIEF.md).
 
 Usage:
-  python3 scripts/v9-mascot-sprite.py SRC.png OUT.webp [--frames 1,2,3,2] [--slots 6] [--height 240]
+  python3 scripts/v9-mascot-sprite.py SRC.png OUT.webp [--frames 1,2,3,2] [--slots 6] [--body 192]
 
 - Splits SRC into --slots equal columns; every connected shape goes to the
   slot holding its centre, so rackets / tails that cross a slot edge stay
   with their own frame and stray pieces of neighbours are dropped.
 - Drops faint haze and makes the character body fully opaque.
 - Aligns the chosen --frames (1-based, repeats allowed) on one shared
-  canvas, scales to --height px (2x of the on-page height) and writes a
-  horizontal WebP strip.
-Prints the per-frame size and frame count for V9Mascot.tsx.
+  canvas and scales it so the dragon + tiger themselves (the big shapes of
+  the first chosen frame, without shuttlecocks / Z's / motion lines) are
+  --body px tall (2x of the on-page size). Every state uses the same
+  --body, so the pair is the same size in every state; decorations keep
+  their own size and simply extend past the body.
+- Writes a horizontal WebP strip and prints the V9Mascot.tsx entry: frame
+  size, the gap below the feet and the body's centre, in on-page px.
 
 Needs: pip install pillow numpy scipy
 """
@@ -30,7 +34,7 @@ def main():
     parser.add_argument("out")
     parser.add_argument("--frames", default="1,2,3,4,5,6")
     parser.add_argument("--slots", type=int, default=6)
-    parser.add_argument("--height", type=int, default=240)
+    parser.add_argument("--body", type=int, default=192)
     args = parser.parse_args()
 
     src = np.array(Image.open(args.src).convert("RGBA")).astype(np.float32)
@@ -71,8 +75,22 @@ def main():
     x1 = max(boxes[i][2] for i in used) + pad
     y1 = max(boxes[i][3] for i in used) + pad
     canvas_w, canvas_h = int(x1 - x0 + 1), int(y1 - y0 + 1)
-    out_h = args.height
-    out_w = round(canvas_w * out_h / canvas_h)
+    # Body = the big shapes (dragon, tiger) of the first chosen frame.
+    first = order[0]
+    first_mask = frames[first].split()[3]
+    body_mask = np.array(first_mask) > 24
+    body_labels, body_count = ndimage.label(body_mask, structure=np.ones((3, 3)))
+    body_sizes = ndimage.sum(body_mask, body_labels, range(1, body_count + 1))
+    big = [i + 1 for i, size in enumerate(body_sizes) if size > 0.08 * body_sizes.sum()]
+    by, bx = np.nonzero(np.isin(body_labels, big))
+    left0 = int(round(first * slot_w + x0)) + margin
+    top0 = int(y0)
+    body_top, body_bottom = by.min() - top0, by.max() - top0
+    body_cx = (bx.min() + bx.max()) / 2 - left0
+
+    scale = args.body / (body_bottom - body_top)
+    out_h = round(canvas_h * scale)
+    out_w = round(canvas_w * scale)
 
     sheet = Image.new("RGBA", (out_w * len(order), out_h), (0, 0, 0, 0))
     for position, slot in enumerate(order):
@@ -82,9 +100,12 @@ def main():
         sheet.alpha_composite(crop.resize((out_w, out_h), Image.LANCZOS), (position * out_w, 0))
 
     sheet.save(args.out, "WEBP", quality=88, method=6)
+    feet = (canvas_h - 1 - body_bottom) * scale / 2
+    centre = body_cx * scale / 2
     print(
-        f"frame {out_w}x{out_h} (display {out_w // 2}x{out_h // 2}), "
-        f"{len(order)} frames, {os.path.getsize(args.out)} bytes"
+        f"{len(order)} frames, {os.path.getsize(args.out)} bytes -> "
+        f"{{ frames: {len(order)}, width: {out_w / 2:g}, height: {out_h / 2:g}, "
+        f"feet: {feet:.1f}, centre: {centre:.1f} }}"
     )
 
 

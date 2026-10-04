@@ -163,5 +163,7 @@
 第二張（尚未報名）的經驗：第一版太像正取的慶祝圖而退回；重畫時要求「雙腳站穩、正面看觀眾、
 先畫基準姿勢、6 格只改手臂」後就可用。後續狀態建議沿用同樣寫法，並提醒「龍的臉照正取那張」。
 
-清理與轉檔：`python3 scripts/v9-mascot-sprite.py 原圖.png public/v9/mascot/<名稱>.webp --frames 1,2,3,4,5,6`
-（`--frames` 可挑格、可重複，例如 `1,2,3,2` 來回循環），再把輸出的尺寸填進 `V9Mascot.tsx` 的 `SPRITES`。
+清理與轉檔：`python3 scripts/v9-mascot-sprite.py 原圖.png public/v9/mascot/<名稱>.webp --frames 1,2,3,4,5,6 --body 192`
+（`--frames` 可挑格、可重複，例如 `1,2,3,2` 來回循環），再把輸出的那一行（width / height / feet / centre）填進 `V9Mascot.tsx` 的 `SPRITES`。
+`--body 192` 讓每個狀態的龍虎本體都是同樣高度（網頁上 96px），所有狀態一定要用同一個值；
+網頁把龍虎腳底對齊固定框（136×100）的底線、本體置中，羽球、Z、汗滴等裝飾可往上破框。
