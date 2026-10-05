@@ -19,6 +19,7 @@ import type { V9RosterTab } from "./V9RosterSheet";
 export type V9Cta =
   | { kind: "loading" }
   | { kind: "login" }
+  | { kind: "identify" }
   | { kind: "profile"; href: string }
   | { kind: "action"; label: string; tone: string };
 
@@ -211,6 +212,10 @@ export function V9Hero({
       ) : cta.kind === "login" ? (
         <button type="button" className="v9-cta is-green" onClick={onLogin}>
           LINE 登入後報名
+        </button>
+      ) : cta.kind === "identify" ? (
+        <button type="button" className="v9-cta is-blue" onClick={onMe}>
+          確認身份
         </button>
       ) : cta.kind === "profile" ? (
         <a className="v9-cta is-blue" href={cta.href}>

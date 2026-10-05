@@ -459,6 +459,40 @@ const V9_CSS = `
 .v9-meetup-info small { font-size: 12px; color: var(--v9-muted); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* my status */
+/* ---------- 選擇身份 (V9-006 6a) ---------- */
+.v9-id { display: grid; gap: 10px; }
+.v9-id-lead { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.5; }
+.v9-id-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v9-id-mode {
+  display: grid; justify-items: center; gap: 4px; padding: 14px 10px 12px; border: 2.5px solid var(--v9-ink); border-radius: 20px;
+  background: #fff; color: var(--v9-ink); text-align: center; box-shadow: 0 4px 0 var(--v9-ink); cursor: pointer;
+}
+.v9-id-mode:active { transform: translateY(4px); box-shadow: none; }
+.v9-id-mode.is-fixed { background: var(--v9-mint); }
+.v9-id-mode.is-temp { background: #ffe9cf; }
+.v9-id-mode img { width: 64px; height: 64px; }
+.v9-id-mode img.is-temp { filter: hue-rotate(-115deg) saturate(1.4); }
+.v9-app .v9-id-mode strong { font-size: 18px; font-weight: 900; }
+.v9-app .v9-id-mode small { color: var(--v9-muted); font-size: 12px; font-weight: 700; line-height: 1.4; }
+.v9-id-back, .v9-id-switch { justify-self: start; padding: 0; border: 0; background: none; color: var(--v9-muted); font-size: 13px; font-weight: 800; cursor: pointer; }
+.v9-id-switch { justify-self: center; text-decoration: underline; }
+.v9-id-claims {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 38vh; overflow-y: auto;
+  padding: 2px; overscroll-behavior: contain;
+}
+.v9-id-claims > .v9-muted, .v9-id-note { grid-column: 1 / -1; }
+.v9-id-note { display: flex; align-items: center; gap: 8px; }
+.v9-id-claim {
+  display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px; border: 2px solid var(--v9-ink); border-radius: 14px;
+  background: #fff; color: var(--v9-ink); font-size: 15px; font-weight: 900; text-align: left; cursor: pointer;
+}
+.v9-id-claim.is-picked { background: var(--v9-yellow); box-shadow: 0 3px 0 var(--v9-ink); }
+.v9-id-claim-no {
+  display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--v9-ink);
+  background: var(--v9-mint); font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.v9-id-error { margin: 0; color: var(--v9-red); font-size: 13px; font-weight: 800; }
+
 /* ---------- 我的球員卡: one card ---------- */
 .v9-pc { overflow: hidden; background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 22px; box-shadow: 0 3px 0 var(--v9-ink); }
 .v9-pc-head {

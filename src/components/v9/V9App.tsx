@@ -23,6 +23,8 @@ import { V9Icon } from "./V9Icons";
 import { V9Toast } from "./V9Toast";
 import { V9Celebrate } from "./V9Celebrate";
 import { V9PlayerCard } from "./V9PlayerCard";
+import { V9IdentityContent } from "./V9IdentitySheet";
+import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { v9PreloadArt } from "./V9Mascot";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
@@ -390,6 +392,31 @@ export function V9App() {
     setSheet(key);
   };
 
+  // 選擇身份 done: store the new identity like V8 does, then re-read it so
+  // the roster match (useCurrentIdentity) picks it up; the sheet turns into
+  // the player card on its own.
+  const confirmIdentity = async (next: V8LineIdentity) => {
+    auth.updateIdentity(next);
+    await auth.refreshIdentity();
+    setNotice(`身份確認完成：${next.confirmedName || next.displayName}`);
+  };
+  // First time this session a signed-in viewer still has no identity, the
+  // 選擇身份 sheet opens by itself once the page is up.
+  const needsIdentity = Boolean(
+    lineIdentity && lineToken && lineIdentity.profileComplete === false,
+  );
+  useEffect(() => {
+    if (!needsIdentity || !pageReady) return;
+    try {
+      const key = v9StorageKey("identity-prompt");
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {
+      // Storage blocked: open it anyway.
+    }
+    setSheet("me");
+  }, [needsIdentity, pageReady]);
+
   const userName = lineIdentity?.confirmedName || lineIdentity?.displayName || "";
   const busy = Boolean(pendingAction);
   const loading = phase === "loading-particles";
@@ -401,9 +428,11 @@ export function V9App() {
     ? { kind: "loading" }
     : !signedIn
       ? { kind: "login" }
-      : !profileComplete || !identity
-        ? { kind: "profile", href: v8PathForCurrentPage() }
-        : { kind: "action", ...ctaFor(identity) };
+      : !profileComplete
+        ? { kind: "identify" }
+        : !identity
+          ? { kind: "profile", href: v8PathForCurrentPage() }
+          : { kind: "action", ...ctaFor(identity) };
   const siteName = SITE_NAMES[siteId] ?? siteId;
   const shownEventId = targetEventId ?? selectedEventId;
   const shownIndex = Math.max(
@@ -611,7 +640,11 @@ export function V9App() {
             </ul>
           </V9Sheet>
 
-          <V9Sheet open={sheet === "me"} title="我的球員卡" onClose={closeSheet}>
+          <V9Sheet
+            open={sheet === "me"}
+            title={signedIn && !profileComplete ? "選擇身份" : "我的球員卡"}
+            onClose={closeSheet}
+          >
             {auth.loading ? (
               <p className="v9-muted">確認 LINE 登入中…</p>
             ) : !signedIn ? (
@@ -621,6 +654,15 @@ export function V9App() {
                   LINE 登入
                 </button>
               </div>
+            ) : !profileComplete && lineIdentity ? (
+              <V9IdentityContent
+                token={lineToken}
+                siteId={siteId}
+                eventId={selectedEventId}
+                lineIdentity={lineIdentity}
+                onLogin={auth.startLogin}
+                onConfirmed={confirmIdentity}
+              />
             ) : !ready || !identity ? (
               <div className="v9-sheet-empty">
                 <p className="v9-muted">請先在 V8 完成身份確認（季打／臨打），再回到 V9 使用。</p>
