@@ -8,7 +8,7 @@ import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Busy } from "./V9Busy";
 import { V9Styles } from "./V9Styles";
-import { V9Bento, V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
+import { V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
 import { v9ShortDate, v9Weekday } from "@/lib/v9-display";
 import { V9Sheet } from "./V9Sheet";
 import { V9RosterContent, type V9RosterTab } from "./V9RosterSheet";
@@ -442,13 +442,13 @@ export function V9App() {
               onCta={() => void handlePrimaryAction()}
               onMeetup={() => setSheet("meetup")}
               onMe={() => setSheet("me")}
-            />
-            <V9Bento
-              confirmedCount={roster.summary.confirmedCount}
-              maxPeople={selectedEvent.maxPeople}
-              remainCount={roster.summary.remainCount}
-              waitingCount={waiting.length}
-              leaveCount={(roster.fixedLeave || []).length}
+              counts={{
+                confirmed: roster.summary.confirmedCount,
+                max: selectedEvent.maxPeople,
+                remain: roster.summary.remainCount,
+                waiting: waiting.length,
+                leave: (roster.fixedLeave || []).length,
+              }}
               onRoster={openRoster}
             />
           </main>

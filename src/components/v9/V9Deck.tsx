@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { motion, useAnimate, useReducedMotion } from "motion/react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
@@ -6,11 +7,12 @@ import { V9Icon } from "./V9Icons";
 import { V9Lockup } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
 import { V9MeetupNav } from "./V9MeetupNav";
+import { V9Roll } from "./V9Roll";
 import { v9MascotMood, v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
 import type { V9RosterTab } from "./V9RosterSheet";
 
-// Home Control Deck: Hero (meetup + 4-item rail + 本場狀態 + ONE CTA),
-// a few uneven Bento tiles, and the sticky Dock. Every number is read from
+// Home Control Deck: Hero (calendar + mascot, info rail, roster strip,
+// 本場狀態, ONE CTA) and the sticky Dock. Every number is read from
 // the event / roster / identity the shared hooks resolved; details open in
 // bottom sheets.
 
@@ -50,6 +52,8 @@ export function V9Hero({
   onCta,
   onMeetup,
   onMe,
+  counts,
+  onRoster,
 }: {
   siteName: string;
   event: AlphaEvent;
@@ -70,6 +74,8 @@ export function V9Hero({
   onCta: () => void;
   onMeetup: () => void;
   onMe: () => void;
+  counts: { confirmed: number; max: number; remain: number; waiting: number; leave: number };
+  onRoster: (tab: V9RosterTab) => void;
 }) {
   const display = parseV8MeetupDisplay(event.name);
   const meetupName = display.displayName || event.name;
@@ -133,13 +139,11 @@ export function V9Hero({
             />
             {showMeetupName && <span className="v9-hero-name">{meetupName}</span>}
           </div>
-          <div className="v9-hero-mascot">
-            <V9MascotArt
-              sprite={identity && !switching ? v9MascotSprite(identity) : "guest"}
-              mood={v9MascotMood(switching ? null : identity)}
-              badge={!switching && identity?.status === "waiting" && rank ? `#${rank}` : undefined}
-            />
-          </div>
+          <V9HeroMascot
+            sprite={identity && !switching ? v9MascotSprite(identity) : "guest"}
+            mood={v9MascotMood(switching ? null : identity)}
+            badge={!switching && identity?.status === "waiting" && rank ? `#${rank}` : undefined}
+          />
         </div>
 
         <dl className="v9-rail">
@@ -166,6 +170,8 @@ export function V9Hero({
           )}
         </dl>
       </div>
+
+      <V9RosterStrip counts={counts} onRoster={onRoster} />
 
       <button
         type="button"
@@ -210,80 +216,131 @@ export function V9Hero({
           前往 V8 確認身份
         </a>
       ) : (
-        <button
+        // A new action (我要請假 → 取消請假 …) flips the button in.
+        <motion.button
+          key={cta.label}
           type="button"
           className={`v9-cta ${cta.tone}`}
           disabled={busy}
           aria-busy={busy}
           onClick={onCta}
+          initial={{ rotateX: -90, opacity: 0.4 }}
+          animate={{ rotateX: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 18 }}
+          style={{ transformPerspective: 500 }}
         >
           {busy ? busyLabel : cta.label}
-        </button>
+        </motion.button>
       )}
     </section>
   );
 }
 
-export function V9Bento({
-  confirmedCount,
-  maxPeople,
-  remainCount,
-  waitingCount,
-  leaveCount,
+// 正取 / 備取 / 請假 at a glance; each part opens its roster tab. Counts
+// roll to new values.
+function V9RosterStrip({
+  counts,
   onRoster,
 }: {
-  confirmedCount: number;
-  maxPeople: number;
-  remainCount: number;
-  waitingCount: number;
-  leaveCount: number;
+  counts: { confirmed: number; max: number; remain: number; waiting: number; leave: number };
   onRoster: (tab: V9RosterTab) => void;
 }) {
-  const fill = maxPeople > 0 ? Math.min(100, (confirmedCount / maxPeople) * 100) : 0;
-  const icon = (name: string, size: number) => (
-    <img
-      className="v9-tile-art"
-      src={`${import.meta.env.BASE_URL}v9/icons/${name}.webp`}
-      alt=""
-      width={size}
-      height={size}
-    />
-  );
-  // One compact row (4 columns) so the whole home fits above the Dock. The
-  // stickers match the roster sheet's empty states: racket 正取, shuttle tube
-  // 備取, water bottle 請假.
+  const fill = counts.max > 0 ? Math.min(100, (counts.confirmed / counts.max) * 100) : 0;
   return (
-    <section className="v9-bento" aria-label="狀態總覽">
+    <div className="v9-roster-strip" role="group" aria-label="名單">
       <button
         type="button"
-        className="v9-tile is-confirmed"
+        className="v9-rs-main"
         onClick={() => onRoster("confirmed")}
-        aria-label={`正取 ${confirmedCount} / ${maxPeople}，剩 ${remainCount} 位`}
+        aria-label={`正取 ${counts.confirmed} / ${counts.max}，剩 ${counts.remain} 位`}
       >
-        {icon("gear-racket", 40)}
-        <span className="v9-tile-main">
-          <span className="v9-tile-label">正取</span>
-          <span className="v9-tile-big">
-            {confirmedCount}
-            <small>/{maxPeople}</small>
-          </span>
-          <span className="v9-meter" aria-hidden="true">
-            <span style={{ width: `${fill}%` }} />
-          </span>
+        <span className="v9-rs-label">正取</span>
+        <span className="v9-rs-count">
+          <V9Roll value={counts.confirmed} />
+          <small>/{counts.max}</small>
         </span>
-        <span className="v9-tile-remain">剩 {remainCount}</span>
+        <span className="v9-meter" aria-hidden="true">
+          <motion.span
+            initial={false}
+            animate={{ width: `${fill}%` }}
+            transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
+          />
+        </span>
+        <span className="v9-rs-remain">
+          剩 <V9Roll value={counts.remain} />
+        </span>
       </button>
-      <button type="button" className="v9-tile is-waiting" onClick={() => onRoster("waiting")}>
-        {icon("gear-holder", 28)}
-        <span className="v9-tile-label">備取</span>
-        <span className="v9-tile-mid">{waitingCount}</span>
+      <button type="button" className="v9-rs-side is-waiting" onClick={() => onRoster("waiting")}>
+        <span className="v9-rs-label">備取</span>
+        <V9Roll value={counts.waiting} />
       </button>
-      <button type="button" className="v9-tile is-leave" onClick={() => onRoster("leave")}>
-        {icon("gear-bottle", 28)}
-        <span className="v9-tile-label">請假</span>
-        <span className="v9-tile-mid">{leaveCount}</span>
+      <button type="button" className="v9-rs-side is-leave" onClick={() => onRoster("leave")}>
+        <span className="v9-rs-label">請假</span>
+        <V9Roll value={counts.leave} />
       </button>
-    </section>
+    </div>
+  );
+}
+
+// The mascot pops in when its state changes, and a tap makes the pair hop
+// and bat a shuttle up -- just for fun.
+function V9HeroMascot({
+  sprite,
+  mood,
+  badge,
+}: {
+  sprite: Parameters<typeof V9MascotArt>[0]["sprite"];
+  mood: Parameters<typeof V9MascotArt>[0]["mood"];
+  badge: string | undefined;
+}) {
+  const reduceMotion = useReducedMotion();
+  const [scope, animateScope] = useAnimate<HTMLButtonElement>();
+  const [shuttles, setShuttles] = useState<number[]>([]);
+  const next = useRef(0);
+
+  const hop = () => {
+    if (reduceMotion) return;
+    void animateScope(
+      scope.current,
+      { y: [0, -16, 0, -6, 0], rotate: [0, -4, 3, 0, 0] },
+      { duration: 0.7, ease: "easeOut" },
+    );
+    const id = (next.current += 1);
+    setShuttles((list) => [...list.slice(-2), id]);
+  };
+
+  return (
+    <button
+      ref={scope}
+      type="button"
+      className="v9-hero-mascot"
+      aria-label="龍虎（點一下會跳）"
+      onClick={hop}
+    >
+      <motion.span
+        key={sprite}
+        className="v9-mascot-pop"
+        initial={reduceMotion ? false : { scale: 0.7, y: 8, opacity: 0.4 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 380, damping: 16 }}
+      >
+        <V9MascotArt sprite={sprite} mood={mood} badge={badge} />
+      </motion.span>
+      {shuttles.map((id) => (
+        <motion.img
+          key={id}
+          className="v9-hop-shuttle"
+          src={`${import.meta.env.BASE_URL}v9/mascot/shuttle.webp`}
+          alt=""
+          width={26}
+          height={22}
+          initial={{ y: 0, x: 0, rotate: -90, opacity: 1 }}
+          animate={{ y: -90, x: (id % 2 ? 1 : -1) * 18, rotate: 270, opacity: [1, 1, 0] }}
+          transition={{ duration: 0.9, ease: "easeOut" }}
+          onAnimationComplete={() => setShuttles((list) => list.filter((item) => item !== id))}
+        />
+      ))}
+    </button>
   );
 }
 

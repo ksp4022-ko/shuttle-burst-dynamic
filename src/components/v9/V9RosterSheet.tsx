@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { AlphaSignup } from "@/lib/database-alpha";
 
 // 名單 sheet body: 正取 / 備取 / 請假 tabs. Lists arrive already sorted by
@@ -32,6 +33,12 @@ export function V9RosterContent({
   displayName: (person: AlphaSignup) => string;
 }) {
   const lists: Record<V9RosterTab, AlphaSignup[]> = { confirmed, waiting, leave };
+  // The new tab's list slides in from the side it sits on.
+  const lastTab = useRef(tab);
+  const from = TAB_KEYS.indexOf(tab) >= TAB_KEYS.indexOf(lastTab.current) ? "right" : "left";
+  useEffect(() => {
+    lastTab.current = tab;
+  }, [tab]);
   const active = TABS[tab];
   const people = lists[tab];
 
@@ -59,7 +66,7 @@ export function V9RosterContent({
         id="v9-roster-panel"
         role="tabpanel"
         aria-labelledby={`v9-tab-${tab}`}
-        className="v9-roster-panel"
+        className={`v9-roster-panel is-from-${from}`}
       >
         {people.length === 0 ? (
           <div className="v9-roster-empty">

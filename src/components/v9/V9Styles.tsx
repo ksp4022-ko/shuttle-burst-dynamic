@@ -31,6 +31,22 @@ const V9_CSS = `
 }
 .v9-app *, .v9-app *::before, .v9-app *::after { box-sizing: border-box; }
 .v9-app button { font: inherit; color: inherit; }
+/* Sheet lists: rows slide in one after another. */
+.v9-sheet-body li { animation: v9-row-in .32s ease-out both; }
+.v9-sheet-body li:nth-child(2) { animation-delay: 0.03s; }
+.v9-sheet-body li:nth-child(3) { animation-delay: 0.06s; }
+.v9-sheet-body li:nth-child(4) { animation-delay: 0.09s; }
+.v9-sheet-body li:nth-child(5) { animation-delay: 0.12s; }
+.v9-sheet-body li:nth-child(6) { animation-delay: 0.15s; }
+.v9-sheet-body li:nth-child(7) { animation-delay: 0.18s; }
+.v9-sheet-body li:nth-child(8) { animation-delay: 0.21s; }
+.v9-sheet-body li:nth-child(9) { animation-delay: 0.24s; }
+.v9-sheet-body li:nth-child(10) { animation-delay: 0.27s; }
+.v9-sheet-body li:nth-child(11) { animation-delay: 0.30s; }
+.v9-sheet-body li:nth-child(12) { animation-delay: 0.33s; }
+.v9-sheet-body li:nth-child(n+13) { animation-delay: .36s; }
+.v9-roster-panel.is-from-right { animation: v9-tab-from-right .28s ease-out both; }
+.v9-roster-panel.is-from-left { animation: v9-tab-from-left .28s ease-out both; }
 .v9-main { display: grid; gap: 14px; max-width: 480px; margin: 0 auto; }
 .v9-main.has-dock { padding-bottom: calc(var(--v9-dock-h) + 28px); }
 .v9-muted { margin: 0; color: var(--v9-muted); font-size: 14px; line-height: 1.5; }
@@ -77,7 +93,7 @@ const V9_CSS = `
 .v9-hero-name { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 17px; font-weight: 900; }
 
 /* ---------- Meetup switcher: tear-off calendar ---------- */
-.v9-main.is-switching .v9-bento { opacity: .5; transition: opacity .2s; }
+.v9-main.is-switching .v9-roster-strip { opacity: .5; transition: opacity .2s; }
 .v9-cal-nav { display: flex; align-items: center; gap: 10px; margin: -10px -14px -6px -10px; padding: 10px 14px 6px 10px; touch-action: none; }
 .v9-cal-steps { display: grid; gap: 10px; }
 .v9-cal-steps button {
@@ -117,7 +133,9 @@ const V9_CSS = `
 .v9-cal-shade { position: absolute; inset: 0; background: var(--v9-ink); pointer-events: none; }
 /* The pair stands just behind the info rail: feet tuck 10px under its top
    edge (the stage keeps a 10px gap above the rail), and the rail sits on top. */
-.v9-hero-mascot { flex: none; position: relative; z-index: 3; margin: 0 -6px -6px 0; }
+.v9-hero-mascot { flex: none; position: relative; z-index: 3; display: block; margin: 0 -6px -6px 0; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.v9-mascot-pop { display: block; transform-origin: 50% 100%; }
+.v9-hop-shuttle { position: absolute; left: 50%; top: 10px; margin-left: -13px; pointer-events: none; }
 .v9-mascot { display: block; overflow: visible; }
 .v9-mascot-frame { position: relative; display: block; }
 .v9-mascot-fallback { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); }
@@ -193,7 +211,7 @@ const V9_CSS = `
 .v9-cta:not(:disabled):active { transform: translateY(4px); box-shadow: 0 0 0 var(--v9-ink); }
 .v9-cta:disabled { cursor: default; opacity: .55; }
 .v9-cta[aria-busy="true"]:disabled { opacity: .85; }
-.v9-cta:focus-visible, .v9-tile:focus-visible, .v9-dock-item:focus-visible, .v9-rail-item:focus-visible,
+.v9-cta:focus-visible, .v9-hero-mascot:focus-visible, .v9-roster-strip button:focus-visible, .v9-dock-item:focus-visible, .v9-rail-item:focus-visible,
 .v9-user-chip:focus-visible, .v9-hero-meetup:focus-visible, .v9-hero-status:focus-visible, .v9-tab:focus-visible,
 .v9-meetup-row:focus-visible, .v9-sheet-close:focus-visible { outline: 3px solid var(--v9-blue); outline-offset: 2px; }
 
@@ -218,30 +236,25 @@ const V9_CSS = `
 @keyframes v9-rally-hit-dragon { 0% { transform: rotate(-5deg); } 12%, 100% { transform: rotate(0); } }
 @keyframes v9-rally-hit-tiger { 0% { transform: rotate(5deg); } 12%, 100% { transform: rotate(0); } }
 
-/* ---------- Bento: one compact row ---------- */
-.v9-bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.v9-tile {
-  position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
-  min-width: 0; height: 70px; padding: 7px 9px; overflow: hidden; border: var(--v9-line); border-radius: 20px; box-shadow: var(--v9-shadow);
-  background: #fff; color: var(--v9-ink); cursor: pointer; text-align: left; transition: transform .08s ease, box-shadow .08s ease;
-  animation: v9-rise .34s ease-out both;
+/* ---------- Roster strip (in the hero) ---------- */
+.v9-roster-strip {
+  display: flex; align-items: stretch; margin: 10px 0 0; overflow: hidden;
+  background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 16px;
 }
-.v9-tile:active { transform: translateY(4px); box-shadow: 0 0 0 var(--v9-ink); }
-.v9-tile-label { font-size: 12px; font-weight: 900; line-height: 1.2; }
-.v9-tile-art { position: absolute; right: 4px; bottom: 5px; width: 24px; height: 24px; pointer-events: none; }
-.v9-tile-mid { font-size: 26px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
-.v9-tile.is-confirmed { grid-column: span 2; background: var(--v9-green); color: #fff; animation-delay: .04s; }
-/* The racket sticker peeks in from the corner behind the numbers. */
-.v9-tile.is-confirmed .v9-tile-art { right: -10px; bottom: -12px; width: 62px; height: 62px; transform: rotate(18deg); opacity: .95; }
-.v9-tile-main { position: relative; z-index: 1; display: grid; gap: 3px; width: 72%; min-width: 0; }
-.v9-tile-big { font-size: 26px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.v9-tile-big small { font-size: 13px; letter-spacing: 0; opacity: .85; }
-.v9-tile-remain {
-  position: absolute; top: 6px; right: 7px; padding: 0 6px; border-radius: 999px; border: 2px solid var(--v9-ink);
-  background: #fff; color: var(--v9-ink); font-size: 10px; font-weight: 900;
-}
-.v9-tile.is-waiting { background: var(--v9-yellow); animation-delay: .08s; }
-.v9-tile.is-leave { background: var(--v9-rose); animation-delay: .12s; }
+.v9-roster-strip button { border: 0; background: none; color: var(--v9-ink); cursor: pointer; text-align: left; }
+.v9-roster-strip button:active { background: #fff5e3; }
+.v9-rs-main { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px 8px 14px; }
+.v9-rs-label { flex: none; font-size: 12px; font-weight: 800; color: var(--v9-muted); }
+.v9-rs-count { flex: none; font-size: 20px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.v9-rs-count small { font-size: 12px; color: var(--v9-muted); }
+.v9-rs-main .v9-meter { flex: 1; min-width: 30px; background: var(--v9-mint); }
+.v9-rs-main .v9-meter span { background: var(--v9-green); }
+.v9-rs-remain { flex: none; padding: 0 7px; border-radius: 999px; border: 2px solid var(--v9-ink); background: var(--v9-yellow); font-size: 11px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.v9-rs-side { flex: none; display: grid; justify-items: center; align-content: center; width: 56px; border-left: 2px dashed #eadfca !important; font-size: 18px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.v9-rs-side .v9-rs-label { font-size: 11px; }
+.v9-rs-side.is-waiting { background: #fff8de; }
+.v9-rs-side.is-leave { background: #fff1ef; }
+.v9-roll { display: inline-block; min-width: .6em; }
 .v9-meter { display: block; width: 100%; height: 9px; border-radius: 999px; border: 2px solid var(--v9-ink); background: rgba(255,255,255,.35); overflow: hidden; }
 .v9-meter span { display: block; height: 100%; background: var(--v9-yellow); border-right: 2px solid var(--v9-ink); transition: width .4s ease; }
 
@@ -453,6 +466,9 @@ const V9_CSS = `
 .v9-stamp-legend { display: flex; align-items: center; gap: 3px; margin: 0; color: var(--v9-muted); font-size: 11px; font-weight: 800; }
 .v9-stamp-legend img { width: 18px; height: 18px; }
 .v9-stamp-legend img + img, .v9-stamp-legend img:nth-of-type(2) { margin-left: 6px; }
+@keyframes v9-row-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes v9-tab-from-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes v9-tab-from-left { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
 @keyframes v9-today-spin { to { transform: rotate(360deg); } }
 
 /* toast */
