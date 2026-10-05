@@ -18,11 +18,14 @@ import { v9Relative, v9ShortDate, v9Weekday } from "@/lib/v9-display";
 // page back over the top. The ▲ ▼ buttons play the same flips; tapping the
 // page opens the full list.
 
-const PAGE_TRAVEL = 110; // px of drag for a full flip
-const COMMIT = 0.35; // fraction of a flip that commits on release
+const PAGE_TRAVEL = 90; // px of drag for a full flip
+const COMMIT = 0.3; // fraction of a flip that commits on release
 const FLING = 420; // px/s release speed that commits regardless
 const HINT_KEY = "v9:calendar-hint";
-const SPRING = { type: "spring", stiffness: 320, damping: 30 } as const;
+// Springing back stays soft; a committed tear plays out slowly enough to
+// read as a page turning.
+const SPRING = { type: "spring", stiffness: 170, damping: 22 } as const;
+const TEAR = { duration: 0.62, ease: [0.3, 0.1, 0.25, 1] } as const;
 
 function CalendarPage({
   siteLabel,
@@ -116,7 +119,7 @@ export function V9MeetupNav({
       onGo(index + step);
       return;
     }
-    void animate(value, 1, { ...SPRING, restDelta: 0.01 }).then(() => onGo(index + step));
+    void animate(value, 1, TEAR).then(() => onGo(index + step));
   };
 
   const onPan = (_: PointerEvent, info: PanInfo) => {
@@ -150,15 +153,19 @@ export function V9MeetupNav({
   const event = events[index];
   if (!event) return null;
   return (
-    <div className="v9-cal-nav">
+    // The whole calendar column (page, ▲ ▼ and the space around them) takes
+    // the flip gesture, not just the page.
+    <motion.div
+      className="v9-cal-nav"
+      onPointerDownCapture={() => (panned.current = false)}
+      onPanStart={() => (panned.current = true)}
+      onPan={onPan}
+      onPanEnd={onPanEnd}
+    >
       <motion.button
         type="button"
         className="v9-cal"
         aria-label={`${v9ShortDate(event.eventDate)}，上下滑換場，點一下看全部聚會`}
-        onTapStart={() => (panned.current = false)}
-        onPanStart={() => (panned.current = true)}
-        onPan={onPan}
-        onPanEnd={onPanEnd}
         onTap={() => {
           if (!panned.current) onList();
         }}
@@ -199,13 +206,23 @@ export function V9MeetupNav({
         </span>
       </motion.button>
       <span className="v9-cal-steps">
-        <button type="button" aria-label="下一場" disabled={!hasNext} onClick={() => step(1)}>
+        <button
+          type="button"
+          aria-label="下一場"
+          disabled={!hasNext}
+          onClick={() => !panned.current && step(1)}
+        >
           ▲
         </button>
-        <button type="button" aria-label="上一場" disabled={!hasPrev} onClick={() => step(-1)}>
+        <button
+          type="button"
+          aria-label="上一場"
+          disabled={!hasPrev}
+          onClick={() => !panned.current && step(-1)}
+        >
           ▼
         </button>
       </span>
-    </div>
+    </motion.div>
   );
 }

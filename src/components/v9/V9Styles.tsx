@@ -47,15 +47,14 @@ const V9_CSS = `
   content: ""; position: absolute; right: -40px; top: 54px; width: 190px; height: 190px; border-radius: 50%;
   background: var(--v9-yellow); border: 3px solid var(--v9-ink); opacity: .9;
 }
-.v9-hero > * { position: relative; }
+.v9-hero > :not(.v9-preview-badge) { position: relative; }
 .v9-hero-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .v9-logo { flex: none; }
-.v9-brand { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .v9-brand-name { margin: 0; line-height: 0; }
-.v9-lockup { display: block; height: 44px; width: auto; }
-.v9-preview-badge {
-  display: inline-block; padding: 0 6px; border-radius: 999px; border: 2px solid var(--v9-ink);
-  background: var(--v9-blue); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .06em;
+.v9-lockup { display: block; height: 56px; width: auto; margin: -4px 0 -2px -4px; }
+.v9-hero > .v9-preview-badge {
+  position: absolute; top: 0; left: 24px; z-index: 5; padding: 0 7px 1px; border: 2px solid var(--v9-ink); border-top: 0;
+  border-radius: 0 0 8px 8px; background: var(--v9-blue); color: #fff; font-size: 8px; font-weight: 800; letter-spacing: .08em; line-height: 1.4;
 }
 .v9-user-chip {
   display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 62%;
@@ -79,7 +78,7 @@ const V9_CSS = `
 
 /* ---------- Meetup switcher: tear-off calendar ---------- */
 .v9-main.is-switching .v9-bento { opacity: .5; transition: opacity .2s; }
-.v9-cal-nav { display: flex; align-items: center; gap: 10px; }
+.v9-cal-nav { display: flex; align-items: center; gap: 10px; margin: -10px -14px -6px -10px; padding: 10px 14px 6px 10px; touch-action: none; }
 .v9-cal-steps { display: grid; gap: 10px; }
 .v9-cal-steps button {
   display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: 50%;
@@ -118,7 +117,7 @@ const V9_CSS = `
 .v9-cal-shade { position: absolute; inset: 0; background: var(--v9-ink); pointer-events: none; }
 /* The pair stands just behind the info rail: feet tuck 10px under its top
    edge (the stage keeps a 10px gap above the rail), and the rail sits on top. */
-.v9-hero-mascot { flex: none; position: relative; z-index: 1; margin: 0 -6px -22px 0; }
+.v9-hero-mascot { flex: none; position: relative; z-index: 3; margin: 0 -6px -6px 0; }
 .v9-mascot { display: block; overflow: visible; }
 .v9-mascot-frame { position: relative; display: block; }
 .v9-mascot-fallback { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); }
@@ -220,7 +219,7 @@ const V9_CSS = `
 @keyframes v9-rally-hit-tiger { 0% { transform: rotate(5deg); } 12%, 100% { transform: rotate(0); } }
 
 /* ---------- Bento: one compact row ---------- */
-.v9-bento { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.v9-bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .v9-tile {
   position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
   min-width: 0; height: 70px; padding: 7px 9px; overflow: hidden; border: var(--v9-line); border-radius: 20px; box-shadow: var(--v9-shadow);
@@ -243,12 +242,6 @@ const V9_CSS = `
 }
 .v9-tile.is-waiting { background: var(--v9-yellow); animation-delay: .08s; }
 .v9-tile.is-leave { background: var(--v9-rose); animation-delay: .12s; }
-.v9-tile.is-bill {
-  align-items: center; justify-content: center; gap: 2px;
-  background: var(--v9-ink); color: #fff; box-shadow: 0 4px 0 #8a7b6c; animation-delay: .16s;
-}
-.v9-tile.is-bill .v9-tile-art { position: static; width: 30px; height: 30px; }
-.v9-tile.is-bill:active { box-shadow: 0 0 0 #8a7b6c; }
 .v9-meter { display: block; width: 100%; height: 9px; border-radius: 999px; border: 2px solid var(--v9-ink); background: rgba(255,255,255,.35); overflow: hidden; }
 .v9-meter span { display: block; height: 100%; background: var(--v9-yellow); border-right: 2px solid var(--v9-ink); transition: width .4s ease; }
 

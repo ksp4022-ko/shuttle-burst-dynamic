@@ -95,16 +95,15 @@ export function V9Hero({
 
   return (
     <section className="v9-hero" aria-label="聚會控制台">
+      {/* Dev route marker until V9 launches (CLAUDE.md): a tag on the card's
+          top edge, out of the layout. */}
+      <span className="v9-preview-badge" data-v9-preview-badge>
+        PREVIEW
+      </span>
       <div className="v9-hero-top">
-        <div className="v9-brand">
-          <h1 className="v9-brand-name">
-            <V9Lockup height={44} />
-          </h1>
-          {/* Dev route marker until V9 launches (CLAUDE.md). */}
-          <span className="v9-preview-badge" data-v9-preview-badge>
-            PREVIEW
-          </span>
-        </div>
+        <h1 className="v9-brand-name">
+          <V9Lockup height={56} />
+        </h1>
         {authLoading ? (
           <span className="v9-user-chip is-muted">確認中…</span>
         ) : signedIn ? (
@@ -231,18 +230,14 @@ export function V9Bento({
   remainCount,
   waitingCount,
   leaveCount,
-  signedIn,
   onRoster,
-  onBill,
 }: {
   confirmedCount: number;
   maxPeople: number;
   remainCount: number;
   waitingCount: number;
   leaveCount: number;
-  signedIn: boolean;
   onRoster: (tab: V9RosterTab) => void;
-  onBill: () => void;
 }) {
   const fill = maxPeople > 0 ? Math.min(100, (confirmedCount / maxPeople) * 100) : 0;
   const icon = (name: string, size: number) => (
@@ -254,7 +249,7 @@ export function V9Bento({
       height={size}
     />
   );
-  // One compact row (5 columns) so the whole home fits above the Dock. The
+  // One compact row (4 columns) so the whole home fits above the Dock. The
   // stickers match the roster sheet's empty states: racket 正取, shuttle tube
   // 備取, water bottle 請假.
   return (
@@ -287,15 +282,6 @@ export function V9Bento({
         {icon("gear-bottle", 28)}
         <span className="v9-tile-label">請假</span>
         <span className="v9-tile-mid">{leaveCount}</span>
-      </button>
-      <button
-        type="button"
-        className="v9-tile is-bill"
-        onClick={onBill}
-        aria-label={signedIn ? "我的帳單" : "我的帳單（登入後查看）"}
-      >
-        {icon("fee", 34)}
-        <span className="v9-tile-label">帳單</span>
       </button>
     </section>
   );

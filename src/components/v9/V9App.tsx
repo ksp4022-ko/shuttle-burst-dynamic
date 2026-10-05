@@ -449,9 +449,7 @@ export function V9App() {
               remainCount={roster.summary.remainCount}
               waitingCount={waiting.length}
               leaveCount={(roster.fixedLeave || []).length}
-              signedIn={signedIn}
               onRoster={openRoster}
-              onBill={() => setSheet("bill")}
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
