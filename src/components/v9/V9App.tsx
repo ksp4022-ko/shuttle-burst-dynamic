@@ -560,12 +560,7 @@ export function V9App() {
             </ul>
           </V9Sheet>
 
-          <V9Sheet
-            open={sheet === "me"}
-            title="我的球員卡"
-            subtitle={`${siteName}羽球`}
-            onClose={closeSheet}
-          >
+          <V9Sheet open={sheet === "me"} title="我的球員卡" onClose={closeSheet}>
             {auth.loading ? (
               <p className="v9-muted">確認 LINE 登入中…</p>
             ) : !signedIn ? (

@@ -5,13 +5,16 @@ import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { V9_STATUS_LABEL, v9ShortDate, v9Weekday } from "@/lib/v9-display";
 import { V9Icon } from "./V9Icons";
 
-// 我的球員卡 (Dock 我的): who I am, this meetup, and the 本季出席 stamp card.
-// Display only -- every state comes from the identity / roster / the shared
+// 我的球員卡 (Dock 我的): one card -- jersey + name, a stats strip (本場 /
+// 費用 / 本季出席), the 本季出席 stamp card, and 我的帳單 as its footer.
+// Display only: every state comes from the identity / roster / the shared
 // season-progress hook. A stamp is not proof of attendance: like V8, a
 // "normal" mark only means the date passed without a leave.
 
 type SeasonProgress = Extract<V8SeasonProgress, { eligible: true }>;
 type StampKind = "attended" | "leave" | "today" | "future";
+
+const ICONS = `${import.meta.env.BASE_URL}v9/icons/`;
 
 function stampKind(event: V8SeasonProgressEvent, today: string): StampKind {
   if (event.state === "leave" || event.onLeave) return "leave";
@@ -60,8 +63,42 @@ function byMonth(events: V8SeasonProgressEvent[]) {
   return months;
 }
 
+// Stamp art: 128px squares with the 96px circle centred (the 休 stamp's
+// zzz pokes out), shown at 44px so every circle reads the same size.
+function Stamp({
+  kind,
+  delay,
+  reduceMotion,
+}: {
+  kind: StampKind;
+  delay: number;
+  reduceMotion: boolean;
+}) {
+  if (kind === "future") return <span className="v9-stamp-empty" />;
+  if (kind === "today") {
+    return (
+      <span className="v9-stamp-today">
+        <img src={`${ICONS}stamp-today.webp`} alt="" width={50} height={50} />
+      </span>
+    );
+  }
+  return (
+    <motion.img
+      className="v9-stamp-art"
+      src={`${ICONS}stamp-${kind}.webp`}
+      alt=""
+      width={44}
+      height={44}
+      style={{ rotate: kind === "attended" ? -6 : 5 }}
+      initial={reduceMotion ? false : { scale: 1.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 520, damping: 18, delay }}
+    />
+  );
+}
+
 function SeasonStamps({ progress }: { progress: SeasonProgress }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = Boolean(useReducedMotion());
   const kinds = progress.events.map((event) => stampKind(event, progress.today));
   const todayIndex = kinds.findIndex((kind) => kind === "today");
   const nextIndex = todayIndex >= 0 ? todayIndex : kinds.findIndex((kind) => kind === "future");
@@ -71,18 +108,8 @@ function SeasonStamps({ progress }: { progress: SeasonProgress }) {
   let order = 0;
 
   return (
-    <section className="v9-pc-section v9-season" aria-label="本季出席">
-      <div className="v9-season-head">
-        <div>
-          <h3>本季出席</h3>
-          <p className="v9-season-cheer">{cheerLine(progress, kinds)}</p>
-        </div>
-        <p className="v9-season-count">
-          <strong>{progress.count}</strong>
-          <span>/{progress.total}</span>
-        </p>
-      </div>
-
+    <section className="v9-season" aria-label="本季出席">
+      <p className="v9-season-cheer">{cheerLine(progress, kinds)}</p>
       <div className="v9-stamp-card">
         {byMonth(progress.events).map((group) => (
           <div key={group.month} className="v9-stamp-row">
@@ -92,7 +119,7 @@ function SeasonStamps({ progress }: { progress: SeasonProgress }) {
                 const index = progress.events.indexOf(event);
                 const kind = kinds[index] ?? "future";
                 const stamped = kind === "attended" || kind === "leave";
-                const delay = stamped ? 0.15 + order++ * 0.07 : 0;
+                const delay = stamped ? 0.12 + order++ * 0.07 : 0;
                 return (
                   <button
                     key={event.eventId}
@@ -103,28 +130,7 @@ function SeasonStamps({ progress }: { progress: SeasonProgress }) {
                     onClick={() => setPicked(index)}
                   >
                     <span className="v9-stamp-slot">
-                      {stamped ? (
-                        <motion.span
-                          className={`v9-stamp is-${kind}`}
-                          style={{ rotate: (index % 3) * 9 - 9 }}
-                          initial={reduceMotion ? false : { scale: 1.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ type: "spring", stiffness: 520, damping: 18, delay }}
-                        >
-                          {kind === "attended" ? (
-                            <img
-                              src={`${import.meta.env.BASE_URL}v9/mascot/shuttle.webp`}
-                              alt=""
-                              width={20}
-                              height={17}
-                            />
-                          ) : (
-                            "休"
-                          )}
-                        </motion.span>
-                      ) : (
-                        <span className={`v9-stamp is-${kind}`} />
-                      )}
+                      <Stamp kind={kind} delay={delay} reduceMotion={reduceMotion} />
                     </span>
                     <span className="v9-stamp-day">{Number(event.date.split("-")[2])}</span>
                   </button>
@@ -134,30 +140,20 @@ function SeasonStamps({ progress }: { progress: SeasonProgress }) {
           </div>
         ))}
       </div>
-
-      {pickedEvent && pickedKind && (
-        <p className="v9-stamp-detail" aria-live="polite">
-          <strong>
+      <div className="v9-stamp-foot">
+        {pickedEvent && pickedKind && (
+          <p className="v9-stamp-detail" aria-live="polite">
             {v9ShortDate(pickedEvent.date)} {v9Weekday(pickedEvent.date)}
-          </strong>
-          <span className={`v9-stamp-tag is-${pickedKind}`}>{STAMP_LABEL[pickedKind]}</span>
+            <span className={`v9-stamp-tag is-${pickedKind}`}>{STAMP_LABEL[pickedKind]}</span>
+          </p>
+        )}
+        <p className="v9-stamp-legend" aria-hidden="true">
+          <img src={`${ICONS}stamp-attended.webp`} alt="" width={18} height={18} />
+          出席
+          <img src={`${ICONS}stamp-leave.webp`} alt="" width={18} height={18} />
+          請假
         </p>
-      )}
-
-      <p className="v9-stamp-legend" aria-hidden="true">
-        <span>
-          <i className="v9-stamp is-attended is-mini" /> 出席
-        </span>
-        <span>
-          <i className="v9-stamp is-leave is-mini">休</i> 請假
-        </span>
-        <span>
-          <i className="v9-stamp is-today is-mini" /> 今天
-        </span>
-        <span>
-          <i className="v9-stamp is-future is-mini" /> 未到
-        </span>
-      </p>
+      </div>
     </section>
   );
 }
@@ -183,16 +179,17 @@ export function V9PlayerCard({
       ? `${identity.status === "confirmed" ? "正取" : "備取"}第 ${rank} 位`
       : V9_STATUS_LABEL[identity.status];
   const fee = fixed ? "含在季費內" : typeof event.tempFee === "number" ? `$${event.tempFee}` : "—";
+  const season = fixed ? progress : null;
 
   return (
-    <div className="v9-pc">
-      <section className="v9-pc-id">
+    <article className="v9-pc">
+      <header className="v9-pc-head">
         <img
           className={`v9-pc-jersey${fixed ? "" : " is-temp"}`}
-          src={`${import.meta.env.BASE_URL}v9/icons/jersey.webp`}
+          src={`${ICONS}jersey.webp`}
           alt=""
-          width={76}
-          height={76}
+          width={60}
+          height={60}
         />
         <div className="v9-pc-who">
           <p className="v9-pc-name">{identity.name}</p>
@@ -200,31 +197,43 @@ export function V9PlayerCard({
             <span className={`v9-badge ${fixed ? "is-blue" : "is-orange"}`}>
               {fixed ? "季打" : "臨打"}
             </span>
-            <span className="v9-badge is-green">LINE 已登入</span>
+            <span className="v9-badge is-green">LINE ✓</span>
+            <a className="v9-pc-switch" href={v8Href}>
+              不是我？
+            </a>
           </p>
-          <a className="v9-pc-switch" href={v8Href}>
-            不是我？到 V8 改身份 <V9Icon name="chevron" size={12} />
-          </a>
         </div>
-      </section>
+      </header>
 
-      <section className="v9-pc-section v9-pc-now" aria-label="本場">
-        <p className="v9-pc-now-date">
-          本場 <strong>{v9ShortDate(event.eventDate)}</strong> {v9Weekday(event.eventDate)}
-        </p>
-        <div className="v9-pc-now-row">
-          <span className={`v9-chip-status is-${identity.status}`}>{position}</span>
-          <span className="v9-pc-fee">{fee}</span>
+      <dl className={`v9-pc-stats${season ? "" : " is-two"}`}>
+        <div>
+          <dt>
+            本場 {v9ShortDate(event.eventDate)} {v9Weekday(event.eventDate)}
+          </dt>
+          <dd className={`is-${identity.status}`}>{position}</dd>
         </div>
-      </section>
+        <div>
+          <dt>費用</dt>
+          <dd>{fee}</dd>
+        </div>
+        {season && (
+          <div>
+            <dt>本季出席</dt>
+            <dd className="v9-pc-count">
+              {season.count}
+              <small>/{season.total}</small>
+            </dd>
+          </div>
+        )}
+      </dl>
 
-      {fixed && progress && <SeasonStamps progress={progress} />}
+      {season && <SeasonStamps progress={season} />}
 
-      <button type="button" className="v9-pc-link" onClick={onBill}>
-        <img src={`${import.meta.env.BASE_URL}v9/icons/fee.webp`} alt="" width={32} height={32} />
+      <button type="button" className="v9-pc-bill" onClick={onBill}>
+        <img src={`${ICONS}fee.webp`} alt="" width={28} height={28} />
         <span>我的帳單</span>
         <V9Icon name="chevron" size={16} />
       </button>
-    </div>
+    </article>
   );
 }

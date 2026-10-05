@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
@@ -87,6 +88,8 @@ export function V9Hero({
     },
     { icon: "court", label: "場地", value: courtLabel(event) },
   ];
+  // eventNote may carry a literal "\\n" for V8's two-line sun; one line here.
+  const note = (event.eventNote || "").replace(/\\n|\n/g, " ").trim();
   const statusHint =
     identity?.signupType === "fixed" && identity.status === "waiting" ? "請假會退出備取" : "";
 
@@ -156,6 +159,12 @@ export function V9Hero({
               <dd>{item.value}</dd>
             </div>
           ))}
+          {note && (
+            <div className="v9-rail-note">
+              <dt>備註</dt>
+              <dd>{note}</dd>
+            </div>
+          )}
         </dl>
       </div>
 
@@ -236,39 +245,57 @@ export function V9Bento({
   onBill: () => void;
 }) {
   const fill = maxPeople > 0 ? Math.min(100, (confirmedCount / maxPeople) * 100) : 0;
+  const icon = (name: string, size: number) => (
+    <img
+      className="v9-tile-art"
+      src={`${import.meta.env.BASE_URL}v9/icons/${name}.webp`}
+      alt=""
+      width={size}
+      height={size}
+    />
+  );
+  // One compact row (5 columns) so the whole home fits above the Dock. The
+  // stickers match the roster sheet's empty states: racket 正取, shuttle tube
+  // 備取, water bottle 請假.
   return (
     <section className="v9-bento" aria-label="狀態總覽">
-      <button type="button" className="v9-tile is-confirmed" onClick={() => onRoster("confirmed")}>
-        <span className="v9-tile-label">正取</span>
-        <span className="v9-tile-big">
-          {confirmedCount}
-          <small>/{maxPeople}</small>
+      <button
+        type="button"
+        className="v9-tile is-confirmed"
+        onClick={() => onRoster("confirmed")}
+        aria-label={`正取 ${confirmedCount} / ${maxPeople}，剩 ${remainCount} 位`}
+      >
+        {icon("gear-racket", 40)}
+        <span className="v9-tile-main">
+          <span className="v9-tile-label">正取</span>
+          <span className="v9-tile-big">
+            {confirmedCount}
+            <small>/{maxPeople}</small>
+          </span>
+          <span className="v9-meter" aria-hidden="true">
+            <span style={{ width: `${fill}%` }} />
+          </span>
         </span>
-        <span className="v9-meter" aria-hidden="true">
-          <span style={{ width: `${fill}%` }} />
-        </span>
+        <span className="v9-tile-remain">剩 {remainCount}</span>
       </button>
       <button type="button" className="v9-tile is-waiting" onClick={() => onRoster("waiting")}>
+        {icon("gear-holder", 28)}
         <span className="v9-tile-label">備取</span>
         <span className="v9-tile-mid">{waitingCount}</span>
       </button>
       <button type="button" className="v9-tile is-leave" onClick={() => onRoster("leave")}>
+        {icon("gear-bottle", 28)}
         <span className="v9-tile-label">請假</span>
         <span className="v9-tile-mid">{leaveCount}</span>
       </button>
-      <button type="button" className="v9-tile is-remain" onClick={() => onRoster("confirmed")}>
-        <span className="v9-tile-label">剩餘名額</span>
-        <span className="v9-tile-mid">{remainCount}</span>
-      </button>
-      <button type="button" className="v9-tile is-bill" onClick={onBill}>
-        <span className="v9-tile-icon">
-          <img src={`${import.meta.env.BASE_URL}v9/icons/fee.webp`} alt="" width={48} height={48} />
-        </span>
-        <span className="v9-tile-text">
-          <span className="v9-tile-label">我的帳單</span>
-          <span className="v9-tile-sub">{signedIn ? "本次應繳 · 點開查看" : "登入後查看"}</span>
-        </span>
-        <V9Icon name="chevron" size={18} />
+      <button
+        type="button"
+        className="v9-tile is-bill"
+        onClick={onBill}
+        aria-label={signedIn ? "我的帳單" : "我的帳單（登入後查看）"}
+      >
+        {icon("fee", 34)}
+        <span className="v9-tile-label">帳單</span>
       </button>
     </section>
   );
@@ -276,13 +303,15 @@ export function V9Bento({
 
 export type V9DockKey = "meetup" | "roster" | "proxy" | "me";
 
-// Sticker icons in public/v9/icons/dock-*.webp (96px, shown at 34px).
+// Sticker icons in public/v9/icons/dock-*.webp (96px, shown at 40px).
 const DOCK: Array<{ key: V9DockKey; label: string }> = [
   { key: "meetup", label: "聚會" },
   { key: "roster", label: "名單" },
   { key: "proxy", label: "代報" },
   { key: "me", label: "我的" },
 ];
+
+const DOCK_HINT_KEY = "v9:dock-hint";
 
 export function V9Dock({
   active,
@@ -291,13 +320,30 @@ export function V9Dock({
   active: V9DockKey | null;
   onSelect: (key: V9DockKey) => void;
 }) {
+  // Icons only; the open one spells its name. First visit this session,
+  // every name floats above its icon for a moment (and while pressed).
+  const [hint, setHint] = useState(false);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(DOCK_HINT_KEY)) return;
+      sessionStorage.setItem(DOCK_HINT_KEY, "1");
+    } catch {
+      // Storage blocked: still show the hint once.
+    }
+    setHint(true);
+    const timer = window.setTimeout(() => setHint(false), 2600);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
-    <nav className="v9-dock" aria-label="快速功能">
+    <nav className={`v9-dock${hint ? " is-hint" : ""}`} aria-label="快速功能">
       {DOCK.map((item) => (
         <button
           key={item.key}
           type="button"
           className={`v9-dock-item${active === item.key ? " is-active" : ""}`}
+          data-label={item.label}
+          aria-label={item.label}
           aria-pressed={active === item.key}
           onClick={() => onSelect(item.key)}
         >
@@ -305,10 +351,12 @@ export function V9Dock({
             className="v9-dock-icon"
             src={`${import.meta.env.BASE_URL}v9/icons/dock-${item.key}.webp`}
             alt=""
-            width={34}
-            height={34}
+            width={40}
+            height={40}
           />
-          <span>{item.label}</span>
+          <span className="v9-dock-label" aria-hidden="true">
+            {item.label}
+          </span>
         </button>
       ))}
     </nav>
