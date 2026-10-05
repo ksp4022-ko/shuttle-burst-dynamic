@@ -1169,8 +1169,7 @@ export const previewDefaults: PreviewControls = {
   activeInfoWaitlistScale: 2,
   activeInfoWaitlistRotation: 2,
   activeInfoAltSlotX: 29,
-  // Y 38 -> 34 (user-tuned value; Cfm 2026-10-03 with the home-screen app).
-  activeInfoAltSlotY: 34,
+  activeInfoAltSlotY: 38,
   activeInfoAltSlotScale: 2,
   activeInfoAltSlotRotation: 2,
   // Ema count text (2026-09-11) -- FontSize 20/MaxWidth 60/Align center/
@@ -1601,7 +1600,7 @@ const v8TestActiveTuningDefaults = {
   // 尚缺/候補 shared slot as tuned on the user's Safari (2026-10-03); the
   // home-screen app has its own storage and fell back to Y 38.
   activeInfoAltSlotX: 29,
-  activeInfoAltSlotY: 34,
+  activeInfoAltSlotY: 38,
   activeInfoAltSlotScale: 2,
   activeInfoAltSlotRotation: 2,
   activeInfoNeededShow: true,
@@ -2023,12 +2022,14 @@ function markPreviewControlsMigration(name: string) {
 // tuned for the old art no longer fit -- drop every saved activeSunBadge*
 // key once so each device picks up the new user-tuned defaults.
 const CLOUD_BADGE_V2_MIGRATION = "activeSunBadgeCloudV2";
+const ACTIVE_INFO_ALT_SLOT_POSITION_MIGRATION = "activeInfoAltSlotPositionV2";
 const V8TEST_ACTIVE_TUNING_MIGRATION = "v8testActiveB3LayerLayoutV1";
 
 function migrateSavedControls(saved: Partial<PreviewControls>) {
   const pending = [
     STATUS_MARK_POSITION_MIGRATION,
     CLOUD_BADGE_V2_MIGRATION,
+    ACTIVE_INFO_ALT_SLOT_POSITION_MIGRATION,
     ...(isV8TestRoute() ? [V8TEST_ACTIVE_TUNING_MIGRATION] : []),
   ].filter((name) => !hasPreviewControlsMigration(name));
   if (pending.length === 0) return saved;
@@ -2042,6 +2043,9 @@ function migrateSavedControls(saved: Partial<PreviewControls>) {
     for (const key of Object.keys(migrated)) {
       if (key.startsWith("activeSunBadge")) delete (migrated as Record<string, unknown>)[key];
     }
+  }
+  if (pending.includes(ACTIVE_INFO_ALT_SLOT_POSITION_MIGRATION)) {
+    delete migrated.activeInfoAltSlotY;
   }
   if (pending.includes(V8TEST_ACTIVE_TUNING_MIGRATION)) {
     for (const key of Object.keys(v8TestActiveTuningDefaults) as (keyof PreviewControls)[]) {
@@ -2064,6 +2068,7 @@ export function loadSavedControls(): PreviewControls {
     if (!raw) {
       markPreviewControlsMigration(STATUS_MARK_POSITION_MIGRATION);
       markPreviewControlsMigration(CLOUD_BADGE_V2_MIGRATION);
+      markPreviewControlsMigration(ACTIVE_INFO_ALT_SLOT_POSITION_MIGRATION);
       if (isV8TestRoute()) markPreviewControlsMigration(V8TEST_ACTIVE_TUNING_MIGRATION);
       return defaults;
     }
