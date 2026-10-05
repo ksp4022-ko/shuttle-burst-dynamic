@@ -254,12 +254,25 @@ function V9RosterStrip({
         type="button"
         className="v9-rs-main"
         onClick={() => onRoster("confirmed")}
-        aria-label={`正取 ${counts.confirmed} / ${counts.max}，剩 ${counts.remain} 位`}
+        aria-label={
+          counts.remain > 0
+            ? `正取 ${counts.confirmed} / ${counts.max}，還缺 ${counts.remain} 位`
+            : `正取 ${counts.confirmed} / ${counts.max}，額滿`
+        }
       >
-        <span className="v9-rs-label">正取</span>
-        <span className="v9-rs-count">
-          <V9Roll value={counts.confirmed} />
-          <small>/{counts.max}</small>
+        <span className="v9-rs-top">
+          <span className="v9-rs-label">正取</span>
+          <span className="v9-rs-count">
+            <V9Roll value={counts.confirmed} />
+            <small>/{counts.max}</small>
+          </span>
+          {counts.remain > 0 ? (
+            <span className="v9-rs-remain">
+              缺 <V9Roll value={counts.remain} />
+            </span>
+          ) : (
+            <span className="v9-rs-remain is-full">額滿</span>
+          )}
         </span>
         <span className="v9-meter" aria-hidden="true">
           <motion.span
@@ -267,9 +280,6 @@ function V9RosterStrip({
             animate={{ width: `${fill}%` }}
             transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
           />
-        </span>
-        <span className="v9-rs-remain">
-          剩 <V9Roll value={counts.remain} />
         </span>
       </button>
       <button type="button" className="v9-rs-side is-waiting" onClick={() => onRoster("waiting")}>
@@ -379,7 +389,7 @@ function V9HeroMascot({
 
 export type V9DockKey = "meetup" | "roster" | "proxy" | "me";
 
-// Sticker icons in public/v9/icons/dock-*.webp (96px, shown at 40px).
+// Sticker icons in public/v9/icons/dock-*.webp (96px, shown at 62px).
 const DOCK: Array<{ key: V9DockKey; label: string }> = [
   { key: "meetup", label: "聚會" },
   { key: "roster", label: "名單" },
@@ -427,8 +437,8 @@ export function V9Dock({
             className="v9-dock-icon"
             src={`${import.meta.env.BASE_URL}v9/icons/dock-${item.key}.webp`}
             alt=""
-            width={40}
-            height={40}
+            width={62}
+            height={62}
           />
           <span className="v9-dock-label" aria-hidden="true">
             {item.label}

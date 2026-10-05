@@ -48,13 +48,14 @@ const V9_CSS = `
 .v9-roster-panel.is-from-right { animation: v9-tab-from-right .28s ease-out both; }
 .v9-roster-panel.is-from-left { animation: v9-tab-from-left .28s ease-out both; }
 .v9-main { display: grid; gap: 14px; max-width: 480px; margin: 0 auto; }
-.v9-main.has-dock { padding-bottom: calc(var(--v9-dock-h) + 28px); }
+.v9-main.has-dock { padding-bottom: calc(var(--v9-dock-h) + 46px); }
 /* The hero reaches down to just above the Dock (capped on tall screens);
-   the extra height spreads evenly between its rows. */
+   the extra height all goes to the roster strip, the other rows stay tight. */
 .v9-main.has-dock > .v9-hero {
-  display: flex; flex-direction: column; justify-content: space-between;
-  min-height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 48px), 640px);
+  display: flex; flex-direction: column;
+  min-height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 54px), 640px);
 }
+.v9-main.has-dock > .v9-hero > .v9-roster-strip { flex: 1 0 auto; max-height: 130px; }
 .v9-muted { margin: 0; color: var(--v9-muted); font-size: 14px; line-height: 1.5; }
 .v9-icon { flex: none; display: block; }
 
@@ -184,7 +185,7 @@ const V9_CSS = `
 .v9-rail-item dd { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 
 .v9-hero-status {
-  display: flex; align-items: center; gap: 10px; width: 100%; margin: 10px 0 0; padding: 9px 10px 9px 14px;
+  display: flex; align-items: center; gap: 10px; width: 100%; margin: 8px 0 0; padding: 9px 10px 9px 14px;
   background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 16px; cursor: pointer; text-align: left;
 }
 .v9-status-label { flex: none; font-size: 12px; font-weight: 800; color: var(--v9-muted); }
@@ -205,8 +206,8 @@ const V9_CSS = `
 .v9-chip-status.is-unregistered { color: var(--v9-muted); }
 
 .v9-cta {
-  display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 12px;
-  min-height: 56px; padding: 12px 18px; border: var(--v9-line); border-radius: 20px; box-shadow: var(--v9-shadow);
+  display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 8px;
+  min-height: 52px; padding: 10px 18px; border: var(--v9-line); border-radius: 20px; box-shadow: var(--v9-shadow);
   font-size: 19px; font-weight: 900; letter-spacing: .04em; text-decoration: none; color: var(--v9-ink);
   background: #fff; cursor: pointer; transition: transform .08s ease, box-shadow .08s ease;
 }
@@ -245,20 +246,28 @@ const V9_CSS = `
 
 /* ---------- Roster strip (in the hero) ---------- */
 .v9-roster-strip {
-  display: flex; align-items: stretch; margin: 10px 0 0; overflow: hidden;
-  background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 16px;
+  display: flex; align-items: stretch; min-height: 70px; margin: 8px 0 0; overflow: hidden;
+  background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 18px;
 }
 .v9-roster-strip button { border: 0; background: none; color: var(--v9-ink); cursor: pointer; text-align: left; }
 .v9-roster-strip button:active { background: #fff5e3; }
-.v9-rs-main { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px 8px 14px; }
-.v9-rs-label { flex: none; font-size: 12px; font-weight: 800; color: var(--v9-muted); }
-.v9-rs-count { flex: none; font-size: 20px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
-.v9-rs-count small { font-size: 12px; color: var(--v9-muted); }
-.v9-rs-main .v9-meter { flex: 1; min-width: 30px; background: var(--v9-mint); }
+/* 正取 count and 缺 N on top, the meter full width below. */
+.v9-rs-main { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; padding: 8px 12px 8px 14px; }
+.v9-rs-top { display: flex; align-items: center; gap: 8px; }
+.v9-rs-label { flex: none; font-size: 14px; font-weight: 900; color: var(--v9-muted); }
+.v9-rs-count { flex: none; font-size: 30px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.v9-rs-count small { font-size: 15px; color: var(--v9-muted); }
+.v9-rs-main .v9-meter { height: 14px; background: var(--v9-mint); }
 .v9-rs-main .v9-meter span { background: var(--v9-green); }
-.v9-rs-remain { flex: none; padding: 0 7px; border-radius: 999px; border: 2px solid var(--v9-ink); background: var(--v9-yellow); font-size: 11px; font-weight: 900; font-variant-numeric: tabular-nums; }
-.v9-rs-side { flex: none; display: grid; justify-items: center; align-content: center; width: 56px; border-left: 2px dashed #eadfca !important; font-size: 18px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; }
-.v9-rs-side .v9-rs-label { font-size: 11px; }
+/* 缺 N: how many seats are still open, loud on purpose. */
+.v9-rs-remain {
+  flex: none; margin-left: auto; padding: 2px 10px; border-radius: 999px; border: 2.5px solid var(--v9-ink);
+  background: var(--v9-red); color: #fff; font-size: 17px; font-weight: 900; line-height: 1.2; font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 0 var(--v9-ink);
+}
+.v9-rs-remain.is-full { background: var(--v9-green); }
+.v9-roster-strip .v9-rs-side { flex: none; display: grid; justify-items: center; align-content: center; gap: 2px; width: 66px; border-left: 2px dashed #eadfca !important; font-size: 26px; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.v9-roster-strip .v9-rs-side .v9-rs-label { font-size: 13px; }
 .v9-rs-side.is-waiting { background: #fff8de; }
 .v9-rs-side.is-leave { background: #fff1ef; }
 .v9-roll { display: inline-block; min-width: .6em; }
@@ -272,19 +281,24 @@ const V9_CSS = `
   display: flex; gap: 4px; padding: 6px;
   background: #fff; border: var(--v9-line); border-radius: 26px; box-shadow: var(--v9-shadow);
 }
+/* Big sticker icons sit on the bottom of their slot and pop ~18px out of
+   the Dock's top edge. */
 .v9-dock-item {
-  position: relative; flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0;
+  position: relative; flex: 1 1 0; display: flex; align-items: flex-end; justify-content: center; gap: 2px; min-width: 0;
   padding: 0; border: 0; border-radius: 18px; background: transparent; color: var(--v9-ink); cursor: pointer;
   transition: flex-grow .25s ease, background-color .15s ease;
 }
 .v9-dock-item.is-active { flex-grow: 1.7; background: var(--v9-yellow); box-shadow: inset 0 0 0 2.5px var(--v9-ink); }
-.v9-dock-icon { display: block; flex: none; width: 40px; height: 40px; transition: transform .15s ease; }
-.v9-dock-item.is-active .v9-dock-icon { transform: rotate(-6deg); }
-.v9-dock-label { max-width: 0; overflow: hidden; opacity: 0; font-size: 13px; font-weight: 900; white-space: nowrap; transition: max-width .25s ease, opacity .2s ease; }
+.v9-dock-icon {
+  display: block; flex: none; width: 60px; height: 60px; margin-bottom: 2px;
+  filter: drop-shadow(0 3px 0 rgba(31, 26, 23, .18)); transition: transform .2s ease;
+}
+.v9-dock-item.is-active .v9-dock-icon { transform: translateY(-4px) rotate(-6deg); }
+.v9-dock-label { align-self: center; max-width: 0; overflow: hidden; opacity: 0; font-size: 13px; font-weight: 900; white-space: nowrap; transition: max-width .25s ease, opacity .2s ease; }
 .v9-dock-item.is-active .v9-dock-label { max-width: 3em; opacity: 1; }
 /* Name bubble while pressed, and for every icon on the first visit. */
 .v9-dock-item::after {
-  content: attr(data-label); position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translate(-50%, 4px);
+  content: attr(data-label); position: absolute; left: 50%; bottom: calc(100% + 26px); transform: translate(-50%, 4px);
   padding: 2px 8px; border: 2px solid var(--v9-ink); border-radius: 999px; background: #fff; color: var(--v9-ink);
   font-size: 12px; font-weight: 900; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease;
 }
