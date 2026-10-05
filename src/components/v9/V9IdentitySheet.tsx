@@ -34,7 +34,6 @@ export function V9IdentityContent({
   const [claims, setClaims] = useState<V8ClaimOption[] | null>(null);
   const [claimError, setClaimError] = useState("");
   const [claimRound, setClaimRound] = useState(0);
-  const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<V8ClaimOption | null>(null);
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -60,17 +59,20 @@ export function V9IdentityContent({
     };
   }, [mode, token, siteId, eventId, claimRound]);
 
-  const shown = useMemo(() => {
-    const list = claims || [];
-    const q = query.trim();
-    return q ? list.filter((member) => member.name.includes(q)) : list;
-  }, [claims, query]);
+  // Only names still open to claim. The Worker decides who that is; if a
+  // row ever carries the season endpoint's claimedByOther flag, hide it.
+  const shown = useMemo(
+    () =>
+      (claims || []).filter(
+        (member) => !(member as V8ClaimOption & { claimedByOther?: boolean }).claimedByOther,
+      ),
+    [claims],
+  );
 
   const choose = (next: Mode) => {
     setMode(next);
     setError("");
     setPicked(null);
-    setQuery("");
     setName(next === "temp" ? lineName : "");
   };
 
@@ -155,15 +157,8 @@ export function V9IdentityContent({
 
       {mode === "fixed" ? (
         <>
-          <p className="v9-id-lead">從季打名單選你的名字：</p>
-          <input
-            className="v9-input v9-id-search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜尋名字"
-            aria-label="搜尋季打名單"
-          />
-          <div className="v9-id-claims" role="listbox" aria-label="季打名單">
+          <p className="v9-id-lead">從尚未認領的季打名單選你的名字：</p>
+          <div className="v9-id-claims" role="listbox" aria-label="尚未認領的季打名單">
             {claims === null ? (
               <p className="v9-muted">讀取季打名單中…</p>
             ) : claimError ? (
@@ -198,9 +193,7 @@ export function V9IdentityContent({
               ))
             ) : (
               <p className="v9-muted">
-                {query
-                  ? "找不到這個名字"
-                  : "目前沒有讀到本季季打名單，請確認這場聚會已綁定賽季名單。"}
+                目前沒有可認領的季打名字。名字已被認領但確定是你本人，請聯繫管理員。
               </p>
             )}
           </div>
