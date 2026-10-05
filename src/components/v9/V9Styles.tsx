@@ -49,6 +49,12 @@ const V9_CSS = `
 .v9-roster-panel.is-from-left { animation: v9-tab-from-left .28s ease-out both; }
 .v9-main { display: grid; gap: 14px; max-width: 480px; margin: 0 auto; }
 .v9-main.has-dock { padding-bottom: calc(var(--v9-dock-h) + 28px); }
+/* The hero reaches down to just above the Dock (capped on tall screens);
+   the extra height spreads evenly between its rows. */
+.v9-main.has-dock > .v9-hero {
+  display: flex; flex-direction: column; justify-content: space-between;
+  min-height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 48px), 640px);
+}
 .v9-muted { margin: 0; color: var(--v9-muted); font-size: 14px; line-height: 1.5; }
 .v9-icon { flex: none; display: block; }
 
@@ -67,6 +73,7 @@ const V9_CSS = `
 .v9-hero-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .v9-logo { flex: none; }
 .v9-brand-name { margin: 0; line-height: 0; }
+.v9-logo-btn { display: block; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 30% 60%; }
 .v9-lockup { display: block; height: 56px; width: auto; margin: -4px 0 -2px -4px; }
 .v9-hero > .v9-preview-badge {
   position: absolute; top: 0; left: 24px; z-index: 5; padding: 0 7px 1px; border: 2px solid var(--v9-ink); border-top: 0;

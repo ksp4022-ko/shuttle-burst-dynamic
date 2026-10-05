@@ -54,6 +54,7 @@ export function V9Hero({
   onMe,
   counts,
   onRoster,
+  onLogoParty,
 }: {
   siteName: string;
   event: AlphaEvent;
@@ -76,6 +77,7 @@ export function V9Hero({
   onMe: () => void;
   counts: { confirmed: number; max: number; remain: number; waiting: number; leave: number };
   onRoster: (tab: V9RosterTab) => void;
+  onLogoParty: () => void;
 }) {
   const display = parseV8MeetupDisplay(event.name);
   const meetupName = display.displayName || event.name;
@@ -108,7 +110,7 @@ export function V9Hero({
       </span>
       <div className="v9-hero-top">
         <h1 className="v9-brand-name">
-          <V9Lockup height={56} />
+          <V9LogoButton onParty={onLogoParty} />
         </h1>
         {authLoading ? (
           <span className="v9-user-chip is-muted">確認中…</span>
@@ -282,6 +284,37 @@ function V9RosterStrip({
   );
 }
 
+// Logo easter egg: a tap squashes and wobbles it like jelly; five quick
+// taps throw the confetti party.
+function V9LogoButton({ onParty }: { onParty: () => void }) {
+  const reduceMotion = useReducedMotion();
+  const [scope, animateScope] = useAnimate<HTMLButtonElement>();
+  const taps = useRef<number[]>([]);
+  const tap = () => {
+    const now = Date.now();
+    taps.current = [...taps.current.filter((at) => now - at < 2000), now];
+    if (taps.current.length >= 5) {
+      taps.current = [];
+      onParty();
+    }
+    if (reduceMotion) return;
+    void animateScope(
+      scope.current,
+      {
+        scaleX: [1, 1.18, 0.9, 1.06, 0.98, 1],
+        scaleY: [1, 0.82, 1.1, 0.95, 1.02, 1],
+        rotate: [0, -3, 3, -1, 0, 0],
+      },
+      { duration: 0.6, ease: "easeOut" },
+    );
+  };
+  return (
+    <button ref={scope} type="button" className="v9-logo-btn" aria-label="OnCourt" onClick={tap}>
+      <V9Lockup height={56} />
+    </button>
+  );
+}
+
 // The mascot pops in when its state changes, and a tap makes the pair hop
 // and bat a shuttle up -- just for fun.
 function V9HeroMascot({
@@ -335,7 +368,7 @@ function V9HeroMascot({
           width={26}
           height={22}
           initial={{ y: 0, x: 0, rotate: -90, opacity: 1 }}
-          animate={{ y: -90, x: (id % 2 ? 1 : -1) * 18, rotate: 270, opacity: [1, 1, 0] }}
+          animate={{ y: -58, x: (id % 2 ? 1 : -1) * 34, rotate: 270, opacity: [1, 1, 0] }}
           transition={{ duration: 0.9, ease: "easeOut" }}
           onAnimationComplete={() => setShuttles((list) => list.filter((item) => item !== id))}
         />

@@ -450,6 +450,7 @@ export function V9App() {
                 leave: (roster.fixedLeave || []).length,
               }}
               onRoster={openRoster}
+              onLogoParty={celebrate}
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
