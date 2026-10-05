@@ -82,3 +82,4 @@ Reply format (user preference):
 - `/v9` uses the official backend: signup / leave / proxy actions are real.
 - Storage: V9-owned keys use the `v9:` prefix (`v9StorageKey`). LINE token/identity are shared with V8.
 - Verification and report format: same as V8 above.
+- Pending workflow: when the user raises an issue and says "pending", record it in `docs/V9_PENDING.md` with the next `V9-NNN` number and change no code; discuss a plan, record it once the user confirms, and implement only after the user says "開工".
