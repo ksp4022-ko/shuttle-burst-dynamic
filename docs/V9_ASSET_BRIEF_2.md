@@ -17,12 +17,12 @@
 | 2 | v9-app-icon.png | ✅ 不採用 ChatGPT 版（重畫了角色、安全區不足）；Claude 用 STEP 1 合成 `icon-180/192/512.png`（88%）、`icon-maskable-512.png`（80%）、`favicon-32.png` |
 | 3 | v9-lockup.png | ✅ → `public/v9/brand/lockup.webp`，Hero 左上顯示 44px 高 |
 | 4 | mascot-busy.png | ✅ 改規格：6 格 sprite 不採用（球拍消失、角色漂移、球頭方向錯）→ 改成靜態 `mascot-rally.png`＋`shuttle.png`，Claude 用 CSS 讓球以拋物線來回飛（`V9Busy.tsx`、`public/v9/mascot/rally-*.webp`、`shuttle.webp`） |
-| 5 | state-error.png | ⏳ 下一張 |
-| 6 | state-empty.png | ⏳ （可改用現成的鞋子＋球袋貼紙，視情況跳過） |
-| 7 | dock-meetup.png | ⏳ |
-| 8 | dock-roster.png | ⏳ |
-| 9 | dock-proxy.png | ⏳ |
-| 10 | dock-me.png | ⏳ |
+| 5 | state-error.png | ✅ → `public/v9/state/error.webp`（讀取失敗畫面） |
+| 6 | state-empty.png | ✅ → `public/v9/state/empty.webp`（沒有開放中聚會） |
+| 7 | dock-meetup.png | ✅ → `public/v9/icons/dock-meetup.webp`（Dock，取代線條 icon） |
+| 8 | dock-roster.png | ✅ → `public/v9/icons/dock-roster.webp`（Dock，取代線條 icon） |
+| 9 | dock-proxy.png | ✅ → `public/v9/icons/dock-proxy.webp`（Dock，取代線條 icon） |
+| 10 | dock-me.png | ✅ → `public/v9/icons/dock-me.webp`（Dock，取代線條 icon） |
 
 ## 使用方式
 

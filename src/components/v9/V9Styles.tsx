@@ -194,6 +194,7 @@ const V9_CSS = `
 
 .v9-hero-message { display: grid; justify-items: center; gap: 8px; text-align: center; padding: 28px 18px; }
 .v9-hero-message::before { display: none; }
+.v9-state-art { display: block; width: 200px; height: auto; margin-bottom: 4px; }
 .v9-hero-message h2 { margin: 0; font-size: 18px; font-weight: 900; }
 /* ---------- Loading (rally) ---------- */
 .v9-busy-card { min-height: 420px; align-content: center; }
@@ -255,7 +256,9 @@ const V9_CSS = `
   display: grid; justify-items: center; align-content: center; gap: 1px; border: 0; border-radius: 18px;
   background: transparent; cursor: pointer; font-size: 11px; font-weight: 800; transition: background-color .15s ease;
 }
-.v9-dock-item.is-active { background: var(--v9-orange); box-shadow: inset 0 0 0 2.5px var(--v9-ink); }
+.v9-dock-item.is-active { background: var(--v9-yellow); box-shadow: inset 0 0 0 2.5px var(--v9-ink); }
+.v9-dock-icon { display: block; width: 34px; height: 34px; margin-bottom: -2px; transition: transform .15s ease; }
+.v9-dock-item.is-active .v9-dock-icon { transform: translateY(-1px) scale(1.08) rotate(-4deg); }
 .v9-dock-item:active { transform: scale(.94); }
 
 /* ---------- Bottom sheet ---------- */

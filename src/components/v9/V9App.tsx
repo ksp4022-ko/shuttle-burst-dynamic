@@ -7,7 +7,6 @@ import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Busy } from "./V9Busy";
-import { V9Logo } from "./V9Logo";
 import { V9Styles } from "./V9Styles";
 import { V9Bento, V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
 import { v9ShortDate, v9Weekday } from "@/lib/v9-display";
@@ -382,7 +381,13 @@ export function V9App() {
       {phase === "load-error" && (
         <main className="v9-main">
           <section className="v9-hero v9-hero-message">
-            <V9Logo size={56} />
+            <img
+              className="v9-state-art"
+              src={`${import.meta.env.BASE_URL}v9/state/error.webp`}
+              alt=""
+              width={200}
+              height={134}
+            />
             <h2>讀取聚會失敗</h2>
             <p className="v9-muted">{flow.error}</p>
             <button
@@ -399,8 +404,15 @@ export function V9App() {
       {!loading && phase !== "load-error" && events.length === 0 && (
         <main className="v9-main">
           <section className="v9-hero v9-hero-message">
-            <V9Logo size={56} />
+            <img
+              className="v9-state-art"
+              src={`${import.meta.env.BASE_URL}v9/state/empty.webp`}
+              alt=""
+              width={200}
+              height={102}
+            />
             <h2>目前沒有開放中的聚會</h2>
+            <p className="v9-muted">龍虎先坐著等，開放報名後就會出現在這裡。</p>
           </section>
         </main>
       )}

@@ -1,7 +1,7 @@
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
-import { V9Icon, type V9IconName } from "./V9Icons";
+import { V9Icon } from "./V9Icons";
 import { V9Lockup } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
 import { V9MeetupNav } from "./V9MeetupNav";
@@ -276,11 +276,12 @@ export function V9Bento({
 
 export type V9DockKey = "meetup" | "roster" | "proxy" | "me";
 
-const DOCK: Array<{ key: V9DockKey; icon: V9IconName; label: string }> = [
-  { key: "meetup", icon: "date", label: "聚會" },
-  { key: "roster", icon: "list", label: "名單" },
-  { key: "proxy", icon: "proxy", label: "代報" },
-  { key: "me", icon: "me", label: "我的" },
+// Sticker icons in public/v9/icons/dock-*.webp (96px, shown at 34px).
+const DOCK: Array<{ key: V9DockKey; label: string }> = [
+  { key: "meetup", label: "聚會" },
+  { key: "roster", label: "名單" },
+  { key: "proxy", label: "代報" },
+  { key: "me", label: "我的" },
 ];
 
 export function V9Dock({
@@ -300,7 +301,13 @@ export function V9Dock({
           aria-pressed={active === item.key}
           onClick={() => onSelect(item.key)}
         >
-          <V9Icon name={item.icon} size={22} />
+          <img
+            className="v9-dock-icon"
+            src={`${import.meta.env.BASE_URL}v9/icons/dock-${item.key}.webp`}
+            alt=""
+            width={34}
+            height={34}
+          />
           <span>{item.label}</span>
         </button>
       ))}
