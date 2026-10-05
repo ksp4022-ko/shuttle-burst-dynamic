@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion, useAnimate, useReducedMotion } from "motion/react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
@@ -397,8 +397,8 @@ const DOCK: Array<{ key: V9DockKey; label: string }> = [
   { key: "me", label: "我的" },
 ];
 
-const DOCK_HINT_KEY = "v9:dock-hint";
-
+// Big sticker icons popping out of the bar, each with its name in a bubble
+// underneath; they breathe in turn (CSS) and the open one turns yellow.
 export function V9Dock({
   active,
   onSelect,
@@ -406,29 +406,13 @@ export function V9Dock({
   active: V9DockKey | null;
   onSelect: (key: V9DockKey) => void;
 }) {
-  // Icons only; the open one spells its name. First visit this session,
-  // every name floats above its icon for a moment (and while pressed).
-  const [hint, setHint] = useState(false);
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem(DOCK_HINT_KEY)) return;
-      sessionStorage.setItem(DOCK_HINT_KEY, "1");
-    } catch {
-      // Storage blocked: still show the hint once.
-    }
-    setHint(true);
-    const timer = window.setTimeout(() => setHint(false), 2600);
-    return () => window.clearTimeout(timer);
-  }, []);
-
   return (
-    <nav className={`v9-dock${hint ? " is-hint" : ""}`} aria-label="快速功能">
+    <nav className="v9-dock" aria-label="快速功能">
       {DOCK.map((item) => (
         <button
           key={item.key}
           type="button"
           className={`v9-dock-item${active === item.key ? " is-active" : ""}`}
-          data-label={item.label}
           aria-label={item.label}
           aria-pressed={active === item.key}
           onClick={() => onSelect(item.key)}

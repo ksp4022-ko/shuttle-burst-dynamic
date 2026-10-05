@@ -18,7 +18,7 @@ const V9_CSS = `
   --v9-rose: #ffe1dd;
   --v9-line: 3px solid var(--v9-ink);
   --v9-shadow: 0 4px 0 var(--v9-ink);
-  --v9-dock-h: 60px;
+  --v9-dock-h: 46px;
   min-height: 100dvh;
   background:
     radial-gradient(circle at 12% 4%, rgba(255, 212, 92, .28) 0 120px, transparent 121px),
@@ -48,12 +48,12 @@ const V9_CSS = `
 .v9-roster-panel.is-from-right { animation: v9-tab-from-right .28s ease-out both; }
 .v9-roster-panel.is-from-left { animation: v9-tab-from-left .28s ease-out both; }
 .v9-main { display: grid; gap: 14px; max-width: 480px; margin: 0 auto; }
-.v9-main.has-dock { padding-bottom: calc(var(--v9-dock-h) + 46px); }
+.v9-main.has-dock { padding-bottom: calc(var(--v9-dock-h) + 58px); }
 /* The hero reaches down to just above the Dock (capped on tall screens);
    the extra height all goes to the roster strip, the other rows stay tight. */
 .v9-main.has-dock > .v9-hero {
   display: flex; flex-direction: column;
-  min-height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 54px), 640px);
+  min-height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 66px), 640px);
 }
 .v9-main.has-dock > .v9-hero > .v9-roster-strip { flex: 1 0 auto; max-height: 130px; }
 .v9-muted { margin: 0; color: var(--v9-muted); font-size: 14px; line-height: 1.5; }
@@ -274,35 +274,49 @@ const V9_CSS = `
 .v9-meter { display: block; width: 100%; height: 9px; border-radius: 999px; border: 2px solid var(--v9-ink); background: rgba(255,255,255,.35); overflow: hidden; }
 .v9-meter span { display: block; height: 100%; background: var(--v9-yellow); border-right: 2px solid var(--v9-ink); transition: width .4s ease; }
 
-/* ---------- Sticky Dock: icons only; the open one shows its name ---------- */
+/* ---------- Sticky Dock ---------- */
 .v9-dock {
   position: fixed; z-index: 40; left: 50%; bottom: max(12px, env(safe-area-inset-bottom));
   transform: translateX(-50%); width: min(calc(100% - 32px), 420px); height: var(--v9-dock-h);
-  display: flex; gap: 4px; padding: 6px;
-  background: #fff; border: var(--v9-line); border-radius: 26px; box-shadow: var(--v9-shadow);
+  display: flex; gap: 4px; padding: 4px 6px 3px;
+  background: #fff; border: var(--v9-line); border-radius: 24px; box-shadow: var(--v9-shadow);
 }
-/* Big sticker icons sit on the bottom of their slot and pop ~18px out of
-   the Dock's top edge. */
+/* Each slot: a big sticker icon popping out of the Dock's top edge, with
+   its name in a small bubble tucked over the icon's lower edge. The open
+   one turns yellow. */
 .v9-dock-item {
-  position: relative; flex: 1 1 0; display: flex; align-items: flex-end; justify-content: center; gap: 2px; min-width: 0;
+  position: relative; flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 1px; min-width: 0;
   padding: 0; border: 0; border-radius: 18px; background: transparent; color: var(--v9-ink); cursor: pointer;
-  transition: flex-grow .25s ease, background-color .15s ease;
 }
-.v9-dock-item.is-active { flex-grow: 1.7; background: var(--v9-yellow); box-shadow: inset 0 0 0 2.5px var(--v9-ink); }
 .v9-dock-icon {
-  display: block; flex: none; width: 60px; height: 60px; margin-bottom: 2px;
+  display: block; flex: none; width: 60px; height: 60px; margin: -30px 0 -13px;
   filter: drop-shadow(0 3px 0 rgba(31, 26, 23, .18)); transition: transform .2s ease;
 }
-.v9-dock-item.is-active .v9-dock-icon { transform: translateY(-4px) rotate(-6deg); }
-.v9-dock-label { align-self: center; max-width: 0; overflow: hidden; opacity: 0; font-size: 13px; font-weight: 900; white-space: nowrap; transition: max-width .25s ease, opacity .2s ease; }
-.v9-dock-item.is-active .v9-dock-label { max-width: 3em; opacity: 1; }
-/* Name bubble while pressed, and for every icon on the first visit. */
-.v9-dock-item::after {
-  content: attr(data-label); position: absolute; left: 50%; bottom: calc(100% + 26px); transform: translate(-50%, 4px);
-  padding: 2px 8px; border: 2px solid var(--v9-ink); border-radius: 999px; background: #fff; color: var(--v9-ink);
-  font-size: 12px; font-weight: 900; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease;
+.v9-dock-item.is-active .v9-dock-icon { transform: translateY(-4px) rotate(-6deg) scale(1.06); }
+.v9-dock-label {
+  position: relative; z-index: 1; padding: 0 8px; border: 2px solid var(--v9-ink); border-radius: 999px; background: #fff;
+  font-size: 11px; font-weight: 900; line-height: 1.35; white-space: nowrap; transition: background-color .15s ease;
 }
-.v9-dock-item:not(.is-active):active::after, .v9-dock.is-hint .v9-dock-item:not(.is-active)::after { opacity: 1; transform: translate(-50%, 0); }
+.v9-dock-item.is-active .v9-dock-label { background: var(--v9-yellow); }
+/* Idle breathing: each icon sinks onto its name (the bubble squashes a
+   little), then springs back up; the four take turns. Uses the individual
+   translate / scale properties so it stacks with the open item's transform. */
+.v9-dock-icon { transform-origin: 50% 100%; animation: v9-dock-breathe 3.2s ease-in-out infinite; }
+.v9-dock-label { transform-origin: 50% 100%; animation: v9-dock-squash 3.2s ease-in-out infinite; }
+.v9-dock-item:nth-child(2) .v9-dock-icon, .v9-dock-item:nth-child(2) .v9-dock-label { animation-delay: .4s; }
+.v9-dock-item:nth-child(3) .v9-dock-icon, .v9-dock-item:nth-child(3) .v9-dock-label { animation-delay: .8s; }
+.v9-dock-item:nth-child(4) .v9-dock-icon, .v9-dock-item:nth-child(4) .v9-dock-label { animation-delay: 1.2s; }
+@keyframes v9-dock-breathe {
+  0%, 46%, 100% { translate: 0 0; scale: 1 1; }
+  58% { translate: 0 5px; scale: 1.05 .9; }
+  72% { translate: 0 -3px; scale: .97 1.04; }
+  84% { translate: 0 0; scale: 1 1; }
+}
+@keyframes v9-dock-squash {
+  0%, 50%, 100% { scale: 1 1; }
+  60% { scale: 1.06 .86; }
+  74% { scale: 1 1; }
+}
 .v9-dock-item:active { transform: scale(.94); }
 
 /* ---------- Bottom sheet ---------- */
