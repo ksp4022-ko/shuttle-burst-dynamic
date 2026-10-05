@@ -38,14 +38,6 @@ export const V9_STATUS_LABEL: Record<CurrentIdentity["status"], string> = {
   unregistered: "尚未報名",
 };
 
-export type V9MascotMood = "happy" | "wait" | "rest";
-
-export function v9MascotMood(identity: CurrentIdentity | null): V9MascotMood {
-  if (!identity) return "happy";
-  if (identity.status === "leave") return "rest";
-  return identity.status === "confirmed" ? "happy" : "wait";
-}
-
 // 本場狀態 line, e.g. "正取第 1 位 · 季打". 排位 is the row's place in the
 // API-ordered list.
 export function v9StatusLine(identity: CurrentIdentity, rank: number | null) {
@@ -55,8 +47,7 @@ export function v9StatusLine(identity: CurrentIdentity, rank: number | null) {
   return `${V9_STATUS_LABEL[identity.status]} · ${role}`;
 }
 
-// Which sticker animation (public/v9/mascot/*.webp) a status uses; null keeps
-// the CSS/SVG duo until that state's art is ready.
+// Which sticker animation (public/v9/mascot/*.webp) a status uses.
 export function v9MascotSprite(
   identity: CurrentIdentity | null,
 ): "confirmed" | "open" | "waiting" | "leave" | null {

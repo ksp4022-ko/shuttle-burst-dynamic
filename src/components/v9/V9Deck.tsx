@@ -8,7 +8,7 @@ import { V9Lockup } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
 import { V9MeetupNav } from "./V9MeetupNav";
 import { V9Roll } from "./V9Roll";
-import { v9MascotMood, v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
+import { v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
 import type { V9RosterTab } from "./V9RosterSheet";
 
 // Home Control Deck: Hero (calendar + mascot, info rail, roster strip,
@@ -143,7 +143,6 @@ export function V9Hero({
           </div>
           <V9HeroMascot
             sprite={identity && !switching ? v9MascotSprite(identity) : "guest"}
-            mood={v9MascotMood(switching ? null : identity)}
             badge={!switching && identity?.status === "waiting" && rank ? `#${rank}` : undefined}
           />
         </div>
@@ -329,11 +328,9 @@ function V9LogoButton({ onParty }: { onParty: () => void }) {
 // and bat a shuttle up -- just for fun.
 function V9HeroMascot({
   sprite,
-  mood,
   badge,
 }: {
   sprite: Parameters<typeof V9MascotArt>[0]["sprite"];
-  mood: Parameters<typeof V9MascotArt>[0]["mood"];
   badge: string | undefined;
 }) {
   const reduceMotion = useReducedMotion();
@@ -367,7 +364,7 @@ function V9HeroMascot({
         animate={{ scale: 1, y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 380, damping: 16 }}
       >
-        <V9MascotArt sprite={sprite} mood={mood} badge={badge} />
+        <V9MascotArt sprite={sprite} badge={badge} />
       </motion.span>
       {shuttles.map((id) => (
         <motion.img
@@ -378,7 +375,7 @@ function V9HeroMascot({
           width={26}
           height={22}
           initial={{ y: 0, x: 0, rotate: -90, opacity: 1 }}
-          animate={{ y: -58, x: (id % 2 ? 1 : -1) * 34, rotate: 270, opacity: [1, 1, 0] }}
+          animate={{ y: -52, x: id % 2 ? -96 : -74, rotate: -300, opacity: [1, 1, 0] }}
           transition={{ duration: 0.9, ease: "easeOut" }}
           onAnimationComplete={() => setShuttles((list) => list.filter((item) => item !== id))}
         />

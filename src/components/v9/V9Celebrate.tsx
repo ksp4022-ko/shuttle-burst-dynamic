@@ -74,7 +74,15 @@ function makeRain(): Piece[] {
   }));
 }
 
-export function V9Celebrate({ playKey }: { playKey: number }) {
+// dismissible: a tap closes it early (the 操作成功 celebration). The logo
+// easter egg passes false so the whole party plays out.
+export function V9Celebrate({
+  playKey,
+  dismissible = true,
+}: {
+  playKey: number;
+  dismissible?: boolean;
+}) {
   const [shown, setShown] = useState<{
     key: number;
     pieces: Piece[];
@@ -114,7 +122,7 @@ export function V9Celebrate({ playKey }: { playKey: number }) {
       key={shown.key}
       className={`v9-celebrate${shown.leaving ? " is-leaving" : ""}`}
       role="presentation"
-      onClick={close}
+      onClick={dismissible ? close : undefined}
     >
       {shown.rain.map((piece) => (
         <span key={piece.id} className={`v9-confetti-rain is-${piece.shape}`} style={piece.style} />

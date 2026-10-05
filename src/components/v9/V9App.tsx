@@ -18,6 +18,7 @@ import { V9Icon } from "./V9Icons";
 import { V9Toast } from "./V9Toast";
 import { V9Celebrate } from "./V9Celebrate";
 import { V9PlayerCard } from "./V9PlayerCard";
+import { v9PreloadArt } from "./V9Mascot";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
@@ -135,10 +136,22 @@ export function V9App() {
   const [rosterTab, setRosterTab] = useState<V9RosterTab>("confirmed");
   const [proxyTab, setProxyTab] = useState<V9ProxyTab>("signup");
   // 操作成功 celebration: bumped only when the viewer lands in 正取.
-  const [celebrateKey, setCelebrateKey] = useState(0);
-  const celebrate = useCallback(() => setCelebrateKey((key) => key + 1), []);
+  const [party, setParty] = useState({ key: 0, dismissible: true });
+  const celebrate = useCallback(
+    () => setParty((last) => ({ key: last.key + 1, dismissible: true })),
+    [],
+  );
+  // Logo easter egg: same party, but a tap doesn't cut it short.
+  const logoParty = useCallback(
+    () => setParty((last) => ({ key: last.key + 1, dismissible: false })),
+    [],
+  );
   const actionLockRef = useRef(false);
   const returnFeedbackRef = useRef<{ signupId: string; name: string } | null>(null);
+
+  useEffect(() => {
+    v9PreloadArt();
+  }, []);
 
   // V9 has no intro: go straight to the flow's "active" phase so its roster
   // polling runs.
@@ -450,7 +463,7 @@ export function V9App() {
                 leave: (roster.fixedLeave || []).length,
               }}
               onRoster={openRoster}
-              onLogoParty={celebrate}
+              onLogoParty={logoParty}
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
@@ -591,7 +604,7 @@ export function V9App() {
       )}
 
       <V9Toast message={flow.notice === "已切換聚會" ? "" : flow.notice} onDone={clearNotice} />
-      <V9Celebrate playKey={celebrateKey} />
+      <V9Celebrate playKey={party.key} dismissible={party.dismissible} />
     </div>
   );
 }

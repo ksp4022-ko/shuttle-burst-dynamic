@@ -30,6 +30,11 @@ const V9_CSS = `
   -webkit-tap-highlight-color: transparent;
 }
 .v9-app *, .v9-app *::before, .v9-app *::after { box-sizing: border-box; }
+/* App feel: no long-press text selection, copy menu or image save/drag.
+   Text fields stay editable and selectable. */
+.v9-app { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.v9-app img { -webkit-user-drag: none; -webkit-touch-callout: none; }
+.v9-app input, .v9-app textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 .v9-app button { font: inherit; color: inherit; }
 /* Sheet lists: rows slide in one after another. */
 .v9-sheet-body li { animation: v9-row-in .32s ease-out both; }
@@ -52,10 +57,10 @@ const V9_CSS = `
 /* The hero reaches down to just above the Dock (capped on tall screens);
    the extra height all goes to the roster strip, the other rows stay tight. */
 .v9-main.has-dock > .v9-hero {
-  display: flex; flex-direction: column;
-  min-height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 66px), 640px);
+  display: flex; flex-direction: column; justify-content: space-between;
+  min-height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 66px), 700px);
 }
-.v9-main.has-dock > .v9-hero > .v9-roster-strip { flex: 1 0 auto; max-height: 130px; }
+.v9-main.has-dock > .v9-hero > .v9-roster-strip { flex: 1 0 auto; max-height: 150px; }
 .v9-muted { margin: 0; color: var(--v9-muted); font-size: 14px; line-height: 1.5; }
 .v9-icon { flex: none; display: block; }
 
@@ -71,7 +76,7 @@ const V9_CSS = `
   background: var(--v9-yellow); border: 3px solid var(--v9-ink); opacity: .9;
 }
 .v9-hero > :not(.v9-preview-badge) { position: relative; }
-.v9-hero-top { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.v9-hero-top { position: relative; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .v9-logo { flex: none; }
 .v9-brand-name { margin: 0; line-height: 0; }
 .v9-logo-btn { display: block; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 30% 60%; }
@@ -143,11 +148,11 @@ const V9_CSS = `
    edge (the stage keeps a 10px gap above the rail), and the rail sits on top. */
 .v9-hero-mascot { flex: none; position: relative; z-index: 3; display: block; margin: 0 -6px -6px 0; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .v9-mascot-pop { display: block; transform-origin: 50% 100%; }
-.v9-hop-shuttle { position: absolute; left: 50%; top: 10px; margin-left: -13px; pointer-events: none; }
-.v9-mascot { display: block; overflow: visible; }
+.v9-hop-shuttle { position: absolute; z-index: 5; left: 50%; top: 10px; margin-left: -13px; pointer-events: none; }
 .v9-mascot-frame { position: relative; display: block; }
-.v9-mascot-fallback { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); }
-.v9-sprite-box { position: absolute; display: block; }
+.v9-mascot-frame.is-loaded { animation: v9-fade-in .3s ease-out both; }
+@keyframes v9-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.v9-sprite-box { position: absolute; display: block; pointer-events: none; }
 .v9-sprite-box.is-sway { transform-origin: 50% 100%; animation: v9-sway 2.2s ease-in-out infinite alternate; }
 .v9-sprite-badge {
   position: absolute; transform: translate(-50%, -50%); font-size: 11px; font-weight: 900; line-height: 1;
@@ -156,10 +161,6 @@ const V9_CSS = `
 .v9-sprite {
   display: block; background-repeat: no-repeat; background-position: 0 0;
 }
-.v9-mascot-dragon { animation: v9-bob 3.4s ease-in-out infinite; transform-origin: 35px 80px; }
-.v9-mascot-tiger { animation: v9-bob 3.4s ease-in-out -1.7s infinite; transform-origin: 93px 80px; }
-.v9-mascot-shuttle { animation: v9-float 2.6s ease-in-out infinite; }
-.v9-mascot.is-rest .v9-mascot-dragon, .v9-mascot.is-rest .v9-mascot-tiger { animation-duration: 5s; }
 
 .v9-rail {
   position: relative; z-index: 2;
@@ -210,6 +211,14 @@ const V9_CSS = `
   min-height: 52px; padding: 10px 18px; border: var(--v9-line); border-radius: 20px; box-shadow: var(--v9-shadow);
   font-size: 19px; font-weight: 900; letter-spacing: .04em; text-decoration: none; color: var(--v9-ink);
   background: #fff; cursor: pointer; transition: transform .08s ease, box-shadow .08s ease;
+}
+/* .v9-app button { font: inherit } outranks .v9-cta, so the CTA type is set
+   at the same weight. White labels get an ink outline (sticker lettering). */
+.v9-app .v9-cta { font-size: 20px; font-weight: 900; letter-spacing: .08em; }
+.v9-cta.is-green, .v9-cta.is-red, .v9-cta.is-blue {
+  text-shadow:
+    -1.5px -1.5px 0 var(--v9-ink), 1.5px -1.5px 0 var(--v9-ink), -1.5px 1.5px 0 var(--v9-ink), 1.5px 1.5px 0 var(--v9-ink),
+    0 -1.5px 0 var(--v9-ink), 0 1.5px 0 var(--v9-ink), -1.5px 0 0 var(--v9-ink), 1.5px 0 0 var(--v9-ink), 0 3px 0 var(--v9-ink);
 }
 .v9-cta.is-orange { background: var(--v9-orange); }
 .v9-cta.is-green { background: var(--v9-green); color: #fff; }
@@ -543,7 +552,6 @@ const V9_CSS = `
 }
 @keyframes v9-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes v9-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-@keyframes v9-bob { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-3deg) translateY(-1px); } }
 @keyframes v9-sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
 @keyframes v9-sprite { to { background-position: var(--v9-sprite-end) 0; } }
 @keyframes v9-celebrate-pop { 0% { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
