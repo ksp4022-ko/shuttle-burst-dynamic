@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { configuredSiteId, type AlphaSignup } from "@/lib/database-alpha";
+import {
+  configuredSiteId,
+  listAlphaEvents,
+  type AlphaEvent,
+  type AlphaSignup,
+} from "@/lib/database-alpha";
 import { useHomepageFlow, type PendingAction } from "@/hooks/use-homepage-flow";
 import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
@@ -52,6 +57,15 @@ function saveSelectedEventId(siteId: string, eventId: string) {
 
 // Same page on the V8 route: LINE profile confirmation (身份確認) stays in V8
 // for the V9 MVP, like the season confirm gate (D1).
+// 尚缺 N (open seats) / 備取 N (full, people waiting) / 額滿 (full, nobody
+// waiting). Counts come straight from the API; nothing is calculated here.
+function V9SeatTag({ remain, waiting }: { remain: number; waiting: number }) {
+  if (!Number.isFinite(remain) || !Number.isFinite(waiting)) return null;
+  if (remain > 0) return <span className="v9-seat-tag is-open">尚缺 {remain}</span>;
+  if (waiting > 0) return <span className="v9-seat-tag is-waiting">備取 {waiting}</span>;
+  return <span className="v9-seat-tag is-full">額滿</span>;
+}
+
 function v8PathForCurrentPage() {
   if (typeof window === "undefined") return "/v8/";
   return window.location.pathname.replace(/\/v9(?=\/|$)/, "/v8");
@@ -334,6 +348,28 @@ export function V9App() {
   };
 
   const closeSheet = useCallback(() => setSheet(null), []);
+
+  // 切換聚會 shows 尚缺 / 備取 per meetup. The list the flow loaded at start
+  // can be stale, so opening the sheet re-reads it (same request as the
+  // flow); the meetup on screen uses its live roster instead.
+  const [meetupCounts, setMeetupCounts] = useState<Record<string, AlphaEvent>>({});
+  useEffect(() => {
+    if (sheet !== "meetup") return;
+    const controller = new AbortController();
+    listAlphaEvents(new Date().toISOString().slice(0, 10), 20, controller.signal)
+      .then((list) => setMeetupCounts(Object.fromEntries(list.map((item) => [item.id, item]))))
+      .catch(() => {
+        // Keep the counts the flow already has.
+      });
+    return () => controller.abort();
+  }, [sheet]);
+  const seatsOf = (item: AlphaEvent) => {
+    if (item.id === selectedEventId && roster) {
+      return { remain: roster.summary.remainCount, waiting: waiting.length };
+    }
+    const fresh = meetupCounts[item.id] ?? item;
+    return { remain: fresh.remainCount, waiting: fresh.waitingCount };
+  };
   // Stable, so a re-render (roster poll) doesn't restart the toast timer.
   const clearNotice = useCallback(() => setNotice(""), [setNotice]);
   // The hero itself changing is the feedback for a switch; no toast.
@@ -549,7 +585,10 @@ export function V9App() {
                         <small>{v9Weekday(item.eventDate)}</small>
                       </span>
                       <span className="v9-meetup-info">
-                        <strong>{itemDisplay.displayName || item.name}</strong>
+                        <strong>
+                          {itemDisplay.displayName || item.name}
+                          <V9SeatTag {...seatsOf(item)} />
+                        </strong>
                         <small>
                           {[
                             itemDisplay.timeLabel,

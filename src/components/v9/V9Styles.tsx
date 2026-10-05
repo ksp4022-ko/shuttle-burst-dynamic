@@ -448,7 +448,14 @@ const V9_CSS = `
 .v9-meetup-date { flex: none; display: grid; justify-items: center; min-width: 58px; padding: 4px 6px; border-radius: 12px; background: var(--v9-yellow); border: 2px solid var(--v9-ink); font-size: 18px; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .v9-meetup-date small { font-size: 11px; font-weight: 800; }
 .v9-meetup-info { flex: 1; min-width: 0; display: grid; }
-.v9-meetup-info strong { font-size: 15px; font-weight: 900; }
+.v9-meetup-info strong { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 900; }
+.v9-seat-tag {
+  flex: none; padding: 0 8px; border: 2px solid var(--v9-ink); border-radius: 999px; font-size: 12px; font-weight: 900;
+  line-height: 1.45; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.v9-seat-tag.is-open { background: var(--v9-red); color: #fff; }
+.v9-seat-tag.is-waiting { background: var(--v9-yellow); }
+.v9-seat-tag.is-full { background: var(--v9-green); color: #fff; }
 .v9-meetup-info small { font-size: 12px; color: var(--v9-muted); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* my status */
