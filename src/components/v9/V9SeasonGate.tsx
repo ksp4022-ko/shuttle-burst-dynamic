@@ -367,8 +367,8 @@ function V9SeasonPage({
           className="v9-lockup"
           src={`${BASE}v9/brand/lockup.webp`}
           alt="OnCourt"
-          width={192}
-          height={56}
+          width={202}
+          height={50}
         />
         <div className="v9-sc-title">
           <span className="v9-sc-mascot" aria-hidden="true">

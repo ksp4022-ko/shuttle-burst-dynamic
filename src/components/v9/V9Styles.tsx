@@ -80,7 +80,7 @@ const V9_CSS = `
 .v9-logo { flex: none; }
 .v9-brand-name { margin: 0; line-height: 0; }
 .v9-logo-btn { display: block; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 30% 60%; }
-.v9-lockup { display: block; height: 56px; width: auto; margin: -4px 0 -2px -4px; }
+.v9-lockup { display: block; height: 50px; width: auto; margin: 0 0 0 -4px; }
 .v9-hero > .v9-preview-badge {
   position: absolute; top: 0; left: 24px; z-index: 5; padding: 0 7px 1px; border: 2px solid var(--v9-ink); border-top: 0;
   border-radius: 0 0 8px 8px; background: var(--v9-blue); color: #fff; font-size: 8px; font-weight: 800; letter-spacing: .08em; line-height: 1.4;

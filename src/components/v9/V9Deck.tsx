@@ -319,7 +319,7 @@ function V9LogoButton({ onParty }: { onParty: () => void }) {
   };
   return (
     <button ref={scope} type="button" className="v9-logo-btn" aria-label="OnCourt" onClick={tap}>
-      <V9Lockup height={56} />
+      <V9Lockup height={50} />
     </button>
   );
 }
