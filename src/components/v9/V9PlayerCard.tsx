@@ -199,8 +199,10 @@ export function V9PlayerCard({
         <div className="v9-pc-who">
           <V9NameEdit name={identity.name} onSave={onRename} />
           <p className="v9-pc-sub">
-            <b className={fixed ? "is-fixed" : "is-temp"}>{fixed ? "季打" : "臨打"}</b>
-            <span>LINE 已綁定</span>
+            <span className={`v9-badge ${fixed ? "is-blue" : "is-orange"}`}>
+              {fixed ? "季打" : "臨打"}
+            </span>
+            <span className="v9-pc-line">LINE 已綁定</span>
           </p>
         </div>
       </header>

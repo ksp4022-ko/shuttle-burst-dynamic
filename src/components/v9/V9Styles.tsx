@@ -107,7 +107,7 @@ const V9_CSS = `
 
 /* ---------- Meetup switcher: tear-off calendar ---------- */
 .v9-main.is-switching .v9-roster-strip { opacity: .5; transition: opacity .2s; }
-.v9-cal-nav { display: flex; align-items: center; gap: 10px; margin: -10px -14px -6px -10px; padding: 10px 14px 6px 10px; touch-action: none; }
+.v9-cal-nav { position: relative; display: flex; align-items: center; gap: 10px; margin: -10px -14px -6px -10px; padding: 10px 14px 6px 10px; touch-action: none; }
 .v9-cal-steps { display: grid; gap: 10px; }
 .v9-cal-steps button {
   display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: 50%;
@@ -115,6 +115,13 @@ const V9_CSS = `
   box-shadow: 0 2px 0 var(--v9-ink); cursor: pointer;
 }
 .v9-cal-steps button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+.v9-cal-steps button.is-hint { animation: v9-cal-pulse .9s ease-in-out 3; background: var(--v9-yellow); }
+.v9-cal-hint {
+  position: absolute; left: 10px; bottom: -12px; z-index: 6; width: 128px; display: flex; justify-content: center; align-items: center; gap: 3px;
+  padding: 3px 0; border: 2px solid var(--v9-ink); border-radius: 999px; background: var(--v9-ink); color: #fff;
+  font-size: 11px; font-weight: 900; letter-spacing: .04em; white-space: nowrap; pointer-events: none;
+}
+.v9-cal-hint i { display: inline-block; font-style: normal; animation: v9-cal-arrow .8s ease-in-out infinite; }
 .v9-cal-steps button:disabled { opacity: .3; box-shadow: none; cursor: default; }
 .v9-cal {
   position: relative; display: block; flex: none; width: 128px; padding: 8px 0 0; margin-top: 2px;
@@ -504,11 +511,7 @@ const V9_CSS = `
 .v9-pc-account { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px 18px; padding: 10px 12px 12px; border-top: 2px dashed #eadfca; color: var(--v9-muted); font-size: 12px; font-weight: 800; }
 .v9-pc .v9-pc-link { padding: 2px 0; border: 0; background: none; color: var(--v9-muted); font-size: 12px; font-weight: 800; text-decoration: underline; cursor: pointer; }
 .v9-pc .v9-pc-link.is-red { color: var(--v9-red); }
-.v9-pc-sub { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--v9-muted); font-size: 13px; font-weight: 800; }
-.v9-pc-sub b { font-weight: 900; }
-.v9-pc-sub b.is-fixed { color: var(--v9-blue); }
-.v9-pc-sub b.is-temp { color: #c46f12; }
-.v9-pc-sub span::before { content: "·"; margin-right: 6px; }
+.v9-pc-sub { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--v9-muted); font-size: 12px; font-weight: 800; }
 .v9-pc-stats { display: grid; grid-template-columns: 1.25fr 1fr .8fr; margin: 0; border-bottom: 2px dashed #eadfca; }
 .v9-pc-stats.is-two { grid-template-columns: 1.25fr 1fr; }
 .v9-pc-stats div { display: grid; gap: 3px; align-content: start; min-width: 0; padding: 9px 10px; }
@@ -598,6 +601,8 @@ const V9_CSS = `
 @keyframes v9-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes v9-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes v9-sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+@keyframes v9-cal-pulse { 50% { transform: scale(1.14); } }
+@keyframes v9-cal-arrow { 50% { transform: translateY(-3px); } }
 @keyframes v9-sprite { to { background-position: var(--v9-sprite-end) 0; } }
 @keyframes v9-celebrate-pop { 0% { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes v9-confetti {

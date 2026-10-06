@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   animate,
+  AnimatePresence,
   motion,
   useMotionValue,
   useReducedMotion,
@@ -21,7 +22,11 @@ import { v9Relative, v9ShortDate, v9Weekday } from "@/lib/v9-display";
 const PAGE_TRAVEL = 90; // px of drag for a full flip
 const COMMIT = 0.3; // fraction of a flip that commits on release
 const FLING = 420; // px/s release speed that commits regardless
+// The flip hint plays once per session until the viewer has flipped a page
+// themselves; after that it never shows again on this device.
 const HINT_KEY = "v9:calendar-hint";
+const LEARNED_KEY = "v9:calendar-learned";
+const HINT_MS = 5200;
 // Springing back stays soft; a committed tear plays out slowly enough to
 // read as a page turning.
 const SPRING = { type: "spring", stiffness: 170, damping: 22 } as const;
@@ -94,22 +99,51 @@ export function V9MeetupNav({
     committing.current = false;
   }, [index, lift, drop]);
 
-  // First visit this session: the page lifts a little to show it flips.
-  useEffect(() => {
-    if (reduceMotion || !hasNext) return;
+  // Flip hint: the page lifts far enough to peek at the next date (twice),
+  // a 往上滑 chip shows under the calendar and ▲ pulses. Any touch on the
+  // calendar ends it.
+  const [hinting, setHinting] = useState(false);
+  const learn = () => {
+    setHinting(false);
     try {
-      if (sessionStorage.getItem(HINT_KEY)) return;
-      sessionStorage.setItem(HINT_KEY, "1");
+      localStorage.setItem(LEARNED_KEY, "1");
+    } catch {
+      // Storage blocked: the hint just shows again next session.
+    }
+  };
+  useEffect(() => {
+    if (!hasNext) return;
+    try {
+      if (localStorage.getItem(LEARNED_KEY) || sessionStorage.getItem(HINT_KEY)) return;
     } catch {
       // Storage blocked: just show the hint.
     }
-    const timer = window.setTimeout(() => {
-      void animate(lift, [0, 0.22, 0], { duration: 0.9, ease: "easeInOut" });
+    const start = window.setTimeout(() => {
+      // Marked as shown only once it really plays (a remount before then
+      // must not swallow it).
+      try {
+        sessionStorage.setItem(HINT_KEY, "1");
+      } catch {
+        // ignore
+      }
+      setHinting(true);
+      if (!reduceMotion) {
+        void animate(lift, [0, 0.42, 0.42, 0, 0, 0.42, 0.42, 0], {
+          duration: 2.6,
+          times: [0, 0.16, 0.3, 0.46, 0.56, 0.72, 0.86, 1],
+          ease: "easeInOut",
+        });
+      }
     }, 700);
-    return () => window.clearTimeout(timer);
+    const end = window.setTimeout(() => setHinting(false), 700 + HINT_MS);
+    return () => {
+      window.clearTimeout(start);
+      window.clearTimeout(end);
+    };
   }, [reduceMotion, hasNext, lift]);
 
   const settle = (value: MotionValue<number>, commit: boolean, step: 1 | -1) => {
+    if (commit) learn();
     if (!commit) {
       void animate(value, 0, SPRING);
       return;
@@ -157,7 +191,10 @@ export function V9MeetupNav({
     // the flip gesture, not just the page.
     <motion.div
       className="v9-cal-nav"
-      onPointerDownCapture={() => (panned.current = false)}
+      onPointerDownCapture={() => {
+        panned.current = false;
+        setHinting(false);
+      }}
       onPanStart={() => (panned.current = true)}
       onPan={onPan}
       onPanEnd={onPanEnd}
@@ -209,6 +246,7 @@ export function V9MeetupNav({
         <button
           type="button"
           aria-label="下一場"
+          className={hinting ? "is-hint" : undefined}
           disabled={!hasNext}
           onClick={() => !panned.current && step(1)}
         >
@@ -223,6 +261,20 @@ export function V9MeetupNav({
           ▼
         </button>
       </span>
+      <AnimatePresence>
+        {hinting && (
+          <motion.span
+            className="v9-cal-hint"
+            aria-hidden="true"
+            initial={{ opacity: 0, y: 6, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 320, damping: 22 }}
+          >
+            <i>↑</i>往上滑 換下一場
+          </motion.span>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
