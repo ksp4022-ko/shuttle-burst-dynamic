@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption } from "@/lib/v8-line-auth";
 import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
+import { useV9Test } from "./useV9Test";
 
 // LINE identity in V9 (V9-006, temp-first). Same requests as V8 ACTIVE's
 // profile step -- 季打 claim a name from the season list, 臨打 give the name
@@ -23,6 +24,8 @@ function V9ClaimPicker({
   picked,
   disabled,
   onPick,
+  emptyCard = false,
+  onEmpty,
 }: {
   token: string;
   siteId: string;
@@ -30,6 +33,9 @@ function V9ClaimPicker({
   picked: V8ClaimOption | null;
   disabled: boolean;
   onPick: (member: V8ClaimOption) => void;
+  // V9-015: an empty list shows the 都已認領 card instead of the plain line.
+  emptyCard?: boolean;
+  onEmpty?: (empty: boolean) => void;
 }) {
   const [claims, setClaims] = useState<V8ClaimOption[] | null>(null);
   const [claimError, setClaimError] = useState("");
@@ -64,6 +70,22 @@ function V9ClaimPicker({
       }),
     [claims],
   );
+  const empty = claims !== null && !claimError && shown.length === 0;
+  useEffect(() => {
+    onEmpty?.(empty);
+  }, [empty, onEmpty]);
+
+  if (empty && emptyCard) {
+    return (
+      <div className="v9-id-empty" role="status">
+        <img src={`${import.meta.env.BASE_URL}v9/state/empty.webp`} alt="" width={88} height={45} />
+        <div>
+          <strong>本季季打名字都已認領</strong>
+          <p>如果你是季打、但名字被別人領走了，請聯絡管理員。</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="v9-id-claims" role="listbox" aria-label="尚未認領的季打名單">
@@ -111,13 +133,22 @@ function V9ClaimForm({
   eventId,
   submitLabel,
   onConfirmed,
+  tempAction,
+  tempOnlyWhenEmpty = false,
 }: {
   token: string;
   siteId: string;
   eventId: string;
   submitLabel: string;
   onConfirmed: (identity: V8LineIdentity) => Promise<void> | void;
+  // 「我是臨打」: a small link under the list; the main button when the
+  // list is empty (V9-015).
+  tempAction?: { label: string; onClick: () => void } | undefined;
+  tempOnlyWhenEmpty?: boolean;
 }) {
+  const next = useV9Test();
+  const [empty, setEmpty] = useState(false);
+  const isEmpty = next && empty;
   const [picked, setPicked] = useState<V8ClaimOption | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -143,7 +174,7 @@ function V9ClaimForm({
 
   return (
     <>
-      <p className="v9-id-lead">選取你的名字</p>
+      {!isEmpty && <p className="v9-id-lead">選取你的名字</p>}
       <V9ClaimPicker
         token={token}
         siteId={siteId}
@@ -154,17 +185,31 @@ function V9ClaimForm({
           setPicked(member);
           setError("");
         }}
+        emptyCard={next}
+        onEmpty={setEmpty}
       />
       {error && <p className="v9-id-error">{error}</p>}
-      <button
-        type="button"
-        className="v9-cta is-blue"
-        disabled={!picked || submitting}
-        aria-busy={submitting}
-        onClick={() => void submit()}
-      >
-        {submitting ? "確認中…" : picked ? `${submitLabel}：${picked.name}` : "先選取你的名字"}
-      </button>
+      {!isEmpty && (
+        <button
+          type="button"
+          className="v9-cta is-blue"
+          disabled={!picked || submitting}
+          aria-busy={submitting}
+          onClick={() => void submit()}
+        >
+          {submitting ? "確認中…" : picked ? `${submitLabel}：${picked.name}` : "先選取你的名字"}
+        </button>
+      )}
+      {tempAction &&
+        (isEmpty ? (
+          <button type="button" className="v9-cta is-orange" onClick={tempAction.onClick}>
+            {tempAction.label}
+          </button>
+        ) : tempOnlyWhenEmpty ? null : (
+          <button type="button" className="v9-id-switch" onClick={tempAction.onClick}>
+            {tempAction.label}
+          </button>
+        ))}
     </>
   );
 }
@@ -254,6 +299,8 @@ export function V9JoinContent({
           eventId={eventId}
           submitLabel="我是"
           onConfirmed={onClaimed}
+          tempAction={{ label: "我是臨打", onClick: () => setMode("temp") }}
+          tempOnlyWhenEmpty
         />
       </div>
     );
@@ -315,6 +362,7 @@ export function V9RepickContent({
   // Absent when there is no identity to go back to.
   onCancel?: (() => void) | undefined;
 }) {
+  const next = useV9Test();
   const wasFixed = lineIdentity.identityType === "fixed";
   const [mode, setMode] = useState<"fixed" | "temp">("fixed");
   const [name, setName] = useState(
@@ -344,7 +392,7 @@ export function V9RepickContent({
 
   return (
     <div className="v9-id">
-      {onCancel && <p className="v9-id-hint">確認送出前，目前的身份都不會改變。</p>}
+      {onCancel && !next && <p className="v9-id-hint">確認送出前，目前的身份都不會改變。</p>}
       {mode === "fixed" ? (
         <>
           <V9ClaimForm
@@ -353,10 +401,11 @@ export function V9RepickContent({
             eventId={eventId}
             submitLabel="改成"
             onConfirmed={onConfirmed}
+            tempAction={{
+              label: next ? "我是臨打" : "我不在季打名單（臨打）",
+              onClick: () => setMode("temp"),
+            }}
           />
-          <button type="button" className="v9-id-switch" onClick={() => setMode("temp")}>
-            我不在季打名單（臨打）
-          </button>
         </>
       ) : (
         <>

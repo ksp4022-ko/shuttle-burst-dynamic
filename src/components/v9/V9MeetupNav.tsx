@@ -33,6 +33,7 @@ const TEAR = { duration: 1, ease: [0.45, 0, 0.25, 1] } as const;
 
 function CalendarPage({
   siteLabel,
+  siteBadge = false,
   event,
   rotate,
   shade,
@@ -40,6 +41,8 @@ function CalendarPage({
   className = "",
 }: {
   siteLabel: string;
+  // V9-016: the site name as a bold sign with a location pin.
+  siteBadge?: boolean;
   event: AlphaEvent | undefined;
   rotate?: MotionValue<number>;
   shade?: MotionValue<number>;
@@ -54,7 +57,23 @@ function CalendarPage({
       className={`v9-cal-page ${className}`}
       style={rotate ? { rotateX: rotate, transformPerspective: 360 } : {}}
     >
-      <span className={`v9-cal-head${relative === "已結束" ? " is-past" : ""}`}>{siteLabel}</span>
+      <span
+        className={`v9-cal-head${relative === "已結束" ? " is-past" : ""}${siteBadge ? " is-site" : ""}`}
+      >
+        {siteBadge && (
+          <svg className="v9-cal-pin" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+            <path
+              d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.6"
+              strokeLinejoin="round"
+            />
+            <circle cx="12" cy="10" r="2.3" fill="currentColor" />
+          </svg>
+        )}
+        {siteLabel}
+      </span>
       <span className="v9-cal-date">{v9ShortDate(event.eventDate)}</span>
       <span className="v9-cal-foot">
         {v9Weekday(event.eventDate)} · {relative}
@@ -67,6 +86,7 @@ function CalendarPage({
 
 export function V9MeetupNav({
   siteLabel,
+  siteBadge = false,
   events,
   index,
   onGo,
@@ -74,6 +94,7 @@ export function V9MeetupNav({
   hintPaused = false,
 }: {
   siteLabel: string;
+  siteBadge?: boolean;
   events: AlphaEvent[];
   index: number;
   onGo: (index: number) => void;
@@ -233,11 +254,13 @@ export function V9MeetupNav({
           {/* Underneath: the next meetup, revealed as the top page lifts. */}
           <CalendarPage
             siteLabel={siteLabel}
+            siteBadge={siteBadge}
             event={events[index + 1] ?? event}
             className="is-under"
           />
           <CalendarPage
             siteLabel={siteLabel}
+            siteBadge={siteBadge}
             event={event}
             rotate={liftRotate}
             shade={liftShade}
@@ -248,6 +271,7 @@ export function V9MeetupNav({
           {hasPrev && (
             <CalendarPage
               siteLabel={siteLabel}
+              siteBadge={siteBadge}
               event={events[index - 1]}
               rotate={dropRotate}
               className="is-back"

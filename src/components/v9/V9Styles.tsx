@@ -76,6 +76,21 @@ const V9_CSS = `
   background: var(--v9-yellow); border: 3px solid var(--v9-ink); opacity: .9;
 }
 .v9-hero > :not(.v9-preview-badge) { position: relative; }
+.v9-hero > .v9-dragon {
+  position: absolute; left: 0; top: 0; width: 80px; height: auto; visibility: hidden; pointer-events: none;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; will-change: transform;
+}
+/* The layout wrappers let taps through their empty gaps (to the dragon
+   underneath); the cards and controls inside take taps as before. */
+.v9-hero-body, .v9-hero-stage { pointer-events: none; }
+.v9-hero-body > :not(.v9-hero-stage), .v9-hero-stage > * { pointer-events: auto; }
+.v9-luck { position: fixed; z-index: 95; width: 0; height: 0; pointer-events: none; }
+.v9-luck-puff { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 2.5px solid var(--v9-ink); }
+.v9-luck-shuttle { position: absolute; left: -11px; top: -11px; display: block; max-width: none; height: auto; }
+.v9-luck-sticker {
+  position: absolute; left: -38px; top: -40px; padding: 3px 10px; border: 2.5px solid var(--v9-ink); border-radius: 999px;
+  background: var(--v9-yellow); color: var(--v9-ink); font-size: 15px; font-weight: 900; white-space: nowrap; box-shadow: 0 3px 0 var(--v9-ink);
+}
 .v9-hero-top { position: relative; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .v9-logo { flex: none; }
 .v9-brand-name { margin: 0; line-height: 0; }
@@ -149,6 +164,12 @@ const V9_CSS = `
   color: #fff; font-size: 12px; font-weight: 900; text-align: center; white-space: nowrap;
 }
 .v9-cal-head.is-past { background: #a89f90; }
+.v9-cal-head.is-site {
+  display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 0 3px;
+  font-size: 17px; letter-spacing: .28em; text-indent: .28em; line-height: 1.15;
+  text-shadow: -1.2px -1.2px 0 var(--v9-ink), 1.2px -1.2px 0 var(--v9-ink), -1.2px 1.2px 0 var(--v9-ink), 1.2px 1.2px 0 var(--v9-ink), 0 2px 0 var(--v9-ink);
+}
+.v9-cal-pin { flex: none; margin-right: -2px; filter: drop-shadow(0 1.5px 0 var(--v9-ink)); }
 .v9-cal-date { padding: 2px 0 0; font-size: 36px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .v9-cal-foot { padding: 0 0 6px; color: var(--v9-muted); font-size: 12px; font-weight: 900; white-space: nowrap; }
 .v9-cal-shade { position: absolute; inset: 0; background: var(--v9-ink); pointer-events: none; }
@@ -500,6 +521,10 @@ const V9_CSS = `
 .v9-id-fee { display: flex; justify-content: space-between; align-items: baseline; margin: 0; padding: 8px 12px; border-radius: 12px; border: 2px dashed #e3d6bd; background: #fffaf0; }
 .v9-id-fee dt { color: var(--v9-muted); font-size: 13px; font-weight: 800; }
 .v9-id-fee dd { margin: 0; font-size: 20px; font-weight: 900; }
+.v9-id-empty { display: flex; align-items: center; gap: 12px; padding: 14px; border: 2.5px solid var(--v9-ink); border-radius: 18px; background: #fff; box-shadow: 0 3px 0 var(--v9-ink); }
+.v9-id-empty img { flex: none; width: 88px; height: auto; }
+.v9-id-empty strong { display: block; font-size: 17px; font-weight: 900; }
+.v9-id-empty p { margin: 4px 0 0; color: var(--v9-muted); font-size: 13px; font-weight: 700; line-height: 1.5; }
 .v9-id-error { margin: 0; color: var(--v9-red); font-size: 13px; font-weight: 800; }
 
 /* ---------- 我的球員卡: one card ---------- */
@@ -644,6 +669,7 @@ const V9_CSS = `
   .v9-user-chip.is-login { padding: 5px 10px; }
   .v9-cal { width: 110px; }
   .v9-cal-date { font-size: 30px; }
+  .v9-cal-head.is-site { font-size: 15px; letter-spacing: .2em; text-indent: .2em; }
   .v9-cal-nav { gap: 6px; }
   .v9-cal-steps button { width: 30px; height: 30px; }
   .v9-cal-hint { width: 110px; font-size: 10px; }
