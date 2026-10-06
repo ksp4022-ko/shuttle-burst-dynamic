@@ -24,6 +24,7 @@ import { V9App } from "./V9App";
 import { V9MascotArt } from "./V9Mascot";
 import { V9Sheet } from "./V9Sheet";
 import { V9Styles } from "./V9Styles";
+import { V9PreviewBadge } from "./V9PreviewBadge";
 
 // 季打確認 in V9 (V9-006 6c). Same branch as V8's V8SeasonConfirmGate:
 // while the admin has the 季打確認 switch on, this page replaces the app;
@@ -341,9 +342,7 @@ function V9SeasonPage({
   return (
     <main className="v9-main v9-sc">
       <section className="v9-hero v9-sc-head">
-        <span className="v9-preview-badge" data-v9-preview-badge>
-          PREVIEW
-        </span>
+        <V9PreviewBadge />
         <img
           className="v9-lockup"
           src={`${BASE}v9/brand/lockup.webp`}

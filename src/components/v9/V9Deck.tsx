@@ -7,6 +7,7 @@ import { V9Icon } from "./V9Icons";
 import { V9Lockup } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
 import { V9MeetupNav } from "./V9MeetupNav";
+import { V9PreviewBadge } from "./V9PreviewBadge";
 import { V9Roll } from "./V9Roll";
 import { v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
 import type { V9RosterTab } from "./V9RosterSheet";
@@ -105,11 +106,7 @@ export function V9Hero({
 
   return (
     <section className="v9-hero" aria-label="聚會控制台">
-      {/* Dev route marker until V9 launches (CLAUDE.md): a tag on the card's
-          top edge, out of the layout. */}
-      <span className="v9-preview-badge" data-v9-preview-badge>
-        PREVIEW
-      </span>
+      <V9PreviewBadge />
       <div className="v9-hero-top">
         <h1 className="v9-brand-name">
           <V9LogoButton onParty={onLogoParty} />

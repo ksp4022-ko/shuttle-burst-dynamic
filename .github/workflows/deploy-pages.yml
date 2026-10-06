@@ -59,6 +59,11 @@ jobs:
           cp dist/client/index.html dist/client/v9/index.html
           cp dist/client/index.html dist/client/v9/rian/index.html
           cp dist/client/index.html dist/client/v9/kangxuan/index.html
+          # /v9test/* = V9 development route (same app, PREVIEW tag on).
+          mkdir -p dist/client/v9test dist/client/v9test/rian dist/client/v9test/kangxuan
+          cp dist/client/index.html dist/client/v9test/index.html
+          cp dist/client/index.html dist/client/v9test/rian/index.html
+          cp dist/client/index.html dist/client/v9test/kangxuan/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

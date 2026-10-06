@@ -95,6 +95,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
     scripts: [
+      // V9 (OnCourt) replaces V8 (V9-014): /v8 and /v8/<site> go to the same
+      // page under /v9, keeping the query (incl. a LINE login's ?auth=) and
+      // hash. /v8test is untouched. Admin backdoor: ?v8=1 keeps V8 for the
+      // rest of this tab (sessionStorage "v8:stay").
+      {
+        children:
+          'try{var P=location.pathname,R=/\\/v8(?=\\/|$)/;if(R.test(P)){if(new URLSearchParams(location.search).get("v8")==="1")sessionStorage.setItem("v8:stay","1");if(sessionStorage.getItem("v8:stay")!=="1")location.replace(P.replace(R,"/v9")+location.search+location.hash)}}catch(e){}',
+      },
       {
         children:
           'try{if(location.pathname.indexOf("/v8")>-1)document.documentElement.classList.add("v8-boot")}catch(e){}',

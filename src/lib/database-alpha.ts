@@ -115,8 +115,12 @@ function configuredFrontendVersion() {
     .filter(Boolean);
 
   // /v8test/* is the V8 test route family and uses the same V8 API.
-  // /v9/* is a new UI over the same V8 API (V9 changes presentation only).
-  return segments.includes("v8") || segments.includes("v8test") || segments.includes("v9")
+  // /v9/* (and its /v9test dev route) is a new UI over the same V8 API
+  // (V9 changes presentation only).
+  return segments.includes("v8") ||
+    segments.includes("v8test") ||
+    segments.includes("v9") ||
+    segments.includes("v9test")
     ? "v8"
     : "v7";
 }
