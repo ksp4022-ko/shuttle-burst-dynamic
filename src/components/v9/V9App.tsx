@@ -395,7 +395,14 @@ export function V9App() {
   // 選擇身份 done: store the new identity like V8 does, then re-read it so
   // the roster match (useCurrentIdentity) picks it up; the sheet turns into
   // the player card on its own.
+  // 不是我？ (6b): like V8, re-picking is local until the new identity is
+  // confirmed -- the current claim stays as-is if they back out.
+  const [identityRedo, setIdentityRedo] = useState(false);
+  useEffect(() => {
+    if (sheet !== "me") setIdentityRedo(false);
+  }, [sheet]);
   const confirmIdentity = async (next: V8LineIdentity) => {
+    setIdentityRedo(false);
     auth.updateIdentity(next);
     await auth.refreshIdentity();
     setNotice(`身份確認完成：${next.confirmedName || next.displayName}`);
@@ -642,7 +649,7 @@ export function V9App() {
 
           <V9Sheet
             open={sheet === "me"}
-            title={signedIn && !profileComplete ? "選擇身份" : "我的球員卡"}
+            title={signedIn && (!profileComplete || identityRedo) ? "選擇身份" : "我的球員卡"}
             onClose={closeSheet}
           >
             {auth.loading ? (
@@ -654,8 +661,10 @@ export function V9App() {
                   LINE 登入
                 </button>
               </div>
-            ) : !profileComplete && lineIdentity ? (
+            ) : (!profileComplete || identityRedo) && lineIdentity ? (
               <V9IdentityContent
+                key={identityRedo ? "redo" : "first"}
+                onCancel={profileComplete ? () => setIdentityRedo(false) : undefined}
                 token={lineToken}
                 siteId={siteId}
                 eventId={selectedEventId}
@@ -676,7 +685,7 @@ export function V9App() {
                 rank={rank}
                 event={selectedEvent}
                 progress={seasonProgress}
-                v8Href={v8PathForCurrentPage()}
+                onSwitch={() => setIdentityRedo(true)}
                 onBill={() => setSheet("bill")}
               />
             )}

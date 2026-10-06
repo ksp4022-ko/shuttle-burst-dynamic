@@ -163,14 +163,14 @@ export function V9PlayerCard({
   rank,
   event,
   progress,
-  v8Href,
+  onSwitch,
   onBill,
 }: {
   identity: CurrentIdentity;
   rank: number | null;
   event: AlphaEvent;
   progress: SeasonProgress | null;
-  v8Href: string;
+  onSwitch: () => void;
   onBill: () => void;
 }) {
   const fixed = identity.signupType === "fixed";
@@ -198,9 +198,9 @@ export function V9PlayerCard({
               {fixed ? "季打" : "臨打"}
             </span>
             <span className="v9-badge is-green">LINE ✓</span>
-            <a className="v9-pc-switch" href={v8Href}>
+            <button type="button" className="v9-pc-switch" onClick={onSwitch}>
               不是我？
-            </a>
+            </button>
           </p>
         </div>
       </header>

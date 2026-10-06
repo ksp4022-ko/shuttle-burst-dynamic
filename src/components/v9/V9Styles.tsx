@@ -504,7 +504,7 @@ const V9_CSS = `
 .v9-pc-who { display: grid; gap: 4px; min-width: 0; flex: 1; }
 .v9-pc-name { margin: 0; font-size: 21px; font-weight: 900; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v9-pc-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
-.v9-pc-switch { margin-left: auto; color: var(--v9-muted); font-size: 12px; font-weight: 800; }
+.v9-pc .v9-pc-switch { margin-left: auto; padding: 4px 0; border: 0; background: none; color: var(--v9-muted); font-size: 12px; font-weight: 800; text-decoration: underline; cursor: pointer; }
 .v9-pc-stats { display: grid; grid-template-columns: 1.25fr 1fr .8fr; margin: 0; border-bottom: 2px dashed #eadfca; }
 .v9-pc-stats.is-two { grid-template-columns: 1.25fr 1fr; }
 .v9-pc-stats div { display: grid; gap: 3px; align-content: start; min-width: 0; padding: 9px 10px; }

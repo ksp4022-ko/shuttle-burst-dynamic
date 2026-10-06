@@ -21,6 +21,7 @@ export function V9IdentityContent({
   lineIdentity,
   onConfirmed,
   onLogin,
+  onCancel,
 }: {
   token: string | null;
   siteId: string;
@@ -28,6 +29,9 @@ export function V9IdentityContent({
   lineIdentity: V8LineIdentity;
   onConfirmed: (identity: V8LineIdentity) => Promise<void> | void;
   onLogin: () => void;
+  // Set when an already-confirmed viewer chose 不是我？: nothing changes
+  // until they confirm a new identity, so this just goes back.
+  onCancel?: (() => void) | undefined;
 }) {
   const lineName = lineIdentity.lineDisplayName || lineIdentity.displayName || "";
   const [mode, setMode] = useState<Mode>(null);
@@ -120,7 +124,9 @@ export function V9IdentityContent({
       <div className="v9-id">
         <p className="v9-id-lead">
           嗨 <strong>{lineName || "球友"}</strong>
-          ，第一次使用請先選擇身份，之後報名、請假都會用這個名字。
+          {onCancel
+            ? "，重新選擇你的身份。確認送出前，目前的身份都不會改變。"
+            : "，第一次使用請先選擇身份，之後報名、請假都會用這個名字。"}
         </p>
         <div className="v9-id-modes">
           <button type="button" className="v9-id-mode is-fixed" onClick={() => choose("fixed")}>
@@ -145,6 +151,11 @@ export function V9IdentityContent({
             <small>單場報名，填要顯示的名字</small>
           </button>
         </div>
+        {onCancel && (
+          <button type="button" className="v9-id-switch" onClick={onCancel}>
+            取消，維持目前身份
+          </button>
+        )}
       </div>
     );
   }
