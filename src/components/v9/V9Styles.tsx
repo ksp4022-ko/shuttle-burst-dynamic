@@ -462,18 +462,6 @@ const V9_CSS = `
 /* ---------- 選擇身份 (V9-006 6a) ---------- */
 .v9-id { display: grid; gap: 10px; }
 .v9-id-lead { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.5; }
-.v9-id-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.v9-id-mode {
-  display: grid; justify-items: center; gap: 4px; padding: 14px 10px 12px; border: 2.5px solid var(--v9-ink); border-radius: 20px;
-  background: #fff; color: var(--v9-ink); text-align: center; box-shadow: 0 4px 0 var(--v9-ink); cursor: pointer;
-}
-.v9-id-mode:active { transform: translateY(4px); box-shadow: none; }
-.v9-id-mode.is-fixed { background: var(--v9-mint); }
-.v9-id-mode.is-temp { background: #ffe9cf; }
-.v9-id-mode img { width: 64px; height: 64px; }
-.v9-id-mode img.is-temp { filter: hue-rotate(-115deg) saturate(1.4); }
-.v9-app .v9-id-mode strong { font-size: 18px; font-weight: 900; }
-.v9-app .v9-id-mode small { color: var(--v9-muted); font-size: 12px; font-weight: 700; line-height: 1.4; }
 .v9-id-back, .v9-id-switch { justify-self: start; padding: 0; border: 0; background: none; color: var(--v9-muted); font-size: 13px; font-weight: 800; cursor: pointer; }
 .v9-id-switch { justify-self: center; text-decoration: underline; }
 .v9-id-claims {
@@ -491,6 +479,11 @@ const V9_CSS = `
   display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--v9-ink);
   background: var(--v9-mint); font-size: 11px; font-variant-numeric: tabular-nums;
 }
+.v9-id-hint { margin: -4px 0 0; color: var(--v9-muted); font-size: 12px; font-weight: 700; }
+.v9-id-warn { margin: 0; padding: 8px 10px; border-radius: 12px; border: 2px solid var(--v9-red); background: #fff1ec; color: var(--v9-red); font-size: 13px; font-weight: 800; line-height: 1.5; }
+.v9-id-fee { display: flex; justify-content: space-between; align-items: baseline; margin: 0; padding: 8px 12px; border-radius: 12px; border: 2px dashed #e3d6bd; background: #fffaf0; }
+.v9-id-fee dt { color: var(--v9-muted); font-size: 13px; font-weight: 800; }
+.v9-id-fee dd { margin: 0; font-size: 20px; font-weight: 900; }
 .v9-id-error { margin: 0; color: var(--v9-red); font-size: 13px; font-weight: 800; }
 
 /* ---------- 我的球員卡: one card ---------- */
@@ -502,9 +495,15 @@ const V9_CSS = `
 .v9-pc-jersey { flex: none; width: 60px; height: 60px; filter: drop-shadow(0 2px 0 rgba(31,26,23,.25)); }
 .v9-pc-jersey.is-temp { filter: hue-rotate(-115deg) saturate(1.4) drop-shadow(0 2px 0 rgba(31,26,23,.25)); }
 .v9-pc-who { display: grid; gap: 4px; min-width: 0; flex: 1; }
-.v9-pc-name { margin: 0; font-size: 21px; font-weight: 900; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v9-pc-name { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 0; font-size: 21px; font-weight: 900; line-height: 1.15; }
+.v9-pc-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v9-pc .v9-pc-edit { flex: none; width: 28px; height: 28px; padding: 0; border: 2px solid var(--v9-ink); border-radius: 50%; background: var(--v9-paper); color: var(--v9-ink); font-size: 14px; line-height: 1; cursor: pointer; }
+.v9-pc-rename { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.v9-pc-rename .v9-input { flex: 1; min-width: 0; padding: 6px 10px; font-size: 16px; }
+.v9-pc-account { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px 18px; padding: 10px 12px 12px; border-top: 2px dashed #eadfca; color: var(--v9-muted); font-size: 12px; font-weight: 800; }
+.v9-pc .v9-pc-link { padding: 2px 0; border: 0; background: none; color: var(--v9-muted); font-size: 12px; font-weight: 800; text-decoration: underline; cursor: pointer; }
+.v9-pc .v9-pc-link.is-red { color: var(--v9-red); }
 .v9-pc-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
-.v9-pc .v9-pc-switch { margin-left: auto; padding: 4px 0; border: 0; background: none; color: var(--v9-muted); font-size: 12px; font-weight: 800; text-decoration: underline; cursor: pointer; }
 .v9-pc-stats { display: grid; grid-template-columns: 1.25fr 1fr .8fr; margin: 0; border-bottom: 2px dashed #eadfca; }
 .v9-pc-stats.is-two { grid-template-columns: 1.25fr 1fr; }
 .v9-pc-stats div { display: grid; gap: 3px; align-content: start; min-width: 0; padding: 9px 10px; }

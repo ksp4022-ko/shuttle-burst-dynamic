@@ -163,15 +163,20 @@ export function V9PlayerCard({
   rank,
   event,
   progress,
-  onSwitch,
   onBill,
+  onRename,
+  onRepick,
+  onLogout,
 }: {
   identity: CurrentIdentity;
   rank: number | null;
   event: AlphaEvent;
   progress: SeasonProgress | null;
-  onSwitch: () => void;
   onBill: () => void;
+  // Saves a new display name (same identity); resolves true when stored.
+  onRename: (name: string) => Promise<boolean>;
+  onRepick: () => void;
+  onLogout: () => void;
 }) {
   const fixed = identity.signupType === "fixed";
   const position =
@@ -192,15 +197,12 @@ export function V9PlayerCard({
           height={60}
         />
         <div className="v9-pc-who">
-          <p className="v9-pc-name">{identity.name}</p>
+          <V9NameEdit name={identity.name} onSave={onRename} />
           <p className="v9-pc-badges">
             <span className={`v9-badge ${fixed ? "is-blue" : "is-orange"}`}>
               {fixed ? "季打" : "臨打"}
             </span>
             <span className="v9-badge is-green">LINE ✓</span>
-            <button type="button" className="v9-pc-switch" onClick={onSwitch}>
-              不是我？
-            </button>
           </p>
         </div>
       </header>
@@ -234,6 +236,110 @@ export function V9PlayerCard({
         <span>我的帳單</span>
         <V9Icon name="chevron" size={16} />
       </button>
+
+      <V9Account onRepick={onRepick} onLogout={onLogout} />
     </article>
+  );
+}
+
+// ✎ next to the name turns it into an input; 儲存 keeps the same identity
+// and only changes the name shown.
+function V9NameEdit({
+  name,
+  onSave,
+}: {
+  name: string;
+  onSave: (name: string) => Promise<boolean>;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  if (draft === null) {
+    return (
+      <p className="v9-pc-name">
+        <span>{name}</span>
+        <button
+          type="button"
+          className="v9-pc-edit"
+          aria-label="修改名字"
+          onClick={() => setDraft(name)}
+        >
+          ✎
+        </button>
+      </p>
+    );
+  }
+  const next = draft.trim();
+  const save = async () => {
+    if (!next || saving) return;
+    if (next === name) {
+      setDraft(null);
+      return;
+    }
+    setSaving(true);
+    const ok = await onSave(next);
+    setSaving(false);
+    if (ok) setDraft(null);
+  };
+  return (
+    <div className="v9-pc-rename">
+      <input
+        className="v9-input"
+        value={draft}
+        maxLength={24}
+        autoFocus
+        disabled={saving}
+        aria-label="新的名字"
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") void save();
+          if (event.key === "Escape") setDraft(null);
+        }}
+      />
+      <button
+        type="button"
+        className="v9-badge is-green"
+        disabled={!next || saving}
+        onClick={() => void save()}
+      >
+        {saving ? "儲存中" : "儲存"}
+      </button>
+      <button
+        type="button"
+        className="v9-badge is-paper"
+        disabled={saving}
+        onClick={() => setDraft(null)}
+      >
+        取消
+      </button>
+    </div>
+  );
+}
+
+// 帳號: rarely needed, so small and at the very bottom.
+function V9Account({ onRepick, onLogout }: { onRepick: () => void; onLogout: () => void }) {
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  return (
+    <footer className="v9-pc-account">
+      {confirmLogout ? (
+        <>
+          <span>登出這支手機上的 LINE？</span>
+          <button type="button" className="v9-pc-link is-red" onClick={onLogout}>
+            確定登出
+          </button>
+          <button type="button" className="v9-pc-link" onClick={() => setConfirmLogout(false)}>
+            取消
+          </button>
+        </>
+      ) : (
+        <>
+          <button type="button" className="v9-pc-link" onClick={onRepick}>
+            選錯名字了
+          </button>
+          <button type="button" className="v9-pc-link" onClick={() => setConfirmLogout(true)}>
+            登出 LINE
+          </button>
+        </>
+      )}
+    </footer>
   );
 }

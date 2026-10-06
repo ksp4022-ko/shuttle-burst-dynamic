@@ -23,8 +23,9 @@ import { V9Icon } from "./V9Icons";
 import { V9Toast } from "./V9Toast";
 import { V9Celebrate } from "./V9Celebrate";
 import { V9PlayerCard } from "./V9PlayerCard";
-import { V9IdentityContent } from "./V9IdentitySheet";
-import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
+import { V9JoinContent, V9RepickContent } from "./V9IdentitySheet";
+import { confirmV8LineProfile } from "@/lib/v8-line-auth";
+import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { v9PreloadArt } from "./V9Mascot";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
@@ -35,7 +36,7 @@ import { v9PreloadArt } from "./V9Mascot";
 
 const SITE_NAMES: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 
-type SheetKind = "roster" | "bill" | "proxy" | "meetup" | "me";
+type SheetKind = "roster" | "bill" | "proxy" | "meetup" | "me" | "join";
 
 function selectedEventKey(siteId: string) {
   return v9StorageKey(`${siteId}:selected-event`);
@@ -392,37 +393,85 @@ export function V9App() {
     setSheet(key);
   };
 
-  // 選擇身份 done: store the new identity like V8 does, then re-read it so
-  // the roster match (useCurrentIdentity) picks it up; the sheet turns into
-  // the player card on its own.
-  // 不是我？ (6b): like V8, re-picking is local until the new identity is
-  // confirmed -- the current claim stays as-is if they back out.
-  const [identityRedo, setIdentityRedo] = useState(false);
-  useEffect(() => {
-    if (sheet !== "me") setIdentityRedo(false);
-  }, [sheet]);
-  const confirmIdentity = async (next: V8LineIdentity) => {
-    setIdentityRedo(false);
+  // Identity (V9-006, temp-first). Nothing pops up after login: 季打 claimed
+  // their name at season start, and the same LINE brings it back on any
+  // device. A viewer with no identity yet gets the 臨打報名 card the first
+  // time they tap 我要報名.
+  const storeIdentity = async (next: V8LineIdentity) => {
     auth.updateIdentity(next);
     await auth.refreshIdentity();
+  };
+  // 季打 binding / 選錯名字了 done: the sheet turns into the player card.
+  const [repicking, setRepicking] = useState(false);
+  useEffect(() => {
+    if (sheet !== "me") setRepicking(false);
+  }, [sheet]);
+  const confirmIdentity = async (next: V8LineIdentity) => {
+    setRepicking(false);
+    await storeIdentity(next);
+    setSheet("me");
     setNotice(`身份確認完成：${next.confirmedName || next.displayName}`);
   };
-  // First time this session a signed-in viewer still has no identity, the
-  // 選擇身份 sheet opens by itself once the page is up.
-  const needsIdentity = Boolean(
-    lineIdentity && lineToken && lineIdentity.profileComplete === false,
-  );
+  // 臨打報名: confirm the temp identity, then the same self signup as the
+  // main CTA -- the two existing requests, one tap.
+  // The refresh captured before the identity existed is a no-op, so the
+  // join reads the latest one.
+  const refreshCancellableRef = useRef(refreshCancellableTempSignups);
   useEffect(() => {
-    if (!needsIdentity || !pageReady) return;
+    refreshCancellableRef.current = refreshCancellableTempSignups;
+  }, [refreshCancellableTempSignups]);
+  const joinAsTemp = (name: string) =>
+    withActionLock(async () => {
+      if (!lineToken) return false;
+      let next: V8LineIdentity;
+      try {
+        next = await confirmV8LineProfile(lineToken, {
+          siteId,
+          identityType: "temp",
+          displayName: name,
+        });
+      } catch (reason) {
+        setNotice(
+          reason instanceof Error && reason.message ? reason.message : "報名失敗，請再試一次",
+        );
+        return false;
+      }
+      auth.updateIdentity(next);
+      const result = await flow.submitSignup(name, lineToken, { selfSignup: true });
+      void auth.refreshIdentity();
+      if (!result.ok) return false;
+      setSheet(null);
+      if (result.status === "confirmed") celebrate();
+      await refreshCancellableRef.current();
+      return true;
+    });
+  // ✎ 改名字: same identity (type and claimed member), new name shown.
+  const renameIdentity = async (name: string) => {
+    if (!lineToken || !lineIdentity?.identityType) return false;
     try {
-      const key = v9StorageKey("identity-prompt");
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
-    } catch {
-      // Storage blocked: open it anyway.
+      const next = await confirmV8LineProfile(lineToken, {
+        siteId,
+        identityType: lineIdentity.identityType,
+        ...(lineIdentity.identityType === "fixed" && lineIdentity.claimedMemberId
+          ? { memberId: lineIdentity.claimedMemberId }
+          : {}),
+        displayName: name,
+      });
+      await storeIdentity(next);
+      setNotice(`名字已改成 ${next.confirmedName || next.displayName || name}`);
+      return true;
+    } catch (reason) {
+      setNotice(
+        reason instanceof Error && reason.message ? reason.message : "名字修改失敗，請再試一次",
+      );
+      return false;
     }
-    setSheet("me");
-  }, [needsIdentity, pageReady]);
+  };
+  // 登出 LINE: this device only; the claim on the server stays.
+  const logout = () => {
+    clearV8LineAuthStorage();
+    window.location.reload();
+  };
 
   const userName = lineIdentity?.confirmedName || lineIdentity?.displayName || "";
   const busy = Boolean(pendingAction);
@@ -436,7 +485,7 @@ export function V9App() {
     : !signedIn
       ? { kind: "login" }
       : !profileComplete
-        ? { kind: "identify" }
+        ? { kind: "action", label: "我要報名", tone: "is-orange" }
         : !identity
           ? { kind: "profile", href: v8PathForCurrentPage() }
           : { kind: "action", ...ctaFor(identity) };
@@ -524,7 +573,7 @@ export function V9App() {
               busy={busy}
               busyLabel={busyLabelFor(pendingAction)}
               onLogin={auth.startLogin}
-              onCta={() => void handlePrimaryAction()}
+              onCta={() => (profileComplete ? void handlePrimaryAction() : setSheet("join"))}
               onMeetup={() => setSheet("meetup")}
               onMe={() => setSheet("me")}
               counts={{
@@ -648,8 +697,30 @@ export function V9App() {
           </V9Sheet>
 
           <V9Sheet
+            open={sheet === "join" && signedIn && !profileComplete}
+            title="臨打報名"
+            subtitle={`${v9ShortDate(selectedEvent.eventDate)} ${v9Weekday(selectedEvent.eventDate)}`}
+            onClose={closeSheet}
+          >
+            {lineIdentity && (
+              <V9JoinContent
+                key={selectedEventId}
+                token={lineToken}
+                siteId={siteId}
+                eventId={selectedEventId}
+                lineIdentity={lineIdentity}
+                fee={typeof selectedEvent.tempFee === "number" ? selectedEvent.tempFee : null}
+                busy={busy}
+                onJoinTemp={joinAsTemp}
+                onClaimed={confirmIdentity}
+                onLogin={auth.startLogin}
+              />
+            )}
+          </V9Sheet>
+
+          <V9Sheet
             open={sheet === "me"}
-            title={signedIn && (!profileComplete || identityRedo) ? "選擇身份" : "我的球員卡"}
+            title={repicking ? "重新選擇身份" : "我的球員卡"}
             onClose={closeSheet}
           >
             {auth.loading ? (
@@ -661,16 +732,23 @@ export function V9App() {
                   LINE 登入
                 </button>
               </div>
-            ) : (!profileComplete || identityRedo) && lineIdentity ? (
-              <V9IdentityContent
-                key={identityRedo ? "redo" : "first"}
-                onCancel={profileComplete ? () => setIdentityRedo(false) : undefined}
+            ) : !profileComplete ? (
+              <div className="v9-sheet-empty">
+                <p className="v9-muted">
+                  還沒有報名紀錄。第一次報名時填好名字，這裡就會出現你的球員卡。
+                </p>
+                <button type="button" className="v9-cta is-orange" onClick={() => setSheet("join")}>
+                  我要報名
+                </button>
+              </div>
+            ) : repicking && lineIdentity && lineToken ? (
+              <V9RepickContent
                 token={lineToken}
                 siteId={siteId}
                 eventId={selectedEventId}
                 lineIdentity={lineIdentity}
-                onLogin={auth.startLogin}
                 onConfirmed={confirmIdentity}
+                onCancel={() => setRepicking(false)}
               />
             ) : !ready || !identity ? (
               <div className="v9-sheet-empty">
@@ -681,12 +759,16 @@ export function V9App() {
               </div>
             ) : (
               <V9PlayerCard
-                identity={identity}
+                // The card shows the profile name (✎ edits it); a temp
+                // identity's own name is the one on this meetup's signup.
+                identity={{ ...identity, name: userName || identity.name }}
                 rank={rank}
                 event={selectedEvent}
                 progress={seasonProgress}
-                onSwitch={() => setIdentityRedo(true)}
                 onBill={() => setSheet("bill")}
+                onRename={renameIdentity}
+                onRepick={() => setRepicking(true)}
+                onLogout={logout}
               />
             )}
           </V9Sheet>

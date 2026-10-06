@@ -193,7 +193,7 @@ export function V9Hero({
               : identity
                 ? v9StatusLine(identity, rank)
                 : signedIn
-                  ? "身份尚未確認"
+                  ? "尚未報名"
                   : "登入後顯示"}
             {!switching && statusHint && <small>{statusHint}</small>}
           </span>
