@@ -263,7 +263,7 @@ function V9NameEdit({
           aria-label="修改名字"
           onClick={() => setDraft(name)}
         >
-          ✎
+          <V9Icon name="edit" size={15} />
         </button>
       </p>
     );

@@ -15,9 +15,16 @@ export type V9IconName =
   | "bill"
   | "me"
   | "chevron"
-  | "close";
+  | "close"
+  | "edit";
 
 const PATHS: Record<V9IconName, ReactNode> = {
+  edit: (
+    <>
+      <path d="M15.5 4.5 19.5 8.5 9 19H5v-4z" />
+      <path d="M13.5 6.5l4 4" />
+    </>
+  ),
   date: (
     <>
       <rect x="3.5" y="5" width="17" height="15" rx="3.5" />
