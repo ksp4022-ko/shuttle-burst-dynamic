@@ -157,7 +157,7 @@ export function V9IdentityContent({
 
       {mode === "fixed" ? (
         <>
-          <p className="v9-id-lead">從尚未認領的季打名單選你的名字：</p>
+          <p className="v9-id-lead">選取你的名字</p>
           <div className="v9-id-claims" role="listbox" aria-label="尚未認領的季打名單">
             {claims === null ? (
               <p className="v9-muted">讀取季打名單中…</p>
