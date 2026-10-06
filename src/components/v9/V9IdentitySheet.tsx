@@ -14,8 +14,8 @@ function errorText(reason: unknown, fallback: string) {
   return reason instanceof Error && reason.message ? reason.message : fallback;
 }
 
-// Names still open to claim. The Worker decides who that is; if a row ever
-// carries the season endpoint's claimedByOther flag, it is hidden too.
+// Names still open to claim: the Worker flags names a LINE account already
+// holds (claimedByOther / claimedByMe); both are left out.
 function V9ClaimPicker({
   token,
   siteId,
@@ -55,9 +55,13 @@ function V9ClaimPicker({
 
   const shown = useMemo(
     () =>
-      (claims || []).filter(
-        (member) => !(member as V8ClaimOption & { claimedByOther?: boolean }).claimedByOther,
-      ),
+      (claims || []).filter((member) => {
+        const flags = member as V8ClaimOption & {
+          claimedByOther?: boolean;
+          claimedByMe?: boolean;
+        };
+        return !flags.claimedByOther && !flags.claimedByMe;
+      }),
     [claims],
   );
 
