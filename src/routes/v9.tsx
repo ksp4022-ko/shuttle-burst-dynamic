@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { V9App } from "@/components/v9/V9App";
+import { V9Page } from "@/components/v9/V9SeasonGate";
 
 export const Route = createFileRoute("/v9")({
   head: () => ({
@@ -18,5 +18,5 @@ export const Route = createFileRoute("/v9")({
       { rel: "apple-touch-icon", href: `${import.meta.env.BASE_URL}v9/brand/icon-180.png` },
     ],
   }),
-  component: V9App,
+  component: V9Page,
 });

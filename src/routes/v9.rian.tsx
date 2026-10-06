@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { V9App } from "@/components/v9/V9App";
+import { V9Page } from "@/components/v9/V9SeasonGate";
 
 // Renders through the /v9 parent (same as /v8/<site>); V9App reads the site
 // from the path.
@@ -10,5 +10,5 @@ export const Route = createFileRoute("/v9/rian")({
       { name: "description", content: "OnCourt 羽球報名。" },
     ],
   }),
-  component: V9App,
+  component: V9Page,
 });
