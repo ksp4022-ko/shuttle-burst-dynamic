@@ -141,7 +141,8 @@ const V9_CSS = `
   background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 12px;
   transform-origin: 50% 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
 }
-.v9-cal-page.is-top { z-index: 2; }
+.v9-cal-page.is-top { z-index: 2; backface-visibility: visible; -webkit-backface-visibility: visible; }
+.v9-cal-backside { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, #efe5d2 0 9px, #e7dcc6 9px 10px); pointer-events: none; }
 .v9-cal-page.is-back { z-index: 3; }
 .v9-cal-head {
   width: 100%; padding: 4px 0 2px; border-bottom: 2.5px solid var(--v9-ink); background: var(--v9-red);

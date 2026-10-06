@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   animate,
   AnimatePresence,
@@ -22,27 +22,29 @@ import { v9Relative, v9ShortDate, v9Weekday } from "@/lib/v9-display";
 const PAGE_TRAVEL = 90; // px of drag for a full flip
 const COMMIT = 0.3; // fraction of a flip that commits on release
 const FLING = 420; // px/s release speed that commits regardless
-// The flip hint plays once per session until the viewer has flipped a page
-// themselves; after that it never shows again on this device.
-const HINT_KEY = "v9:calendar-hint";
-const LEARNED_KEY = "v9:calendar-learned";
-const HINT_MS = 5200;
+// The flip hint plays after 8s without a touch, then again every 8s; any
+// touch stops it and starts the 8s over.
+const IDLE_MS = 8000;
+const HINT_MS = 3600;
 // Springing back stays soft; a committed tear plays out slowly enough to
 // read as a page turning.
 const SPRING = { type: "spring", stiffness: 170, damping: 22 } as const;
-const TEAR = { duration: 0.62, ease: [0.3, 0.1, 0.25, 1] } as const;
+const TEAR = { duration: 1, ease: [0.45, 0, 0.25, 1] } as const;
 
 function CalendarPage({
   siteLabel,
   event,
   rotate,
   shade,
+  back,
   className = "",
 }: {
   siteLabel: string;
   event: AlphaEvent | undefined;
   rotate?: MotionValue<number>;
   shade?: MotionValue<number>;
+  // Past 90° the page shows its plain back while it goes over the rings.
+  back?: MotionValue<number>;
   className?: string;
 }) {
   if (!event) return null;
@@ -58,6 +60,7 @@ function CalendarPage({
         {v9Weekday(event.eventDate)} · {relative}
       </span>
       {shade && <motion.span className="v9-cal-shade" style={{ opacity: shade }} />}
+      {back && <motion.span className="v9-cal-backside" style={{ opacity: back }} />}
     </motion.span>
   );
 }
@@ -82,6 +85,7 @@ export function V9MeetupNav({
   const drop = useMotionValue(0);
   const liftRotate = useTransform(lift, [0, 1], [0, 165]);
   const liftShade = useTransform(lift, [0, 0.5], [0, 0.22]);
+  const liftBack = useTransform(lift, [0.5, 0.52], [0, 1]);
   const dropRotate = useTransform(drop, [0, 1], [165, 0]);
   const committing = useRef(false);
   // motion still fires onTap after a short pan inside the page; a drag must
@@ -93,57 +97,58 @@ export function V9MeetupNav({
 
   // A new meetup is on top: both flaps rest again (the page that tore away
   // is now the one underneath, so the reset is invisible).
-  useEffect(() => {
+  // Before paint, or the page after next flashes for a frame.
+  useLayoutEffect(() => {
     lift.jump(0);
     drop.jump(0);
     committing.current = false;
   }, [index, lift, drop]);
 
   // Flip hint: the page lifts far enough to peek at the next date (twice),
-  // a 往上滑 chip shows under the calendar and ▲ pulses. Any touch on the
-  // calendar ends it.
+  // a 往上滑 chip shows under the calendar and ▲ pulses.
   const [hinting, setHinting] = useState(false);
-  const learn = () => {
-    setHinting(false);
-    try {
-      localStorage.setItem(LEARNED_KEY, "1");
-    } catch {
-      // Storage blocked: the hint just shows again next session.
-    }
-  };
+  const [idleRound, setIdleRound] = useState(0);
+  const hintPlayback = useRef<{ stop: () => void } | null>(null);
+  useEffect(() => {
+    const restart = () => {
+      hintPlayback.current?.stop();
+      hintPlayback.current = null;
+      setHinting(false);
+      if (!committing.current) lift.set(0);
+      setIdleRound((round) => round + 1);
+    };
+    window.addEventListener("pointerdown", restart, true);
+    return () => window.removeEventListener("pointerdown", restart, true);
+  }, [lift]);
   useEffect(() => {
     if (!hasNext) return;
-    try {
-      if (localStorage.getItem(LEARNED_KEY) || sessionStorage.getItem(HINT_KEY)) return;
-    } catch {
-      // Storage blocked: just show the hint.
-    }
+    let end = 0;
     const start = window.setTimeout(() => {
-      // Marked as shown only once it really plays (a remount before then
-      // must not swallow it).
-      try {
-        sessionStorage.setItem(HINT_KEY, "1");
-      } catch {
-        // ignore
+      if (document.visibilityState !== "visible" || committing.current) {
+        setIdleRound((round) => round + 1);
+        return;
       }
       setHinting(true);
       if (!reduceMotion) {
-        void animate(lift, [0, 0.42, 0.42, 0, 0, 0.42, 0.42, 0], {
-          duration: 2.6,
+        hintPlayback.current = animate(lift, [0, 0.42, 0.42, 0, 0, 0.42, 0.42, 0], {
+          duration: 3.2,
           times: [0, 0.16, 0.3, 0.46, 0.56, 0.72, 0.86, 1],
           ease: "easeInOut",
         });
       }
-    }, 700);
-    const end = window.setTimeout(() => setHinting(false), 700 + HINT_MS);
+      end = window.setTimeout(() => {
+        hintPlayback.current = null;
+        setHinting(false);
+        setIdleRound((round) => round + 1);
+      }, HINT_MS);
+    }, IDLE_MS);
     return () => {
       window.clearTimeout(start);
       window.clearTimeout(end);
     };
-  }, [reduceMotion, hasNext, lift]);
+  }, [idleRound, index, reduceMotion, hasNext, lift]);
 
   const settle = (value: MotionValue<number>, commit: boolean, step: 1 | -1) => {
-    if (commit) learn();
     if (!commit) {
       void animate(value, 0, SPRING);
       return;
@@ -191,10 +196,7 @@ export function V9MeetupNav({
     // the flip gesture, not just the page.
     <motion.div
       className="v9-cal-nav"
-      onPointerDownCapture={() => {
-        panned.current = false;
-        setHinting(false);
-      }}
+      onPointerDownCapture={() => (panned.current = false)}
       onPanStart={() => (panned.current = true)}
       onPan={onPan}
       onPanEnd={onPanEnd}
@@ -229,6 +231,7 @@ export function V9MeetupNav({
             event={event}
             rotate={liftRotate}
             shade={liftShade}
+            back={liftBack}
             className="is-top"
           />
           {/* The previous meetup, folded back above the rings until pulled down. */}
