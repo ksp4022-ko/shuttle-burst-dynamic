@@ -422,6 +422,14 @@ const V9_CSS = `
 .v9-bill-detail-name small { color: var(--v9-muted); font-size: 12px; }
 .v9-bill-detail-money { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .v9-bill-total { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding: 12px 14px; border: var(--v9-line); border-radius: 16px; background: var(--v9-orange); font-weight: 900; }
+.v9-skel {
+  display: block; height: 14px; border-radius: 7px; background: #eee4d2;
+  background-image: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.75) 50%, transparent 80%);
+  background-size: 220% 100%; background-repeat: no-repeat; animation: v9-skel 1.3s ease-in-out infinite;
+}
+.v9-skel.is-short { width: 22%; }
+.v9-skel.is-dark { height: 18px; background-color: rgba(31,26,23,.16); }
+.v9-bill-total.is-skel { background: #f7c98f; }
 .v9-bill-total strong { font-size: 24px; font-variant-numeric: tabular-nums; }
 .v9-btn {
   display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px; margin-top: 10px; font-weight: 800;
@@ -566,6 +574,8 @@ const V9_CSS = `
 
 /* toast */
 .v9-toast-region { position: fixed; left: 0; right: 0; bottom: calc(max(12px, env(safe-area-inset-bottom)) + var(--v9-dock-h) + 14px); z-index: 60; display: flex; justify-content: center; pointer-events: none; padding: 0 16px; }
+.v9-toast-region.is-top { top: calc(max(10px, env(safe-area-inset-top)) + 4px); bottom: auto; z-index: 90; }
+.v9-toast-region.is-top .v9-toast { animation-name: v9-toast-top; }
 .v9-toast { max-width: 440px; padding: 10px 18px; border: var(--v9-line); border-radius: 999px; background: var(--v9-ink); color: #fff; font-weight: 800; box-shadow: 0 4px 0 rgba(0,0,0,.25); animation: v9-toast .28s cubic-bezier(.3,1.4,.5,1) both; }
 
 /* 操作成功 celebration */
@@ -620,8 +630,39 @@ const V9_CSS = `
 @keyframes v9-fade-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes v9-sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes v9-sheet-out { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes v9-skel { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+@keyframes v9-toast-top { from { opacity: 0; transform: translateY(-12px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes v9-toast { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes v9-shake { 0%,100% { translate: 0; } 20% { translate: -8px; } 45% { translate: 7px; } 70% { translate: -4px; } 85% { translate: 2px; } }
+
+/* ---------- Narrow screens (V9-009): Safari page zoom or a small phone
+   leaves ~340px; tighten the hero so nothing wraps, hides or gets cut. */
+.v9-user-chip { white-space: nowrap; }
+@media (max-width: 374px) {
+  .v9-lockup { height: 36px; }
+  .v9-user-chip { flex: none; max-width: 150px; font-size: 12px; }
+  .v9-user-chip.is-login { padding: 5px 10px; }
+  .v9-cal { width: 110px; }
+  .v9-cal-date { font-size: 30px; }
+  .v9-cal-nav { gap: 6px; }
+  .v9-cal-steps button { width: 30px; height: 30px; }
+  .v9-cal-hint { width: 110px; font-size: 10px; }
+  .v9-hero-mascot { width: 112px; margin-right: -10px; }
+  .v9-hero-mascot .v9-mascot-frame { transform: scale(.82); transform-origin: 0 100%; }
+  .v9-hero::before { width: 160px; height: 160px; right: -46px; }
+  .v9-rail-item { grid-template-columns: 28px minmax(0, 1fr); column-gap: 5px; padding: 7px 6px; }
+  .v9-rail-icon, .v9-rail-icon img { width: 28px; height: 28px; }
+  .v9-rail-item dd { font-size: 13.5px; letter-spacing: -.02em; }
+  .v9-rs-main { padding: 8px 8px 8px 10px; }
+  .v9-rs-top { gap: 6px; }
+  .v9-rs-label { font-size: 13px; }
+  .v9-rs-count { font-size: 26px; }
+  .v9-rs-count small { font-size: 13px; }
+  .v9-rs-remain { padding: 1px 8px; font-size: 15px; }
+  .v9-roster-strip .v9-rs-side { width: 54px; font-size: 22px; }
+  .v9-roster-strip .v9-rs-side .v9-rs-label { font-size: 12px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .v9-confetti, .v9-confetti-rain { display: none; }
   .v9-app *, .v9-app *::before, .v9-app *::after { animation: none !important; transition: none !important; }

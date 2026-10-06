@@ -71,12 +71,15 @@ export function V9MeetupNav({
   index,
   onGo,
   onList,
+  hintPaused = false,
 }: {
   siteLabel: string;
   events: AlphaEvent[];
   index: number;
   onGo: (index: number) => void;
   onList: () => void;
+  // A sheet covers the hero: no hint until it closes (then 8s again).
+  hintPaused?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
   // 0 → 1: the current page tearing up (next) / the previous page falling
@@ -122,6 +125,13 @@ export function V9MeetupNav({
   }, [lift]);
   useEffect(() => {
     if (!hasNext) return;
+    if (hintPaused) {
+      hintPlayback.current?.stop();
+      hintPlayback.current = null;
+      setHinting(false);
+      if (!committing.current) lift.set(0);
+      return;
+    }
     let end = 0;
     const start = window.setTimeout(() => {
       if (document.visibilityState !== "visible" || committing.current) {
@@ -146,7 +156,7 @@ export function V9MeetupNav({
       window.clearTimeout(start);
       window.clearTimeout(end);
     };
-  }, [idleRound, index, reduceMotion, hasNext, lift]);
+  }, [idleRound, index, reduceMotion, hasNext, lift, hintPaused]);
 
   const settle = (value: MotionValue<number>, commit: boolean, step: 1 | -1) => {
     if (!commit) {

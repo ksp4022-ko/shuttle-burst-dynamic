@@ -108,7 +108,22 @@ export function V9BillingContent({
 
   let body: ReactNode;
   if (state.kind === "idle" || state.kind === "loading") {
-    body = <p className="v9-muted">帳單讀取中…</p>;
+    // Skeleton in the bill's own shape (4 lines + total): the real numbers
+    // drop into the same places, nothing jumps.
+    body = (
+      <div className="v9-bill-skeleton" role="status" aria-label="帳單讀取中">
+        {[64, 52, 40, 58].map((width) => (
+          <div key={width} className="v9-bill-line">
+            <span className="v9-skel" style={{ width: `${width}%` }} />
+            <span className="v9-skel is-short" />
+          </div>
+        ))}
+        <div className="v9-bill-total is-skel">
+          <span className="v9-skel is-dark" style={{ width: "34%" }} />
+          <span className="v9-skel is-dark is-short" />
+        </div>
+      </div>
+    );
   } else if (state.kind === "auth") {
     body = <p className="v9-muted">登入狀態失效，請重新登入。</p>;
   } else if (state.kind === "error") {

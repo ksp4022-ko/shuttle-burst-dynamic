@@ -21,14 +21,13 @@ import {
   v9SeasonSource,
 } from "@/lib/v9-season";
 import { V9App } from "./V9App";
-import { V9Busy } from "./V9Busy";
 import { V9MascotArt } from "./V9Mascot";
 import { V9Sheet } from "./V9Sheet";
 import { V9Styles } from "./V9Styles";
 
 // 季打確認 in V9 (V9-006 6c). Same branch as V8's V8SeasonConfirmGate:
 // while the admin has the 季打確認 switch on, this page replaces the app;
-// otherwise (or if the check fails / takes over 6s) the app shows. Same
+// otherwise (or if the check fails / takes over 6s) the app stays. Same
 // endpoints and the same choices -- V9 only renders. ?v8test=1 skips the
 // branch for admins, as on V8.
 
@@ -38,8 +37,7 @@ const PENDING_MAX_AGE_MS = 30 * 60 * 1000;
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 const BASE = import.meta.env.BASE_URL;
 
-type GateState =
-  { kind: "checking" } | { kind: "app" } | { kind: "confirm"; info: V8SeasonConfirmInfo };
+type GateState = { kind: "app" } | { kind: "confirm"; info: V8SeasonConfirmInfo };
 
 function siteIdFromPath() {
   if (typeof window === "undefined") return "";
@@ -61,52 +59,35 @@ export function V9Page() {
 }
 
 function V9SeasonGate({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<GateState>({ kind: "checking" });
+  // The app starts loading right away; the check runs alongside it and only
+  // swaps in the confirm page when the switch is on. Any failure keeps the
+  // app (fail open, as before).
+  const [state, setState] = useState<GateState>({ kind: "app" });
   const [siteId] = useState(siteIdFromPath);
 
   useEffect(() => {
-    if (!siteId || hasTestFlag()) {
-      setState({ kind: "app" });
-      return;
-    }
+    if (!siteId || hasTestFlag()) return;
     const controller = new AbortController();
-    let settled = false;
-    const settle = (next: GateState) => {
-      if (settled) return;
-      settled = true;
-      setState(next);
-    };
-    const timer = window.setTimeout(() => {
-      controller.abort();
-      settle({ kind: "app" });
-    }, GATE_TIMEOUT_MS);
+    const timer = window.setTimeout(() => controller.abort(), GATE_TIMEOUT_MS);
     fetchV8SeasonConfirm(siteId, controller.signal)
-      .then((info) =>
-        settle(info.enabled && info.phase !== "off" ? { kind: "confirm", info } : { kind: "app" }),
-      )
-      // Fail open: the confirm page is optional, the app is not.
-      .catch(() => settle({ kind: "app" }))
+      .then((info) => {
+        if (info.enabled && info.phase !== "off") setState({ kind: "confirm", info });
+      })
+      .catch(() => {
+        // Keep the app.
+      })
       .finally(() => window.clearTimeout(timer));
     return () => {
-      settled = true;
       window.clearTimeout(timer);
       controller.abort();
     };
   }, [siteId]);
 
-  if (state.kind === "app") return <>{children}</>;
+  if (state.kind !== "confirm") return <>{children}</>;
   return (
     <div className="v9-app">
       <V9Styles />
-      {state.kind === "checking" ? (
-        <main className="v9-main">
-          <section className="v9-hero v9-hero-message v9-busy-card" aria-busy="true">
-            <V9Busy />
-          </section>
-        </main>
-      ) : (
-        <V9SeasonPage siteId={siteId} initialInfo={state.info} />
-      )}
+      <V9SeasonPage siteId={siteId} initialInfo={state.info} />
     </div>
   );
 }

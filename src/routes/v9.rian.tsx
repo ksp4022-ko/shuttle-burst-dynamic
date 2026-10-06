@@ -8,7 +8,13 @@ export const Route = createFileRoute("/v9/rian")({
     meta: [
       { title: "OnCourt 日安羽球報名" },
       { name: "description", content: "OnCourt 羽球報名。" },
+      // Home-screen app (V9-009): its own name, icon and start page.
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "OnCourt 日安" },
+      { name: "theme-color", content: "#fbf6ec" },
     ],
+    links: [{ rel: "manifest", href: `${import.meta.env.BASE_URL}v9/manifest-rian.webmanifest` }],
   }),
   component: V9Page,
 });

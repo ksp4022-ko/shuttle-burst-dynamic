@@ -578,6 +578,7 @@ export function V9App() {
               }}
               onRoster={openRoster}
               onLogoParty={logoParty}
+              hintPaused={sheet !== null}
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
@@ -777,7 +778,11 @@ export function V9App() {
         </>
       )}
 
-      <V9Toast message={flow.notice === "已切換聚會" ? "" : flow.notice} onDone={clearNotice} />
+      <V9Toast
+        message={flow.notice === "已切換聚會" ? "" : flow.notice}
+        onDone={clearNotice}
+        atTop={sheet !== null}
+      />
       <V9Celebrate playKey={party.key} dismissible={party.dismissible} />
     </div>
   );

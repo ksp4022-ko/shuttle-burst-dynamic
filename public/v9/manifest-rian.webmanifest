@@ -1,0 +1,15 @@
+{
+  "name": "OnCourt 日安羽球",
+  "short_name": "OnCourt 日安",
+  "start_url": "/shuttle-burst-dynamic/v9/rian/",
+  "scope": "/shuttle-burst-dynamic/v9/",
+  "display": "standalone",
+  "background_color": "#fbf6ec",
+  "theme_color": "#fbf6ec",
+  "lang": "zh-Hant-TW",
+  "icons": [
+    { "src": "/shuttle-burst-dynamic/v9/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/shuttle-burst-dynamic/v9/brand/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/shuttle-burst-dynamic/v9/brand/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

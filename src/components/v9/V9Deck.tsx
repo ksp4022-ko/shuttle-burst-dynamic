@@ -55,6 +55,7 @@ export function V9Hero({
   counts,
   onRoster,
   onLogoParty,
+  hintPaused,
 }: {
   siteName: string;
   event: AlphaEvent;
@@ -78,6 +79,7 @@ export function V9Hero({
   counts: { confirmed: number; max: number; remain: number; waiting: number; leave: number };
   onRoster: (tab: V9RosterTab) => void;
   onLogoParty: () => void;
+  hintPaused: boolean;
 }) {
   const display = parseV8MeetupDisplay(event.name);
   const meetupName = display.displayName || event.name;
@@ -138,6 +140,7 @@ export function V9Hero({
               index={index}
               onGo={go}
               onList={onMeetup}
+              hintPaused={hintPaused}
             />
             {showMeetupName && <span className="v9-hero-name">{meetupName}</span>}
           </div>

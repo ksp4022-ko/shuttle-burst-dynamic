@@ -56,9 +56,23 @@ export type V9MascotSprite = keyof typeof SPRITES;
 const LAST_SPRITE_KEY = v9StorageKey("last-sprite");
 const DOCK_ICONS = ["meetup", "roster", "proxy", "me"];
 
+// Strips already decoded this visit: they show at once, no fade-in gap.
+const LOADED = new Set<string>();
+
+function loadStrip(url: string, onLoad?: () => void) {
+  const image = new Image();
+  image.decoding = "async";
+  image.onload = () => {
+    LOADED.add(url);
+    onLoad?.();
+  };
+  image.src = url;
+}
+
 // Called once on app start (behind the loading screen): fetch the Dock
 // icons and the mascot strip the viewer saw last time, so both are cached
-// before the home shows.
+// before the home shows; the other strips follow a moment later, so a
+// meetup switch never waits on a download.
 export function v9PreloadArt() {
   const base = import.meta.env.BASE_URL;
   const urls = DOCK_ICONS.map((key) => `${base}v9/icons/dock-${key}.webp`);
@@ -68,11 +82,10 @@ export function v9PreloadArt() {
   } catch {
     // Storage blocked: the strip just loads when it is needed.
   }
-  for (const url of urls) {
-    const image = new Image();
-    image.decoding = "async";
-    image.src = url;
-  }
+  for (const url of urls) loadStrip(url);
+  window.setTimeout(() => {
+    for (const key of Object.keys(SPRITES)) loadStrip(`${base}v9/mascot/${key}.webp`);
+  }, 1500);
 }
 
 export function V9MascotArt({
@@ -83,36 +96,41 @@ export function V9MascotArt({
   // Text laid over the sprite's blank card (e.g. "#3"), if it has one.
   badge?: string | undefined;
 }) {
-  const src = sprite ? `${import.meta.env.BASE_URL}v9/mascot/${sprite}.webp` : "";
-  const [loadedSrc, setLoadedSrc] = useState("");
+  const srcOf = (key: V9MascotSprite) => `${import.meta.env.BASE_URL}v9/mascot/${key}.webp`;
+  // The strip on screen: the requested one once it has loaded; until then
+  // the previous one stays (no empty gap on a state change).
+  const [shown, setShown] = useState<V9MascotSprite | null>(() =>
+    sprite && LOADED.has(srcOf(sprite)) ? sprite : null,
+  );
 
   useEffect(() => {
-    if (!src) return;
+    if (!sprite) return;
     let cancelled = false;
-    const image = new Image();
-    image.onload = () => {
+    const done = () => {
       if (cancelled) return;
-      setLoadedSrc(src);
+      setShown(sprite);
       try {
-        if (sprite) localStorage.setItem(LAST_SPRITE_KEY, sprite);
+        localStorage.setItem(LAST_SPRITE_KEY, sprite);
       } catch {
         // Storage blocked: no preload next time.
       }
     };
-    image.src = src;
+    if (LOADED.has(srcOf(sprite))) done();
+    else loadStrip(srcOf(sprite), done);
     return () => {
       cancelled = true;
     };
-  }, [src, sprite]);
+  }, [sprite]);
 
-  if (!sprite || loadedSrc !== src) {
+  if (!sprite || !shown) {
     return <span className="v9-mascot-frame" style={MASCOT_BOX} aria-hidden="true" />;
   }
-  const config = SPRITES[sprite];
+  const src = srcOf(shown);
+  const config = SPRITES[shown];
   const { frames, width, height, feet, centre, duration } = config;
   const strip = (
     <span
-      key={sprite}
+      key={shown}
       className="v9-sprite"
       role="presentation"
       style={{
