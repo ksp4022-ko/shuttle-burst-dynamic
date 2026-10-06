@@ -308,7 +308,8 @@ export function V9RepickContent({
   eventId: string;
   lineIdentity: V8LineIdentity;
   onConfirmed: (identity: V8LineIdentity) => Promise<void> | void;
-  onCancel: () => void;
+  // Absent when there is no identity to go back to.
+  onCancel?: (() => void) | undefined;
 }) {
   const wasFixed = lineIdentity.identityType === "fixed";
   const [mode, setMode] = useState<"fixed" | "temp">("fixed");
@@ -339,7 +340,7 @@ export function V9RepickContent({
 
   return (
     <div className="v9-id">
-      <p className="v9-id-hint">確認送出前，目前的身份都不會改變。</p>
+      {onCancel && <p className="v9-id-hint">確認送出前，目前的身份都不會改變。</p>}
       {mode === "fixed" ? (
         <>
           <V9ClaimForm
@@ -381,9 +382,11 @@ export function V9RepickContent({
           </button>
         </>
       )}
-      <button type="button" className="v9-id-switch" onClick={onCancel}>
-        取消，維持目前身份
-      </button>
+      {onCancel && (
+        <button type="button" className="v9-id-switch" onClick={onCancel}>
+          取消，維持目前身份
+        </button>
+      )}
     </div>
   );
 }

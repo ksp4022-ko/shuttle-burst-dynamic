@@ -58,8 +58,6 @@ function saveSelectedEventId(siteId: string, eventId: string) {
   }
 }
 
-// Same page on the V8 route: LINE profile confirmation (身份確認) stays in V8
-// for the V9 MVP, like the season confirm gate (D1).
 // 尚缺 N (open seats) / 備取 N (full, people waiting) / 額滿 (full, nobody
 // waiting). Counts come straight from the API; nothing is calculated here.
 function V9SeatTag({ remain, waiting }: { remain: number; waiting: number }) {
@@ -67,11 +65,6 @@ function V9SeatTag({ remain, waiting }: { remain: number; waiting: number }) {
   if (remain > 0) return <span className="v9-seat-tag is-open">尚缺 {remain}</span>;
   if (waiting > 0) return <span className="v9-seat-tag is-waiting">備取 {waiting}</span>;
   return <span className="v9-seat-tag is-full">額滿</span>;
-}
-
-function v8PathForCurrentPage() {
-  if (typeof window === "undefined") return "/v8/";
-  return window.location.pathname.replace(/\/v9(?=\/|$)/, "/v8");
 }
 
 // V9 wording for the shared flow's pending label (取消請假 instead of 消假).
@@ -487,7 +480,7 @@ export function V9App() {
       : !profileComplete
         ? { kind: "action", label: "我要報名", tone: "is-orange" }
         : !identity
-          ? { kind: "profile", href: v8PathForCurrentPage() }
+          ? { kind: "identify" }
           : { kind: "action", ...ctaFor(identity) };
   const siteName = SITE_NAMES[siteId] ?? siteId;
   const shownEventId = targetEventId ?? selectedEventId;
@@ -720,7 +713,11 @@ export function V9App() {
 
           <V9Sheet
             open={sheet === "me"}
-            title={repicking ? "重新選擇身份" : "我的球員卡"}
+            title={
+              repicking || (signedIn && profileComplete && !identity)
+                ? "重新選擇身份"
+                : "我的球員卡"
+            }
             onClose={closeSheet}
           >
             {auth.loading ? (
@@ -751,12 +748,17 @@ export function V9App() {
                 onCancel={() => setRepicking(false)}
               />
             ) : !ready || !identity ? (
-              <div className="v9-sheet-empty">
-                <p className="v9-muted">請先在 V8 完成身份確認（季打／臨打），再回到 V9 使用。</p>
-                <a className="v9-cta is-blue" href={v8PathForCurrentPage()}>
-                  前往 V8 確認身份
-                </a>
-              </div>
+              // Signed in and marked complete, but no 季打/臨打 came back
+              // (old or partial data): pick again right here.
+              lineIdentity && lineToken ? (
+                <V9RepickContent
+                  token={lineToken}
+                  siteId={siteId}
+                  eventId={selectedEventId}
+                  lineIdentity={lineIdentity}
+                  onConfirmed={confirmIdentity}
+                />
+              ) : null
             ) : (
               <V9PlayerCard
                 // The card shows the profile name (✎ edits it); a temp

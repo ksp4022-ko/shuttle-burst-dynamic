@@ -3,10 +3,7 @@ import { V9Page } from "@/components/v9/V9SeasonGate";
 
 export const Route = createFileRoute("/v9")({
   head: () => ({
-    meta: [
-      { title: "OnCourt 羽球報名" },
-      { name: "description", content: "OnCourt 羽球報名，使用 V8 API。" },
-    ],
+    meta: [{ title: "OnCourt 羽球報名" }, { name: "description", content: "OnCourt 羽球報名。" }],
     // OnCourt icons for every /v9 page (the manifest comes in baseline phase 6).
     links: [
       {

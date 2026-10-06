@@ -20,7 +20,6 @@ export type V9Cta =
   | { kind: "loading" }
   | { kind: "login" }
   | { kind: "identify" }
-  | { kind: "profile"; href: string }
   | { kind: "action"; label: string; tone: string };
 
 // Sticker icons in public/v9/icons/*.webp (96px, shown at 36px).
@@ -217,10 +216,6 @@ export function V9Hero({
         <button type="button" className="v9-cta is-blue" onClick={onMe}>
           確認身份
         </button>
-      ) : cta.kind === "profile" ? (
-        <a className="v9-cta is-blue" href={cta.href}>
-          前往 V8 確認身份
-        </a>
       ) : (
         // A new action (我要請假 → 取消請假 …) flips the button in.
         <motion.button
