@@ -497,14 +497,18 @@ const V9_CSS = `
 .v9-pc-who { display: grid; gap: 4px; min-width: 0; flex: 1; }
 .v9-pc-name { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 0; font-size: 21px; font-weight: 900; line-height: 1.15; }
 .v9-pc-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.v9-pc .v9-pc-edit { flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 2px solid var(--v9-ink); border-radius: 50%; background: var(--v9-yellow); color: var(--v9-ink); box-shadow: 0 2px 0 var(--v9-ink); cursor: pointer; }
-.v9-pc .v9-pc-edit:active { transform: translateY(2px); box-shadow: none; }
+.v9-pc .v9-pc-edit { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--v9-muted); cursor: pointer; }
+.v9-pc .v9-pc-edit:active { background: rgba(31,26,23,.08); }
 .v9-pc-rename { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .v9-pc-rename .v9-input { flex: 1; min-width: 0; padding: 6px 10px; font-size: 16px; }
 .v9-pc-account { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px 18px; padding: 10px 12px 12px; border-top: 2px dashed #eadfca; color: var(--v9-muted); font-size: 12px; font-weight: 800; }
 .v9-pc .v9-pc-link { padding: 2px 0; border: 0; background: none; color: var(--v9-muted); font-size: 12px; font-weight: 800; text-decoration: underline; cursor: pointer; }
 .v9-pc .v9-pc-link.is-red { color: var(--v9-red); }
-.v9-pc-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
+.v9-pc-sub { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--v9-muted); font-size: 13px; font-weight: 800; }
+.v9-pc-sub b { font-weight: 900; }
+.v9-pc-sub b.is-fixed { color: var(--v9-blue); }
+.v9-pc-sub b.is-temp { color: #c46f12; }
+.v9-pc-sub span::before { content: "·"; margin-right: 6px; }
 .v9-pc-stats { display: grid; grid-template-columns: 1.25fr 1fr .8fr; margin: 0; border-bottom: 2px dashed #eadfca; }
 .v9-pc-stats.is-two { grid-template-columns: 1.25fr 1fr; }
 .v9-pc-stats div { display: grid; gap: 3px; align-content: start; min-width: 0; padding: 9px 10px; }
