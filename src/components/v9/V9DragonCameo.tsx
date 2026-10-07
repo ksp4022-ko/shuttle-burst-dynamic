@@ -187,8 +187,9 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
 
     // One warped pass: each slice sits on the path at its arc position,
     // turned to the path, nudged along the normal by the body wave and the
-    // breathing. Past the start of the side run the dragon rolls over
-    // (mirrored), so it comes back belly-down instead of upside down.
+    // breathing. Down the side the feet face the cards; at the bottom of the
+    // side run it rolls over (mirrored), so it comes back belly-down instead
+    // of upside down.
     const drawPass = (nose: number, time: number, rows: number) => {
       const k = Math.PI * 2 * 1.3;
       const phase = time * Math.PI * 2 * 1.6;
@@ -203,7 +204,7 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
             : 0;
         const breathe = 3 * Math.sin(time * Math.PI * 2 * 0.6 - s * 0.012) * level;
         const off = wave + breathe;
-        const roll = s > sideStart ? -1 : 1;
+        const roll = s > sideEnd ? -1 : 1;
         // On a turn the slices fan out on the outer side; widen them so the
         // fan closes (rows far from the path spread the most).
         const bend = Math.abs(at(s + 1).a - at(s - 1).a) / 2;
