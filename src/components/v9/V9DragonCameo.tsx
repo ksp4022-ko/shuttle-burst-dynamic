@@ -66,6 +66,49 @@ function makeSticker(img: HTMLImageElement) {
 
 type Pt = { x: number; y: number; a: number };
 
+const BANG_S = 0.32;
+
+// A comic impact star: pops out, holds, shrinks away; a few speed ticks
+// around it.
+function drawBang(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  age: number,
+  colors: { fill: string; ink: string },
+) {
+  const grow = age < 0.3 ? 0.5 + (age / 0.3) * 0.7 : 1.2 - ((age - 0.3) / 0.7) * 0.5;
+  const r = size * grow;
+  const spikes = 9;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(0.2);
+  ctx.globalAlpha = age > 0.75 ? (1 - age) / 0.25 : 1;
+  ctx.beginPath();
+  for (let i = 0; i < spikes * 2; i += 1) {
+    const t = (i / (spikes * 2)) * Math.PI * 2;
+    const len = i % 2 === 0 ? r * (i % 4 === 0 ? 1 : 0.82) : r * 0.48;
+    ctx.lineTo(Math.cos(t) * len, Math.sin(t) * len);
+  }
+  ctx.closePath();
+  ctx.fillStyle = colors.fill;
+  ctx.strokeStyle = colors.ink;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.fill();
+  ctx.stroke();
+  ctx.lineCap = "round";
+  for (let i = 0; i < 4; i += 1) {
+    const t = -0.9 + i * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(t) * r * 1.25, Math.sin(t) * r * 1.25);
+    ctx.lineTo(Math.cos(t) * r * 1.6, Math.sin(t) * r * 1.6);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 // The swim path (always drawn left → right; the other side is a mirror):
 // along gap 1, a quarter turn down, along the side margin, a quarter turn
 // back, along gap 2 out of the hero. Sampled every 1px of arc length.
@@ -183,6 +226,12 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
     // The roster strip: a spring that the two bumps kick and the squeeze holds.
     let push = 0;
     let pushV = 0;
+    const bangs: { at: number; size: number }[] = [];
+    const css = getComputedStyle(hero);
+    const colors = {
+      fill: css.getPropertyValue("--v9-yellow").trim() || "#ffd23f",
+      ink: css.getPropertyValue("--v9-ink").trim() || "#1f1a17",
+    };
     let hits = 0;
     let lastNow = performance.now();
     const started = lastNow;
@@ -264,10 +313,12 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
       if (hits === 0 && b >= 0.3) {
         hits = 1;
         pushV -= 110;
+        bangs.push({ at: time, size: 13 });
       }
       if (hits === 1 && b >= 0.6) {
         hits = 2;
         pushV -= 220 + shove * 8;
+        bangs.push({ at: time, size: 18 });
       }
       const target = hits === 2 && nose - fullW < sideEnd + TURN_R ? -shove : hits === 1 ? -2 : 0;
       pushV += (320 * (target - push) - 16 * pushV) * dt;
@@ -290,6 +341,12 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
       ctx.restore();
       // Over the cards: the upper half -- head, back, fins.
       const neck = drawPass(nose, time, topRows);
+      // A yellow comic "bang" on the strip's corner at each bump.
+      bangs.forEach((bang) => {
+        const age = (time - bang.at) / BANG_S;
+        if (age < 1)
+          drawBang(ctx, stripBox.x + stripBox.w + push + 2, stripBox.y + 6, bang.size, age, colors);
+      });
 
       const headX = neck.x + Math.cos(neck.a) * W * 0.18 + Math.sin(neck.a) * neck.roll * H * 0.2;
       const headY = neck.y + Math.sin(neck.a) * W * 0.18 - Math.cos(neck.a) * neck.roll * H * 0.2;
