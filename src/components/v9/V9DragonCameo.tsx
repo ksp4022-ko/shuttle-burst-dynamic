@@ -24,7 +24,7 @@ const TOP_ROWS = BODY_Y * H + 4; // rows above this ride over the cards
 const OUTLINE = 2.5; // sticker outline, CSS px
 const SPEED = 190; // CSS px per second
 const SPEED_LIVELY = 60; // /v9test (V9-018): a slow, slithering swim
-const TRACK_AMP = 11;
+const TRACK_AMP = 6; // ±6px: 12px from crest to trough
 const BUMP_S = 0.8; // the two bumps at the corner
 const TURN_R = 16;
 const SLICE = 2;
@@ -263,7 +263,7 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
         let tilt = 0;
         if (livelyRef.current) {
           const beat = s * trackK;
-          breathe = (TRACK_AMP * Math.sin(beat) - 6) * level;
+          breathe = (TRACK_AMP * Math.sin(beat) - 3) * level;
           tilt = Math.atan(TRACK_AMP * trackK * Math.cos(beat) * level);
         } else {
           breathe = 3 * Math.sin(time * Math.PI * 2 * 0.6 - s * 0.012) * level;
