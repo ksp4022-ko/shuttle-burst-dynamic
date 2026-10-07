@@ -23,7 +23,8 @@ const BODY_Y = 0.55; // the body line (riding the path) as a share of the height
 const TOP_ROWS = BODY_Y * H + 4; // rows above this ride over the cards
 const OUTLINE = 2.5; // sticker outline, CSS px
 const SPEED = 190; // CSS px per second
-const SPEED_LIVELY = 90; // /v9test (V9-018): a slow, rolling swim
+const SPEED_LIVELY = 60; // /v9test (V9-018): a slow, slithering swim
+const TRACK_AMP = 11;
 const BUMP_S = 0.8; // the two bumps at the corner
 const TURN_R = 16;
 const SLICE = 2;
@@ -207,8 +208,8 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
     const bumpAt = sideStart + 2;
     const speed = livelyRef.current ? SPEED_LIVELY : SPEED;
     const toBump = (bumpAt - noseStart) / speed;
-    // lively: three crests along each level run.
-    const swellPeriod = toBump / 3;
+    // lively: three crests of the slithering track across the hero.
+    const trackK = (Math.PI * 2 * 3) / side;
     const total = toBump + BUMP_S + (last - bumpAt) / speed;
     const noseAt = (t: number) => {
       if (t < toBump) return noseStart + t * speed;
@@ -253,20 +254,20 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
           along < NECK
             ? 5 * ((NECK - along) / NECK) ** 0.8 * Math.sin(k * along + phase) * (0.4 + 0.6 * level)
             : 0;
-        // lively: the swell rides the dragon's own clock -- head first, the
-        // body following -- rather than a wave fixed to the path, which at
-        // swimming speed it would just surf at one height.
-        const swell = livelyRef.current ? { amp: 18, k: 0.018 } : { amp: 3, k: 0.012 };
-        const beat = livelyRef.current
-          ? (time * Math.PI * 2) / swellPeriod - (fullW - cx) * swell.k
-          : time * Math.PI * 2 * 0.6 - s * swell.k;
-        // lively: lifted a little overall, so a crest clears the card down
-        // to the feet and a trough sinks to the fins.
-        const breathe = (swell.amp * Math.sin(beat) - (livelyRef.current ? 9 : 0)) * level;
-        // The slope of that swell: the body leans into it.
-        const tilt = livelyRef.current
-          ? Math.atan(0.6 * swell.amp * swell.k * Math.cos(beat) * level)
-          : 0;
+        // lively: a slithering track -- the swell is fixed to the path, so
+        // each part of the body rises and dives where the head did, the body
+        // bending through crests and troughs (three across the hero), and
+        // leans with the track's slope. Lifted a little overall, so a crest
+        // clears the card and a trough sinks to the fins.
+        let breathe: number;
+        let tilt = 0;
+        if (livelyRef.current) {
+          const beat = s * trackK;
+          breathe = (TRACK_AMP * Math.sin(beat) - 6) * level;
+          tilt = Math.atan(TRACK_AMP * trackK * Math.cos(beat) * level);
+        } else {
+          breathe = 3 * Math.sin(time * Math.PI * 2 * 0.6 - s * 0.012) * level;
+        }
         const off = wave + breathe;
         const roll = s > sideEnd ? -1 : 1;
         // On a turn the slices fan out on the outer side; widen them so the
