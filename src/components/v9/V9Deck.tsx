@@ -8,7 +8,6 @@ import { V9Lockup } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
 import { V9MeetupNav } from "./V9MeetupNav";
 import { V9PreviewBadge } from "./V9PreviewBadge";
-import { useV9Test } from "./useV9Test";
 import { V9DragonCameo } from "./V9DragonCameo";
 import { V9Roll } from "./V9Roll";
 import { v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
@@ -84,7 +83,6 @@ export function V9Hero({
   onLogoParty: () => void;
   hintPaused: boolean;
 }) {
-  const next = useV9Test();
   const display = parseV8MeetupDisplay(event.name);
   const meetupName = display.displayName || event.name;
   // "康軒" next to "康軒羽球" says nothing new; only special names show.
@@ -110,7 +108,7 @@ export function V9Hero({
   return (
     <section className="v9-hero" aria-label="聚會控制台">
       {/* V9-017: swims along a gap between the cards. */}
-      {next && <V9DragonCameo paused={hintPaused || busy} />}
+      <V9DragonCameo paused={hintPaused || busy} />
       <V9PreviewBadge />
       <div className="v9-hero-top">
         <h1 className="v9-brand-name">
@@ -137,8 +135,8 @@ export function V9Hero({
         <div className="v9-hero-stage">
           <div className="v9-hero-meetup">
             <V9MeetupNav
-              siteLabel={next ? siteName : `${siteName}羽球`}
-              siteBadge={next}
+              siteLabel={siteName}
+              siteBadge
               events={events}
               index={index}
               onGo={go}

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmV8LineProfile, fetchV8ClaimOptions, type V8ClaimOption } from "@/lib/v8-line-auth";
 import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
-import { useV9Test } from "./useV9Test";
 
 // LINE identity in V9 (V9-006, temp-first). Same requests as V8 ACTIVE's
 // profile step -- 季打 claim a name from the season list, 臨打 give the name
@@ -146,9 +145,7 @@ function V9ClaimForm({
   tempAction?: { label: string; onClick: () => void } | undefined;
   tempOnlyWhenEmpty?: boolean;
 }) {
-  const next = useV9Test();
   const [empty, setEmpty] = useState(false);
-  const isEmpty = next && empty;
   const [picked, setPicked] = useState<V8ClaimOption | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -174,7 +171,7 @@ function V9ClaimForm({
 
   return (
     <>
-      {!isEmpty && <p className="v9-id-lead">選取你的名字</p>}
+      {!empty && <p className="v9-id-lead">選取你的名字</p>}
       <V9ClaimPicker
         token={token}
         siteId={siteId}
@@ -185,11 +182,11 @@ function V9ClaimForm({
           setPicked(member);
           setError("");
         }}
-        emptyCard={next}
+        emptyCard
         onEmpty={setEmpty}
       />
       {error && <p className="v9-id-error">{error}</p>}
-      {!isEmpty && (
+      {!empty && (
         <button
           type="button"
           className="v9-cta is-blue"
@@ -201,7 +198,7 @@ function V9ClaimForm({
         </button>
       )}
       {tempAction &&
-        (isEmpty ? (
+        (empty ? (
           <button type="button" className="v9-cta is-orange" onClick={tempAction.onClick}>
             {tempAction.label}
           </button>
@@ -362,7 +359,6 @@ export function V9RepickContent({
   // Absent when there is no identity to go back to.
   onCancel?: (() => void) | undefined;
 }) {
-  const next = useV9Test();
   const wasFixed = lineIdentity.identityType === "fixed";
   const [mode, setMode] = useState<"fixed" | "temp">("fixed");
   const [name, setName] = useState(
@@ -392,7 +388,6 @@ export function V9RepickContent({
 
   return (
     <div className="v9-id">
-      {onCancel && !next && <p className="v9-id-hint">確認送出前，目前的身份都不會改變。</p>}
       {mode === "fixed" ? (
         <>
           <V9ClaimForm
@@ -402,7 +397,7 @@ export function V9RepickContent({
             submitLabel="改成"
             onConfirmed={onConfirmed}
             tempAction={{
-              label: next ? "我是臨打" : "我不在季打名單（臨打）",
+              label: "我是臨打",
               onClick: () => setMode("temp"),
             }}
           />
