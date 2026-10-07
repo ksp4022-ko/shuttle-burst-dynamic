@@ -24,7 +24,6 @@ const TOP_ROWS = BODY_Y * H + 4; // rows above this ride over the cards
 const OUTLINE = 2.5; // sticker outline, CSS px
 const SPEED = 190; // CSS px per second
 const BUMP_S = 0.8; // the two bumps at the corner
-const PUSH = 10; // how far the strip is shoved aside
 const TURN_R = 16;
 const SLICE = 2;
 const MIN_GAP_MS = 30_000;
@@ -145,7 +144,10 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
     const stripBox = cards[1]!;
     const y1 = (cards[0]!.y + cards[0]!.h + stripBox.y) / 2;
     const y2 = (stripBox.y + stripBox.h + cards[2]!.y) / 2;
-    const side = (stripBox.x + stripBox.w + (hw - hero.clientLeft)) / 2;
+    // Down the side the dragon keeps its back (head, antlers) clear of the
+    // frame; the strip is shoved aside far enough to make room for the body.
+    const side = hw - hero.clientLeft - H * BODY_Y * 0.95;
+    const shove = Math.max(10, stripBox.x + stripBox.w + 9 - side);
 
     const pad = art.pad;
     const fullW = W + pad * 2;
@@ -265,9 +267,9 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
       }
       if (hits === 1 && b >= 0.6) {
         hits = 2;
-        pushV -= 220;
+        pushV -= 220 + shove * 8;
       }
-      const target = hits === 2 && nose - fullW < sideEnd + TURN_R ? -PUSH : hits === 1 ? -2 : 0;
+      const target = hits === 2 && nose - fullW < sideEnd + TURN_R ? -shove : hits === 1 ? -2 : 0;
       pushV += (320 * (target - push) - 16 * pushV) * dt;
       push += pushV * dt;
       strip.style.translate = `${(dir * push).toFixed(2)}px 0`;
