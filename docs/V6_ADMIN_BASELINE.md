@@ -1,6 +1,6 @@
 # V6 Admin Next Baseline
 
-Status: 初版 v0.1（2026-10-07，主要決策已定案，尚未開工）
+Status: v0.2 定案（2026-10-07，尚未開工）
 Repo: `ksp4022-ko/shuttle-burst-dynamic`（frontend，新後台）／`ksp4022-ko/badminton-signup`（Worker，原則上不改）
 
 ---
@@ -8,7 +8,7 @@ Repo: `ksp4022-ko/shuttle-burst-dynamic`（frontend，新後台）／`ksp4022-ko
 ## 0. 定位
 
 - 新版 V6 管理後台，與舊 Worker `/admin`（`renderAdminPage()`）**平行運行**；舊 `/admin` 不動。
-- 路由：`/v6next`（暫定），放在 GitHub Pages，沿用 V9（OnCourt）的 React / TanStack Start 架構。
+- 路由：`/v10CtlPanel`（定案；網址大小寫有區分），放在 GitHub Pages，沿用 V9（OnCourt）的 React / TanStack Start 架構。
 - 目標：舊 `/admin` 的功能**全部搬進來**，**唯一不做：Google Sheet 資料匯入**（dry-run / apply）。
 - 只換介面，不改計費規則、不改 D1 結構、不新增商業規則；所有數字以 Worker 回傳為準，前端不自行計算。
 
@@ -21,6 +21,8 @@ Repo: `ksp4022-ko/shuttle-burst-dynamic`（frontend，新後台）／`ksp4022-ko
 | D3 | 預設分頁 | 開啟後停在「① 當次聚會」，自動選今天或下一場聚會 |
 | D4 | 第一階段範圍 | 唯讀，先做 ① 當次聚會、③ 賽季管理 |
 | D5 | 功能範圍 | V6 後台全部功能，Google Sheet 匯入除外 |
+| D6 | 路由 | `/v10CtlPanel` |
+| D7 | 測試路由 | 不另開，只有 `/v10CtlPanel` 一個 |
 
 ## 2. 資料與驗證
 
@@ -113,7 +115,7 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 
 | 階段 | 內容 | 驗收 |
 |---|---|---|
-| P0 | 骨架：`/v6next` 路由、登入頁、Header、dock、API client | 手機截圖 |
+| P0 | 骨架：`/v10CtlPanel` 路由、登入頁、Header、dock、API client | 手機截圖 |
 | P1 | 唯讀：① 當次聚會、③ 賽季管理 | 手機截圖＋與舊 /admin 數字比對 |
 | P2 | 唯讀：② 聚會管理、④ 系統設定 | 手機截圖 |
 | P3 | 寫入：① 當次聚會（收費、支出、代操作、開關、LINE 推送） | 在測試聚會實測 |
@@ -125,9 +127,9 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 
 ## 6. 隔離與安全規則
 
-- 程式放在 `src/components/v6admin/`、`src/lib/v6admin-*`；路由檔 `src/routes/v6next.tsx`。
+- 程式放在 `src/components/v6admin/`、`src/lib/v6admin-*`；路由檔 `src/routes/v10CtlPanel.tsx`。
 - 不 import V8 / V9 的 UI 元件，V8 / V9 也不 import v6admin 程式；可參考 V9 的色票與樣式，但另外複製一份。
-- 新後台自有 storage key 使用 `v6next:` 前綴；只存非敏感偏好（例如上次選的場地），不存密碼。
+- 新後台自有 storage key 使用 `v10CtlPanel:` 前綴；只存非敏感偏好（例如上次選的場地），不存密碼。
 - 共用檔（`__root.tsx`、`routeTree.gen.ts`、workflow）若需修改，報告中標示「影響共用檔」，並做 `/v9`、`/v8` 迴歸檢查。
 - `/v9` 正式頁面不得受影響；不 force push、不 hard reset。
 - Worker 原則上不改；若必須改，先跑 `cd worker && npm run check`，改完提供 Codex 一鍵部署指令（目前編號到 V6-025）。
@@ -139,5 +141,4 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 
 ## 8. 待決事項
 
-- 正式路由名稱（`/v6next` 為暫定）。
-- 是否需要 `/v6nexttest` 開發路由（目前 `/v6next` 本身是新頁面，不影響既有使用者，暫不另開）。
+- 無（v0.2 已定案）。
