@@ -109,7 +109,7 @@ export function V9Hero({
 
   return (
     <section className="v9-hero" aria-label="聚會控制台">
-      {/* First child: every card after it paints on top (V9-017). */}
+      {/* V9-017: swims along a gap between the cards. */}
       {next && <V9DragonCameo paused={hintPaused || busy} />}
       <V9PreviewBadge />
       <div className="v9-hero-top">

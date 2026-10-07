@@ -77,13 +77,8 @@ const V9_CSS = `
 }
 .v9-hero > :not(.v9-preview-badge) { position: relative; }
 .v9-hero > .v9-dragon {
-  position: absolute; left: 0; top: 0; width: 80px; height: auto; visibility: hidden; pointer-events: none;
-  cursor: pointer; -webkit-tap-highlight-color: transparent; will-change: transform;
+  position: absolute; left: 0; top: 0; z-index: 3; width: 100%; height: 100%; visibility: hidden; pointer-events: none;
 }
-/* The layout wrappers let taps through their empty gaps (to the dragon
-   underneath); the cards and controls inside take taps as before. */
-.v9-hero-body, .v9-hero-stage { pointer-events: none; }
-.v9-hero-body > :not(.v9-hero-stage), .v9-hero-stage > * { pointer-events: auto; }
 .v9-luck { position: fixed; z-index: 95; width: 0; height: 0; pointer-events: none; }
 .v9-luck-puff { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 2.5px solid var(--v9-ink); }
 .v9-luck-shuttle { position: absolute; left: -11px; top: -11px; display: block; max-width: none; height: auto; }

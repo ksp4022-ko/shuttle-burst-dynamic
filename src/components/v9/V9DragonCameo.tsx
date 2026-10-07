@@ -1,112 +1,211 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { animate, motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 
-// V9-017: a little dragon hiding behind the cards. Every 30–60s it rises
-// from behind the info rail or the roster strip (taking turns), swims along
-// the top or bottom edge with only its back and head showing, peeks out at
-// the corner and dives back. A tap while it shows plays the 好運 +1 egg
-// (a puff, a spray of mini shuttles, a sticker). It is the hero's first
-// child, so every card painted after it covers it -- only the gaps show it.
+// V9-017: a little dragon that swims along a gap between two hero cards
+// (info rail / roster strip, or roster strip / status) every 30–60s. It is
+// one picture warped column by column into a travelling wave, so the body
+// bends without seams. The part above the lower card's top edge -- head,
+// back, fins -- rides over the cards as a sticker (white outline, soft
+// shadow); the belly and feet slip behind the lower card. A tap while it
+// swims plays the 好運 +1 egg (a puff, a spray of mini shuttles, a sticker).
 
 const BASE = import.meta.env.BASE_URL;
-const W = 80;
-const H = Math.round((W * 138) / 240);
-const SHOW = 0.62; // share of the dragon's height that rises above the edge
+const SRC_W = 288;
+const SRC_H = 203;
+const W = 90; // CSS px
+const H = Math.round((W * SRC_H) / SRC_W);
+const NECK = 0.66; // right of this (the head) stays rigid
+const BODY_Y = 0.55; // share of the height where the body line sits in the gap
+const OUTLINE = 2.5; // sticker outline, CSS px
+const SWIM_MS = 2800;
 const MIN_GAP_MS = 30_000;
 const MAX_GAP_MS = 60_000;
+const PAIRS: [string, string][] = [
+  [".v9-rail", ".v9-roster-strip"],
+  [".v9-roster-strip", ".v9-hero-status"],
+];
 
-type Run = { card: "rail" | "strip"; edge: "top" | "bottom"; dir: 1 | -1 };
-
-function nextRun(last: Run | null): Run {
-  return {
-    card: last?.card === "rail" ? "strip" : "rail",
-    edge: Math.random() < 0.5 ? "top" : "bottom",
-    dir: Math.random() < 0.5 ? 1 : -1,
+// The dragon with its sticker outline and shadow baked in, at source scale.
+function makeSticker(img: HTMLImageElement) {
+  const scale = SRC_W / W;
+  const pad = Math.ceil((OUTLINE + 2) * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = SRC_W + pad * 2;
+  canvas.height = SRC_H + pad * 2;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const tint = (color: string) => {
+    const layer = document.createElement("canvas");
+    layer.width = canvas.width;
+    layer.height = canvas.height;
+    const lc = layer.getContext("2d")!;
+    lc.drawImage(img, pad, pad, SRC_W, SRC_H);
+    lc.globalCompositeOperation = "source-in";
+    lc.fillStyle = color;
+    lc.fillRect(0, 0, layer.width, layer.height);
+    return layer;
   };
+  const white = tint("#fff");
+  const shade = tint("rgba(60,40,20,.22)");
+  const r = OUTLINE * scale;
+  for (let a = 0; a < 16; a += 1) {
+    const t = (a / 16) * Math.PI * 2;
+    ctx.drawImage(shade, Math.cos(t) * r + scale, Math.sin(t) * r + 2 * scale);
+  }
+  for (let a = 0; a < 16; a += 1) {
+    const t = (a / 16) * Math.PI * 2;
+    ctx.drawImage(white, Math.cos(t) * r, Math.sin(t) * r);
+  }
+  ctx.drawImage(img, pad, pad, SRC_W, SRC_H);
+  return { canvas, pad: pad / scale };
 }
 
 type Burst = { id: number; x: number; y: number };
+type Run = { pair: number; dir: 1 | -1 };
 
 export function V9DragonCameo({ paused }: { paused: boolean }) {
   const reduceMotion = useReducedMotion();
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const lastRun = useRef<Run | null>(null);
-  const running = useRef(false);
-  const tapped = useRef(false);
-  const stopAll = useRef<(() => void) | null>(null);
-  const facing = useRef<1 | -1>(1);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sticker = useRef<{ canvas: HTMLCanvasElement; pad: number } | null>(null);
+  const lastPair = useRef(1);
+  const frame = useRef(0);
+  const hitBox = useRef<{
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    headX: number;
+    headY: number;
+  } | null>(null);
+  const stop = useRef<((tapped: boolean) => void) | null>(null);
   const [round, setRound] = useState(0);
   const [bursts, setBursts] = useState<Burst[]>([]);
 
-  const play = useCallback(async () => {
-    const img = imgRef.current;
-    const hero = img?.parentElement;
-    if (!img || !hero) return;
-    const run = nextRun(lastRun.current);
-    lastRun.current = run;
-    facing.current = run.dir;
-    const card = hero.querySelector<HTMLElement>(
-      run.card === "rail" ? ".v9-rail" : ".v9-roster-strip",
-    );
-    if (!card) return;
-    const h = hero.getBoundingClientRect();
-    const c = card.getBoundingClientRect();
-    const left = c.left - h.left;
-    const right = c.right - h.left;
-    const top = run.edge === "top" ? c.top - h.top : c.bottom - h.top;
-    // Upright on the top edge; upside down (back out) under the bottom edge.
-    const hidden = run.edge === "top" ? top : top - H;
-    const shown = run.edge === "top" ? top - H * SHOW : top - H * (1 - SHOW);
-    const peek = run.edge === "top" ? shown - 5 : shown + 5;
-    const startX = run.dir === 1 ? left + 12 : right - W - 12;
-    const endX = run.dir === 1 ? right - W * 0.72 : left - W * 0.28;
-    const midX = startX + (endX - startX) * 0.55;
-    const tilt = (run.edge === "top" ? -1 : 1) * run.dir * 12;
-
-    running.current = true;
-    tapped.current = false;
-    img.style.visibility = "visible";
-    img.style.pointerEvents = "auto";
-    const base = { scaleX: run.dir, scaleY: run.edge === "top" ? 1 : -1 };
-    const controls: { stop: () => void }[] = [];
-    stopAll.current = () => controls.forEach((item) => item.stop());
-    const step = (keyframes: Record<string, unknown>, options: Record<string, unknown>) => {
-      const control = animate(img, { ...base, ...keyframes }, options);
-      controls.push(control);
-      return control;
+  useEffect(() => {
+    if (reduceMotion) return;
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => {
+      sticker.current = makeSticker(img);
     };
-    try {
-      await step(
-        { x: [startX, startX + run.dir * 14], y: [hidden, shown], rotate: 0 },
-        { duration: 0.35, ease: "easeOut" },
-      );
-      if (tapped.current) return;
-      await step(
-        {
-          x: [startX + run.dir * 14, midX, endX],
-          y: [shown, shown - 2, shown + 2, shown - 2, shown],
-          rotate: [0, 4, -4, 4, -3, 0],
-        },
-        { duration: 1.35, ease: "easeInOut" },
-      );
-      if (tapped.current) return;
-      await step({ y: peek, rotate: tilt }, { duration: 0.22, ease: "easeOut" });
-      await step({ rotate: [tilt, tilt * 0.4, tilt] }, { duration: 0.45 });
-      if (tapped.current) return;
-      await step({ y: hidden, rotate: 0 }, { duration: 0.3, ease: "easeIn" });
-    } finally {
-      if (!tapped.current) {
-        img.style.visibility = "hidden";
-        img.style.pointerEvents = "none";
-        running.current = false;
-        setRound((value) => value + 1);
+    img.src = `${BASE}v9/mascot/dragon-full.webp`;
+  }, [reduceMotion]);
+
+  const play = useCallback(() => {
+    const canvas = canvasRef.current;
+    const hero = canvas?.parentElement;
+    const art = sticker.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !hero || !art || !ctx) return false;
+    const run: Run = { pair: 1 - lastPair.current, dir: Math.random() < 0.5 ? 1 : -1 };
+    lastPair.current = run.pair;
+    const pair = PAIRS[run.pair];
+    const upper = pair && hero.querySelector<HTMLElement>(pair[0]);
+    const lower = pair && hero.querySelector<HTMLElement>(pair[1]);
+    if (!upper || !lower) return false;
+    const h = hero.getBoundingClientRect();
+    const u = upper.getBoundingClientRect();
+    const l = lower.getBoundingClientRect();
+    const cut = l.top - h.top;
+    const gapMid = (u.bottom + l.top) / 2 - h.top;
+    const radius = parseFloat(getComputedStyle(lower).borderTopLeftRadius) || 0;
+    const lowerBox = { x: l.left - h.left, y: cut, w: l.width, h: l.height };
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(h.width * dpr);
+    canvas.height = Math.round(h.height * dpr);
+    canvas.style.visibility = "visible";
+    canvas.style.opacity = "1";
+
+    const pad = art.pad;
+    const sw = art.canvas.width;
+    const sh = art.canvas.height;
+    const fullW = W + pad * 2;
+    const fullH = H + pad * 2;
+    const unit = sw / fullW; // source px per CSS px
+    const top = gapMid - H * BODY_Y - pad;
+    const startX = run.dir === 1 ? -fullW : h.width;
+    const endX = run.dir === 1 ? h.width : -fullW;
+    const SLICE = 2; // CSS px per column slice
+    const started = performance.now();
+
+    const draw = (now: number) => {
+      const t = Math.min(1, (now - started) / SWIM_MS);
+      const x = startX + (endX - startX) * t;
+      const phase = ((now - started) / 1000) * Math.PI * 2 * 1.6;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, h.width, h.height);
+      ctx.save();
+      // Everything except the lower card: the belly and feet slip behind it.
+      ctx.beginPath();
+      ctx.rect(0, 0, h.width, h.height);
+      if (ctx.roundRect) ctx.roundRect(lowerBox.x, lowerBox.y, lowerBox.w, lowerBox.h, radius);
+      else ctx.rect(lowerBox.x, lowerBox.y, lowerBox.w, lowerBox.h);
+      ctx.clip("evenodd");
+      if (run.dir === -1) {
+        ctx.translate(x + fullW, 0);
+        ctx.scale(-1, 1);
+      } else {
+        ctx.translate(x, 0);
       }
-    }
+      const k = Math.PI * 2 * 1.3;
+      const bob = 1.2 * Math.sin(phase + k * NECK);
+      for (let cx = 0; cx < fullW; cx += SLICE) {
+        const along = Math.min(1, Math.max(0, (cx - pad) / W));
+        const wave =
+          along < NECK ? 5 * ((NECK - along) / NECK) ** 0.8 * Math.sin(k * along + phase) : 0;
+        ctx.drawImage(
+          art.canvas,
+          cx * unit,
+          0,
+          SLICE * unit,
+          sh,
+          cx,
+          top + wave + bob,
+          SLICE + 0.6,
+          fullH,
+        );
+      }
+      ctx.restore();
+      const left = Math.max(h.left, h.left + x);
+      const right = Math.min(h.right, h.left + x + fullW);
+      const headX = h.left + x + (run.dir === 1 ? pad + W * 0.84 : pad + W * 0.16);
+      hitBox.current =
+        right > left
+          ? {
+              left,
+              right,
+              top: h.top + top,
+              bottom: h.top + cut,
+              headX,
+              headY: h.top + top + pad + H * 0.3,
+            }
+          : null;
+      if (t < 1) frame.current = requestAnimationFrame(draw);
+      else stop.current?.(false);
+    };
+
+    stop.current = (tapped) => {
+      cancelAnimationFrame(frame.current);
+      stop.current = null;
+      hitBox.current = null;
+      const finish = () => {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.visibility = "hidden";
+        setRound((value) => value + 1);
+      };
+      if (!tapped) return finish();
+      canvas.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300 }).onfinish = finish;
+      canvas.style.opacity = "0";
+    };
+    frame.current = requestAnimationFrame(draw);
+    return true;
   }, []);
 
-  // Next appearance: 30–60s after the last (?dragon=now on /v9test: 3s,
-  // then every 8s, to preview). Waits for the calendar hint to finish.
+  // Next appearance: 30–60s after the last (?dragon=now: 3s, then every 8s,
+  // to preview). Waits for the calendar hint to finish.
   useEffect(() => {
     if (reduceMotion || paused) return;
     const quick =
@@ -118,55 +217,51 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
         : 8000
       : MIN_GAP_MS + Math.random() * (MAX_GAP_MS - MIN_GAP_MS);
     let timer = window.setTimeout(function tick() {
-      if (document.querySelector(".v9-cal-hint") || document.visibilityState !== "visible") {
+      if (
+        document.querySelector(".v9-cal-hint") ||
+        document.visibilityState !== "visible" ||
+        !play()
+      ) {
         timer = window.setTimeout(tick, 3000);
-        return;
       }
-      void play();
     }, delay);
     return () => window.clearTimeout(timer);
   }, [round, paused, reduceMotion, play]);
 
-  // A sheet opening mid-swim sends the dragon straight back down.
+  // A sheet opening mid-swim: the dragon just goes.
   useEffect(() => {
-    if (!paused || !running.current || !imgRef.current) return;
-    stopAll.current?.();
-    tapped.current = true;
-    const img = imgRef.current;
-    img.style.visibility = "hidden";
-    img.style.pointerEvents = "none";
-    running.current = false;
+    if (paused) stop.current?.(false);
   }, [paused]);
 
-  const onTap = () => {
-    const img = imgRef.current;
-    if (!img || !running.current || tapped.current) return;
-    tapped.current = true;
-    stopAll.current?.();
-    const box = img.getBoundingClientRect();
-    const headX = box.left + (facing.current === -1 ? box.width * 0.18 : box.width * 0.82);
-    setBursts((list) => [...list, { id: Date.now(), x: headX, y: box.top + box.height * 0.4 }]);
-    void animate(img, { opacity: [1, 0], scale: [1, 0.85] }, { duration: 0.35 }).then(() => {
-      img.style.visibility = "hidden";
-      img.style.pointerEvents = "none";
-      img.style.opacity = "1";
-      running.current = false;
-      setRound((value) => value + 1);
-    });
-  };
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+
+  // The canvas lets taps through to the cards; a tap on the dragon itself
+  // (the part riding on top) is caught here instead.
+  useEffect(() => {
+    const onDown = (event: PointerEvent) => {
+      const box = hitBox.current;
+      if (!box || !stop.current) return;
+      const { clientX: px, clientY: py } = event;
+      if (px < box.left || px > box.right || py < box.top || py > box.bottom) return;
+      event.preventDefault();
+      event.stopPropagation();
+      // ...and the click that follows, so the card underneath stays put.
+      const swallow = (click: Event) => {
+        click.preventDefault();
+        click.stopPropagation();
+      };
+      window.addEventListener("click", swallow, { capture: true, once: true });
+      window.setTimeout(() => window.removeEventListener("click", swallow, true), 600);
+      setBursts((list) => [...list, { id: Date.now(), x: box.headX, y: box.headY }]);
+      stop.current(true);
+    };
+    window.addEventListener("pointerdown", onDown, true);
+    return () => window.removeEventListener("pointerdown", onDown, true);
+  }, []);
 
   return (
     <>
-      <img
-        ref={imgRef}
-        className="v9-dragon"
-        src={`${BASE}v9/mascot/dragon-swim.webp`}
-        alt=""
-        width={W}
-        height={H}
-        draggable={false}
-        onPointerDown={onTap}
-      />
+      <canvas ref={canvasRef} className="v9-dragon" aria-hidden="true" />
       {typeof document !== "undefined" &&
         bursts.length > 0 &&
         createPortal(
