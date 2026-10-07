@@ -8,9 +8,11 @@ import { motion, useReducedMotion } from "motion/react";
 // shoving the roster strip aside -- squeezes down, turns back into the gap
 // between the roster strip and the status card and swims out the way it
 // came; the strip springs back. The dragon is one picture warped slice by
-// slice along that path (with a travelling body wave and a gentle rise and
-// fall), so it bends without seams. Its upper half (head, back, fins) rides
-// over the cards as a sticker; the belly and feet stay behind them. A tap on
+// slice along that path, so it bends without seams; along the gaps it
+// slithers -- each part of the body climbing and diving through the lower
+// card's edge where the head did (V9-018). What rides above that edge (head,
+// back, fins) sits over the cards as a sticker; the belly and feet stay
+// behind them. A tap on
 // it plays the 好運 +1 egg (a puff, a spray of mini shuttles, a sticker).
 
 const BASE = import.meta.env.BASE_URL;
@@ -22,8 +24,7 @@ const NECK = 0.66; // right of this (the head) stays rigid
 const BODY_Y = 0.55; // the body line (riding the path) as a share of the height
 const TOP_ROWS = BODY_Y * H + 4; // rows above this ride over the cards
 const OUTLINE = 2.5; // sticker outline, CSS px
-const SPEED = 190; // CSS px per second
-const SPEED_LIVELY = 60; // /v9test (V9-018): a slow, slithering swim
+const SPEED = 60; // CSS px per second: a slow, slithering swim
 const TRACK_AMP = 6; // ±6px: 12px from crest to trough
 const BUMP_S = 0.8; // the two bumps at the corner
 const TURN_R = 16;
@@ -128,11 +129,7 @@ function buildPath(y1: number, y2: number, side: number, out: number) {
 
 type Burst = { id: number; x: number; y: number };
 
-// lively (/v9test, V9-018): a deeper rise and fall, and the dragon tilts
-// nose-up / nose-down with it.
-export function V9DragonCameo({ paused, lively = false }: { paused: boolean; lively?: boolean }) {
-  const livelyRef = useRef(lively);
-  livelyRef.current = lively;
+export function V9DragonCameo({ paused }: { paused: boolean }) {
   const reduceMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sticker = useRef<{ canvas: HTMLCanvasElement; pad: number } | null>(null);
@@ -206,16 +203,15 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
     // The nose's arc position: swim to the corner, bump twice, swim on.
     const noseStart = fullW + 20;
     const bumpAt = sideStart + 2;
-    const speed = livelyRef.current ? SPEED_LIVELY : SPEED;
-    const toBump = (bumpAt - noseStart) / speed;
-    // lively: three crests of the slithering track across the hero.
+    const toBump = (bumpAt - noseStart) / SPEED;
+    // Three crests of the slithering track across the hero.
     const trackK = (Math.PI * 2 * 3) / side;
-    const total = toBump + BUMP_S + (last - bumpAt) / speed;
+    const total = toBump + BUMP_S + (last - bumpAt) / SPEED;
     const noseAt = (t: number) => {
-      if (t < toBump) return noseStart + t * speed;
+      if (t < toBump) return noseStart + t * SPEED;
       const b = t - toBump;
       if (b < BUMP_S) return bumpAt - (b < 0.6 ? 7 * Math.sin((Math.PI * b) / 0.3) ** 2 : 0);
-      return bumpAt + (b - BUMP_S) * speed;
+      return bumpAt + (b - BUMP_S) * SPEED;
     };
 
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -254,22 +250,16 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
           along < NECK
             ? 5 * ((NECK - along) / NECK) ** 0.8 * Math.sin(k * along + phase) * (0.4 + 0.6 * level)
             : 0;
-        // lively: a slithering track -- the swell is fixed to the path, so
+        // A slithering track -- the swell is fixed to the path, so
         // each part of the body rises and dives where the head did, the body
         // bending through crests and troughs (three across the hero), and
         // leans with the track's slope.
-        let breathe: number;
-        let tilt = 0;
-        if (livelyRef.current) {
-          const beat = s * trackK;
-          // In screen terms (the way back runs upside down along the
-          // normal): centred 3px below the gap, so it rides low in both gaps.
-          const facing = Math.cos(p.a);
-          breathe = (TRACK_AMP * Math.sin(beat) + 3) * facing;
-          tilt = Math.atan(TRACK_AMP * trackK * Math.cos(beat) * facing);
-        } else {
-          breathe = 3 * Math.sin(time * Math.PI * 2 * 0.6 - s * 0.012) * level;
-        }
+        const beat = s * trackK;
+        // In screen terms (the way back runs upside down along the normal):
+        // centred 3px below the gap, so it rides low in both gaps.
+        const facing = Math.cos(p.a);
+        const breathe = (TRACK_AMP * Math.sin(beat) + 3) * facing;
+        const tilt = Math.atan(TRACK_AMP * trackK * Math.cos(beat) * facing);
         const off = wave + breathe;
         const roll = s > sideEnd ? -1 : 1;
         // On a turn the slices fan out on the outer side; widen them so the
@@ -364,30 +354,25 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
       drawPass(nose, time, fullH);
       ctx.restore();
       // Over the cards: the upper half -- head, back, fins.
-      let neck: ReturnType<typeof drawPass>;
-      if (livelyRef.current) {
-        // Along a gap the cut is the lower card's top edge itself, so the
-        // rise and fall dives the dragon in and out of that card; down the
-        // side it is the body line, as before.
-        const dive = (card: (typeof cards)[number], dx: number, only: (s: number) => boolean) => {
-          ctx.save();
-          ctx.beginPath();
-          ctx.rect(0, 0, hw, h.height);
-          if (ctx.roundRect) ctx.roundRect(card.x + dx, card.y, card.w, card.h, card.r);
-          else ctx.rect(card.x + dx, card.y, card.w, card.h);
-          ctx.clip("evenodd");
-          const q = drawPass(nose, time, fullH, only);
-          ctx.restore();
-          return q;
-        };
-        const a = dive(stripBox, push, (s) => s <= sideStart);
-        const c = dive(cards[2]!, 0, (s) => s > sideEnd);
-        const down = drawPass(nose, time, topRows, (s) => s > sideStart && s <= sideEnd);
-        const sNeck = nose - (fullW - neckX);
-        neck = sNeck <= sideStart ? a : sNeck > sideEnd ? c : down;
-      } else {
-        neck = drawPass(nose, time, topRows);
-      }
+      // Along a gap the cut is the lower card's top edge itself, so the rise
+      // and fall dives the dragon in and out of that card; down the side it
+      // is the body line.
+      const dive = (card: (typeof cards)[number], dx: number, only: (s: number) => boolean) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, hw, h.height);
+        if (ctx.roundRect) ctx.roundRect(card.x + dx, card.y, card.w, card.h, card.r);
+        else ctx.rect(card.x + dx, card.y, card.w, card.h);
+        ctx.clip("evenodd");
+        const q = drawPass(nose, time, fullH, only);
+        ctx.restore();
+        return q;
+      };
+      const a = dive(stripBox, push, (s) => s <= sideStart);
+      const c = dive(cards[2]!, 0, (s) => s > sideEnd);
+      const down = drawPass(nose, time, topRows, (s) => s > sideStart && s <= sideEnd);
+      const sNeck = nose - (fullW - neckX);
+      const neck = sNeck <= sideStart ? a : sNeck > sideEnd ? c : down;
       // Yellow comic impact marks off the strip's corner at each bump.
       bangs.forEach((bang) => {
         const age = (time - bang.at) / BANG_S;
