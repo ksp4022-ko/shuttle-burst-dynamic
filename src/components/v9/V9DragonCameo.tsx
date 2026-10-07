@@ -237,7 +237,7 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
     // breathing. Down the side the feet face the cards; at the bottom of the
     // side run it rolls over (mirrored), so it comes back belly-down instead
     // of upside down.
-    const drawPass = (nose: number, time: number, rows: number) => {
+    const drawPass = (nose: number, time: number, rows: number, only?: (s: number) => boolean) => {
       const k = Math.PI * 2 * 1.3;
       const phase = time * Math.PI * 2 * 1.6;
       const place = (cx: number) => {
@@ -249,7 +249,7 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
           along < NECK
             ? 5 * ((NECK - along) / NECK) ** 0.8 * Math.sin(k * along + phase) * (0.4 + 0.6 * level)
             : 0;
-        const swell = livelyRef.current ? { amp: 7, k: 0.022 } : { amp: 3, k: 0.012 };
+        const swell = livelyRef.current ? { amp: 9, k: 0.022 } : { amp: 3, k: 0.012 };
         const beat = time * Math.PI * 2 * 0.6 - s * swell.k;
         const breathe = swell.amp * Math.sin(beat) * level;
         // The slope of that swell: the body leans into it.
@@ -271,6 +271,7 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
         };
       };
       for (let cx = 0; cx < neckX; cx += SLICE) {
+        if (only && !only(nose - (fullW - cx - SLICE / 2))) continue;
         const q = place(cx + SLICE / 2);
         ctx.save();
         ctx.translate(q.x, q.y);
@@ -291,6 +292,7 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
         ctx.restore();
       }
       const q = place(neckX);
+      if (only && !only(nose - (fullW - neckX))) return q;
       ctx.save();
       ctx.translate(q.x, q.y);
       ctx.rotate(q.a);
@@ -348,7 +350,30 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
       drawPass(nose, time, fullH);
       ctx.restore();
       // Over the cards: the upper half -- head, back, fins.
-      const neck = drawPass(nose, time, topRows);
+      let neck: ReturnType<typeof drawPass>;
+      if (livelyRef.current) {
+        // Along a gap the cut is the lower card's top edge itself, so the
+        // rise and fall dives the dragon in and out of that card; down the
+        // side it is the body line, as before.
+        const dive = (card: (typeof cards)[number], dx: number, only: (s: number) => boolean) => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, hw, h.height);
+          if (ctx.roundRect) ctx.roundRect(card.x + dx, card.y, card.w, card.h, card.r);
+          else ctx.rect(card.x + dx, card.y, card.w, card.h);
+          ctx.clip("evenodd");
+          const q = drawPass(nose, time, fullH, only);
+          ctx.restore();
+          return q;
+        };
+        const a = dive(stripBox, push, (s) => s <= sideStart);
+        const c = dive(cards[2]!, 0, (s) => s > sideEnd);
+        const down = drawPass(nose, time, topRows, (s) => s > sideStart && s <= sideEnd);
+        const sNeck = nose - (fullW - neckX);
+        neck = sNeck <= sideStart ? a : sNeck > sideEnd ? c : down;
+      } else {
+        neck = drawPass(nose, time, topRows);
+      }
       // Yellow comic impact marks off the strip's corner at each bump.
       bangs.forEach((bang) => {
         const age = (time - bang.at) / BANG_S;
