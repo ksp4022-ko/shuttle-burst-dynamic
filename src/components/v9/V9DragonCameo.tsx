@@ -23,6 +23,7 @@ const BODY_Y = 0.55; // the body line (riding the path) as a share of the height
 const TOP_ROWS = BODY_Y * H + 4; // rows above this ride over the cards
 const OUTLINE = 2.5; // sticker outline, CSS px
 const SPEED = 190; // CSS px per second
+const SPEED_LIVELY = 90; // /v9test (V9-018): a slow, rolling swim
 const BUMP_S = 0.8; // the two bumps at the corner
 const TURN_R = 16;
 const SLICE = 2;
@@ -204,15 +205,16 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
     // The nose's arc position: swim to the corner, bump twice, swim on.
     const noseStart = fullW + 20;
     const bumpAt = sideStart + 2;
-    const toBump = (bumpAt - noseStart) / SPEED;
+    const speed = livelyRef.current ? SPEED_LIVELY : SPEED;
+    const toBump = (bumpAt - noseStart) / speed;
     // lively: three crests along each level run.
     const swellPeriod = toBump / 3;
-    const total = toBump + BUMP_S + (last - bumpAt) / SPEED;
+    const total = toBump + BUMP_S + (last - bumpAt) / speed;
     const noseAt = (t: number) => {
-      if (t < toBump) return noseStart + t * SPEED;
+      if (t < toBump) return noseStart + t * speed;
       const b = t - toBump;
       if (b < BUMP_S) return bumpAt - (b < 0.6 ? 7 * Math.sin((Math.PI * b) / 0.3) ** 2 : 0);
-      return bumpAt + (b - BUMP_S) * SPEED;
+      return bumpAt + (b - BUMP_S) * speed;
     };
 
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
