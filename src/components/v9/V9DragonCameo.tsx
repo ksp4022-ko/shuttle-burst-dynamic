@@ -257,14 +257,16 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
         // lively: a slithering track -- the swell is fixed to the path, so
         // each part of the body rises and dives where the head did, the body
         // bending through crests and troughs (three across the hero), and
-        // leans with the track's slope. Lifted a little overall, so a crest
-        // clears the card and a trough sinks to the fins.
+        // leans with the track's slope.
         let breathe: number;
         let tilt = 0;
         if (livelyRef.current) {
           const beat = s * trackK;
-          breathe = (TRACK_AMP * Math.sin(beat) - 3) * level;
-          tilt = Math.atan(TRACK_AMP * trackK * Math.cos(beat) * level);
+          // In screen terms (the way back runs upside down along the
+          // normal): centred 3px below the gap, so it rides low in both gaps.
+          const facing = Math.cos(p.a);
+          breathe = (TRACK_AMP * Math.sin(beat) + 3) * facing;
+          tilt = Math.atan(TRACK_AMP * trackK * Math.cos(beat) * facing);
         } else {
           breathe = 3 * Math.sin(time * Math.PI * 2 * 0.6 - s * 0.012) * level;
         }
