@@ -252,11 +252,13 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
         // lively: the swell rides the dragon's own clock -- head first, the
         // body following -- rather than a wave fixed to the path, which at
         // swimming speed it would just surf at one height.
-        const swell = livelyRef.current ? { amp: 15, k: 0.022 } : { amp: 3, k: 0.012 };
+        const swell = livelyRef.current ? { amp: 18, k: 0.018 } : { amp: 3, k: 0.012 };
         const beat = livelyRef.current
-          ? (time * Math.PI * 2) / 1.4 - (fullW - cx) * swell.k
+          ? (time * Math.PI * 2) / 1.6 - (fullW - cx) * swell.k
           : time * Math.PI * 2 * 0.6 - s * swell.k;
-        const breathe = swell.amp * Math.sin(beat) * level;
+        // lively: lifted a little overall, so a crest clears the card down
+        // to the feet and a trough sinks to the fins.
+        const breathe = (swell.amp * Math.sin(beat) - (livelyRef.current ? 9 : 0)) * level;
         // The slope of that swell: the body leans into it.
         const tilt = livelyRef.current
           ? Math.atan(0.6 * swell.amp * swell.k * Math.cos(beat) * level)
