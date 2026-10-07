@@ -126,7 +126,11 @@ function buildPath(y1: number, y2: number, side: number, out: number) {
 
 type Burst = { id: number; x: number; y: number };
 
-export function V9DragonCameo({ paused }: { paused: boolean }) {
+// lively (/v9test, V9-018): a deeper rise and fall, and the dragon tilts
+// nose-up / nose-down with it.
+export function V9DragonCameo({ paused, lively = false }: { paused: boolean; lively?: boolean }) {
+  const livelyRef = useRef(lively);
+  livelyRef.current = lively;
   const reduceMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sticker = useRef<{ canvas: HTMLCanvasElement; pad: number } | null>(null);
@@ -245,14 +249,26 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
           along < NECK
             ? 5 * ((NECK - along) / NECK) ** 0.8 * Math.sin(k * along + phase) * (0.4 + 0.6 * level)
             : 0;
-        const breathe = 3 * Math.sin(time * Math.PI * 2 * 0.6 - s * 0.012) * level;
+        const swell = livelyRef.current ? { amp: 7, k: 0.022 } : { amp: 3, k: 0.012 };
+        const beat = time * Math.PI * 2 * 0.6 - s * swell.k;
+        const breathe = swell.amp * Math.sin(beat) * level;
+        // The slope of that swell: the body leans into it.
+        const tilt = livelyRef.current
+          ? Math.atan(-swell.amp * swell.k * Math.cos(beat) * level)
+          : 0;
         const off = wave + breathe;
         const roll = s > sideEnd ? -1 : 1;
         // On a turn the slices fan out on the outer side; widen them so the
         // fan closes (rows far from the path spread the most).
         const bend = Math.abs(at(s + 1).a - at(s - 1).a) / 2;
         const spread = 1 + bend * bodyRow;
-        return { x: p.x - Math.sin(p.a) * off, y: p.y + Math.cos(p.a) * off, a: p.a, roll, spread };
+        return {
+          x: p.x - Math.sin(p.a) * off,
+          y: p.y + Math.cos(p.a) * off,
+          a: p.a + tilt,
+          roll,
+          spread,
+        };
       };
       for (let cx = 0; cx < neckX; cx += SLICE) {
         const q = place(cx + SLICE / 2);
