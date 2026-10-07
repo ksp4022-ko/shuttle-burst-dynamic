@@ -66,10 +66,10 @@ function makeSticker(img: HTMLImageElement) {
 
 type Pt = { x: number; y: number; a: number };
 
-const BANG_S = 0.32;
+const BANG_S = 0.45;
 
-// A comic impact star: pops out, holds, shrinks away; a few speed ticks
-// around it.
+// Comic impact marks like the mascots' (V9 sprites): short yellow capsule
+// dashes with an ink outline, fanned out from the hit and popping outward.
 function drawBang(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -78,33 +78,25 @@ function drawBang(
   age: number,
   colors: { fill: string; ink: string },
 ) {
-  const grow = age < 0.3 ? 0.5 + (age / 0.3) * 0.7 : 1.2 - ((age - 0.3) / 0.7) * 0.5;
-  const r = size * grow;
-  const spikes = 9;
+  const ease = 1 - (1 - Math.min(1, age / 0.35)) ** 2;
+  const inner = size * (0.35 + 0.35 * ease);
+  const len = size * (0.25 + 0.3 * ease);
+  const count = size > 15 ? 4 : 3;
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(0.2);
-  ctx.globalAlpha = age > 0.75 ? (1 - age) / 0.25 : 1;
-  ctx.beginPath();
-  for (let i = 0; i < spikes * 2; i += 1) {
-    const t = (i / (spikes * 2)) * Math.PI * 2;
-    const len = i % 2 === 0 ? r * (i % 4 === 0 ? 1 : 0.82) : r * 0.48;
-    ctx.lineTo(Math.cos(t) * len, Math.sin(t) * len);
-  }
-  ctx.closePath();
-  ctx.fillStyle = colors.fill;
-  ctx.strokeStyle = colors.ink;
-  ctx.lineWidth = 2;
-  ctx.lineJoin = "round";
-  ctx.fill();
-  ctx.stroke();
+  ctx.globalAlpha = age > 0.7 ? (1 - age) / 0.3 : 1;
   ctx.lineCap = "round";
-  for (let i = 0; i < 4; i += 1) {
-    const t = -0.9 + i * 0.6;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(t) * r * 1.25, Math.sin(t) * r * 1.25);
-    ctx.lineTo(Math.cos(t) * r * 1.6, Math.sin(t) * r * 1.6);
-    ctx.stroke();
+  for (let pass = 0; pass < 2; pass += 1) {
+    ctx.strokeStyle = pass === 0 ? colors.ink : colors.fill;
+    ctx.lineWidth = pass === 0 ? 5.5 : 2.8;
+    for (let i = 0; i < count; i += 1) {
+      // Fanned down and back over the card, clear of the dragon.
+      const t = (100 + (i * 75) / (count - 1)) * (Math.PI / 180);
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(t) * inner, Math.sin(t) * inner);
+      ctx.lineTo(Math.cos(t) * (inner + len), Math.sin(t) * (inner + len));
+      ctx.stroke();
+    }
   }
   ctx.restore();
 }
@@ -341,11 +333,11 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
       ctx.restore();
       // Over the cards: the upper half -- head, back, fins.
       const neck = drawPass(nose, time, topRows);
-      // A yellow comic "bang" on the strip's corner at each bump.
+      // Yellow comic impact marks off the strip's corner at each bump.
       bangs.forEach((bang) => {
         const age = (time - bang.at) / BANG_S;
         if (age < 1)
-          drawBang(ctx, stripBox.x + stripBox.w + push + 2, stripBox.y + 6, bang.size, age, colors);
+          drawBang(ctx, stripBox.x + stripBox.w + push - 3, stripBox.y + 8, bang.size, age, colors);
       });
 
       const headX = neck.x + Math.cos(neck.a) * W * 0.18 + Math.sin(neck.a) * neck.roll * H * 0.2;
