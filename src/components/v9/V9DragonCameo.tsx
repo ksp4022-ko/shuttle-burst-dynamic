@@ -249,12 +249,12 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
           along < NECK
             ? 5 * ((NECK - along) / NECK) ** 0.8 * Math.sin(k * along + phase) * (0.4 + 0.6 * level)
             : 0;
-        const swell = livelyRef.current ? { amp: 9, k: 0.022 } : { amp: 3, k: 0.012 };
+        const swell = livelyRef.current ? { amp: 15, k: 0.022 } : { amp: 3, k: 0.012 };
         const beat = time * Math.PI * 2 * 0.6 - s * swell.k;
         const breathe = swell.amp * Math.sin(beat) * level;
         // The slope of that swell: the body leans into it.
         const tilt = livelyRef.current
-          ? Math.atan(-swell.amp * swell.k * Math.cos(beat) * level)
+          ? Math.atan(-0.6 * swell.amp * swell.k * Math.cos(beat) * level)
           : 0;
         const off = wave + breathe;
         const roll = s > sideEnd ? -1 : 1;
