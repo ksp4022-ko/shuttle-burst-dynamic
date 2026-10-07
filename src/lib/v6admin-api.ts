@@ -1,7 +1,7 @@
 // V6 admin (/v10CtlPanel) API client. Talks to the V6 Worker admin API with
 // the password the admin typed in (x-admin-password header). The password is
 // only ever passed in from React state; it is never stored or logged here.
-// Read-only phase (P1/P2): only GET is exposed.
+// P3 adds the ① 當次聚會 writes (adminWrite / adminWriteApi).
 
 export const V6_API_BASE =
   "https://badminton-signup-v6-alpha.badminton-signup-v6-worker.workers.dev/api/v6-alpha";
@@ -43,6 +43,42 @@ export async function adminGet<T>(path: string, password: string): Promise<T> {
   }
   return json.data as T;
 }
+
+// POST with a JSON body. Used only by adminWriteApi below.
+async function adminPost<T>(path: string, password: string, body?: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(V6_API_BASE + path, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-admin-password": password },
+      body: JSON.stringify(body ?? {}),
+      cache: "no-store",
+    });
+  } catch {
+    throw new AdminApiError("網路連線失敗，請稍後再試。", "NETWORK", 0);
+  }
+  let json: { ok?: boolean; data?: T; error?: { code?: string; message?: string } } | null = null;
+  try {
+    json = await res.json();
+  } catch {
+    json = null;
+  }
+  if (!res.ok || !json || json.ok === false) {
+    const code = json?.error?.code || `HTTP_${res.status}`;
+    const message =
+      res.status === 401
+        ? "密碼錯誤或沒有權限。"
+        : WRITE_ERROR_TEXT[code] || json?.error?.message || `操作失敗（${res.status}）`;
+    throw new AdminApiError(message, code, res.status);
+  }
+  return json.data as T;
+}
+
+const WRITE_ERROR_TEXT: Record<string, string> = {
+  EVENT_CLOSED: "聚會已關閉，不能再調整名單。",
+  PAYMENT_CANCELLED: "這筆收費已取消，不能修改。",
+  EVENT_CANCELLED: "已取消的聚會不能重新開放。",
+};
 
 const enc = encodeURIComponent;
 
@@ -133,6 +169,14 @@ export type EventFinance = {
     acFee?: number;
     miscFee?: number;
     total?: number;
+    courtCount?: number;
+    hours?: number;
+    ballUsed?: number;
+    acHours?: number;
+    courtFeePerCourtHour?: number;
+    courtDiscountRate?: number;
+    shuttleUnitCost?: number;
+    acFeePerHour?: number;
   } | null;
   actualExpense: number | null;
   expenseBreakdown: {
@@ -146,6 +190,34 @@ export type EventFinance = {
     actualMiscFee: number;
     actualTotalCost: number;
   } | null;
+};
+
+export type EventUsage = {
+  id?: string;
+  note?: string | null;
+  updatedAt?: string;
+  actualCourtCount?: number | null;
+  actualHours?: number | null;
+  actualBallUsed?: number | null;
+  actualAcHours?: number | null;
+  actualMiscFee?: number | null;
+  courtFeePerCourtHour?: number | null;
+  courtDiscountRate?: number | null;
+  shuttleUnitCost?: number | null;
+  acFeePerHour?: number | null;
+};
+
+export type UsageInput = {
+  actualCourtCount: string;
+  actualHours: string;
+  courtFeePerCourtHour: string;
+  courtDiscountRate: string;
+  actualBallUsed: string;
+  shuttleUnitCost: string;
+  actualAcHours: string;
+  acFeePerHour: string;
+  actualMiscFee: string;
+  note: string;
 };
 
 export type EventOverview = {
@@ -165,7 +237,7 @@ export type EventOverview = {
     };
   };
   payments: TempPayment[];
-  usage: { id?: string; note?: string | null } | null;
+  usage: EventUsage | null;
   finance: EventFinance;
 };
 
@@ -401,6 +473,37 @@ export const adminApi = {
       `/admin/sites/${enc(siteId)}/season-confirm/${enc(settingId)}/intents`,
       pw,
     ),
+};
+
+// ---------- Write endpoints (P3: ① 當次聚會) ----------
+// Same requests as the Worker's /admin page. Roster actions go through the
+// public signup API with reason "admin_action", exactly like /admin does.
+
+export const adminWriteApi = {
+  tempPaymentStatus: (pw: string, paymentId: string, status: "paid" | "unpaid", amount: number) =>
+    adminPost(`/admin/temp-payments/${enc(paymentId)}/status`, pw, { status, amount }),
+  saveUsage: (pw: string, eventId: string, input: UsageInput) =>
+    adminPost(`/admin/events/${enc(eventId)}/usage`, pw, input),
+  closeEvent: (pw: string, eventId: string) => adminPost(`/admin/events/${enc(eventId)}/close`, pw),
+  reopenEvent: (pw: string, eventId: string) =>
+    adminPost(`/admin/events/${enc(eventId)}/reopen`, pw),
+  pushLineRoster: (pw: string, eventId: string) =>
+    adminPost(`/admin/events/${enc(eventId)}/line-roster-push`, pw),
+  fixedLeave: (pw: string, siteId: string, eventId: string, signupId: string) =>
+    adminPost(`/events/${enc(eventId)}/fixed-signups/${enc(signupId)}/leave`, pw, {
+      siteId,
+      reason: "admin_action",
+    }),
+  fixedReturn: (pw: string, siteId: string, eventId: string, signupId: string) =>
+    adminPost(`/events/${enc(eventId)}/fixed-signups/${enc(signupId)}/return`, pw, {
+      siteId,
+      reason: "admin_action",
+    }),
+  cancelTemp: (pw: string, siteId: string, eventId: string, signupId: string) =>
+    adminPost(`/events/${enc(eventId)}/temp-signups/${enc(signupId)}/cancel`, pw, {
+      siteId,
+      reason: "admin_action",
+    }),
 };
 
 // ---------- Display helpers ----------

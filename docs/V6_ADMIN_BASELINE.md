@@ -125,6 +125,10 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 
 每個階段都截手機圖給使用者確認後，才進入下一階段。
 
+進度（2026-10-08）：
+- P0 + P1 已部署，使用者以正式資料核對通過。
+- 使用者決定先做 P3（P2 延後）。P3 已完成並在本機用 Worker 原始碼 + 假資料驗證，待確認後部署。
+
 ## 6. 隔離與安全規則
 
 - 程式放在 `src/components/v6admin/`、`src/lib/v6admin-*`；路由檔 `src/routes/v10CtlPanel.tsx`。

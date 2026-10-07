@@ -86,7 +86,7 @@ function Login({ onSuccess }: { onSuccess: (pw: string, sites: AdminSite[]) => v
       <form className="ctl-login-card" onSubmit={submit}>
         <div>
           <h1>V6 控制台</h1>
-          <span className="ctl-readonly-tag">唯讀版 · 不會修改任何資料</span>
+          <span className="ctl-readonly-tag">羽球報名 V6 管理後台</span>
         </div>
         <input
           className="ctl-input"
@@ -147,6 +147,17 @@ function Panel({
     };
   }, [password, siteId, reloadKey]);
 
+  // Silent re-read after a write (event status / counts in the picker).
+  function refreshDashboard() {
+    const site = siteId;
+    adminApi
+      .dashboard(password, site)
+      .then((data) => setDashboard((cur) => (cur && cur.site.id === site ? data : cur)))
+      .catch(() => {
+        /* keep the current list; the next full reload will retry */
+      });
+  }
+
   function chooseSite(id: string) {
     if (id === siteId) return;
     setEventId("");
@@ -173,6 +184,7 @@ function Panel({
         dashboard={dashboard}
         eventId={eventId}
         onEventChange={setEventId}
+        onDashboardRefresh={refreshDashboard}
       />
     );
   else if (tab === "season")
@@ -191,9 +203,7 @@ function Panel({
     <>
       <header className="ctl-header">
         <div className="ctl-header-row">
-          <div className="ctl-title">
-            V6 控制台<small>唯讀</small>
-          </div>
+          <div className="ctl-title">V6 控制台</div>
           {sites.length > 1 ? (
             <div className="ctl-sites" role="tablist" aria-label="場地">
               {sites.map((s) => (
