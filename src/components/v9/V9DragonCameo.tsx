@@ -205,6 +205,8 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
     const noseStart = fullW + 20;
     const bumpAt = sideStart + 2;
     const toBump = (bumpAt - noseStart) / SPEED;
+    // lively: three crests along each level run.
+    const swellPeriod = toBump / 3;
     const total = toBump + BUMP_S + (last - bumpAt) / SPEED;
     const noseAt = (t: number) => {
       if (t < toBump) return noseStart + t * SPEED;
@@ -254,7 +256,7 @@ export function V9DragonCameo({ paused, lively = false }: { paused: boolean; liv
         // swimming speed it would just surf at one height.
         const swell = livelyRef.current ? { amp: 18, k: 0.018 } : { amp: 3, k: 0.012 };
         const beat = livelyRef.current
-          ? (time * Math.PI * 2) / 1.6 - (fullW - cx) * swell.k
+          ? (time * Math.PI * 2) / swellPeriod - (fullW - cx) * swell.k
           : time * Math.PI * 2 * 0.6 - s * swell.k;
         // lively: lifted a little overall, so a crest clears the card down
         // to the feet and a trough sinks to the fins.
