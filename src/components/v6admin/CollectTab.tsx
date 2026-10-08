@@ -11,7 +11,7 @@ import {
   type BillSeasonItem,
   type PersonBill,
 } from "@/lib/v6admin-api";
-import { errText, useToast, type WriteLock } from "@/lib/v6admin-write";
+import { errText, runWrite, useToast, type WriteLock } from "@/lib/v6admin-write";
 import { Card, Section, Sheet, Toast } from "./AdminParts";
 
 // 收款 (P7, V6-027): pick a person, see everything they owe on this site
@@ -153,6 +153,19 @@ export function CollectTab({
   const itemsTotal = items.reduce((sum, i) => sum + i.amount, 0);
 
   const [confirming, setConfirming] = useState(false);
+
+  // C4: 已繳紀錄 → fix → 改回未收 (same requests as ① / ③'s 取消已收).
+  const [fixing, setFixing] = useState<{
+    label: string;
+    amount: number;
+    run: () => Promise<unknown>;
+  } | null>(null);
+  const [fixError, setFixError] = useState("");
+  function openFix(label: string, amount: number, run: () => Promise<unknown>) {
+    if (writing) return;
+    setFixError("");
+    setFixing({ label, amount, run });
+  }
 
   // Mark the picked items paid one by one inside the panel-wide write lock.
   // Stops at the first failure; an unknown outcome is never resent.
@@ -412,6 +425,18 @@ export function CollectTab({
                     </span>
                     <span className="ctl-row-amt">{money(s.finalPayableAmount)}</span>
                     <span className="ctl-pill green">已收</span>
+                    <button
+                      className="ctl-act is-fix"
+                      type="button"
+                      disabled={writing}
+                      onClick={() =>
+                        openFix(`${s.seasonName} 季費`, s.finalPayableAmount, () =>
+                          adminWriteApi.seasonPaymentStatus(password, s.paymentId, "unpaid"),
+                        )
+                      }
+                    >
+                      fix
+                    </button>
                   </li>
                 ))}
                 {paidGuests
@@ -425,6 +450,23 @@ export function CollectTab({
                       </span>
                       <span className="ctl-row-amt">{money(g.amount)}</span>
                       <span className="ctl-pill green">已收</span>
+                      <button
+                        className="ctl-act is-fix"
+                        type="button"
+                        disabled={writing}
+                        onClick={() =>
+                          openFix(`${shortDate(g.eventDate)} 臨打`, g.amount, () =>
+                            adminWriteApi.tempPaymentStatus(
+                              password,
+                              g.paymentId,
+                              "unpaid",
+                              g.amount,
+                            ),
+                          )
+                        }
+                      >
+                        fix
+                      </button>
                     </li>
                   ))}
               </ul>
@@ -447,6 +489,51 @@ export function CollectTab({
           ) : null}
         </>
       )}
+
+      {fixing ? (
+        <Sheet title="改回未收" onClose={() => !writing && setFixing(null)} busy={writing}>
+          <p>
+            <strong>{person?.displayName || person?.memberName}</strong> 的這筆款項：
+          </p>
+          <ul className="ctl-rows">
+            <li className="ctl-row">
+              <span className="ctl-row-name is-wrap">{fixing.label}</span>
+              <span className="ctl-row-amt">{money(fixing.amount)}</span>
+            </li>
+          </ul>
+          <p className="ctl-sub">改回「未付款」，原付款時間會清除，這筆會回到未繳項目。</p>
+          {fixError ? <div className="ctl-error">{fixError}</div> : null}
+          <div className="ctl-sheet-actions">
+            <button
+              className="ctl-btn is-plain"
+              type="button"
+              onClick={() => setFixing(null)}
+              disabled={writing}
+            >
+              返回
+            </button>
+            <button
+              className="ctl-btn is-danger"
+              type="button"
+              disabled={writing}
+              onClick={() =>
+                runWrite({
+                  writeLock,
+                  work: fixing.run,
+                  okText: `${fixing.label} 已改回未收`,
+                  reread: () => [loadBill(personId), loadPeople()],
+                  onDataChanged,
+                  onRejected: setFixError,
+                  onClose: () => setFixing(null),
+                  toast: showToast,
+                })
+              }
+            >
+              {writing ? "處理中…" : "確定改回未收"}
+            </button>
+          </div>
+        </Sheet>
+      ) : null}
 
       {confirming ? (
         <Sheet title="確認收款" onClose={() => !writing && setConfirming(false)} busy={writing}>

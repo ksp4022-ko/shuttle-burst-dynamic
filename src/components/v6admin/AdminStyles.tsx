@@ -270,6 +270,8 @@ html.ctl-lock-x body {
 .ctl-collect-bar .ctl-btn { width: 100%; padding: 14px; font-size: 17px; }
 .ctl-btn:disabled { opacity: .55; cursor: default; }
 .ctl-result-bad { border-color: var(--red); }
+.ctl-act.is-fix { min-width: 44px; min-height: 32px; background: #fff; box-shadow: 0 2px 0 var(--ink); }
+.ctl-act.is-fix:active { transform: translateY(2px); box-shadow: none; }
 
 /* ---------- Toast ---------- */
 .ctl-toast {
