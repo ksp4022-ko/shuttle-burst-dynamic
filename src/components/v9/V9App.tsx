@@ -33,7 +33,6 @@ import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-
 import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
-import { useV9Test } from "./useV9Test";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
@@ -143,7 +142,6 @@ export function V9App() {
   // V9-021: the admin can look at someone else's page, read-only.
   // Their 本場 status comes from the same roster (季打) or from the admin's
   // view of this meetup's temp signups (臨打); nothing is ever submitted.
-  const test = useV9Test();
   const isAdmin = lineIdentity?.role === "admin" && Boolean(lineToken);
   const [viewAs, setViewAs] = useState<V8LineIdentity | null>(null);
   const viewing = isAdmin && viewAs !== null;
@@ -505,9 +503,9 @@ export function V9App() {
   const profileComplete = Boolean(lineIdentity?.profileComplete);
   const ready = signedIn && profileComplete && Boolean(identity);
   const shownIdentity = viewing ? viewIdentity : identity;
-  // V9-022 (/v9test): 本次應繳 on the player card, fetched when it opens.
+  // V9-022: 本次應繳 on the player card, fetched when it opens.
   const billDue = useV9BillDue({
-    enabled: test && sheet === "me" && signedIn && profileComplete,
+    enabled: sheet === "me" && signedIn && profileComplete,
     token: lineToken,
     siteId,
     eventId: selectedEventId,
