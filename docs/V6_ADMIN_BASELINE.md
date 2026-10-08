@@ -181,4 +181,4 @@ Worker V6-027（唯讀，x-admin-password 驗證）：
 - 收完重新讀取帳單，其他分頁同步更新（dataVersion）。
 
 P7 待辦（使用者提出，待「開工」）：
-- C4：「已繳紀錄」每筆可直接「改回未收」（確認後送出；季費 POST season-payments/:id/status unpaid，臨打 POST temp-payments/:id/status unpaid，與 ①③ 相同 API）。
+- C4：「已繳紀錄」每筆右側加按鈕「fix」（外觀是按鈕：有框線、可點的樣式，與綠色「已收」膠囊明顯不同），點後確認「改回未收」再送出（確認後送出；季費 POST season-payments/:id/status unpaid，臨打 POST temp-payments/:id/status unpaid，與 ①③ 相同 API）。
