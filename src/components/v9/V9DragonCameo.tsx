@@ -29,6 +29,7 @@ const TRACK_AMP = 6; // ±6px: 12px from crest to trough
 const BUMP_S = 0.8; // the two bumps at the corner
 const TURN_R = 16;
 const SLICE = 2;
+const TAP_REACH = 14; // CSS px around a tap that counts as touching the dragon
 const MIN_GAP_MS = 30_000;
 const MAX_GAP_MS = 60_000;
 
@@ -135,7 +136,6 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
   const sticker = useRef<{ canvas: HTMLCanvasElement; pad: number } | null>(null);
   const lastDir = useRef<1 | -1>(-1);
   const frame = useRef(0);
-  const hitBox = useRef<{ x: number; y: number } | null>(null);
   const stop = useRef<((tapped: boolean) => void) | null>(null);
   const [round, setRound] = useState(0);
   const [bursts, setBursts] = useState<Burst[]>([]);
@@ -364,15 +364,12 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
         if (ctx.roundRect) ctx.roundRect(card.x + dx, card.y, card.w, card.h, card.r);
         else ctx.rect(card.x + dx, card.y, card.w, card.h);
         ctx.clip("evenodd");
-        const q = drawPass(nose, time, fullH, only);
+        drawPass(nose, time, fullH, only);
         ctx.restore();
-        return q;
       };
-      const a = dive(stripBox, push, (s) => s <= sideStart);
-      const c = dive(cards[2]!, 0, (s) => s > sideEnd);
-      const down = drawPass(nose, time, topRows, (s) => s > sideStart && s <= sideEnd);
-      const sNeck = nose - (fullW - neckX);
-      const neck = sNeck <= sideStart ? a : sNeck > sideEnd ? c : down;
+      dive(stripBox, push, (s) => s <= sideStart);
+      dive(cards[2]!, 0, (s) => s > sideEnd);
+      drawPass(nose, time, topRows, (s) => s > sideStart && s <= sideEnd);
       // Yellow comic impact marks off the strip's corner at each bump.
       bangs.forEach((bang) => {
         const age = (time - bang.at) / BANG_S;
@@ -380,9 +377,6 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
           drawBang(ctx, stripBox.x + stripBox.w + push - 3, stripBox.y + 8, bang.size, age, colors);
       });
 
-      const headX = neck.x + Math.cos(neck.a) * W * 0.18 + Math.sin(neck.a) * neck.roll * H * 0.2;
-      const headY = neck.y + Math.sin(neck.a) * W * 0.18 - Math.cos(neck.a) * neck.roll * H * 0.2;
-      hitBox.current = { x: h.left + (dir === 1 ? headX : hw - headX), y: h.top + headY };
       if (time < total) frame.current = requestAnimationFrame(draw);
       else stop.current?.(false);
     };
@@ -390,7 +384,6 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
     stop.current = (tapped) => {
       cancelAnimationFrame(frame.current);
       stop.current = null;
-      hitBox.current = null;
       strip.style.translate = "";
       const finish = () => {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -438,12 +431,29 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   // The canvas lets taps through to the cards; a tap on the dragon itself
-  // (the part riding on top) is caught here instead.
+  // is caught here instead -- anything drawn within a fingertip of the tap,
+  // looked up on the canvas as it is now (the page may have scrolled since
+  // the swim began).
   useEffect(() => {
     const onDown = (event: PointerEvent) => {
-      const head = hitBox.current;
-      if (!head || !stop.current) return;
-      if (Math.hypot(event.clientX - head.x, event.clientY - head.y) > 34) return;
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx || !stop.current) return;
+      const box = canvas.getBoundingClientRect();
+      if (!box.width) return;
+      const scale = canvas.width / box.width;
+      const reach = Math.round(TAP_REACH * scale);
+      const cx = Math.round((event.clientX - box.left) * scale);
+      const cy = Math.round((event.clientY - box.top) * scale);
+      const x0 = Math.max(0, cx - reach);
+      const y0 = Math.max(0, cy - reach);
+      const x1 = Math.min(canvas.width, cx + reach);
+      const y1 = Math.min(canvas.height, cy + reach);
+      if (x1 <= x0 || y1 <= y0) return;
+      const alpha = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+      let hit = false;
+      for (let i = 3; i < alpha.length && !hit; i += 4 * 3) hit = alpha[i]! > 100;
+      if (!hit) return;
       event.preventDefault();
       event.stopPropagation();
       // ...and the click that follows, so the card underneath stays put.
@@ -453,7 +463,7 @@ export function V9DragonCameo({ paused }: { paused: boolean }) {
       };
       window.addEventListener("click", swallow, { capture: true, once: true });
       window.setTimeout(() => window.removeEventListener("click", swallow, true), 600);
-      setBursts((list) => [...list, { id: Date.now(), x: head.x, y: head.y }]);
+      setBursts((list) => [...list, { id: Date.now(), x: event.clientX, y: event.clientY }]);
       stop.current(true);
     };
     window.addEventListener("pointerdown", onDown, true);
