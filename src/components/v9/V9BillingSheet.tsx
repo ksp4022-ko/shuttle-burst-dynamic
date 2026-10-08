@@ -5,11 +5,10 @@ import type {
   V8BillingRefundSource,
   V8BillingSeasonPayment,
 } from "@/lib/v8-personal-billing";
-import { useV9Test } from "./useV9Test";
 
 // 帳單 sheet body: the same hook and GET /me/billing data as the official V8 bill (B3).
 // Display only -- every amount and status is the backend's value. The one
-// sum V9 shows itself is 歷史未收 on /v9test (V9-020): earlier seasons' unpaid
+// sum V9 shows itself is 歷史未收 (V9-020): earlier seasons' unpaid
 // fees, which the backend already counts in 本次應繳, plus the guest arrears.
 
 function money(value: number) {
@@ -146,7 +145,6 @@ export function V9BillingContent({
     ...(eventId ? { eventId } : {}),
   });
   const { state } = billing;
-  const test = useV9Test();
 
   let body: ReactNode;
   if (state.kind === "idle" || state.kind === "loading") {
@@ -180,13 +178,11 @@ export function V9BillingContent({
   } else {
     const { totals, currentGuestItems, guestLedger, seasonPaymentHistory } = state.billing;
     const season = seasonPaymentHistory.items[0] ?? null;
-    // Earlier seasons still unpaid (V9-020, /v9test): the backend counts them
+    // Earlier seasons still unpaid (V9-020): the backend counts them
     // in 本次應繳; list them under 歷史未收 so the lines add up.
-    const pastSeasons = test
-      ? seasonPaymentHistory.items
-          .slice(1)
-          .filter((item) => item.status === "unpaid" && item.outstanding > 0)
-      : [];
+    const pastSeasons = seasonPaymentHistory.items
+      .slice(1)
+      .filter((item) => item.status === "unpaid" && item.outstanding > 0);
     const historyTotal =
       totals.otherGuestOutstandingTotal +
       pastSeasons.reduce((sum, item) => sum + item.outstanding, 0);
