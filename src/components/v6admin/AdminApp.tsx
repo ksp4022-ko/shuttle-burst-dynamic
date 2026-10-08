@@ -247,6 +247,7 @@ function Panel({
             onEventChange={setEventId}
             onDashboardRefresh={refreshDashboard}
             onDataChanged={markDataChanged}
+            dataVersion={dataVersion}
             writeLock={writeLock}
             writing={writing}
           />

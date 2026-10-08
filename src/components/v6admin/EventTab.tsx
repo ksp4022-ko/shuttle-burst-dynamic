@@ -34,6 +34,7 @@ export function EventTab({
   onEventChange,
   onDashboardRefresh,
   onDataChanged,
+  dataVersion,
   writeLock,
   writing,
 }: {
@@ -43,6 +44,8 @@ export function EventTab({
   onEventChange: (id: string) => void;
   onDashboardRefresh: () => Promise<void>;
   onDataChanged: () => void;
+  // Bumped by the panel after any write (also ② 聚會管理 edits/sync/delete).
+  dataVersion: number;
   writeLock: WriteLock;
   writing: boolean;
 }) {
@@ -81,6 +84,16 @@ export function EventTab({
     const data = await adminApi.eventOverview(password, id);
     if (seq === seqRef.current && current.current === id) setOverview(data);
   }, [password]);
+
+  // A write elsewhere (e.g. ② editing or syncing this event) may have changed
+  // the current event: re-read it quietly. Writes made here already re-read,
+  // the extra request is harmless (sequenced, newest wins).
+  const seenVersion = useRef(dataVersion);
+  useEffect(() => {
+    if (seenVersion.current === dataVersion) return;
+    seenVersion.current = dataVersion;
+    if (current.current) refresh().catch(() => {});
+  }, [dataVersion, refresh]);
 
   const events = [...dashboard.events].sort((a, b) => b.eventDate.localeCompare(a.eventDate));
 

@@ -68,7 +68,6 @@ export async function runWrite<R>(o: {
     if (!unknown) o.onSuccess?.(result as R);
     const reads = await Promise.allSettled(o.reread(Boolean(unknown)));
     const readFailed = reads.some((r) => r.status === "rejected");
-    const okText = typeof o.okText === "function" ? o.okText(result as R) : o.okText;
     if (unknown)
       o.toast(
         readFailed
@@ -76,8 +75,11 @@ export async function runWrite<R>(o: {
           : `${unknown.message}。已重新讀取，請先核對畫面資料，不要直接重做。`,
         "error",
       );
-    else if (readFailed) o.toast(`${okText}，但重新讀取失敗，請按重新整理。`, "error");
-    else o.toast(okText);
+    else {
+      const okText = typeof o.okText === "function" ? o.okText(result as R) : o.okText;
+      if (readFailed) o.toast(`${okText}，但重新讀取失敗，請按重新整理。`, "error");
+      else o.toast(okText);
+    }
   } finally {
     o.writeLock.release();
   }
