@@ -182,3 +182,4 @@ Worker V6-027（唯讀，x-admin-password 驗證）：
 
 P7 追加（C4 已實作並部署，待 iPhone 驗收）：
 - C4：「已繳紀錄」每筆右側加按鈕「fix」（外觀是按鈕：有框線、可點的樣式，與綠色「已收」膠囊明顯不同），點後確認「改回未收」再送出（確認後送出；季費 POST season-payments/:id/status unpaid，臨打 POST temp-payments/:id/status unpaid，與 ①③ 相同 API）。
+- V6-028（Worker，commit ffbbb94，待 Codex 部署）：季繳／臨打「改狀態」API 先把網址中的付款 ID 解碼再查詢。原因：Google Sheet 匯入的付款 ID 含中文，未解碼導致 SEASON_PAYMENT_NOT_FOUND（2026-10-09 千賀 2026 第3季）。
