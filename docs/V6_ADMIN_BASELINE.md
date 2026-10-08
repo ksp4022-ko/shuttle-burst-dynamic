@@ -158,3 +158,24 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 | T-04 | 2026-10-08 | 舊密碼仍可登入：如要停用，請 Codex 刪除 Worker secret ADMIN_PASSWORD / ADMIN_PASSWORD_HASH（不改程式） | 已完成（使用者 2026-10-08 確認） |
 
 P6（④ 系統設定寫入）、頁面左右鎖定、賽季預設修正、Worker V6-026（臨打成員清單）已部署；預設賽季、左右鎖定、場地設定、測試發送已驗收。
+
+## 9. P7 一站式收款（規劃中，待「開工」）
+
+問題：同一位球員的未繳項目分散在 ③（各賽季季繳）與 ①（各場臨打），收一次款要切換三個以上地方。
+
+已定案（2026-10-08）：
+| # | 項目 | 決定 |
+|---|---|---|
+| C1 | 入口 | 新增第 5 個 dock「收款」 |
+| C2 | 收款方式 | 列出所有未繳項目（本季季費、臨打費、歷史未收），預設全選、顯示合計，按一次「收款 $合計」全部標記已收；可取消勾選只收部分 |
+| C3 | Worker | 同意只加唯讀 API（V6-027），沿用 V9-021 的帳單計算，不改計費規則、不改 D1 結構 |
+
+Worker V6-027（唯讀，x-admin-password 驗證）：
+- GET `/admin/sites/:site/billing-people`：可收款的人＝有 LINE 身分的球員（同 V9-021 名單）＋未認領 LINE 的季打成員。
+- GET `/admin/sites/:site/billing-people/:id/billing`：沿用 `respondV8Billing` 的結果（季繳含退費抵扣明細、臨打含聚會日期、各項 paymentId、合計）。未認領成員只有季繳。
+
+前端（「收款」分頁）：
+- 搜尋／選擇球員 → 帳單（與 V9 帳單同樣的項目與金額，數字以 Worker 為準）。
+- 收款寫入沿用現有 API：臨打 POST `/admin/temp-payments/:id/status`、季繳 POST `/admin/season-payments/:id/status`，在寫入鎖內逐筆送出。
+- 中途失敗：停在失敗那筆，畫面標示哪些已收、哪些未收，重新讀取帳單；結果不明（逾時等）不自動重送。
+- 收完重新讀取帳單，其他分頁同步更新（dataVersion）。
