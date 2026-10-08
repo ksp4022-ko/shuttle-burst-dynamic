@@ -52,6 +52,14 @@ export function AdminApp() {
     setSites([]);
   }, []);
 
+  // Lock the page horizontally while the panel is open (no sideways scroll,
+  // swipe or bounce on iPhone). Scoped to this route via a class on <html>.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("ctl-lock-x");
+    return () => root.classList.remove("ctl-lock-x");
+  }, []);
+
   return (
     <div className="ctl">
       <AdminStyles />

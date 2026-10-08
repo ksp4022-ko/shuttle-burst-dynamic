@@ -2,7 +2,21 @@
 // rounded cards, but thinner outlines and denser rows for admin work.
 // Everything is scoped under .ctl so nothing leaks into V8/V9.
 const CTL_CSS = `
+/* Horizontal lock. "clip" (not "hidden") keeps body / .ctl from becoming
+   scroll containers, so the sticky header and window scrolling still work. */
+html.ctl-lock-x {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+html.ctl-lock-x body {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
 .ctl {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  /* Vertical scrolling only: no sideways pan, no pinch zoom. */
+  touch-action: pan-y;
   --ink: #1f1a17;
   --paper: #fbf6ec;
   --card: #ffffff;
