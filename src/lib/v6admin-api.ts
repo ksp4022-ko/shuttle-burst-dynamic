@@ -665,6 +665,60 @@ export const adminWriteApi = {
   // The Worker requires the literal confirmation "DELETE".
   deleteEvent: (pw: string, eventId: string) =>
     adminPost(`/admin/events/${enc(eventId)}/delete`, pw, { confirmation: "DELETE" }),
+
+  // ④ 系統設定 (P6)
+  updateSite: (pw: string, siteId: string, input: { name: string; status: string }) =>
+    adminPost<{ site: AdminSite; sites: AdminSite[] }>(
+      `/admin/sites/${enc(siteId)}/settings`,
+      pw,
+      input,
+    ),
+  changePassword: (pw: string, newPassword: string) =>
+    adminPost<{ changed: boolean; passwordUpdatedAt?: string }>(`/admin/password`, pw, {
+      newPassword,
+    }),
+  saveLineNotification: (pw: string, siteId: string, input: LineNotificationInput) =>
+    adminPost(`/admin/sites/${enc(siteId)}/notification-settings`, pw, {
+      channel: "line",
+      ...input,
+    }),
+  saveDiscordNotification: (pw: string, siteId: string, input: DiscordNotificationInput) =>
+    adminPost(`/admin/sites/${enc(siteId)}/notification-settings`, pw, {
+      channel: "discord",
+      ...input,
+    }),
+  // Both send a real test message.
+  lineTest: (pw: string, siteId: string) =>
+    adminPost<{ latestNotifications?: NotificationLog[] }>(
+      `/admin/sites/${enc(siteId)}/line-test`,
+      pw,
+    ),
+  discordTest: (pw: string, siteId: string) =>
+    adminPost<{ discord?: { status?: string; errorMessage?: string } }>(
+      `/admin/sites/${enc(siteId)}/discord-test`,
+      pw,
+    ),
+  unlinkLineClaim: (pw: string, siteId: string, lineIdentityId: string) =>
+    adminPost(`/admin/sites/${enc(siteId)}/line-claims/${enc(lineIdentityId)}/unlink`, pw),
+};
+
+export type LineNotificationInput = {
+  enabled: boolean;
+  targetLabel: string;
+  notifySignup: boolean;
+  notifyCancel: boolean;
+  notifyLeave: boolean;
+  notifyReturn: boolean;
+  rosterReminderEnabled: boolean;
+  rosterReminderTime: string;
+};
+
+export type DiscordNotificationInput = {
+  discordEnabled: boolean;
+  discordNotifySignup: boolean;
+  discordNotifyCancel: boolean;
+  discordNotifyLeave: boolean;
+  discordNotifyReturn: boolean;
 };
 
 // ---------- Display helpers ----------

@@ -56,7 +56,13 @@ export function AdminApp() {
     <div className="ctl">
       <AdminStyles />
       {password ? (
-        <Panel password={password} sites={sites} onLogout={logout} />
+        <Panel
+          password={password}
+          sites={sites}
+          onLogout={logout}
+          onPasswordChanged={setPassword}
+          onSitesChanged={setSites}
+        />
       ) : (
         <Login
           onSuccess={(pw, list) => {
@@ -121,11 +127,20 @@ function Panel({
   password,
   sites,
   onLogout,
+  onPasswordChanged,
+  onSitesChanged,
 }: {
   password: string;
   sites: AdminSite[];
   onLogout: () => void;
+  // ④ 系統設定 (P6): new admin password / renamed or disabled site.
+  onPasswordChanged: (pw: string) => void;
+  onSitesChanged: (sites: AdminSite[]) => void;
 }) {
+  // The dashboard is read with the latest password without reloading the
+  // whole panel when the password changes (P6 改管理密碼).
+  const passwordRef = useRef(password);
+  passwordRef.current = password;
   const [siteId, setSiteId] = useState(() => {
     const pref = readSitePref();
     return sites.some((s) => s.id === pref) ? pref : sites[0]?.id || "";
@@ -172,7 +187,7 @@ function Panel({
     setDashboard(null);
     setError("");
     adminApi
-      .dashboard(password, siteId)
+      .dashboard(passwordRef.current, siteId)
       .then((data) => {
         if (seq !== dashSeq.current) return;
         setDashboard(data);
@@ -189,20 +204,30 @@ function Panel({
     return () => {
       counter.current++; // invalidate this request
     };
-  }, [password, siteId, reloadKey]);
+  }, [siteId, reloadKey]);
 
   // Silent re-read after a write (event status / counts in the picker).
   // Returns a promise so the write lock can wait for it; rejects on failure.
   const refreshDashboard = useCallback(async () => {
     const seq = ++dashSeq.current;
-    const data = await adminApi.dashboard(password, siteId);
+    const data = await adminApi.dashboard(passwordRef.current, siteId);
     if (seq !== dashSeq.current) return;
     setDashboard(data);
     // The current event may have been deleted: fall back to the default one.
     setEventId((cur) =>
       cur && data.events.some((e) => e.id === cur) ? cur : pickDefaultEvent(data.events)?.id || "",
     );
-  }, [password, siteId]);
+  }, [siteId]);
+
+  // Switch the in-memory password right away so the re-read that follows the
+  // change already uses it; the parent state updates on the next render.
+  const changePassword = useCallback(
+    (pw: string) => {
+      passwordRef.current = pw;
+      onPasswordChanged(pw);
+    },
+    [onPasswordChanged],
+  );
 
   // Bumped after every write so tabs that cache derived data (賽季管理)
   // re-read instead of showing pre-write numbers.
@@ -290,6 +315,12 @@ function Panel({
               siteId={siteId}
               dashboard={dashboard}
               dataVersion={dataVersion}
+              writeLock={writeLock}
+              writing={writing}
+              onDashboardRefresh={refreshDashboard}
+              onDataChanged={markDataChanged}
+              onPasswordChanged={changePassword}
+              onSitesChanged={onSitesChanged}
             />
           </div>
         ) : null}

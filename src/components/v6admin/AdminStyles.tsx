@@ -256,6 +256,12 @@ const CTL_CSS = `
 .ctl-check.is-wide { grid-column: 1 / -1; }
 .ctl-check input { width: 20px; height: 20px; }
 .ctl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Grid children must be allowed to shrink, or one long nowrap line widens
+   the whole card and pushes row buttons out of view. */
+.ctl-main, .ctl-tab, .ctl-sec-body { grid-template-columns: minmax(0, 1fr); }
+.ctl-row-name.is-wrap { white-space: normal; }
+.ctl-row-name.is-wrap small { display: block; margin-left: 0; margin-top: 1px; line-height: 1.35; }
+.ctl-form > .ctl-sub.is-wide { grid-column: 1 / -1; margin: 4px 0 -4px; font-weight: 700; }
 .ctl-readonly-tag { display: inline-block; margin-top: 2px; font-size: 12px; color: var(--muted); }
 `;
 
