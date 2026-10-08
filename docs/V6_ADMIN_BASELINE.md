@@ -159,7 +159,7 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 
 P6（④ 系統設定寫入）、頁面左右鎖定、賽季預設修正、Worker V6-026（臨打成員清單）已部署；預設賽季、左右鎖定、場地設定、測試發送已驗收。
 
-## 9. P7 一站式收款（已實作：Worker V6-027 commit e0e0ab4 待 Codex 部署；前端在 feat/v10ctl-next，Worker 上線後才併入 main）
+## 9. P7 一站式收款（已部署：Worker V6-027 e0e0ab4，Cloudflare version 1e74aa4d-658f-4ce0-b9e5-8460706ed3fe；前端 5d93930；待 iPhone 驗收）
 
 問題：同一位球員的未繳項目分散在 ③（各賽季季繳）與 ①（各場臨打），收一次款要切換三個以上地方。
 
