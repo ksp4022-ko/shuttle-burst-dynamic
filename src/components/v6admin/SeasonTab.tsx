@@ -20,6 +20,13 @@ import {
 } from "@/lib/v6admin-api";
 import { runWrite, useToast, type WriteLock } from "@/lib/v6admin-write";
 import { Metric, Section, Sheet, Toast } from "./AdminParts";
+import {
+  ConfirmSheet,
+  GroupSheet,
+  MembersSheet,
+  RefundGenSheet,
+  SettingSheet,
+} from "./SeasonWrites";
 
 // ③ 賽季管理: season + group picker, then 期初設定, 群組成員, 季繳紀錄,
 // 退費抵扣, 季末結算 and 季打確認, each from its own GET endpoint.
@@ -53,14 +60,25 @@ function groupHasSetting(group: AdminGroup, seasonId: string): boolean {
     .includes(seasonId);
 }
 
+// Groups linked to the season first, then the other active groups (a group
+// just created has no season setting yet but must be pickable).
 function groupsForSeason(groups: AdminGroup[], seasonId: string): AdminGroup[] {
   const linked = groups.filter((g) => groupHasSetting(g, seasonId) || g.seasonId === seasonId);
-  return linked.length ? linked : groups.filter((g) => g.status === "active");
+  const others = groups.filter((g) => g.status === "active" && !linked.includes(g));
+  return [...linked, ...others];
 }
 
 type Pending =
   | { kind: "pay"; payment: SeasonPaymentAuditRow; next: "paid" | "unpaid" }
-  | { kind: "adjust"; payment: SeasonPaymentAuditRow };
+  | { kind: "adjust"; payment: SeasonPaymentAuditRow }
+  // P5-b
+  | { kind: "setting" }
+  | { kind: "group-create" }
+  | { kind: "group-edit" }
+  | { kind: "members" }
+  | { kind: "refund-gen" }
+  | { kind: "pay-gen" }
+  | { kind: "pl-save" };
 
 export function SeasonTab({
   password,
@@ -70,6 +88,7 @@ export function SeasonTab({
   writeLock,
   writing,
   onDataChanged,
+  onDashboardRefresh,
 }: {
   password: string;
   siteId: string;
@@ -79,6 +98,8 @@ export function SeasonTab({
   writeLock: WriteLock;
   writing: boolean;
   onDataChanged: () => void;
+  // Groups / seasons live in the dashboard payload (re-read after group writes).
+  onDashboardRefresh: () => Promise<void>;
 }) {
   const seasons = dashboard.seasons || [];
   const [seasonId, setSeasonId] = useState(() => defaultSeason(seasons));
@@ -92,8 +113,18 @@ export function SeasonTab({
   const [confirmError, setConfirmError] = useState("");
   const [confirmReload, setConfirmReload] = useState(0);
 
+  // A group just created: select it once the refreshed dashboard lists it
+  // (until then, don't let the check below switch to another group).
+  const wantGroupId = useRef("");
   // Keep the group valid for the chosen season (prefer one with a season setting).
   useEffect(() => {
+    if (wantGroupId.current) {
+      if (groupChoices.some((g) => g.id === wantGroupId.current)) {
+        setGroupId(wantGroupId.current);
+        wantGroupId.current = "";
+      }
+      return;
+    }
     if (groupChoices.some((g) => g.id === groupId)) return;
     const withSetting = groupChoices.find((g) => groupHasSetting(g, seasonId));
     setGroupId(
@@ -166,6 +197,28 @@ export function SeasonTab({
   }
   const close = () => setPending(null);
 
+  // P5-b writes: one flow (runWrite), re-reading this tab and, for group
+  // changes, the dashboard (group list).
+  function submit<R>(
+    work: () => Promise<R>,
+    okText: string | ((r: R) => string),
+    opts?: { dashboard?: boolean; onSuccess?: (r: R) => void },
+  ) {
+    void runWrite<R>({
+      writeLock,
+      work,
+      okText,
+      reread: () => (opts?.dashboard ? [loadSeason(), onDashboardRefresh()] : [loadSeason()]),
+      onDataChanged,
+      onRejected: setSheetError,
+      onClose: close,
+      toast: showToast,
+      ...(opts?.onSuccess ? { onSuccess: opts.onSuccess } : {}),
+    });
+  }
+  const seasonLabel = seasons.find((s) => s.id === seasonId)?.name || seasonId;
+  const groupInfo = (dashboard.groups || []).find((g) => g.id === groupId);
+
   const confirmSettings = (confirm?.settings || []).filter(
     (s) => s.targetSeasonId === seasonId && s.groupId === groupId,
   );
@@ -208,6 +261,17 @@ export function SeasonTab({
         </div>
       </div>
 
+      <div className="ctl-actions ctl-picker-actions">
+        <button
+          className="ctl-btn-ghost"
+          type="button"
+          disabled={writing}
+          onClick={() => open({ kind: "group-create" })}
+        >
+          ＋ 新增群組
+        </button>
+      </div>
+
       {!seasonId || !groupId ? (
         <div className="ctl-card ctl-empty">請選擇賽季與群組。</div>
       ) : !data ? (
@@ -220,11 +284,26 @@ export function SeasonTab({
             writing={writing}
             onPay={(payment, next) => open({ kind: "pay", payment, next })}
             onAdjust={(payment) => open({ kind: "adjust", payment })}
+            onGenerate={() => open({ kind: "pay-gen" })}
+            onRefundGen={() => open({ kind: "refund-gen" })}
           />
-          <SettingSection management={data.management} />
-          <MembersSection group={data.group} />
+          <SettingSection
+            management={data.management}
+            writing={writing}
+            onEdit={() => open({ kind: "setting" })}
+          />
+          <MembersSection
+            group={data.group}
+            writing={writing}
+            onEdit={() => open({ kind: "members" })}
+            onGroup={() => open({ kind: "group-edit" })}
+          />
           <CreditsSection audit={data.credits} />
-          <SettlementSection management={data.management} />
+          <SettlementSection
+            management={data.management}
+            writing={writing}
+            onSave={() => open({ kind: "pl-save" })}
+          />
           <ConfirmSection
             password={password}
             siteId={siteId}
@@ -314,6 +393,150 @@ export function SeasonTab({
           error={sheetError}
           setError={setSheetError}
         />
+      ) : null}
+
+      {pending?.kind === "setting" ? (
+        <SettingSheet
+          password={password}
+          siteId={siteId}
+          seasonId={seasonId}
+          groupId={groupId}
+          title={`期初設定｜${seasonLabel}／${groupInfo?.name || groupId}`}
+          current={data?.management?.setting}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          submit={(work, okText) => submit(work, okText, { dashboard: true })}
+        />
+      ) : null}
+
+      {pending?.kind === "group-create" ? (
+        <GroupSheet
+          mode="create"
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onCreate={(name) =>
+            submit(
+              () => adminWriteApi.createGroup(password, siteId, name),
+              `已新增群組「${name}」`,
+              {
+                dashboard: true,
+                onSuccess: (r) => {
+                  if (r.group?.id) wantGroupId.current = r.group.id;
+                },
+              },
+            )
+          }
+          onRename={() => undefined}
+          onDisable={() => undefined}
+        />
+      ) : null}
+
+      {pending?.kind === "group-edit" && groupInfo ? (
+        <GroupSheet
+          mode="edit"
+          group={{ id: groupInfo.id, name: groupInfo.name || groupInfo.id }}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onCreate={() => undefined}
+          onRename={(name) =>
+            submit(
+              () => adminWriteApi.updateGroup(password, siteId, groupInfo.id, name, "active"),
+              `群組已改名為「${name}」`,
+              { dashboard: true },
+            )
+          }
+          onDisable={(name) =>
+            submit(
+              () => adminWriteApi.updateGroup(password, siteId, groupInfo.id, name, "disabled"),
+              `群組「${name}」已停用`,
+              { dashboard: true },
+            )
+          }
+        />
+      ) : null}
+
+      {pending?.kind === "members" && data?.group ? (
+        <MembersSheet
+          members={data.group.members}
+          seasonName={seasonLabel}
+          bootstrapDraft={data.group.bootstrapDraft}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onSave={(members) =>
+            submit(
+              () => adminWriteApi.saveGroupMembers(password, siteId, groupId, seasonId, members),
+              `已儲存 ${seasonLabel} 季打名單（${members.filter((m) => m.status === "active").length} 人有效）`,
+              { dashboard: true },
+            )
+          }
+        />
+      ) : null}
+
+      {pending?.kind === "refund-gen" ? (
+        <RefundGenSheet
+          password={password}
+          siteId={siteId}
+          toSeasonId={seasonId}
+          toSeasonName={seasonLabel}
+          groupId={groupId}
+          seasons={seasons}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          submit={(work, okText) => submit(work, okText)}
+        />
+      ) : null}
+
+      {pending?.kind === "pay-gen" ? (
+        <ConfirmSheet
+          title="建立／更新季繳收費單"
+          confirmText="建立／更新"
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onConfirm={() =>
+            submit(
+              () => adminWriteApi.generateSeasonPayments(password, siteId, seasonId, groupId),
+              (r) => {
+                const list = r.result || [];
+                const locked = list.filter((x) => x.locked).length;
+                return `季繳收費單已更新 ${list.length - locked} 人${locked ? `（${locked} 人已付款未改動）` : ""}`;
+              },
+            )
+          }
+        >
+          <p>
+            依 <strong>{seasonLabel}</strong> 的期初設定與退費抵扣，為「{groupInfo?.name || groupId}
+            」的有效季打成員建立或更新季繳收費單。
+          </p>
+          <p className="ctl-sub">已付款的收費單不會被覆蓋；有抵扣的請先「產生下季退費抵扣」。</p>
+        </ConfirmSheet>
+      ) : null}
+
+      {pending?.kind === "pl-save" ? (
+        <ConfirmSheet
+          title="儲存本季損益"
+          confirmText="儲存"
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onConfirm={() =>
+            submit(
+              () => adminWriteApi.saveSeasonProfitLoss(password, siteId, seasonId, groupId),
+              "本季損益已儲存",
+            )
+          }
+        >
+          <p>
+            把 <strong>{seasonLabel}</strong> 目前的季末結算結果（損益{" "}
+            {money(data?.management?.settlement?.netProfit)}）存成一筆正式紀錄。
+          </p>
+          <p className="ctl-sub">每按一次會新增一筆紀錄；之後資料有變可以再存一次。</p>
+        </ConfirmSheet>
       ) : null}
 
       <Toast toast={toast} />
@@ -571,13 +794,27 @@ function PaymentsSection({
   writing,
   onPay,
   onAdjust,
+  onGenerate,
+  onRefundGen,
 }: {
   audit: SeasonPaymentAudit | null;
   writing: boolean;
   onPay: (payment: SeasonPaymentAuditRow, next: "paid" | "unpaid") => void;
   onAdjust: (payment: SeasonPaymentAuditRow) => void;
+  onGenerate: () => void;
+  onRefundGen: () => void;
 }) {
   if (!audit) return null;
+  const tools = (
+    <div className="ctl-actions">
+      <button className="ctl-act" type="button" disabled={writing} onClick={onRefundGen}>
+        產生下季退費抵扣
+      </button>
+      <button className="ctl-act is-pay" type="button" disabled={writing} onClick={onGenerate}>
+        建立／更新收費單
+      </button>
+    </div>
+  );
   const s = audit.summary;
   const rows = audit.payments || [];
   return (
@@ -622,6 +859,7 @@ function PaymentsSection({
       ) : (
         <p className="ctl-empty">此賽季尚未建立季繳紀錄。</p>
       )}
+      {tools}
     </Section>
   );
 }
@@ -731,7 +969,15 @@ function PaymentRow({
 
 // ---------- 期初設定 ----------
 
-function SettingSection({ management }: { management: SeasonManagementData | null }) {
+function SettingSection({
+  management,
+  writing,
+  onEdit,
+}: {
+  management: SeasonManagementData | null;
+  writing: boolean;
+  onEdit: () => void;
+}) {
   const st = management?.setting;
   return (
     <Section title="期初設定" note={st ? `季費 ${money(st.seasonFee)}` : "尚未設定"}>
@@ -777,13 +1023,28 @@ function SettingSection({ management }: { management: SeasonManagementData | nul
       ) : (
         <p className="ctl-empty">這個賽季／群組還沒有期初設定。</p>
       )}
+      <div className="ctl-actions">
+        <button className="ctl-act is-pay" type="button" disabled={writing} onClick={onEdit}>
+          {st ? "修改期初設定" : "建立期初設定"}
+        </button>
+      </div>
     </Section>
   );
 }
 
 // ---------- 群組成員 ----------
 
-function MembersSection({ group }: { group: GroupSnapshot | null }) {
+function MembersSection({
+  group,
+  writing,
+  onEdit,
+  onGroup,
+}: {
+  group: GroupSnapshot | null;
+  writing: boolean;
+  onEdit: () => void;
+  onGroup: () => void;
+}) {
   if (!group) return null;
   const active = group.members.filter((m) => m.status === "active");
   const others = group.members.filter((m) => m.status !== "active");
@@ -805,6 +1066,14 @@ function MembersSection({ group }: { group: GroupSnapshot | null }) {
       ) : (
         <p className="ctl-empty">沒有成員。</p>
       )}
+      <div className="ctl-actions">
+        <button className="ctl-act" type="button" disabled={writing} onClick={onGroup}>
+          群組設定
+        </button>
+        <button className="ctl-act is-pay" type="button" disabled={writing} onClick={onEdit}>
+          編輯成員
+        </button>
+      </div>
     </Section>
   );
 }
@@ -866,7 +1135,15 @@ function CreditsSection({ audit }: { audit: RefundCreditAudit | null }) {
 
 // ---------- 季末結算 ----------
 
-function SettlementSection({ management }: { management: SeasonManagementData | null }) {
+function SettlementSection({
+  management,
+  writing,
+  onSave,
+}: {
+  management: SeasonManagementData | null;
+  writing: boolean;
+  onSave: () => void;
+}) {
   const s = management?.settlement;
   if (!s) return null;
   const col = s.collection || {};
@@ -901,7 +1178,14 @@ function SettlementSection({ management }: { management: SeasonManagementData | 
         {s.testExcludedCount ?? 0}
       </p>
       {s.canFinalize === true ? (
-        <div className="ctl-notice is-ok">正式季末結算條件已完成。</div>
+        <>
+          <div className="ctl-notice is-ok">正式季末結算條件已完成。</div>
+          <div className="ctl-actions">
+            <button className="ctl-act is-pay" type="button" disabled={writing} onClick={onSave}>
+              儲存本季損益
+            </button>
+          </div>
+        </>
       ) : (
         <div className="ctl-notice">
           {(s.blockReasons || []).length

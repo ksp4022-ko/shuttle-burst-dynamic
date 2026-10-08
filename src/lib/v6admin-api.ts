@@ -420,7 +420,39 @@ export type SeasonSetting = {
   seasonFee?: number;
   perEventSeasonFee?: number;
   tempFee?: number;
+  roundingUnit?: number;
+  shuttleUnitCost?: number;
+  courtFeePerEvent?: number;
+  shuttleFeePerEvent?: number;
+  acFeePerEvent?: number;
   updatedAt?: string;
+};
+
+// P5-b: the 期初設定 form, same fields the Worker /admin page posts.
+export type SeasonSettingInput = {
+  seasonId: string;
+  groupId: string;
+  courtFeePerCourtHour: string;
+  courtDiscountRate: string;
+  courtCount: string;
+  hoursPerEvent: string;
+  shuttleTubePrice: string;
+  shuttlePerTube: string;
+  estimatedShuttlePerEvent: string;
+  acFeePerHour: string;
+  acHoursPerEvent: string;
+  miscFeePerSeason: string;
+  estimatedEventCount: string;
+  seasonMemberCount: string;
+  roundingUnit: string;
+  tempFee: string;
+};
+
+export type GroupMemberInput = {
+  id: string;
+  name: string;
+  orderNo: number;
+  status: "active" | "disabled";
 };
 
 export type SettlementRow = {
@@ -923,6 +955,59 @@ export const adminWriteApi = {
       pw,
       { reason },
     ),
+  // ③ 賽季管理 (P5-b): same requests as the Worker's /admin page.
+  previewSeasonSetting: (pw: string, siteId: string, input: SeasonSettingInput) =>
+    adminPost<{ setting: SeasonSetting; existing: SeasonSetting | null }>(
+      `/admin/sites/${enc(siteId)}/season-settings/preview`,
+      pw,
+      input,
+    ),
+  saveSeasonSetting: (pw: string, siteId: string, input: SeasonSettingInput) =>
+    adminPost<{ setting: SeasonSetting; revisionStatus?: string }>(
+      `/admin/sites/${enc(siteId)}/season-settings`,
+      pw,
+      input,
+    ),
+  createGroup: (pw: string, siteId: string, name: string) =>
+    adminPost<{ group: { id: string; name: string } }>(`/admin/sites/${enc(siteId)}/groups`, pw, {
+      name,
+    }),
+  updateGroup: (
+    pw: string,
+    siteId: string,
+    groupId: string,
+    name: string,
+    status: "active" | "disabled",
+  ) => adminPost(`/admin/sites/${enc(siteId)}/groups/${enc(groupId)}`, pw, { name, status }),
+  saveGroupMembers: (
+    pw: string,
+    siteId: string,
+    groupId: string,
+    seasonId: string,
+    members: GroupMemberInput[],
+  ) =>
+    adminPost(`/admin/sites/${enc(siteId)}/groups/${enc(groupId)}/members`, pw, {
+      seasonId,
+      members,
+    }),
+  generateRefundCredits: (
+    pw: string,
+    siteId: string,
+    input: { fromSeasonId: string; toSeasonId: string; groupId: string; refundUnit: number },
+  ) =>
+    adminPost<{ created: { memberName?: string; refundAmount?: number; paidLocked?: boolean }[] }>(
+      `/admin/sites/${enc(siteId)}/refund-credits/generate`,
+      pw,
+      input,
+    ),
+  generateSeasonPayments: (pw: string, siteId: string, seasonId: string, groupId: string) =>
+    adminPost<{ result: { memberName: string; status: string; locked?: boolean }[] }>(
+      `/admin/sites/${enc(siteId)}/season-payments/generate`,
+      pw,
+      { seasonId, groupId },
+    ),
+  saveSeasonProfitLoss: (pw: string, siteId: string, seasonId: string, groupId: string) =>
+    adminPost(`/admin/sites/${enc(siteId)}/season-profit-loss/save`, pw, { seasonId, groupId }),
   unlinkLineClaim: (pw: string, siteId: string, lineIdentityId: string) =>
     adminPost(`/admin/sites/${enc(siteId)}/line-claims/${enc(lineIdentityId)}/unlink`, pw),
 };

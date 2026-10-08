@@ -286,6 +286,14 @@ html.ctl-lock-x body {
 .ctl-claim-row.is-head { font-size: 12px; font-weight: 700; color: var(--muted); padding-top: 2px; }
 .ctl-claim-row .ctl-act { padding: 5px 8px; }
 
+/* ---------- ③ 賽季管理 writes (P5-b) ---------- */
+.ctl-picker-actions { margin-top: -4px; }
+.ctl-member-edit { display: flex; align-items: center; gap: 6px; padding: 5px 0; border-top: 1px solid var(--line); }
+.ctl-member-edit:first-child { border-top: 0; }
+.ctl-member-edit input { border: 1.5px solid var(--ink); border-radius: 10px; padding: 8px; font-size: 16px; background: #fff; min-width: 0; }
+.ctl-member-order { width: 58px; flex: none; text-align: center; }
+.ctl-member-name { flex: 1; font-weight: 700; }
+
 /* ---------- Toast ---------- */
 .ctl-toast {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 60;

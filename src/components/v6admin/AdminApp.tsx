@@ -342,6 +342,7 @@ function Panel({
               writeLock={writeLock}
               writing={writing}
               onDataChanged={markDataChanged}
+              onDashboardRefresh={refreshDashboard}
             />
           </div>
         ) : null}
