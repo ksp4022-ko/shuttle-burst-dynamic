@@ -18,11 +18,14 @@ export function useV8PersonalBillingTest({
   token,
   siteId,
   eventId,
+  asIdentityId,
 }: {
   enabled: boolean;
   token: string | null;
   siteId: string;
   eventId?: string;
+  // V9-021: an admin viewing another identity's bill.
+  asIdentityId?: string;
 }) {
   const [state, setState] = useState<V8BillingTestState>({ kind: "idle" });
   const [guestLoadingMore, setGuestLoadingMore] = useState(false);
@@ -39,6 +42,7 @@ export function useV8PersonalBillingTest({
         const billing = await fetchV8PersonalBilling(token, {
           siteId,
           ...(eventId ? { eventId } : {}),
+          ...(asIdentityId ? { asIdentityId } : {}),
           ...(signal ? { signal } : {}),
         });
         if (signal?.aborted) return;
@@ -52,7 +56,7 @@ export function useV8PersonalBillingTest({
         setState({ kind: status === 401 || status === 403 ? "auth" : "error" });
       }
     },
-    [eventId, siteId, token],
+    [asIdentityId, eventId, siteId, token],
   );
 
   useEffect(() => {
@@ -78,6 +82,7 @@ export function useV8PersonalBillingTest({
       const next = await fetchV8PersonalBilling(token, {
         siteId,
         ...(eventId ? { eventId } : {}),
+        ...(asIdentityId ? { asIdentityId } : {}),
         guestCursor: state.billing.guestLedger.nextCursor,
         guestLimit: state.billing.guestLedger.limit,
         seasonLimit: 1,
@@ -92,7 +97,7 @@ export function useV8PersonalBillingTest({
     } finally {
       setGuestLoadingMore(false);
     }
-  }, [eventId, guestLoadingMore, siteId, state, token]);
+  }, [asIdentityId, eventId, guestLoadingMore, siteId, state, token]);
 
   const loadMoreSeason = useCallback(async () => {
     if (
@@ -107,6 +112,7 @@ export function useV8PersonalBillingTest({
       const next = await fetchV8PersonalBilling(token, {
         siteId,
         ...(eventId ? { eventId } : {}),
+        ...(asIdentityId ? { asIdentityId } : {}),
         seasonCursor: state.billing.seasonPaymentHistory.nextCursor,
         seasonLimit: state.billing.seasonPaymentHistory.limit,
         guestLimit: 1,
@@ -121,7 +127,7 @@ export function useV8PersonalBillingTest({
     } finally {
       setSeasonLoadingMore(false);
     }
-  }, [eventId, seasonLoadingMore, siteId, state, token]);
+  }, [asIdentityId, eventId, seasonLoadingMore, siteId, state, token]);
 
   return {
     state,

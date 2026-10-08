@@ -1,4 +1,5 @@
 import type { V8PersonalBilling } from "@/lib/v8-personal-billing";
+import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
 
 export type AlphaEvent = {
   id: string;
@@ -142,15 +143,19 @@ export function configuredApiBase() {
 }
 
 function normalizeSiteId(value: unknown) {
-  const siteId = String(value || "").trim().toLowerCase();
+  const siteId = String(value || "")
+    .trim()
+    .toLowerCase();
   return siteId === "rian" || siteId === "kangxuan" ? siteId : "";
 }
 
 function siteIdFromPathname(pathname: string) {
-  return pathname
-    .split("/")
-    .map((segment) => normalizeSiteId(segment))
-    .find(Boolean) || "";
+  return (
+    pathname
+      .split("/")
+      .map((segment) => normalizeSiteId(segment))
+      .find(Boolean) || ""
+  );
 }
 
 export function configuredSiteId() {
@@ -175,7 +180,9 @@ export function configuredSiteId() {
       return fromPath;
     }
 
-    const fromStorage = normalizeSiteId(window.localStorage.getItem(DATABASE_ALPHA_SITE_STORAGE_KEY));
+    const fromStorage = normalizeSiteId(
+      window.localStorage.getItem(DATABASE_ALPHA_SITE_STORAGE_KEY),
+    );
     if (fromStorage) return fromStorage;
   }
 
@@ -216,7 +223,9 @@ export async function alphaFetch<T>(
   const json = (await response.json().catch(() => ({}))) as AlphaResponse<T>;
 
   if (!response.ok || json.ok === false) {
-    const error = new Error(json.error?.message || `database-alpha request failed (${response.status})`) as Error & {
+    const error = new Error(
+      json.error?.message || `database-alpha request failed (${response.status})`,
+    ) as Error & {
       status?: number;
       code?: string;
     };
@@ -247,10 +256,18 @@ export function listAlphaEvents(from: string, limit = 20, signal?: AbortSignal) 
 }
 
 export function getAlphaRoster(eventId: string, signal?: AbortSignal) {
-  return alphaFetch<AlphaRoster>(`/events/${encodeURIComponent(eventId)}/roster`, signal ? { signal } : undefined);
+  return alphaFetch<AlphaRoster>(
+    `/events/${encodeURIComponent(eventId)}/roster`,
+    signal ? { signal } : undefined,
+  );
 }
 
-export function createAlphaTempSignup(eventId: string, name: string, token?: string, options: { selfSignup?: boolean } = {}) {
+export function createAlphaTempSignup(
+  eventId: string,
+  name: string,
+  token?: string,
+  options: { selfSignup?: boolean } = {},
+) {
   const siteId = configuredSiteId();
   return alphaFetch<{ signupId: string; status: string; position: number }>(
     `/events/${encodeURIComponent(eventId)}/temp-signups`,
@@ -360,11 +377,15 @@ export function fetchV8PersonalBilling(
     seasonCursor?: string;
     guestLimit?: number;
     seasonLimit?: number;
+    // V9-021: an admin reading another identity's bill (read-only).
+    asIdentityId?: string;
     signal?: AbortSignal;
   },
 ) {
   return alphaFetch<V8PersonalBilling>(
-    "/me/billing",
+    input.asIdentityId
+      ? `/admin/identities/${encodeURIComponent(input.asIdentityId)}/billing`
+      : "/me/billing",
     {
       headers: authHeaders(token),
       cache: "no-store",
@@ -381,15 +402,20 @@ export function fetchV8PersonalBilling(
   );
 }
 
+// V9-021: everyone on a site with a LINE identity (admin only).
+export function fetchV8AdminIdentities(token: string, siteId: string) {
+  return alphaFetch<{
+    siteId: string;
+    items: Array<V8LineIdentity & { lastLoginAt: string | null }>;
+  }>("/admin/identities", { headers: authHeaders(token), cache: "no-store" }, { siteId });
+}
+
 export function fetchV8CancellableTempSignups(token: string, eventId: string) {
   return alphaFetch<{
     eventId: string;
     isAdmin: boolean;
     items: AlphaCancellableTempSignup[];
-  }>(
-    `/events/${encodeURIComponent(eventId)}/temp-signups/cancellable`,
-    {
-      headers: authHeaders(token),
-    },
-  );
+  }>(`/events/${encodeURIComponent(eventId)}/temp-signups/cancellable`, {
+    headers: authHeaders(token),
+  });
 }

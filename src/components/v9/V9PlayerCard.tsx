@@ -167,6 +167,8 @@ export function V9PlayerCard({
   onRename,
   onRepick,
   onLogout,
+  readOnly = false,
+  onViewAs,
 }: {
   identity: CurrentIdentity;
   rank: number | null;
@@ -177,6 +179,10 @@ export function V9PlayerCard({
   onRename: (name: string) => Promise<boolean>;
   onRepick: () => void;
   onLogout: () => void;
+  // V9-021: an admin viewing someone else's card -- no editing, no account.
+  readOnly?: boolean;
+  // V9-021: the admin's own card offers 以成員身分檢視.
+  onViewAs?: (() => void) | undefined;
 }) {
   const fixed = identity.signupType === "fixed";
   const position =
@@ -197,7 +203,13 @@ export function V9PlayerCard({
           height={60}
         />
         <div className="v9-pc-who">
-          <V9NameEdit name={identity.name} onSave={onRename} />
+          {readOnly ? (
+            <p className="v9-pc-name">
+              <span>{identity.name}</span>
+            </p>
+          ) : (
+            <V9NameEdit name={identity.name} onSave={onRename} />
+          )}
           <p className="v9-pc-sub">
             <span className={`v9-badge ${fixed ? "is-blue" : "is-orange"}`}>
               {fixed ? "季打" : "臨打"}
@@ -233,11 +245,19 @@ export function V9PlayerCard({
 
       <button type="button" className="v9-pc-bill" onClick={onBill}>
         <img src={`${ICONS}fee.webp`} alt="" width={28} height={28} />
-        <span>我的帳單</span>
+        <span>{readOnly ? "帳單" : "我的帳單"}</span>
         <V9Icon name="chevron" size={16} />
       </button>
 
-      <V9Account onRepick={onRepick} onLogout={onLogout} />
+      {onViewAs && !readOnly && (
+        <button type="button" className="v9-pc-viewas" onClick={onViewAs}>
+          <span aria-hidden="true">👁</span>
+          <span>以成員身分檢視</span>
+          <V9Icon name="chevron" size={16} />
+        </button>
+      )}
+
+      {!readOnly && <V9Account onRepick={onRepick} onLogout={onLogout} />}
     </article>
   );
 }

@@ -565,6 +565,36 @@ const V9_CSS = `
   background: #fffaf0; color: var(--v9-ink); font-size: 15px; font-weight: 900; text-align: left; cursor: pointer;
 }
 .v9-pc-bill span { flex: 1; }
+.v9-pc-viewas {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 0; border-top: 2px dashed #eadfca;
+  background: #eef4ff; color: var(--v9-ink); font-size: 15px; font-weight: 900; text-align: left; cursor: pointer;
+}
+.v9-pc-viewas span:nth-child(2) { flex: 1; }
+
+/* V9-021 admin read-only view-as: the bar on top, the picker sheet */
+.v9-viewas-bar {
+  position: sticky; top: 0; z-index: 70; display: flex; align-items: center; gap: 8px; margin: 0 auto 10px; max-width: 480px;
+  padding: 8px 10px 8px 14px; border: 2.5px solid var(--v9-ink); border-radius: 16px; background: var(--v9-blue); color: #fff;
+  font-size: 14px; font-weight: 800; box-shadow: 0 3px 0 var(--v9-ink);
+}
+.v9-viewas-bar-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v9-viewas-bar button {
+  flex: none; padding: 5px 12px; border: 2px solid var(--v9-ink); border-radius: 999px; background: #fff; color: var(--v9-ink);
+  font-size: 13px; font-weight: 900; cursor: pointer;
+}
+.v9-viewas { display: grid; gap: 14px; }
+.v9-viewas-search {
+  width: 100%; padding: 10px 14px; border: 2.5px solid var(--v9-ink); border-radius: 14px; background: #fff; font-size: 16px; font-weight: 700;
+}
+.v9-viewas-group h3 { margin: 0 0 6px; font-size: 14px; font-weight: 900; color: var(--v9-muted); }
+.v9-viewas-group h3 small { font-size: 12px; }
+.v9-viewas-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.v9-viewas-group li button {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 2px solid #eadfca; border-radius: 14px;
+  background: #fff; color: var(--v9-ink); font-size: 15px; font-weight: 800; text-align: left; cursor: pointer;
+}
+.v9-viewas-group li button:active { background: #fff5e3; }
+.v9-viewas-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 
 /* 本季出席 stamp card: one row per month, day numbers under the stamps */
 .v9-season { display: grid; gap: 8px; padding: 10px 10px 8px; }

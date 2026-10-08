@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   configuredSiteId,
   listAlphaEvents,
@@ -6,7 +6,11 @@ import {
   type AlphaSignup,
 } from "@/lib/database-alpha";
 import { useHomepageFlow, type PendingAction } from "@/hooks/use-homepage-flow";
-import { useCurrentIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
+import {
+  findFixedIdentity,
+  useCurrentIdentity,
+  type CurrentIdentity,
+} from "@/hooks/use-current-identity";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
@@ -14,7 +18,7 @@ import { v9StorageKey } from "@/lib/v9-route";
 import { V9Busy } from "./V9Busy";
 import { V9Styles } from "./V9Styles";
 import { V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
-import { v9ShortDate, v9Weekday } from "@/lib/v9-display";
+import { v9IdentityName, v9ShortDate, v9Weekday } from "@/lib/v9-display";
 import { V9Sheet } from "./V9Sheet";
 import { V9RosterContent, type V9RosterTab } from "./V9RosterSheet";
 import { V9BillingContent } from "./V9BillingSheet";
@@ -27,6 +31,8 @@ import { V9JoinContent, V9RepickContent } from "./V9IdentitySheet";
 import { confirmV8LineProfile } from "@/lib/v8-line-auth";
 import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { v9PreloadArt } from "./V9Mascot";
+import { useV9Test } from "./useV9Test";
+import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
@@ -36,7 +42,7 @@ import { v9PreloadArt } from "./V9Mascot";
 
 const SITE_NAMES: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 
-type SheetKind = "roster" | "bill" | "proxy" | "meetup" | "me" | "join";
+type SheetKind = "roster" | "bill" | "proxy" | "meetup" | "me" | "join" | "viewas";
 
 function selectedEventKey(siteId: string) {
   return v9StorageKey(`${siteId}:selected-event`);
@@ -132,6 +138,31 @@ export function V9App() {
       lineAuthToken: lineToken,
       eventId: selectedEventId,
     });
+
+  // V9-021 (/v9test): the admin can look at someone else's page, read-only.
+  // Their 本場 status comes from the same roster (季打) or from the admin's
+  // view of this meetup's temp signups (臨打); nothing is ever submitted.
+  const test = useV9Test();
+  const isAdmin = test && lineIdentity?.role === "admin" && Boolean(lineToken);
+  const [viewAs, setViewAs] = useState<V8LineIdentity | null>(null);
+  const viewing = isAdmin && viewAs !== null;
+  const viewIdentity = useMemo<CurrentIdentity | null>(() => {
+    if (!viewAs) return null;
+    const name = v9IdentityName(viewAs);
+    const fixed = viewAs.identityType === "fixed" ? findFixedIdentity(roster, viewAs) : null;
+    if (fixed) return fixed;
+    const own = cancellableTempSignups.find(
+      (signup) =>
+        signup.participantLineIdentityId === viewAs.id ||
+        (!signup.participantLineIdentityId &&
+          signup.createdByLineIdentityId === viewAs.id &&
+          signup.name === name),
+    );
+    if (own && (own.status === "confirmed" || own.status === "waiting")) {
+      return { signupId: own.id, name: own.name, signupType: "temp", status: own.status };
+    }
+    return { signupId: "", name, signupType: "temp", status: "unregistered" };
+  }, [cancellableTempSignups, roster, viewAs]);
 
   // 本季出席 (same fail-soft shared hook as V8 ACTIVE): 季打 only.
   const { progress: seasonProgress, refresh: refreshSeasonProgress } = useV8SeasonProgress({
@@ -472,7 +503,10 @@ export function V9App() {
   const signedIn = Boolean(lineIdentity && lineToken);
   const profileComplete = Boolean(lineIdentity?.profileComplete);
   const ready = signedIn && profileComplete && Boolean(identity);
-  const rank = rankOf(identity, confirmed, waiting);
+  const shownIdentity = viewing ? viewIdentity : identity;
+  const shownName = viewing && viewAs ? v9IdentityName(viewAs) : userName;
+  const shownReady = viewing ? Boolean(viewIdentity) : ready;
+  const rank = rankOf(shownIdentity, confirmed, waiting);
   const cta: V9Cta = auth.loading
     ? { kind: "loading" }
     : !signedIn
@@ -546,7 +580,12 @@ export function V9App() {
 
       {selectedEvent && roster && (
         <>
-          <main className={`v9-main has-dock${switching ? " is-switching" : ""}`}>
+          {viewing && viewAs && (
+            <V9ViewAsBar name={v9IdentityName(viewAs)} onExit={() => setViewAs(null)} />
+          )}
+          <main
+            className={`v9-main has-dock${switching ? " is-switching" : ""}${viewing ? " is-viewas" : ""}`}
+          >
             <V9Hero
               siteName={siteName}
               event={shownEvent ?? selectedEvent}
@@ -557,16 +596,22 @@ export function V9App() {
                 const item = events[next];
                 if (item) selectEvent(item.id);
               }}
-              userName={userName}
+              userName={shownName}
               authLoading={auth.loading}
               signedIn={signedIn}
-              identity={ready ? identity : null}
-              rank={ready ? rank : null}
-              cta={cta}
+              identity={shownReady ? shownIdentity : null}
+              rank={shownReady ? rank : null}
+              cta={viewing ? { kind: "action", label: "唯讀檢視中", tone: "is-paper" } : cta}
               busy={busy}
               busyLabel={busyLabelFor(pendingAction)}
               onLogin={auth.startLogin}
-              onCta={() => (profileComplete ? void handlePrimaryAction() : setSheet("join"))}
+              onCta={() =>
+                viewing
+                  ? undefined
+                  : profileComplete
+                    ? void handlePrimaryAction()
+                    : setSheet("join")
+              }
               onMeetup={() => setSheet("meetup")}
               onMe={() => setSheet("me")}
               counts={{
@@ -595,19 +640,25 @@ export function V9App() {
               confirmed={confirmed}
               waiting={waiting}
               leave={roster.fixedLeave || []}
-              mySignupId={ready ? identity?.signupId || "" : ""}
+              mySignupId={shownReady ? shownIdentity?.signupId || "" : ""}
               displayName={displayName}
             />
           </V9Sheet>
 
           <V9Sheet
             open={sheet === "bill"}
-            title="我的帳單"
-            subtitle={userName || undefined}
+            title={viewing ? "帳單（唯讀）" : "我的帳單"}
+            subtitle={shownName || undefined}
             onClose={closeSheet}
           >
             {signedIn && profileComplete ? (
-              <V9BillingContent token={lineToken} siteId={siteId} eventId={selectedEventId} />
+              <V9BillingContent
+                key={viewing && viewAs ? viewAs.id : "me"}
+                token={lineToken}
+                siteId={siteId}
+                eventId={selectedEventId}
+                asIdentityId={viewing && viewAs ? viewAs.id : undefined}
+              />
             ) : (
               <div className="v9-sheet-empty">
                 <p className="v9-muted">LINE 登入並完成身份確認後即可查看個人帳單。</p>
@@ -630,7 +681,7 @@ export function V9App() {
               key={selectedEventId}
               tab={proxyTab}
               onTab={setProxyTab}
-              enabled={signedIn && profileComplete}
+              enabled={signedIn && profileComplete && !viewing}
               busy={busy}
               candidates={cancellableTempSignups}
               candidatesLoading={cancellableLoading}
@@ -715,13 +766,27 @@ export function V9App() {
           <V9Sheet
             open={sheet === "me"}
             title={
-              repicking || (signedIn && profileComplete && !identity)
-                ? "重新選擇身份"
-                : "我的球員卡"
+              viewing
+                ? "球員卡（唯讀）"
+                : repicking || (signedIn && profileComplete && !identity)
+                  ? "重新選擇身份"
+                  : "我的球員卡"
             }
             onClose={closeSheet}
           >
-            {auth.loading ? (
+            {viewing && viewIdentity ? (
+              <V9PlayerCard
+                identity={viewIdentity}
+                rank={rank}
+                event={selectedEvent}
+                progress={null}
+                onBill={() => setSheet("bill")}
+                onRename={async () => false}
+                onRepick={() => undefined}
+                onLogout={() => undefined}
+                readOnly
+              />
+            ) : auth.loading ? (
               <p className="v9-muted">確認 LINE 登入中…</p>
             ) : !signedIn ? (
               <div className="v9-sheet-empty">
@@ -772,9 +837,29 @@ export function V9App() {
                 onRename={renameIdentity}
                 onRepick={() => setRepicking(true)}
                 onLogout={logout}
+                onViewAs={isAdmin ? () => setSheet("viewas") : undefined}
               />
             )}
           </V9Sheet>
+
+          {isAdmin && lineToken && lineIdentity && (
+            <V9Sheet
+              open={sheet === "viewas"}
+              title="以成員身分檢視"
+              subtitle="唯讀：看得到他的頁面，不能替他操作"
+              onClose={closeSheet}
+            >
+              <V9ViewAsPicker
+                token={lineToken}
+                siteId={siteId}
+                selfId={lineIdentity.id}
+                onPick={(person) => {
+                  setViewAs(person);
+                  setSheet(null);
+                }}
+              />
+            </V9Sheet>
+          )}
         </>
       )}
 

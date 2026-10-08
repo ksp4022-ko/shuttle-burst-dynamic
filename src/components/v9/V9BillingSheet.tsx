@@ -133,16 +133,19 @@ export function V9BillingContent({
   token,
   siteId,
   eventId,
+  asIdentityId,
 }: {
   token: string | null;
   siteId: string;
   eventId: string;
+  asIdentityId?: string | undefined;
 }) {
   const billing = useV8PersonalBillingTest({
     enabled: true,
     token,
     siteId,
     ...(eventId ? { eventId } : {}),
+    ...(asIdentityId ? { asIdentityId } : {}),
   });
   const { state } = billing;
 

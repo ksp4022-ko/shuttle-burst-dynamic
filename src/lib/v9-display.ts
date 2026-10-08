@@ -57,3 +57,12 @@ export function v9MascotSprite(
   if (identity?.status === "unregistered") return "open";
   return null;
 }
+
+// V9-021: how a LINE identity is named in the admin's view-as picker / bar.
+export function v9IdentityName(person: {
+  confirmedName?: string | null;
+  displayName?: string | null;
+  lineDisplayName?: string | null;
+}) {
+  return person.confirmedName || person.displayName || person.lineDisplayName || "（未命名）";
+}
