@@ -57,7 +57,19 @@ export function AdminApp() {
   useEffect(() => {
     const root = document.documentElement;
     root.classList.add("ctl-lock-x");
-    return () => root.classList.remove("ctl-lock-x");
+    // iOS keeps a zoomed-in page across reloads and auto-zooms on input
+    // focus; with sideways panning locked that leaves the page stuck cropped.
+    // maximum-scale=1 snaps the zoom back to 100% (restored on leave, so other
+    // routes keep the shared viewport tag as is).
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+    const original = meta?.getAttribute("content") ?? null;
+    if (meta && original !== null && !/maximum-scale/.test(original)) {
+      meta.setAttribute("content", `${original}, maximum-scale=1`);
+    }
+    return () => {
+      root.classList.remove("ctl-lock-x");
+      if (meta && original !== null) meta.setAttribute("content", original);
+    };
   }, []);
 
   return (

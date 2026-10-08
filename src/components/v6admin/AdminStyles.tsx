@@ -15,8 +15,9 @@ html.ctl-lock-x body {
 .ctl {
   overflow-x: clip;
   overscroll-behavior-x: none;
-  /* Vertical scrolling only: no sideways pan, no pinch zoom. */
-  touch-action: pan-y;
+  /* No sideways panning; pinch stays allowed so a zoomed page can always be
+     zoomed back out. */
+  touch-action: pan-y pinch-zoom;
   --ink: #1f1a17;
   --paper: #fbf6ec;
   --card: #ffffff;
