@@ -565,6 +565,10 @@ const V9_CSS = `
   background: #fffaf0; color: var(--v9-ink); font-size: 15px; font-weight: 900; text-align: left; cursor: pointer;
 }
 .v9-pc-bill span { flex: 1; }
+.v9-pc-due { flex: none; font-style: normal; font-size: 14px; font-weight: 800; color: var(--v9-muted); font-variant-numeric: tabular-nums; }
+.v9-pc-due strong { color: var(--v9-red); font-size: 17px; font-weight: 900; }
+.v9-pc-due.is-clear { color: var(--v9-green); }
+.v9-pc-due.is-loading { color: #c9bda6; }
 .v9-pc-viewas {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 0; border-top: 2px dashed #eadfca;
   background: #eef4ff; color: var(--v9-ink); font-size: 15px; font-weight: 900; text-align: left; cursor: pointer;

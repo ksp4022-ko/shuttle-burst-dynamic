@@ -1,3 +1,4 @@
+import type { V9BillDue } from "./useV9BillDue";
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import type { AlphaEvent, V8SeasonProgress, V8SeasonProgressEvent } from "@/lib/database-alpha";
@@ -169,6 +170,7 @@ export function V9PlayerCard({
   onLogout,
   readOnly = false,
   onViewAs,
+  due,
 }: {
   identity: CurrentIdentity;
   rank: number | null;
@@ -183,6 +185,8 @@ export function V9PlayerCard({
   readOnly?: boolean;
   // V9-021: the admin's own card offers 以成員身分檢視.
   onViewAs?: (() => void) | undefined;
+  // V9-022: 本次應繳 shown at the end of the 我的帳單 row.
+  due?: V9BillDue | undefined;
 }) {
   const fixed = identity.signupType === "fixed";
   const position =
@@ -246,6 +250,15 @@ export function V9PlayerCard({
       <button type="button" className="v9-pc-bill" onClick={onBill}>
         <img src={`${ICONS}fee.webp`} alt="" width={28} height={28} />
         <span>{readOnly ? "帳單" : "我的帳單"}</span>
+        {due?.kind === "loading" && <em className="v9-pc-due is-loading">應繳 …</em>}
+        {due?.kind === "ready" &&
+          (due.amount > 0 ? (
+            <em className="v9-pc-due">
+              應繳 <strong>${due.amount.toLocaleString("en-US")}</strong>
+            </em>
+          ) : (
+            <em className="v9-pc-due is-clear">已繳清</em>
+          ))}
         <V9Icon name="chevron" size={16} />
       </button>
 

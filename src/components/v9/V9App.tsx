@@ -32,6 +32,7 @@ import { confirmV8LineProfile } from "@/lib/v8-line-auth";
 import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
+import { useV9BillDue } from "./useV9BillDue";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
@@ -502,6 +503,14 @@ export function V9App() {
   const profileComplete = Boolean(lineIdentity?.profileComplete);
   const ready = signedIn && profileComplete && Boolean(identity);
   const shownIdentity = viewing ? viewIdentity : identity;
+  // V9-022: 本次應繳 on the player card, fetched when it opens.
+  const billDue = useV9BillDue({
+    enabled: sheet === "me" && signedIn && profileComplete,
+    token: lineToken,
+    siteId,
+    eventId: selectedEventId,
+    asIdentityId: viewing && viewAs ? viewAs.id : undefined,
+  });
   const shownName = viewing && viewAs ? v9IdentityName(viewAs) : userName;
   const shownReady = viewing ? Boolean(viewIdentity) : ready;
   const rank = rankOf(shownIdentity, confirmed, waiting);
@@ -783,6 +792,7 @@ export function V9App() {
                 onRepick={() => undefined}
                 onLogout={() => undefined}
                 readOnly
+                due={billDue}
               />
             ) : auth.loading ? (
               <p className="v9-muted">確認 LINE 登入中…</p>
@@ -836,6 +846,7 @@ export function V9App() {
                 onRepick={() => setRepicking(true)}
                 onLogout={logout}
                 onViewAs={isAdmin ? () => setSheet("viewas") : undefined}
+                due={billDue}
               />
             )}
           </V9Sheet>
