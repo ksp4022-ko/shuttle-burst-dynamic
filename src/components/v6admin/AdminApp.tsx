@@ -9,8 +9,10 @@ import {
 } from "react";
 import { AdminStyles } from "./AdminStyles";
 import { EventTab } from "./EventTab";
+import { ManageTab } from "./ManageTab";
 import { SeasonTab } from "./SeasonTab";
-import type { WriteLock } from "./AdminParts";
+import { SystemTab } from "./SystemTab";
+import type { WriteLock } from "@/lib/v6admin-write";
 import {
   adminApi,
   AdminApiError,
@@ -129,7 +131,13 @@ function Panel({
     return sites.some((s) => s.id === pref) ? pref : sites[0]?.id || "";
   });
   const [tab, setTab] = useState<TabKey>("event");
-  const [seasonVisited, setSeasonVisited] = useState(false);
+  // Tabs mount on first visit and then stay mounted (hidden) — see below.
+  const [visited, setVisited] = useState<Record<TabKey, boolean>>({
+    event: true,
+    manage: false,
+    season: false,
+    system: false,
+  });
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -188,7 +196,12 @@ function Panel({
   const refreshDashboard = useCallback(async () => {
     const seq = ++dashSeq.current;
     const data = await adminApi.dashboard(password, siteId);
-    if (seq === dashSeq.current) setDashboard(data);
+    if (seq !== dashSeq.current) return;
+    setDashboard(data);
+    // The current event may have been deleted: fall back to the default one.
+    setEventId((cur) =>
+      cur && data.events.some((e) => e.id === cur) ? cur : pickDefaultEvent(data.events)?.id || "",
+    );
   }, [password, siteId]);
 
   // Bumped after every write so tabs that cache derived data (賽季管理)
@@ -204,8 +217,9 @@ function Panel({
   }
 
   function chooseTab(next: TabKey) {
-    if (next === "season") setSeasonVisited(true);
+    setVisited((v) => (v[next] ? v : { ...v, [next]: true }));
     setTab(next);
+    window.scrollTo({ top: 0 });
   }
 
   let body: ReactNode;
@@ -237,7 +251,26 @@ function Panel({
             writing={writing}
           />
         </div>
-        {seasonVisited ? (
+        {visited.manage ? (
+          <div className="ctl-tab" hidden={tab !== "manage"}>
+            <ManageTab
+              key={siteId}
+              password={password}
+              siteId={siteId}
+              dashboard={dashboard}
+              writeLock={writeLock}
+              writing={writing}
+              onDashboardRefresh={refreshDashboard}
+              onDataChanged={markDataChanged}
+              onSelectEvent={setEventId}
+              onOpenEvent={(id) => {
+                setEventId(id);
+                chooseTab("event");
+              }}
+            />
+          </div>
+        ) : null}
+        {visited.season ? (
           <div className="ctl-tab" hidden={tab !== "season"}>
             <SeasonTab
               key={siteId}
@@ -248,12 +281,15 @@ function Panel({
             />
           </div>
         ) : null}
-        {tab === "manage" || tab === "system" ? (
-          <div className="ctl-card">
-            <div className="ctl-card-title">
-              <h2>{tab === "manage" ? "聚會管理" : "系統設定"}</h2>
-            </div>
-            <p className="ctl-empty">這一頁會在下一階段（P2）加入。</p>
+        {visited.system ? (
+          <div className="ctl-tab" hidden={tab !== "system"}>
+            <SystemTab
+              key={siteId}
+              password={password}
+              siteId={siteId}
+              dashboard={dashboard}
+              dataVersion={dataVersion}
+            />
           </div>
         ) : null}
       </>
@@ -378,7 +414,6 @@ function Dock({ tab, onChange }: { tab: TabKey; onChange: (t: TabKey) => void })
             aria-current={tab === d.key ? "page" : undefined}
             onClick={() => {
               onChange(d.key);
-              window.scrollTo({ top: 0 });
             }}
           >
             {d.icon}

@@ -148,6 +148,9 @@ export type AdminEvent = {
   eventKind?: string;
   ballType?: string;
   eventNote?: string;
+  defaultAcHours?: number | null;
+  defaultAcFeePerHour?: number | null;
+  estimatedBallUsed?: number | null;
 };
 
 // Dashboard list rows: the event plus per-event counts.
@@ -175,11 +178,102 @@ export type AdminGroup = {
   settingSeasonIds?: string | null;
 };
 
+// Per season/group defaults for a new event (Worker getAdminEventDefaults).
+export type EventDefault = {
+  seasonId: string;
+  groupId: string;
+  maxPeople?: number | null;
+  tempFee?: number | null;
+  courtCount?: number | null;
+  hours?: number | null;
+  estimatedBallUsed?: number | null;
+  ballType?: string | null;
+  defaultAcFeePerHour?: number | null;
+  defaultAcHours?: number | null;
+};
+
+export type NotificationStatus = {
+  enabled: boolean;
+  targetLabel?: string;
+  notifySignup: boolean;
+  notifyCancel: boolean;
+  notifyLeave: boolean;
+  notifyReturn: boolean;
+  discordEnabled: boolean;
+  discordNotifySignup: boolean;
+  discordNotifyCancel: boolean;
+  discordNotifyLeave: boolean;
+  discordNotifyReturn: boolean;
+  rosterReminderEnabled: boolean;
+  rosterReminderTime?: string;
+  lineConfigured: boolean;
+  discordConfigured: boolean;
+};
+
+export type NotificationLog = {
+  id: string;
+  channel?: string;
+  action?: string;
+  personName?: string;
+  status?: string;
+  errorMessage?: string | null;
+  createdAt?: string;
+};
+
+export type SystemSettings = {
+  perf?: { requestCount?: number; errorCount?: number; avgMs?: number; maxMs?: number };
+  audit?: { id: string; action?: string; targetType?: string; createdAt?: string }[];
+  password?: { storedInD1?: boolean; passwordUpdatedAt?: string };
+};
+
 export type DashboardData = {
   site: AdminSite;
   events: AdminEventRow[];
   seasons: AdminSeason[];
   groups: AdminGroup[];
+  eventDefaults?: EventDefault[];
+  notification?: NotificationStatus;
+  line?: { configured?: boolean };
+  latestNotifications?: NotificationLog[];
+  dataReadiness?: Record<string, number | null>;
+  systemSettings?: SystemSettings;
+};
+
+export type LineClaim = {
+  lineIdentityId: string;
+  lineDisplayName?: string;
+  confirmedName?: string;
+  memberName?: string;
+  memberStatus?: string;
+  nameConfirmedAt?: string | null;
+  updatedAt?: string;
+  activeIntentCount?: number;
+};
+export type LineClaimLog = {
+  createdAt?: string;
+  action?: string;
+  lineDisplayName?: string;
+  memberName?: string | null;
+  previousMemberName?: string | null;
+};
+export type LineClaimsData = { claims: LineClaim[]; logs: LineClaimLog[] };
+
+// Event form as the Worker's /admin sends it (FormData → strings).
+export type EventFormInput = {
+  eventDate: string;
+  name: string;
+  seasonId: string;
+  groupId: string;
+  maxPeople: string;
+  tempFee: string;
+  courtCount: string;
+  hours: string;
+  estimatedBallUsed: string;
+  ballType: string;
+  defaultAcFeePerHour: string;
+  defaultAcHours: string;
+  eventKind: string;
+  eventNote: string;
 };
 
 export type RosterPerson = {
@@ -523,6 +617,8 @@ export const adminApi = {
       `/admin/sites/${enc(siteId)}/season-confirm/${enc(settingId)}/intents`,
       pw,
     ),
+  lineClaims: (pw: string, siteId: string) =>
+    adminGet<LineClaimsData>(`/admin/sites/${enc(siteId)}/line-claims`, pw),
 };
 
 // ---------- Write endpoints (P3: ① 當次聚會) ----------
@@ -554,6 +650,21 @@ export const adminWriteApi = {
       siteId,
       reason: "admin_action",
     }),
+
+  // ② 聚會管理 (P4)
+  createEvent: (pw: string, siteId: string, input: EventFormInput, syncFixed: boolean) =>
+    adminPost<{ event: AdminEvent; addedFixedCount?: number }>(
+      `/admin/sites/${enc(siteId)}/events`,
+      pw,
+      { ...input, syncFixed },
+    ),
+  updateEvent: (pw: string, eventId: string, input: EventFormInput) =>
+    adminPost<{ event: AdminEvent }>(`/admin/events/${enc(eventId)}/update`, pw, input),
+  syncFixed: (pw: string, eventId: string) =>
+    adminPost<{ addedFixedCount?: number }>(`/admin/events/${enc(eventId)}/sync-fixed`, pw),
+  // The Worker requires the literal confirmation "DELETE".
+  deleteEvent: (pw: string, eventId: string) =>
+    adminPost(`/admin/events/${enc(eventId)}/delete`, pw, { confirmation: "DELETE" }),
 };
 
 // ---------- Display helpers ----------
