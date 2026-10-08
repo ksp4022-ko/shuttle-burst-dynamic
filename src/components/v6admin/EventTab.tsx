@@ -11,7 +11,7 @@ import {
   type TempPayment,
   type UsageInput,
 } from "@/lib/v6admin-api";
-import { Metric, SegButton, Sheet, Toast } from "./AdminParts";
+import { Card, Metric, SegButton, Sheet, Toast } from "./AdminParts";
 import { errText, runWrite, useToast, type WriteLock } from "@/lib/v6admin-write";
 
 // ① 當次聚會: event picker, head-count summary, full roster, temp-fee
@@ -262,13 +262,16 @@ function EventBody({
         </div>
       </section>
 
-      <section className="ctl-card">
-        <div className="ctl-card-title">
-          <h2>名單</h2>
-          <span className="ctl-sub">
-            季打 {roster.fixedConfirmed.length} · 臨打 {roster.tempConfirmed.length}
-          </span>
-        </div>
+      <Card
+        title="名單"
+        side={
+          <>
+            <span className="ctl-sub">
+              季打 {roster.fixedConfirmed.length} · 臨打 {roster.tempConfirmed.length}
+            </span>
+          </>
+        }
+      >
         <div className="ctl-seg" role="tablist">
           <SegButton on={view === "confirmed"} onClick={() => setView("confirmed")}>
             正式 {confirmed.length}
@@ -298,15 +301,18 @@ function EventBody({
         ) : (
           <p className="ctl-empty">沒有人。</p>
         )}
-      </section>
+      </Card>
 
-      <section className="ctl-card">
-        <div className="ctl-card-title">
-          <h2>臨打收費</h2>
-          <span className="ctl-sub">
-            已收 {paid.length} · 未收 {unpaid.length}
-          </span>
-        </div>
+      <Card
+        title="臨打收費"
+        side={
+          <>
+            <span className="ctl-sub">
+              已收 {paid.length} · 未收 {unpaid.length}
+            </span>
+          </>
+        }
+      >
         <div className="ctl-metrics is-3" style={{ marginBottom: 6 }}>
           <Metric label="應收" value={money(finance.tempOperatingIncome)} />
           <Metric label="已收" value={money(finance.tempPaidAmount)} tone="green" />
@@ -348,13 +354,16 @@ function EventBody({
         ) : (
           <p className="ctl-empty">本場沒有臨打收費。</p>
         )}
-      </section>
+      </Card>
 
-      <section className="ctl-card">
-        <div className="ctl-card-title">
-          <h2>本場支出</h2>
-          <span className="ctl-sub">{breakdown ? "已填" : "尚未填寫"}</span>
-        </div>
+      <Card
+        title="本場支出"
+        side={
+          <>
+            <span className="ctl-sub">{breakdown ? "已填" : "尚未填寫"}</span>
+          </>
+        }
+      >
         {breakdown ? (
           <dl className="ctl-kv">
             <dt>
@@ -390,12 +399,9 @@ function EventBody({
             {breakdown ? "修改支出" : "填寫支出"}
           </button>
         </div>
-      </section>
+      </Card>
 
-      <section className="ctl-card">
-        <div className="ctl-card-title">
-          <h2>當天損益</h2>
-        </div>
+      <Card title="當天損益">
         <dl className="ctl-kv">
           <dt>
             季打 {finance.fixedPresentCount} 人 × {money(finance.perEventSeasonFee)}
@@ -415,13 +421,16 @@ function EventBody({
             {finance.operatingProfit == null ? "未完成" : money(finance.operatingProfit)}
           </dd>
         </dl>
-      </section>
+      </Card>
 
-      <section className="ctl-card">
-        <div className="ctl-card-title">
-          <h2>聚會狀態</h2>
-          <span className={`ctl-pill ${statusClass}`}>{eventStatusLabel(event.status)}</span>
-        </div>
+      <Card
+        title="聚會狀態"
+        side={
+          <>
+            <span className={`ctl-pill ${statusClass}`}>{eventStatusLabel(event.status)}</span>
+          </>
+        }
+      >
         <p className="ctl-sub">
           {isOpen
             ? "開放中：前台可報名、請假。打完球、支出填好後再關閉。"
@@ -448,7 +457,7 @@ function EventBody({
             </button>
           ) : null}
         </div>
-      </section>
+      </Card>
 
       {pending ? (
         <ActionSheet

@@ -122,7 +122,7 @@ function Login({ onSuccess }: { onSuccess: (pw: string, sites: AdminSite[]) => v
     <div className="ctl-login">
       <form className="ctl-login-card" onSubmit={submit}>
         <div>
-          <h1>V6 控制台</h1>
+          <h1>V10 控制台</h1>
           <span className="ctl-readonly-tag">羽球報名 V6 管理後台</span>
         </div>
         <input
@@ -324,6 +324,9 @@ function Panel({
               siteId={siteId}
               dashboard={dashboard}
               dataVersion={dataVersion}
+              writeLock={writeLock}
+              writing={writing}
+              onDataChanged={markDataChanged}
             />
           </div>
         ) : null}
@@ -351,7 +354,7 @@ function Panel({
     <>
       <header className="ctl-header">
         <div className="ctl-header-row">
-          <div className="ctl-title">V6 控制台</div>
+          <div className="ctl-title">V10 控制台</div>
           {sites.length > 1 ? (
             <div className="ctl-sites" role="tablist" aria-label="場地">
               {sites.map((s) => (

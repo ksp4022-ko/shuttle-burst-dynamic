@@ -485,8 +485,11 @@ export type SeasonPaymentAuditRow = {
   id: string;
   memberId?: string | null;
   memberName: string;
+  seasonId?: string;
   seasonName?: string;
+  groupId?: string;
   groupName?: string;
+  creditSourceSeasonId?: string | null;
   baseSeasonFee: number;
   refundCreditTotal: number;
   finalPayableAmount: number;
@@ -517,6 +520,59 @@ export type SeasonPaymentAudit = {
   };
   relationLimitations?: { paymentsWithoutStableCreditRelation?: number };
 };
+
+// GET/POST refund-adjustments: per member, which source-season events count
+// as leave for the refund credit (system result + manual include/exclude).
+export type RefundAdjustment = {
+  id: string;
+  adjustmentType: "include" | "exclude";
+  reason?: string;
+  createdByDisplayName?: string;
+  createdAt?: string;
+};
+
+export type RefundAdjustmentEvent = {
+  eventId: string;
+  eventDate: string;
+  eventName?: string;
+  systemEligible?: boolean;
+  systemReason?: string;
+  finalEligible: boolean;
+  effectiveReason?: string;
+  adjustment?: RefundAdjustment | null;
+};
+
+export type RefundAdjustmentScope = {
+  sourceSeasonId: string;
+  targetSeasonId: string;
+  groupId: string;
+  memberId: string;
+};
+
+export type RefundAdjustmentPreview = {
+  scope: RefundAdjustmentScope & {
+    memberName?: string;
+    sourceSeasonName?: string;
+    targetSeasonName?: string;
+    groupName?: string;
+  };
+  systemLeaveCount: number;
+  effectiveManualIncludeCount: number;
+  effectiveManualExcludeCount: number;
+  finalLeaveCount: number;
+  events: RefundAdjustmentEvent[];
+  refundUnit: number;
+  refundAmount: number;
+  payment?: {
+    status?: string;
+    paidAmount?: number;
+    recalculatedPayableAmount?: number;
+    discrepancyAmount?: number;
+    discrepancyType?: "none" | "refund_due" | "additional_due";
+  } | null;
+};
+
+export type RefundAdjustmentResult = { preview?: RefundAdjustmentPreview; unchanged?: boolean };
 
 export type RefundCreditAuditRow = {
   id: string;
@@ -611,6 +667,11 @@ export const adminApi = {
   seasonPaymentAudit: (pw: string, siteId: string, seasonId: string, groupId: string) =>
     adminGet<SeasonPaymentAudit>(
       `/admin/sites/${enc(siteId)}/season-payments/audit?seasonId=${enc(seasonId)}&groupId=${enc(groupId)}`,
+      pw,
+    ),
+  refundAdjustmentPreview: (pw: string, siteId: string, scope: RefundAdjustmentScope) =>
+    adminGet<RefundAdjustmentPreview>(
+      `/admin/sites/${enc(siteId)}/refund-adjustments/preview?sourceSeasonId=${enc(scope.sourceSeasonId)}&targetSeasonId=${enc(scope.targetSeasonId)}&groupId=${enc(scope.groupId)}&memberId=${enc(scope.memberId)}`,
       pw,
     ),
   refundCreditAudit: (pw: string, siteId: string, seasonId: string, groupId: string) =>
@@ -710,6 +771,29 @@ export const adminWriteApi = {
     adminPost<{ discord?: { status?: string; errorMessage?: string } }>(
       `/admin/sites/${enc(siteId)}/discord-test`,
       pw,
+    ),
+  // ③ 賽季管理 (P5-a): same requests as the Worker's /admin page.
+  seasonPaymentStatus: (pw: string, paymentId: string, status: "paid" | "unpaid") =>
+    adminPost(`/admin/season-payments/${enc(paymentId)}/status`, pw, { status }),
+  createRefundAdjustment: (
+    pw: string,
+    siteId: string,
+    scope: RefundAdjustmentScope,
+    eventId: string,
+    adjustmentType: "include" | "exclude",
+    reason: string,
+  ) =>
+    adminPost<RefundAdjustmentResult>(`/admin/sites/${enc(siteId)}/refund-adjustments`, pw, {
+      ...scope,
+      eventId,
+      adjustmentType,
+      reason,
+    }),
+  cancelRefundAdjustment: (pw: string, siteId: string, adjustmentId: string, reason: string) =>
+    adminPost<RefundAdjustmentResult>(
+      `/admin/sites/${enc(siteId)}/refund-adjustments/${enc(adjustmentId)}/cancel`,
+      pw,
+      { reason },
     ),
   unlinkLineClaim: (pw: string, siteId: string, lineIdentityId: string) =>
     adminPost(`/admin/sites/${enc(siteId)}/line-claims/${enc(lineIdentityId)}/unlink`, pw),

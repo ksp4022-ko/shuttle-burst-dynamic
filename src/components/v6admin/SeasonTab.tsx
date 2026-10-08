@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   adminApi,
   AdminApiError,
+  adminWriteApi,
   money,
   shortDate,
   type AdminGroup,
   type AdminSeason,
   type DashboardData,
   type GroupSnapshot,
+  type RefundAdjustmentPreview,
+  type RefundAdjustmentScope,
   type RefundCreditAudit,
   type SeasonConfirmData,
   type SeasonIntentsData,
@@ -15,10 +18,14 @@ import {
   type SeasonPaymentAudit,
   type SeasonPaymentAuditRow,
 } from "@/lib/v6admin-api";
-import { Metric, Section } from "./AdminParts";
+import { runWrite, useToast, type WriteLock } from "@/lib/v6admin-write";
+import { Metric, Section, Sheet, Toast } from "./AdminParts";
 
-// ③ 賽季管理 (read-only): season + group picker, then 期初設定, 群組成員,
-// 季繳紀錄, 退費抵扣, 季末結算 and 季打確認, each from its own GET endpoint.
+// ③ 賽季管理: season + group picker, then 期初設定, 群組成員, 季繳紀錄,
+// 退費抵扣, 季末結算 and 季打確認, each from its own GET endpoint.
+// P5-a writes (same requests as the Worker's /admin page, through runWrite):
+// 季繳 標記已收／取消已收, and 調整抵扣 (per member: 補列／排除 a source-season
+// event, or cancel an existing manual adjustment).
 
 type Loaded = {
   management: SeasonManagementData | null;
@@ -51,17 +58,27 @@ function groupsForSeason(groups: AdminGroup[], seasonId: string): AdminGroup[] {
   return linked.length ? linked : groups.filter((g) => g.status === "active");
 }
 
+type Pending =
+  | { kind: "pay"; payment: SeasonPaymentAuditRow; next: "paid" | "unpaid" }
+  | { kind: "adjust"; payment: SeasonPaymentAuditRow };
+
 export function SeasonTab({
   password,
   siteId,
   dashboard,
   dataVersion,
+  writeLock,
+  writing,
+  onDataChanged,
 }: {
   password: string;
   siteId: string;
   dashboard: DashboardData;
   // Bumped by the panel after any write; forces a re-read of season data.
   dataVersion: number;
+  writeLock: WriteLock;
+  writing: boolean;
+  onDataChanged: () => void;
 }) {
   const seasons = dashboard.seasons || [];
   const [seasonId, setSeasonId] = useState(() => defaultSeason(seasons));
@@ -98,19 +115,21 @@ export function SeasonTab({
     };
   }, [password, siteId, confirmReload]);
 
-  useEffect(() => {
+  // Sequenced so only the newest read lands. Rejects when any part failed so
+  // runWrite can tell the re-read did not fully succeed.
+  const loadSeq = useRef(0);
+  const loadSeason = useCallback(async () => {
     if (!seasonId || !groupId) return;
-    let alive = true;
-    setData(null);
-    Promise.allSettled([
+    const seq = ++loadSeq.current;
+    const [m, p, c, g] = await Promise.allSettled([
       adminApi.seasonManagement(password, siteId, seasonId, groupId),
       adminApi.seasonPaymentAudit(password, siteId, seasonId, groupId),
       adminApi.refundCreditAudit(password, siteId, seasonId, groupId),
       adminApi.group(password, siteId, groupId, seasonId),
-    ]).then(([m, p, c, g]) => {
-      if (!alive) return;
-      const errors: string[] = [];
-      for (const r of [m, p, c, g]) if (r.status === "rejected") errors.push(errText(r.reason));
+    ]);
+    const errors: string[] = [];
+    for (const r of [m, p, c, g]) if (r.status === "rejected") errors.push(errText(r.reason));
+    if (seq === loadSeq.current)
       setData({
         management: m.status === "fulfilled" ? m.value : null,
         payments: p.status === "fulfilled" ? p.value : null,
@@ -118,11 +137,34 @@ export function SeasonTab({
         group: g.status === "fulfilled" ? g.value : null,
         errors: Array.from(new Set(errors)),
       });
-    });
+    if (errors.length) throw new Error(errors[0]);
+  }, [password, siteId, seasonId, groupId]);
+
+  // A new season/group starts from "loading"; a re-read after a write keeps
+  // the current data on screen (and open rows open) until it lands.
+  const shownKey = useRef("");
+  useEffect(() => {
+    const counter = loadSeq;
+    const key = `${siteId}|${seasonId}|${groupId}`;
+    if (shownKey.current !== key) {
+      shownKey.current = key;
+      setData(null);
+    }
+    loadSeason().catch(() => {});
     return () => {
-      alive = false;
+      counter.current++; // drop a read still in flight
     };
-  }, [password, siteId, seasonId, groupId, dataVersion]);
+  }, [loadSeason, siteId, seasonId, groupId, dataVersion]);
+
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [sheetError, setSheetError] = useState("");
+  const [toast, showToast] = useToast();
+  function open(p: Pending) {
+    if (writing) return;
+    setSheetError("");
+    setPending(p);
+  }
+  const close = () => setPending(null);
 
   const confirmSettings = (confirm?.settings || []).filter(
     (s) => s.targetSeasonId === seasonId && s.groupId === groupId,
@@ -173,7 +215,12 @@ export function SeasonTab({
       ) : (
         <>
           {data.errors.length ? <div className="ctl-error">{data.errors.join("；")}</div> : null}
-          <PaymentsSection audit={data.payments} />
+          <PaymentsSection
+            audit={data.payments}
+            writing={writing}
+            onPay={(payment, next) => open({ kind: "pay", payment, next })}
+            onAdjust={(payment) => open({ kind: "adjust", payment })}
+          />
           <SettingSection management={data.management} />
           <MembersSection group={data.group} />
           <CreditsSection audit={data.credits} />
@@ -189,7 +236,324 @@ export function SeasonTab({
           />
         </>
       )}
+
+      {writing && !pending ? <div className="ctl-notice">處理中，請稍候…</div> : null}
+
+      {pending?.kind === "pay" ? (
+        <Sheet
+          title={pending.next === "paid" ? "標記季費已收" : "取消已收"}
+          onClose={close}
+          busy={writing}
+        >
+          <p>
+            <strong>{pending.payment.memberName}</strong> · {seasonName(seasons, seasonId)}
+            季費 <strong>{money(pending.payment.finalPayableAmount)}</strong>
+          </p>
+          <p className="ctl-sub">
+            {pending.next === "paid"
+              ? "改為「已付款」，付款時間記為現在。"
+              : "改回「未付款」，原付款時間會清除。"}
+          </p>
+          {sheetError ? <div className="ctl-error">{sheetError}</div> : null}
+          <div className="ctl-sheet-actions">
+            <button className="ctl-btn is-plain" type="button" onClick={close} disabled={writing}>
+              返回
+            </button>
+            <button
+              className={`ctl-btn${pending.next === "unpaid" ? " is-danger" : ""}`}
+              type="button"
+              disabled={writing}
+              onClick={() =>
+                runWrite({
+                  writeLock,
+                  work: () =>
+                    adminWriteApi.seasonPaymentStatus(password, pending.payment.id, pending.next),
+                  okText: `${pending.payment.memberName} 已${pending.next === "paid" ? "標記已收" : "改回未收"}`,
+                  reread: () => [loadSeason()],
+                  onDataChanged,
+                  onRejected: setSheetError,
+                  onClose: close,
+                  toast: showToast,
+                })
+              }
+            >
+              {writing ? "處理中…" : pending.next === "paid" ? "標記已收" : "取消已收"}
+            </button>
+          </div>
+        </Sheet>
+      ) : null}
+
+      {pending?.kind === "adjust" ? (
+        <AdjustSheet
+          password={password}
+          siteId={siteId}
+          payment={pending.payment}
+          targetSeasonId={seasonId}
+          groupId={groupId}
+          seasons={seasons}
+          writing={writing}
+          onClose={close}
+          write={(work, okText, onPreview) =>
+            runWrite({
+              writeLock,
+              work,
+              okText,
+              // The sheet stays open on success (to adjust more dates); an
+              // unknown outcome closes it so nothing is resent from it.
+              reread: (unknown) => {
+                if (unknown) close();
+                return [loadSeason()];
+              },
+              onDataChanged,
+              onRejected: setSheetError,
+              onClose: () => {},
+              toast: showToast,
+              onSuccess: (r) => r.preview && onPreview(r.preview),
+            })
+          }
+          error={sheetError}
+          setError={setSheetError}
+        />
+      ) : null}
+
+      <Toast toast={toast} />
     </>
+  );
+}
+
+function seasonName(seasons: AdminSeason[], id?: string | null) {
+  return seasons.find((s) => s.id === id)?.name || id || "";
+}
+
+// ---------- 調整抵扣 ----------
+
+function eligibilityLabel(reason?: string) {
+  if (reason === "valid_leave") return "系統有效請假";
+  if (reason === "waiting") return "候補未出席";
+  if (reason === "returned_waiting") return "消假後候補";
+  if (reason === "returned_confirmed") return "已消假";
+  if (reason === "manual_include") return "人工補列";
+  if (reason === "manual_exclude") return "人工排除";
+  return "無系統有效請假";
+}
+
+type AdjustResult = { preview?: RefundAdjustmentPreview };
+
+function AdjustSheet({
+  password,
+  siteId,
+  payment,
+  targetSeasonId,
+  groupId,
+  seasons,
+  writing,
+  onClose,
+  write,
+  error,
+  setError,
+}: {
+  password: string;
+  siteId: string;
+  payment: SeasonPaymentAuditRow;
+  targetSeasonId: string;
+  groupId: string;
+  seasons: AdminSeason[];
+  writing: boolean;
+  onClose: () => void;
+  write: (
+    work: () => Promise<AdjustResult>,
+    okText: string,
+    onPreview: (p: RefundAdjustmentPreview) => void,
+  ) => Promise<void>;
+  error: string;
+  setError: (e: string) => void;
+}) {
+  // Source season: the payment's own credit source, else the admin picks one
+  // (the old /admin used its 退費來源賽季 select for this).
+  const knownSource =
+    payment.creditSourceSeasonId || payment.linkedCredits?.[0]?.fromSeasonId || "";
+  const sourceChoices = seasons.filter((s) => s.id !== targetSeasonId);
+  const [sourceId, setSourceId] = useState(knownSource);
+  const [preview, setPreview] = useState<RefundAdjustmentPreview | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [reason, setReason] = useState("");
+  const [cancelArmed, setCancelArmed] = useState("");
+
+  const scope = useMemo<RefundAdjustmentScope | null>(
+    () =>
+      sourceId && payment.memberId
+        ? {
+            sourceSeasonId: sourceId,
+            targetSeasonId: payment.seasonId || targetSeasonId,
+            groupId: payment.groupId || groupId,
+            memberId: payment.memberId,
+          }
+        : null,
+    [sourceId, payment.memberId, payment.seasonId, payment.groupId, targetSeasonId, groupId],
+  );
+
+  useEffect(() => {
+    if (!scope) return;
+    let alive = true;
+    setPreview(null);
+    setLoadError("");
+    adminApi
+      .refundAdjustmentPreview(password, siteId, scope)
+      .then((d) => alive && setPreview(d))
+      .catch((err) => alive && setLoadError(errText(err)));
+    return () => {
+      alive = false;
+    };
+  }, [password, siteId, scope]);
+
+  const trimmed = reason.trim();
+  function save(eventId: string, type: "include" | "exclude", date: string) {
+    if (!scope) return;
+    if (!trimmed) return setError("請先填寫調整原因。");
+    setCancelArmed("");
+    void write(
+      () => adminWriteApi.createRefundAdjustment(password, siteId, scope, eventId, type, trimmed),
+      `${shortDate(date)} 已${type === "include" ? "補列" : "排除"}抵扣`,
+      setPreview,
+    );
+  }
+  function cancel(adjustmentId: string, date: string) {
+    if (!trimmed) return setError("請先填寫取消調整的原因。");
+    if (cancelArmed !== adjustmentId) {
+      setError("");
+      return setCancelArmed(adjustmentId);
+    }
+    setCancelArmed("");
+    void write(
+      () => adminWriteApi.cancelRefundAdjustment(password, siteId, adjustmentId, trimmed),
+      `${shortDate(date)} 的調整已取消`,
+      setPreview,
+    );
+  }
+
+  const pay = preview?.payment;
+  return (
+    <Sheet title={`調整抵扣｜${payment.memberName}`} onClose={onClose} busy={writing}>
+      <div className="ctl-picker">
+        <label htmlFor="ctl-adj-source">退費來源賽季</label>
+        <select
+          id="ctl-adj-source"
+          className="ctl-select"
+          value={sourceId}
+          disabled={writing || Boolean(knownSource)}
+          onChange={(e) => setSourceId(e.target.value)}
+        >
+          {!sourceId ? <option value="">請選擇</option> : null}
+          {(knownSource && !sourceChoices.some((s) => s.id === knownSource)
+            ? [{ id: knownSource, name: knownSource } as AdminSeason, ...sourceChoices]
+            : sourceChoices
+          ).map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name || s.id}
+            </option>
+          ))}
+        </select>
+      </div>
+      {!scope ? (
+        <p className="ctl-sub">請選擇退費來源賽季。</p>
+      ) : loadError ? (
+        <div className="ctl-error">{loadError}</div>
+      ) : !preview ? (
+        <div className="ctl-loading">讀取抵扣資料中…</div>
+      ) : (
+        <>
+          <p className="ctl-sub">
+            {preview.scope.sourceSeasonName || preview.scope.sourceSeasonId} →{" "}
+            {preview.scope.targetSeasonName || preview.scope.targetSeasonId}｜
+            {preview.scope.groupName || preview.scope.groupId}
+          </p>
+          <div className="ctl-metrics">
+            <Metric label="系統" value={preview.systemLeaveCount} />
+            <Metric label="補列" value={preview.effectiveManualIncludeCount} />
+            <Metric label="排除" value={preview.effectiveManualExcludeCount} />
+            <Metric label="最終次數" value={preview.finalLeaveCount} tone="green" />
+          </div>
+          <p>
+            抵扣金額 {money(preview.refundUnit)} × {preview.finalLeaveCount} 次 ={" "}
+            <strong>{money(preview.refundAmount)}</strong>
+          </p>
+          {pay?.status === "paid" && pay.discrepancyType && pay.discrepancyType !== "none" ? (
+            <div className="ctl-notice">
+              已付款 {money(pay.paidAmount)}｜重新核對後應付 {money(pay.recalculatedPayableAmount)}
+              ｜{pay.discrepancyType === "refund_due" ? "應退" : "尚差"}{" "}
+              {money(pay.discrepancyAmount)}。這裡不改已付款紀錄。
+            </div>
+          ) : null}
+          <label className="ctl-field">
+            調整原因（必填，補列／排除／取消都需要）
+            <input
+              value={reason}
+              maxLength={300}
+              placeholder="例如：當天有請假但系統沒記到"
+              onChange={(e) => {
+                setReason(e.target.value);
+                setCancelArmed("");
+              }}
+              disabled={writing}
+            />
+          </label>
+          {error ? <div className="ctl-error">{error}</div> : null}
+          {preview.events.length ? (
+            <ul className="ctl-rows">
+              {preview.events.map((ev) => {
+                const adj = ev.adjustment;
+                const label = eligibilityLabel(ev.effectiveReason || ev.systemReason);
+                return (
+                  <li className="ctl-row ctl-adj-row" key={ev.eventId}>
+                    <span className="ctl-row-name is-wrap">
+                      {shortDate(ev.eventDate)}
+                      <small>{label}</small>
+                      {adj ? (
+                        <small className="ctl-adj-note">
+                          原因：{adj.reason}
+                          {adj.createdByDisplayName ? `｜${adj.createdByDisplayName}` : ""}
+                        </small>
+                      ) : null}
+                    </span>
+                    <span className={`ctl-pill ${ev.finalEligible ? "green" : ""}`}>
+                      {ev.finalEligible ? "抵扣" : "不抵扣"}
+                    </span>
+                    {adj ? (
+                      <button
+                        className="ctl-act is-danger"
+                        type="button"
+                        disabled={writing}
+                        onClick={() => cancel(adj.id, ev.eventDate)}
+                      >
+                        {cancelArmed === adj.id ? "確定取消？" : "取消調整"}
+                      </button>
+                    ) : (
+                      <button
+                        className="ctl-act"
+                        type="button"
+                        disabled={writing}
+                        onClick={() =>
+                          save(ev.eventId, ev.finalEligible ? "exclude" : "include", ev.eventDate)
+                        }
+                      >
+                        {ev.finalEligible ? "排除" : "補列"}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="ctl-empty">來源賽季沒有這個群組的聚會。</p>
+          )}
+        </>
+      )}
+      <div className="ctl-sheet-actions">
+        <button className="ctl-btn is-plain" type="button" onClick={onClose} disabled={writing}>
+          {writing ? "處理中…" : "完成"}
+        </button>
+      </div>
+    </Sheet>
   );
 }
 
@@ -202,7 +566,17 @@ function seasonPayLabel(status: string) {
   return status || "其他";
 }
 
-function PaymentsSection({ audit }: { audit: SeasonPaymentAudit | null }) {
+function PaymentsSection({
+  audit,
+  writing,
+  onPay,
+  onAdjust,
+}: {
+  audit: SeasonPaymentAudit | null;
+  writing: boolean;
+  onPay: (payment: SeasonPaymentAuditRow, next: "paid" | "unpaid") => void;
+  onAdjust: (payment: SeasonPaymentAuditRow) => void;
+}) {
   if (!audit) return null;
   const s = audit.summary;
   const rows = audit.payments || [];
@@ -234,7 +608,14 @@ function PaymentsSection({ audit }: { audit: SeasonPaymentAudit | null }) {
           ) : null}
           <div>
             {rows.map((p, i) => (
-              <PaymentRow key={p.id} index={i + 1} payment={p} />
+              <PaymentRow
+                key={p.id}
+                index={i + 1}
+                payment={p}
+                writing={writing}
+                onPay={onPay}
+                onAdjust={onAdjust}
+              />
             ))}
           </div>
         </>
@@ -245,7 +626,19 @@ function PaymentsSection({ audit }: { audit: SeasonPaymentAudit | null }) {
   );
 }
 
-function PaymentRow({ index, payment: p }: { index: number; payment: SeasonPaymentAuditRow }) {
+function PaymentRow({
+  index,
+  payment: p,
+  writing,
+  onPay,
+  onAdjust,
+}: {
+  index: number;
+  payment: SeasonPaymentAuditRow;
+  writing: boolean;
+  onPay: (payment: SeasonPaymentAuditRow, next: "paid" | "unpaid") => void;
+  onAdjust: (payment: SeasonPaymentAuditRow) => void;
+}) {
   const tone = p.status === "paid" ? "green" : p.status === "cancelled" ? "red" : "orange";
   return (
     <details className="ctl-pay">
@@ -300,6 +693,37 @@ function PaymentRow({ index, payment: p }: { index: number; payment: SeasonPayme
           </div>
         ) : null}
         {p.note ? <div className="ctl-sub">備註：{p.note}</div> : null}
+        <div className="ctl-actions">
+          {p.memberId ? (
+            <button
+              className="ctl-act"
+              type="button"
+              disabled={writing}
+              onClick={() => onAdjust(p)}
+            >
+              調整抵扣
+            </button>
+          ) : null}
+          {p.status === "paid" ? (
+            <button
+              className="ctl-act is-done"
+              type="button"
+              disabled={writing}
+              onClick={() => onPay(p, "unpaid")}
+            >
+              已收 ✓（取消）
+            </button>
+          ) : p.status === "unpaid" ? (
+            <button
+              className="ctl-act is-pay"
+              type="button"
+              disabled={writing}
+              onClick={() => onPay(p, "paid")}
+            >
+              標記已收
+            </button>
+          ) : null}
+        </div>
       </div>
     </details>
   );

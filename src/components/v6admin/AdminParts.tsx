@@ -66,6 +66,27 @@ export function Section({
   );
 }
 
+// A card whose title row folds it (open by default).
+export function Card({
+  title,
+  side,
+  children,
+}: {
+  title: string;
+  side?: ReactNode | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <details className="ctl-card ctl-fold" open>
+      <summary className="ctl-card-title">
+        <h2>{title}</h2>
+        {side}
+      </summary>
+      {children}
+    </details>
+  );
+}
+
 // Freeze the page behind an open sheet. iOS Safari ignores overflow:hidden on
 // body, so pin the body at its scroll offset and restore it on close.
 function useBodyScrollLock() {

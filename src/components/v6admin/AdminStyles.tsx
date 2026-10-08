@@ -150,7 +150,15 @@ html.ctl-lock-x body {
 .ctl-row-name small { font-weight: 500; color: var(--muted); margin-left: 6px; font-size: 12px; }
 .ctl-row-amt { font-weight: 800; font-variant-numeric: tabular-nums; }
 
+.ctl-adj-row { align-items: flex-start; }
+.ctl-row-name small.ctl-adj-note { display: block; margin-left: 0; }
 /* Collapsible sections */
+.ctl-fold > summary { list-style: none; cursor: pointer; margin-bottom: 0; }
+.ctl-fold > summary::-webkit-details-marker { display: none; }
+.ctl-fold > summary h2 { margin-right: auto; }
+.ctl-fold > summary::after { content: "›"; font-size: 20px; line-height: 1; color: var(--muted); transition: transform .18s; }
+.ctl-fold[open] > summary { margin-bottom: 8px; }
+.ctl-fold[open] > summary::after { transform: rotate(90deg); }
 .ctl-sec { background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; overflow: hidden; }
 .ctl-sec > summary {
   list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px;
