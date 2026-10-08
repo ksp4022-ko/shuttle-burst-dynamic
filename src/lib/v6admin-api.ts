@@ -22,9 +22,11 @@ type ApiJson<T> = { ok?: boolean; data?: T; error?: { code?: string; message?: s
 const GET_TIMEOUT_MS = 20_000;
 const POST_TIMEOUT_MS = 30_000;
 
-// fetch + JSON body under one deadline. A timed-out write is reported as
-// TIMEOUT: the Worker may or may not have applied it, so callers must re-read
-// instead of retrying (never auto-resend, e.g. a LINE push).
+// fetch + JSON body under one deadline.
+// For writes, anything short of a readable Worker reply (timeout, dropped
+// connection, unreadable body) means the Worker may or may not have applied
+// it: that is reported as an unknown result (see isUnknownResult), and callers
+// must re-read instead of retrying (never auto-resend, e.g. a LINE push).
 async function fetchJson<T>(
   path: string,
   init: RequestInit,
@@ -39,6 +41,7 @@ async function fetchJson<T>(
       res = await fetch(V6_API_BASE + path, { ...init, cache: "no-store", signal: ctrl.signal });
     } catch {
       if (ctrl.signal.aborted) throw timeoutError(isWrite);
+      if (isWrite) throw unknownResultError("連線中斷");
       throw new AdminApiError("網路連線失敗，請稍後再試。", "NETWORK", 0);
     }
     let json: ApiJson<T> = null;
@@ -46,6 +49,7 @@ async function fetchJson<T>(
       json = await res.json();
     } catch {
       if (ctrl.signal.aborted) throw timeoutError(isWrite);
+      if (isWrite) throw unknownResultError("回應讀取失敗");
       json = null;
     }
     return { res, json };
@@ -55,13 +59,18 @@ async function fetchJson<T>(
 }
 
 function timeoutError(isWrite: boolean) {
-  return new AdminApiError(
-    isWrite
-      ? "連線逾時，無法確認是否已完成。已重新讀取，請先核對畫面資料，不要直接重做。"
-      : "連線逾時，請稍後再試。",
-    "TIMEOUT",
-    0,
-  );
+  return isWrite
+    ? unknownResultError("連線逾時", "TIMEOUT")
+    : new AdminApiError("連線逾時，請稍後再試。", "TIMEOUT", 0);
+}
+
+function unknownResultError(reason: string, code = "UNKNOWN_RESULT") {
+  return new AdminApiError(`${reason}，無法確認是否已完成`, code, 0);
+}
+
+// A write whose outcome is unknown (vs. one the Worker clearly rejected).
+export function isUnknownResult(err: unknown): err is AdminApiError {
+  return err instanceof AdminApiError && (err.code === "TIMEOUT" || err.code === "UNKNOWN_RESULT");
 }
 
 export async function adminGet<T>(path: string, password: string): Promise<T> {
@@ -94,14 +103,19 @@ async function adminPost<T>(path: string, password: string, body?: unknown): Pro
     POST_TIMEOUT_MS,
     true,
   );
-  if (!res.ok || !json || json.ok === false) {
-    const code = json?.error?.code || `HTTP_${res.status}`;
+  // Only an explicit { ok: false } from the Worker (or 401) is a definite
+  // failure that may be retried from the sheet; anything else is unknown.
+  if (json && json.ok === false) {
+    const code = json.error?.code || `HTTP_${res.status}`;
     const message =
       res.status === 401
         ? "密碼錯誤或沒有權限。"
-        : WRITE_ERROR_TEXT[code] || json?.error?.message || `操作失敗（${res.status}）`;
+        : WRITE_ERROR_TEXT[code] || json.error?.message || `操作失敗（${res.status}）`;
     throw new AdminApiError(message, code, res.status);
   }
+  if (res.status === 401) throw new AdminApiError("密碼錯誤或沒有權限。", "HTTP_401", 401);
+  if (!res.ok || !json || json.ok !== true)
+    throw unknownResultError(`伺服器回應異常（${res.status}）`);
   return json.data as T;
 }
 

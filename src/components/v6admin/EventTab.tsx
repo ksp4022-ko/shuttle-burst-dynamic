@@ -3,6 +3,7 @@ import {
   adminApi,
   AdminApiError,
   adminWriteApi,
+  isUnknownResult,
   eventStatusLabel,
   money,
   shortDate,
@@ -199,12 +200,14 @@ function EventBody({
     if (!writeLock.acquire()) return;
     setSheetError("");
     try {
-      let timedOut = false;
+      // Unknown outcome (timeout, dropped connection, unreadable reply): the
+      // Worker may have applied it, so no retry from the sheet.
+      let unknown: AdminApiError | null = null;
       try {
         await work();
       } catch (err) {
-        if (err instanceof AdminApiError && err.code === "TIMEOUT") {
-          timedOut = true;
+        if (isUnknownResult(err)) {
+          unknown = err;
         } else {
           setSheetError(errText(err));
           return;
@@ -214,14 +217,14 @@ function EventBody({
       onDataChanged();
       const reads = await Promise.allSettled([
         onRefresh(),
-        dashboardToo || timedOut ? onDashboardRefresh() : Promise.resolve(),
+        dashboardToo || unknown ? onDashboardRefresh() : Promise.resolve(),
       ]);
       const readFailed = reads.some((r) => r.status === "rejected");
-      if (timedOut)
+      if (unknown)
         showToast(
           readFailed
-            ? "連線逾時，無法確認是否已完成，重新讀取也失敗。請稍後按重新整理核對，不要直接重做。"
-            : "連線逾時，無法確認是否已完成。已重新讀取，請先核對畫面資料，不要直接重做。",
+            ? `${unknown.message}，重新讀取也失敗。請稍後按重新整理核對，不要直接重做。`
+            : `${unknown.message}。已重新讀取，請先核對畫面資料，不要直接重做。`,
           "error",
         );
       else if (readFailed) showToast(`${okText}，但重新讀取失敗，請按重新整理。`, "error");
