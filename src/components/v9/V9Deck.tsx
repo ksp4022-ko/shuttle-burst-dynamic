@@ -22,7 +22,9 @@ export type V9Cta =
   | { kind: "loading" }
   | { kind: "login" }
   | { kind: "identify" }
-  | { kind: "action"; label: string; tone: string };
+  | { kind: "action"; label: string; tone: string }
+  // V9-023: the meetup has started / ended - shown, not tappable.
+  | { kind: "closed"; label: string };
 
 // Sticker icons in public/v9/icons/*.webp (96px, shown at 36px).
 type RailItem = { icon: "time" | "shuttle" | "fee" | "court"; label: string; value: string };
@@ -219,6 +221,10 @@ export function V9Hero({
       ) : cta.kind === "identify" ? (
         <button type="button" className="v9-cta is-blue" onClick={onMe}>
           確認身份
+        </button>
+      ) : cta.kind === "closed" ? (
+        <button type="button" className="v9-cta is-paper" disabled>
+          {cta.label}
         </button>
       ) : (
         // A new action (我要請假 → 取消請假 …) flips the button in.

@@ -11,6 +11,7 @@ export function V9ProxyContent({
   tab,
   onTab,
   enabled,
+  phase = "before",
   busy,
   candidates,
   candidatesLoading,
@@ -21,6 +22,8 @@ export function V9ProxyContent({
   tab: V9ProxyTab;
   onTab: (tab: V9ProxyTab) => void;
   enabled: boolean;
+  // V9-023: started → no 代退; ended → no 代報 either.
+  phase?: "before" | "started" | "ended";
   busy: boolean;
   candidates: AlphaCancellableTempSignup[];
   candidatesLoading: boolean;
@@ -78,6 +81,10 @@ export function V9ProxyContent({
 
       {!enabled ? (
         <p className="v9-muted v9-sheet-note">LINE 登入並完成身份確認後即可代報、代退。</p>
+      ) : phase === "ended" ? (
+        <p className="v9-muted v9-sheet-note">聚會已結束，不能再代報、代退。</p>
+      ) : phase === "started" && tab === "cancel" ? (
+        <p className="v9-muted v9-sheet-note">已開打，不能在系統上代退。</p>
       ) : tab === "signup" ? (
         <form
           key={`signup-${failed}`}

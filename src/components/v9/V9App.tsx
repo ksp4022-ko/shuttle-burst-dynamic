@@ -33,6 +33,8 @@ import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-
 import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
+import { useV9Test } from "./useV9Test";
+import { v9EventPhase, type V9EventPhase } from "@/lib/v9-event-time";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
@@ -257,10 +259,37 @@ export function V9App() {
     }
   };
 
+  // V9-023 (/v9test): once a meetup has started, no 請假／取消請假／取消報名
+  // (代退 too); once it has ended, no 報名／代報 either. Taipei time from the
+  // event name's time; checked again at the moment of each action.
+  const test = useV9Test();
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const eventPhase: V9EventPhase = test ? v9EventPhase(selectedEvent, nowMs) : "before";
+  const blockedBy = (kind: "leave" | "signup") => {
+    if (!test) return false;
+    const phase = v9EventPhase(selectedEvent, Date.now());
+    setNowMs(Date.now());
+    if (phase === "ended") {
+      setNotice("聚會已結束，不能再報名或請假");
+      return true;
+    }
+    if (phase === "started" && kind === "leave") {
+      setNotice("已開打，不能在系統上請假或取消");
+      return true;
+    }
+    return false;
+  };
+
   // Same mapping as V8 ACTIVE's main CTA.
   const handlePrimaryAction = () =>
     withActionLock(async () => {
       if (!identity || !lineToken || !lineIdentity?.profileComplete) return false;
+      const signingUp = identity.signupType === "temp" && identity.status === "unregistered";
+      if (blockedBy(signingUp ? "signup" : "leave")) return false;
       if (identity.signupType === "temp" && identity.status === "unregistered") {
         const submittedName =
           lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName;
@@ -307,6 +336,7 @@ export function V9App() {
   const submitHelperSignup = (name: string) =>
     withActionLock(async () => {
       if (!lineToken) return false;
+      if (blockedBy("signup")) return false;
       const trimmed = name.trim();
       const result = await flow.submitSignup(trimmed, lineToken);
       if (!result.ok) return false;
@@ -323,6 +353,7 @@ export function V9App() {
   const submitHelperCancel = (person: AlphaSignup) =>
     withActionLock(async () => {
       if (!lineToken) return false;
+      if (blockedBy("leave")) return false;
       const ok = await flow.runIdentityAction(
         "cancel-temp",
         { id: person.id, name: person.name },
@@ -446,6 +477,7 @@ export function V9App() {
   const joinAsTemp = (name: string) =>
     withActionLock(async () => {
       if (!lineToken) return false;
+      if (blockedBy("signup")) return false;
       let next: V8LineIdentity;
       try {
         next = await confirmV8LineProfile(lineToken, {
@@ -523,6 +555,14 @@ export function V9App() {
         : !identity
           ? { kind: "identify" }
           : { kind: "action", ...ctaFor(identity) };
+  const shownCta: V9Cta =
+    viewing || cta.kind === "loading"
+      ? cta
+      : eventPhase === "ended"
+        ? { kind: "closed", label: "聚會已結束" }
+        : eventPhase === "started" && cta.kind === "action" && cta.label !== "我要報名"
+          ? { kind: "closed", label: "已開打，不能請假" }
+          : cta;
   const siteName = SITE_NAMES[siteId] ?? siteId;
   const shownEventId = targetEventId ?? selectedEventId;
   const shownIndex = Math.max(
@@ -608,7 +648,7 @@ export function V9App() {
               signedIn={signedIn}
               identity={shownReady ? shownIdentity : null}
               rank={shownReady ? rank : null}
-              cta={viewing ? { kind: "action", label: "唯讀檢視中", tone: "is-paper" } : cta}
+              cta={viewing ? { kind: "action", label: "唯讀檢視中", tone: "is-paper" } : shownCta}
               busy={busy}
               busyLabel={busyLabelFor(pendingAction)}
               onLogin={auth.startLogin}
@@ -692,6 +732,7 @@ export function V9App() {
               busy={busy}
               candidates={cancellableTempSignups}
               candidatesLoading={cancellableLoading}
+              phase={eventPhase}
               onSignup={submitHelperSignup}
               onCancel={submitHelperCancel}
               onDone={closeSheet}
