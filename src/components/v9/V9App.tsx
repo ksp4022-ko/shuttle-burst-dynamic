@@ -33,7 +33,6 @@ import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-
 import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
-import { useV9Test } from "./useV9Test";
 import { v9EventPhase, type V9EventPhase } from "@/lib/v9-event-time";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
@@ -259,18 +258,16 @@ export function V9App() {
     }
   };
 
-  // V9-023 (/v9test): once a meetup has started, no 請假／取消請假／取消報名
+  // V9-023: once a meetup has started, no 請假／取消請假／取消報名
   // (代退 too); once it has ended, no 報名／代報 either. Taipei time from the
   // event name's time; checked again at the moment of each action.
-  const test = useV9Test();
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNowMs(Date.now()), 30000);
     return () => window.clearInterval(timer);
   }, []);
-  const eventPhase: V9EventPhase = test ? v9EventPhase(selectedEvent, nowMs) : "before";
+  const eventPhase: V9EventPhase = v9EventPhase(selectedEvent, nowMs);
   const blockedBy = (kind: "leave" | "signup") => {
-    if (!test) return false;
     const phase = v9EventPhase(selectedEvent, Date.now());
     setNowMs(Date.now());
     if (phase === "ended") {
