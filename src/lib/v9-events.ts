@@ -1,4 +1,4 @@
-// V9-024 (/v9test): which meetups V9 lists and which one it opens first.
+// V9-024: which meetups V9 lists and which one it opens first.
 // - List: every open meetup from yesterday on, plus every meetup of 本季
 //   (open or already closed in the admin), so players can still check
 //   their attendance after a meetup is closed. 本季 = the season of the
@@ -6,16 +6,8 @@
 // - First meetup: the nearest one that has not started (Taipei time); the
 //   one viewed last in this tab only wins while it has not started either
 //   (so a LINE login round-trip still lands back on it).
-// On /v9 both fall back to the original behaviour (open meetups from
-// today's UTC date; last viewed, else nearest by date).
-import {
-  alphaFetch,
-  configuredSiteId,
-  listAlphaEvents,
-  type AlphaEvent,
-} from "@/lib/database-alpha";
+import { alphaFetch, configuredSiteId, type AlphaEvent } from "@/lib/database-alpha";
 import { v9EventPhase } from "@/lib/v9-event-time";
-import { isV9TestRoute } from "@/lib/v9-route";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TAIPEI_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -43,9 +35,6 @@ function siteEvents(status: "open" | "closed", from: string, limit: number, sign
 }
 
 export async function loadV9Events(signal?: AbortSignal): Promise<AlphaEvent[]> {
-  if (!isV9TestRoute()) {
-    return listAlphaEvents(new Date().toISOString().slice(0, 10), 20, signal);
-  }
   const since = taipeiDate(-SEASON_LOOKBACK_DAYS);
   const [open, closed] = await Promise.all([
     siteEvents("open", since, 50, signal),
@@ -72,7 +61,6 @@ export function chooseV9InitialEvent(
 ): AlphaEvent | null {
   const sorted = [...events].sort(byDate);
   const preferred = preferredEventId ? sorted.find((event) => event.id === preferredEventId) : null;
-  if (!isV9TestRoute()) return preferred || sorted[0] || null;
   const nowMs = Date.now();
   if (preferred && notStarted(preferred, nowMs)) return preferred;
   return (
