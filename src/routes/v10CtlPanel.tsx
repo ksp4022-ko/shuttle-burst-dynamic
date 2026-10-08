@@ -5,7 +5,7 @@ import { AdminApp } from "@/components/v6admin/AdminApp";
 // (docs/V6_ADMIN_BASELINE.md). Independent of V8/V9 UI code.
 export const Route = createFileRoute("/v10CtlPanel")({
   head: () => ({
-    meta: [{ title: "V6 控制台" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "V10 控制台" }, { name: "robots", content: "noindex" }],
   }),
   component: AdminApp,
 });
