@@ -274,6 +274,7 @@ html.ctl-lock-x body {
    the whole card and pushes row buttons out of view. */
 .ctl-main, .ctl-tab, .ctl-sec-body { grid-template-columns: minmax(0, 1fr); }
 .ctl-row-name.is-wrap { white-space: normal; }
+.ctl-sub-details > summary { cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 700; padding: 4px 0; }
 .ctl-row-name.is-wrap small { display: block; margin-left: 0; margin-top: 1px; line-height: 1.35; }
 .ctl-form > .ctl-sub.is-wide { grid-column: 1 / -1; margin: 4px 0 -4px; font-weight: 700; }
 .ctl-readonly-tag { display: inline-block; margin-top: 2px; font-size: 12px; color: var(--muted); }

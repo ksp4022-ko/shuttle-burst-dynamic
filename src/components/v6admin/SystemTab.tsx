@@ -300,7 +300,13 @@ export function SystemTab({
 
       <Section
         title="LINE 認領"
-        note={claims ? `${claims.claims.length} 人` : claimsError ? "讀取失敗" : "讀取中"}
+        note={
+          claims
+            ? `季打 ${claims.claims.length}${claims.tempIdentities ? ` · 臨打 ${claims.tempIdentities.length}` : ""}`
+            : claimsError
+              ? "讀取失敗"
+              : "讀取中"
+        }
       >
         {claimsError ? (
           <div className="ctl-error">
@@ -317,53 +323,82 @@ export function SystemTab({
           <div className="ctl-loading">讀取中…</div>
         ) : (
           <>
+            <p className="ctl-sub">季打成員 {claims.claims.length} 人（自訂稱呼 ← LINE 名稱）</p>
             {claims.claims.length ? (
               <ul className="ctl-rows">
-                {claims.claims.map((c) => (
-                  <li className="ctl-row" key={c.lineIdentityId}>
-                    <span className="ctl-row-name is-wrap">
-                      {c.memberName}
-                      {c.memberStatus === "disabled" ? "（停用）" : ""}
-                      <small>
-                        LINE {c.lineDisplayName}
-                        {c.confirmedName ? ` · 確認名稱 ${c.confirmedName}` : ""} ·{" "}
-                        {when(c.nameConfirmedAt || c.updatedAt)}
-                        {c.activeIntentCount ? ` · 季打回覆 ${c.activeIntentCount}` : ""}
-                      </small>
-                    </span>
-                    <button
-                      className="ctl-act is-danger"
-                      type="button"
-                      disabled={writing}
-                      onClick={() => open({ kind: "unlink", claim: c })}
-                    >
-                      解除
-                    </button>
-                  </li>
-                ))}
+                {claims.claims.map((c) => {
+                  const called = c.confirmedName || c.memberName || "";
+                  return (
+                    <li className="ctl-row" key={c.lineIdentityId}>
+                      <span className="ctl-row-name is-wrap">
+                        {called}
+                        <small>
+                          ← LINE {c.lineDisplayName || "—"}
+                          {c.memberName && c.memberName !== called
+                            ? ` · 季打名 ${c.memberName}`
+                            : ""}
+                          {c.memberStatus === "disabled" ? " · 季打名冊已停用" : ""}
+                        </small>
+                      </span>
+                      <button
+                        className="ctl-act is-danger"
+                        type="button"
+                        disabled={writing}
+                        onClick={() => open({ kind: "unlink", claim: c })}
+                      >
+                        解除
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
-              <p className="ctl-empty">目前沒有 LINE 認領這個場地的成員。</p>
+              <p className="ctl-empty">目前沒有季打成員用 LINE 認領。</p>
             )}
-            <p className="ctl-sub">最近認領紀錄</p>
-            {claims.logs.length ? (
+
+            <p className="ctl-sub">
+              臨打成員
+              {claims.tempIdentities ? ` ${claims.tempIdentities.length} 人` : ""}（自訂稱呼 ← LINE
+              名稱）
+            </p>
+            {!claims.tempIdentities ? (
+              <p className="ctl-empty">Worker 更新（V6-026）部署後才會顯示。</p>
+            ) : claims.tempIdentities.length ? (
               <ul className="ctl-rows">
-                {claims.logs.slice(0, 20).map((l, i) => (
-                  <li className="ctl-row" key={i}>
+                {claims.tempIdentities.map((t) => (
+                  <li className="ctl-row" key={t.lineIdentityId}>
                     <span className="ctl-row-name is-wrap">
-                      {l.lineDisplayName}
-                      {l.memberName || l.previousMemberName
-                        ? ` → ${l.memberName || l.previousMemberName}`
-                        : ""}
-                      <small>{when(l.createdAt)}</small>
+                      {t.confirmedName || "（未填稱呼）"}
+                      <small>← LINE {t.lineDisplayName || "—"}</small>
                     </span>
-                    <span className="ctl-pill">{CLAIM_ACTION[l.action || ""] || l.action}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="ctl-empty">尚無認領紀錄。</p>
+              <p className="ctl-empty">目前沒有臨打成員用 LINE 登入。</p>
             )}
+
+            <details className="ctl-sub-details">
+              <summary>認領紀錄（最近 {Math.min(claims.logs.length, 20)} 筆）</summary>
+              {claims.logs.length ? (
+                <ul className="ctl-rows">
+                  {claims.logs.slice(0, 20).map((l, i) => (
+                    <li className="ctl-row" key={i}>
+                      <span className="ctl-row-name is-wrap">
+                        {l.lineDisplayName}
+                        {l.memberName || l.previousMemberName
+                          ? ` → ${l.memberName || l.previousMemberName}`
+                          : ""}
+                        <small>{when(l.createdAt)}</small>
+                      </span>
+                      <span className="ctl-pill">{CLAIM_ACTION[l.action || ""] || l.action}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="ctl-empty">尚無認領紀錄。</p>
+              )}
+            </details>
           </>
         )}
       </Section>

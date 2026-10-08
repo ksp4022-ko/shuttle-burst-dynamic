@@ -4,7 +4,6 @@ import {
   AdminApiError,
   money,
   shortDate,
-  taipeiToday,
   type AdminGroup,
   type AdminSeason,
   type DashboardData,
@@ -33,16 +32,11 @@ function errText(reason: unknown): string {
   return reason instanceof AdminApiError ? reason.message : "讀取失敗。";
 }
 
+// The Worker already sorts seasons like the old /admin (sortAdminSeasonRows:
+// the current season first, by name "20xx 第N季" + season-setting months), so
+// the default is simply the first one.
 function defaultSeason(seasons: AdminSeason[]): string {
-  const today = taipeiToday();
-  const current = seasons.find(
-    (s) => s.startDate && s.endDate && s.startDate <= today && today <= s.endDate,
-  );
-  if (current) return current.id;
-  const dated = seasons
-    .filter((s) => s.startDate)
-    .sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
-  return (dated[0] || seasons[0])?.id || "";
+  return seasons[0]?.id || "";
 }
 
 function groupHasSetting(group: AdminGroup, seasonId: string): boolean {

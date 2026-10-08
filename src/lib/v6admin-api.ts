@@ -256,7 +256,20 @@ export type LineClaimLog = {
   memberName?: string | null;
   previousMemberName?: string | null;
 };
-export type LineClaimsData = { claims: LineClaim[]; logs: LineClaimLog[] };
+// Temp players: their self-chosen name next to their LINE name (Worker V6-026).
+export type TempIdentity = {
+  lineIdentityId: string;
+  lineDisplayName?: string;
+  confirmedName?: string;
+  nameConfirmedAt?: string | null;
+  updatedAt?: string;
+};
+export type LineClaimsData = {
+  claims: LineClaim[];
+  // Missing until Worker V6-026 is deployed.
+  tempIdentities?: TempIdentity[];
+  logs: LineClaimLog[];
+};
 
 // Event form as the Worker's /admin sends it (FormData → strings).
 export type EventFormInput = {
