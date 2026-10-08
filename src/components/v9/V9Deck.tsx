@@ -58,6 +58,7 @@ export function V9Hero({
   onMe,
   counts,
   onRoster,
+  tired = false,
   onLogoParty,
   hintPaused,
 }: {
@@ -82,6 +83,8 @@ export function V9Hero({
   onMe: () => void;
   counts: { confirmed: number; max: number; remain: number; waiting: number; leave: number };
   onRoster: (tab: V9RosterTab) => void;
+  // V9-024: the meetup is over - the mascot shows the "累爆了" sticker.
+  tired?: boolean;
   onLogoParty: () => void;
   hintPaused: boolean;
 }) {
@@ -148,7 +151,7 @@ export function V9Hero({
             {showMeetupName && <span className="v9-hero-name">{meetupName}</span>}
           </div>
           <V9HeroMascot
-            sprite={identity && !switching ? v9MascotSprite(identity) : "guest"}
+            sprite={tired ? "tired" : identity && !switching ? v9MascotSprite(identity) : "guest"}
             badge={!switching && identity?.status === "waiting" && rank ? `#${rank}` : undefined}
           />
         </div>

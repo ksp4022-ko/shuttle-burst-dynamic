@@ -37,6 +37,8 @@ const SPRITES = {
   // 未登入: waving hello, frames 1-2-6-2 of the sheet (3-5 changed pose /
   // drifted sideways).
   guest: { frames: 4, width: 122.5, height: 101, feet: 2.2, centre: 61.9, duration: 1.4 },
+  // V9-024: the meetup is over - "累爆了" sticker (one still frame).
+  tired: { frames: 1, width: 146, height: 123, feet: 2, centre: 73, duration: 1 },
 } as const satisfies Record<
   string,
   {

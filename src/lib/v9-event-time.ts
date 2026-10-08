@@ -38,11 +38,15 @@ export function v9EventWindow(event: { eventDate: string; name: string }): {
   return { startMs: null, endMs: taipeiMs(event.eventDate, "2359") };
 }
 
+// options.closedEnds (V9-024): a meetup closed / cancelled in the admin
+// counts as ended whatever the clock says.
 export function v9EventPhase(
-  event: { eventDate: string; name: string } | null | undefined,
+  event: { eventDate: string; name: string; status?: string } | null | undefined,
   nowMs: number,
+  options?: { closedEnds?: boolean },
 ): V9EventPhase {
   if (!event) return "before";
+  if (options?.closedEnds && event.status && event.status !== "open") return "ended";
   const { startMs, endMs } = v9EventWindow(event);
   if (endMs != null && nowMs >= endMs) return "ended";
   if (startMs != null && nowMs >= startMs) return "started";

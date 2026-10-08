@@ -39,6 +39,14 @@ export type HomepageHandoffTiming = {
   // racket the intro was building up to.
   skipIntro?: boolean;
   preferredEventId?: () => string | null | undefined;
+  // V9 only (V9-024): its own meetup list and first meetup. Without them the
+  // list is open meetups from today and the first is the preferred one,
+  // else the nearest by date (unchanged for V8).
+  loadEvents?: (signal: AbortSignal) => Promise<AlphaEvent[]>;
+  chooseInitialEvent?: (
+    events: AlphaEvent[],
+    preferredEventId: string | null | undefined,
+  ) => AlphaEvent | null;
   disabled?: boolean;
 };
 
@@ -131,6 +139,8 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     skipIntro: Boolean(handoffTiming?.skipIntro),
     disabled,
     ...(handoffTiming?.preferredEventId ? { preferredEventId: handoffTiming.preferredEventId } : {}),
+    ...(handoffTiming?.loadEvents ? { loadEvents: handoffTiming.loadEvents } : {}),
+    ...(handoffTiming?.chooseInitialEvent ? { chooseInitialEvent: handoffTiming.chooseInitialEvent } : {}),
   };
 
   const selectedEvent = useMemo(
@@ -188,7 +198,10 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
 
   const loadInitial = useCallback(async () => {
     setError("");
-    const nextEvents = await withStartupRetry((signal) => listAlphaEvents(todayString(), 20, signal));
+    const loadEvents = handoffTimingRef.current.loadEvents;
+    const nextEvents = await withStartupRetry((signal) =>
+      loadEvents ? loadEvents(signal) : listAlphaEvents(todayString(), 20, signal),
+    );
     setEvents(nextEvents);
 
     if (!nextEvents.length) {
@@ -198,9 +211,11 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     }
 
     const preferredEventId = handoffTimingRef.current.preferredEventId?.();
-    const nextEvent =
-      (preferredEventId ? nextEvents.find((event) => event.id === preferredEventId) : null) ||
-      chooseNearestEvent(nextEvents);
+    const chooseInitialEvent = handoffTimingRef.current.chooseInitialEvent;
+    const nextEvent = chooseInitialEvent
+      ? chooseInitialEvent(nextEvents, preferredEventId)
+      : (preferredEventId ? nextEvents.find((event) => event.id === preferredEventId) : null) ||
+        chooseNearestEvent(nextEvents);
     if (!nextEvent) throw new Error("找不到最近聚會。");
 
     setSelectedEventId(nextEvent.id);

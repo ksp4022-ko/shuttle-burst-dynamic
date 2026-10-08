@@ -34,6 +34,8 @@ import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
 import { v9EventPhase, type V9EventPhase } from "@/lib/v9-event-time";
+import { chooseV9InitialEvent, loadV9Events } from "@/lib/v9-events";
+import { useV9Test } from "./useV9Test";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
 // Data and actions come from the same shared hooks V8 ACTIVE uses
@@ -118,6 +120,8 @@ export function V9App() {
     realFadeMs: 0,
     skipIntro: true,
     preferredEventId: () => readSelectedEventId(siteId),
+    loadEvents: loadV9Events,
+    chooseInitialEvent: chooseV9InitialEvent,
   });
   const {
     phase,
@@ -266,9 +270,11 @@ export function V9App() {
     const timer = window.setInterval(() => setNowMs(Date.now()), 30000);
     return () => window.clearInterval(timer);
   }, []);
-  const eventPhase: V9EventPhase = v9EventPhase(selectedEvent, nowMs);
+  // V9-024 (/v9test): a meetup closed in the admin counts as ended.
+  const test = useV9Test();
+  const eventPhase: V9EventPhase = v9EventPhase(selectedEvent, nowMs, { closedEnds: test });
   const blockedBy = (kind: "leave" | "signup") => {
-    const phase = v9EventPhase(selectedEvent, Date.now());
+    const phase = v9EventPhase(selectedEvent, Date.now(), { closedEnds: test });
     setNowMs(Date.now());
     if (phase === "ended") {
       setNotice("聚會已結束，不能再報名或請假");
@@ -666,6 +672,7 @@ export function V9App() {
                 leave: (roster.fixedLeave || []).length,
               }}
               onRoster={openRoster}
+              tired={test && !switching && eventPhase === "ended"}
               onLogoParty={logoParty}
               hintPaused={sheet !== null}
             />
