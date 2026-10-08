@@ -61,10 +61,13 @@ export function SeasonTab({
   password,
   siteId,
   dashboard,
+  dataVersion,
 }: {
   password: string;
   siteId: string;
   dashboard: DashboardData;
+  // Bumped by the panel after any write; forces a re-read of season data.
+  dataVersion: number;
 }) {
   const seasons = dashboard.seasons || [];
   const [seasonId, setSeasonId] = useState(() => defaultSeason(seasons));
@@ -125,7 +128,7 @@ export function SeasonTab({
     return () => {
       alive = false;
     };
-  }, [password, siteId, seasonId, groupId]);
+  }, [password, siteId, seasonId, groupId, dataVersion]);
 
   const confirmSettings = (confirm?.settings || []).filter(
     (s) => s.targetSeasonId === seasonId && s.groupId === groupId,

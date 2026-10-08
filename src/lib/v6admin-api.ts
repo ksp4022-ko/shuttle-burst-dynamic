@@ -16,23 +16,61 @@ export class AdminApiError extends Error {
   }
 }
 
+type ApiJson<T> = { ok?: boolean; data?: T; error?: { code?: string; message?: string } } | null;
+
+// Requests that hang would otherwise keep the panel's write lock forever.
+const GET_TIMEOUT_MS = 20_000;
+const POST_TIMEOUT_MS = 30_000;
+
+// fetch + JSON body under one deadline. A timed-out write is reported as
+// TIMEOUT: the Worker may or may not have applied it, so callers must re-read
+// instead of retrying (never auto-resend, e.g. a LINE push).
+async function fetchJson<T>(
+  path: string,
+  init: RequestInit,
+  timeoutMs: number,
+  isWrite: boolean,
+): Promise<{ res: Response; json: ApiJson<T> }> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    let res: Response;
+    try {
+      res = await fetch(V6_API_BASE + path, { ...init, cache: "no-store", signal: ctrl.signal });
+    } catch {
+      if (ctrl.signal.aborted) throw timeoutError(isWrite);
+      throw new AdminApiError("網路連線失敗，請稍後再試。", "NETWORK", 0);
+    }
+    let json: ApiJson<T> = null;
+    try {
+      json = await res.json();
+    } catch {
+      if (ctrl.signal.aborted) throw timeoutError(isWrite);
+      json = null;
+    }
+    return { res, json };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function timeoutError(isWrite: boolean) {
+  return new AdminApiError(
+    isWrite
+      ? "連線逾時，無法確認是否已完成。已重新讀取，請先核對畫面資料，不要直接重做。"
+      : "連線逾時，請稍後再試。",
+    "TIMEOUT",
+    0,
+  );
+}
+
 export async function adminGet<T>(path: string, password: string): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(V6_API_BASE + path, {
-      method: "GET",
-      headers: { "x-admin-password": password },
-      cache: "no-store",
-    });
-  } catch {
-    throw new AdminApiError("網路連線失敗，請稍後再試。", "NETWORK", 0);
-  }
-  let json: { ok?: boolean; data?: T; error?: { code?: string; message?: string } } | null = null;
-  try {
-    json = await res.json();
-  } catch {
-    json = null;
-  }
+  const { res, json } = await fetchJson<T>(
+    path,
+    { method: "GET", headers: { "x-admin-password": password } },
+    GET_TIMEOUT_MS,
+    false,
+  );
   if (!res.ok || !json || json.ok === false) {
     const code = json?.error?.code || `HTTP_${res.status}`;
     const message =
@@ -46,23 +84,16 @@ export async function adminGet<T>(path: string, password: string): Promise<T> {
 
 // POST with a JSON body. Used only by adminWriteApi below.
 async function adminPost<T>(path: string, password: string, body?: unknown): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(V6_API_BASE + path, {
+  const { res, json } = await fetchJson<T>(
+    path,
+    {
       method: "POST",
       headers: { "content-type": "application/json", "x-admin-password": password },
       body: JSON.stringify(body ?? {}),
-      cache: "no-store",
-    });
-  } catch {
-    throw new AdminApiError("網路連線失敗，請稍後再試。", "NETWORK", 0);
-  }
-  let json: { ok?: boolean; data?: T; error?: { code?: string; message?: string } } | null = null;
-  try {
-    json = await res.json();
-  } catch {
-    json = null;
-  }
+    },
+    POST_TIMEOUT_MS,
+    true,
+  );
   if (!res.ok || !json || json.ok === false) {
     const code = json?.error?.code || `HTTP_${res.status}`;
     const message =

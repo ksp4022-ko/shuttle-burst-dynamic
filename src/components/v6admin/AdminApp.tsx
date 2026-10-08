@@ -184,17 +184,17 @@ function Panel({
   }, [password, siteId, reloadKey]);
 
   // Silent re-read after a write (event status / counts in the picker).
-  const refreshDashboard = useCallback(() => {
+  // Returns a promise so the write lock can wait for it; rejects on failure.
+  const refreshDashboard = useCallback(async () => {
     const seq = ++dashSeq.current;
-    adminApi
-      .dashboard(password, siteId)
-      .then((data) => {
-        if (seq === dashSeq.current) setDashboard(data);
-      })
-      .catch(() => {
-        /* keep the current list; the next full reload will retry */
-      });
+    const data = await adminApi.dashboard(password, siteId);
+    if (seq === dashSeq.current) setDashboard(data);
   }, [password, siteId]);
+
+  // Bumped after every write so tabs that cache derived data (賽季管理)
+  // re-read instead of showing pre-write numbers.
+  const [dataVersion, setDataVersion] = useState(0);
+  const markDataChanged = useCallback(() => setDataVersion((v) => v + 1), []);
 
   function chooseSite(id: string) {
     if (id === siteId || writing) return;
@@ -232,13 +232,20 @@ function Panel({
             eventId={eventId}
             onEventChange={setEventId}
             onDashboardRefresh={refreshDashboard}
+            onDataChanged={markDataChanged}
             writeLock={writeLock}
             writing={writing}
           />
         </div>
         {seasonVisited ? (
           <div className="ctl-tab" hidden={tab !== "season"}>
-            <SeasonTab key={siteId} password={password} siteId={siteId} dashboard={dashboard} />
+            <SeasonTab
+              key={siteId}
+              password={password}
+              siteId={siteId}
+              dashboard={dashboard}
+              dataVersion={dataVersion}
+            />
           </div>
         ) : null}
         {tab === "manage" || tab === "system" ? (

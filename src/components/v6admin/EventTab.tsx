@@ -37,6 +37,7 @@ export function EventTab({
   eventId,
   onEventChange,
   onDashboardRefresh,
+  onDataChanged,
   writeLock,
   writing,
 }: {
@@ -44,7 +45,8 @@ export function EventTab({
   dashboard: DashboardData;
   eventId: string;
   onEventChange: (id: string) => void;
-  onDashboardRefresh: () => void;
+  onDashboardRefresh: () => Promise<void>;
+  onDataChanged: () => void;
   writeLock: WriteLock;
   writing: boolean;
 }) {
@@ -133,6 +135,7 @@ export function EventTab({
           onReload={() => setReloadKey((k) => k + 1)}
           onRefresh={refresh}
           onDashboardRefresh={onDashboardRefresh}
+          onDataChanged={onDataChanged}
           writeLock={writeLock}
           writing={writing}
         />
@@ -147,6 +150,7 @@ function EventBody({
   onReload,
   onRefresh,
   onDashboardRefresh,
+  onDataChanged,
   writeLock,
   writing,
 }: {
@@ -154,7 +158,8 @@ function EventBody({
   overview: EventOverview;
   onReload: () => void;
   onRefresh: () => Promise<void>;
-  onDashboardRefresh: () => void;
+  onDashboardRefresh: () => Promise<void>;
+  onDataChanged: () => void;
   writeLock: WriteLock;
   writing: boolean;
 }) {
@@ -176,7 +181,7 @@ function EventBody({
   function showToast(text: string, tone: "ok" | "error" = "ok") {
     setToast({ text, tone });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 2600);
+    toastTimer.current = setTimeout(() => setToast(null), tone === "error" ? 6000 : 2600);
   }
 
   function open(p: Pending) {
@@ -185,26 +190,42 @@ function EventBody({
     setPending(p);
   }
 
-  // The panel-wide lock is held from the POST until the re-read has landed,
-  // so nothing can be written against stale data in between.
+  // The panel-wide lock is held from the POST until every re-read it needs
+  // (overview, and the dashboard when counts/status change) has landed, so
+  // nothing can be written against stale data in between.
+  // A timed-out write has an unknown outcome: close the sheet, re-read, and
+  // let the admin check before doing anything again (never auto-retry).
   async function run(work: () => Promise<unknown>, okText: string, dashboardToo = false) {
     if (!writeLock.acquire()) return;
     setSheetError("");
     try {
+      let timedOut = false;
       try {
         await work();
       } catch (err) {
-        setSheetError(errText(err));
-        return;
+        if (err instanceof AdminApiError && err.code === "TIMEOUT") {
+          timedOut = true;
+        } else {
+          setSheetError(errText(err));
+          return;
+        }
       }
       setPending(null);
-      showToast(okText);
-      if (dashboardToo) onDashboardRefresh();
-      try {
-        await onRefresh();
-      } catch {
-        showToast("已完成，但重新讀取失敗，請按重新整理。", "error");
-      }
+      onDataChanged();
+      const reads = await Promise.allSettled([
+        onRefresh(),
+        dashboardToo || timedOut ? onDashboardRefresh() : Promise.resolve(),
+      ]);
+      const readFailed = reads.some((r) => r.status === "rejected");
+      if (timedOut)
+        showToast(
+          readFailed
+            ? "連線逾時，無法確認是否已完成，重新讀取也失敗。請稍後按重新整理核對，不要直接重做。"
+            : "連線逾時，無法確認是否已完成。已重新讀取，請先核對畫面資料，不要直接重做。",
+          "error",
+        );
+      else if (readFailed) showToast(`${okText}，但重新讀取失敗，請按重新整理。`, "error");
+      else showToast(okText);
     } finally {
       writeLock.release();
     }
@@ -703,7 +724,8 @@ function usageDefaults(overview: EventOverview): UsageInput {
     courtFeePerCourtHour: v(u.courtFeePerCourtHour, x.courtFeePerCourtHour, 0),
     courtDiscountRate: v(u.courtDiscountRate, x.courtDiscountRate, 1),
     actualBallUsed: v(u.actualBallUsed, x.ballUsed),
-    shuttleUnitCost: v(u.shuttleUnitCost, x.shuttleUnitCost, 0),
+    // Whole dollars, like the Worker's /admin form (the Worker rounds it on save too).
+    shuttleUnitCost: String(Math.round(Number(v(u.shuttleUnitCost, x.shuttleUnitCost, 0)) || 0)),
     actualAcHours: v(u.actualAcHours, x.acHours),
     acFeePerHour: v(u.acFeePerHour, x.acFeePerHour, 0),
     actualMiscFee: v(u.actualMiscFee, 0),
@@ -717,7 +739,7 @@ const USAGE_FIELDS: { key: keyof UsageInput; label: string; step: string; hot?: 
   { key: "courtFeePerCourtHour", label: "場租 / 面 / 時", step: "1" },
   { key: "courtDiscountRate", label: "場租折扣", step: "0.01" },
   { key: "actualBallUsed", label: "用球數", step: "0.5", hot: true },
-  { key: "shuttleUnitCost", label: "球單顆成本", step: "0.01" },
+  { key: "shuttleUnitCost", label: "球單顆成本", step: "1" },
   { key: "actualAcHours", label: "冷氣小時", step: "0.5" },
   { key: "acFeePerHour", label: "冷氣 / 時", step: "1" },
   { key: "actualMiscFee", label: "其他支出", step: "1", hot: true },
