@@ -159,7 +159,7 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 
 P6（④ 系統設定寫入）、頁面左右鎖定、賽季預設修正、Worker V6-026（臨打成員清單）已部署；預設賽季、左右鎖定、場地設定、測試發送已驗收。
 
-## 9. P7 一站式收款（已部署：Worker V6-027 e0e0ab4，Cloudflare version 1e74aa4d-658f-4ce0-b9e5-8460706ed3fe；前端 5d93930；待 iPhone 驗收）
+## 9. P7 一站式收款（已部署：Worker V6-027 e0e0ab4，Cloudflare version 1e74aa4d-658f-4ce0-b9e5-8460706ed3fe；前端 5d93930；iPhone 驗收 1–5 通過 2026-10-08）
 
 問題：同一位球員的未繳項目分散在 ③（各賽季季繳）與 ①（各場臨打），收一次款要切換三個以上地方。
 
@@ -179,3 +179,6 @@ Worker V6-027（唯讀，x-admin-password 驗證）：
 - 收款寫入沿用現有 API：臨打 POST `/admin/temp-payments/:id/status`、季繳 POST `/admin/season-payments/:id/status`，在寫入鎖內逐筆送出。
 - 中途失敗：停在失敗那筆，畫面標示哪些已收、哪些未收，重新讀取帳單；結果不明（逾時等）不自動重送。
 - 收完重新讀取帳單，其他分頁同步更新（dataVersion）。
+
+P7 待辦（使用者提出，待「開工」）：
+- C4：「已繳紀錄」每筆可直接「改回未收」（確認後送出；季費 POST season-payments/:id/status unpaid，臨打 POST temp-payments/:id/status unpaid，與 ①③ 相同 API）。
