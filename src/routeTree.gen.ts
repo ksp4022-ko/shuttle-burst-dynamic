@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as KangxuanRouteImport } from './routes/kangxuan'
 import { Route as RianRouteImport } from './routes/rian'
+import { Route as V10CtlPanelRouteImport } from './routes/v10CtlPanel'
 import { Route as V8RouteImport } from './routes/v8'
 import { Route as V8testRouteImport } from './routes/v8test'
 import { Route as V9RouteImport } from './routes/v9'
@@ -39,6 +40,11 @@ const KangxuanRoute = KangxuanRouteImport.update({
 const RianRoute = RianRouteImport.update({
   id: '/rian',
   path: '/rian',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V10CtlPanelRoute = V10CtlPanelRouteImport.update({
+  id: '/v10CtlPanel',
+  path: '/v10CtlPanel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const V8Route = V8RouteImport.update({
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/kangxuan': typeof KangxuanRoute
   '/rian': typeof RianRoute
+  '/v10CtlPanel': typeof V10CtlPanelRoute
   '/v8': typeof V8RouteWithChildren
   '/v8test': typeof V8testRouteWithChildren
   '/v9': typeof V9RouteWithChildren
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/kangxuan': typeof KangxuanRoute
   '/rian': typeof RianRoute
+  '/v10CtlPanel': typeof V10CtlPanelRoute
   '/v8': typeof V8RouteWithChildren
   '/v8test': typeof V8testRouteWithChildren
   '/v9': typeof V9RouteWithChildren
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/kangxuan': typeof KangxuanRoute
   '/rian': typeof RianRoute
+  '/v10CtlPanel': typeof V10CtlPanelRoute
   '/v8': typeof V8RouteWithChildren
   '/v8test': typeof V8testRouteWithChildren
   '/v9': typeof V9RouteWithChildren
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/'
     | '/kangxuan'
     | '/rian'
+    | '/v10CtlPanel'
     | '/v8'
     | '/v8test'
     | '/v9'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/'
     | '/kangxuan'
     | '/rian'
+    | '/v10CtlPanel'
     | '/v8'
     | '/v8test'
     | '/v9'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/'
     | '/kangxuan'
     | '/rian'
+    | '/v10CtlPanel'
     | '/v8'
     | '/v8test'
     | '/v9'
@@ -223,6 +235,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   KangxuanRoute: typeof KangxuanRoute
   RianRoute: typeof RianRoute
+  V10CtlPanelRoute: typeof V10CtlPanelRoute
   V8Route: typeof V8RouteWithChildren
   V8testRoute: typeof V8testRouteWithChildren
   V9Route: typeof V9RouteWithChildren
@@ -251,6 +264,13 @@ declare module '@tanstack/react-router' {
       path: '/rian'
       fullPath: '/rian'
       preLoaderRoute: typeof RianRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v10CtlPanel': {
+      id: '/v10CtlPanel'
+      path: '/v10CtlPanel'
+      fullPath: '/v10CtlPanel'
+      preLoaderRoute: typeof V10CtlPanelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/v8': {
@@ -401,6 +421,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   KangxuanRoute: KangxuanRoute,
   RianRoute: RianRoute,
+  V10CtlPanelRoute: V10CtlPanelRoute,
   V8Route: V8RouteWithChildren,
   V8testRoute: V8testRouteWithChildren,
   V9Route: V9RouteWithChildren,

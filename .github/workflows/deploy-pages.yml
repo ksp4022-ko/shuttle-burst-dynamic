@@ -64,6 +64,9 @@ jobs:
           cp dist/client/index.html dist/client/v9test/index.html
           cp dist/client/index.html dist/client/v9test/rian/index.html
           cp dist/client/index.html dist/client/v9test/kangxuan/index.html
+          # /v10CtlPanel = V6 admin panel (see docs/V6_ADMIN_BASELINE.md).
+          mkdir -p dist/client/v10CtlPanel
+          cp dist/client/index.html dist/client/v10CtlPanel/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
