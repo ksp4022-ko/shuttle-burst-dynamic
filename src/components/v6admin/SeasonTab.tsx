@@ -75,6 +75,8 @@ export function SeasonTab({
   const [groupId, setGroupId] = useState("");
   const [data, setData] = useState<Loaded | null>(null);
   const [confirm, setConfirm] = useState<SeasonConfirmData | null>(null);
+  const [confirmError, setConfirmError] = useState("");
+  const [confirmReload, setConfirmReload] = useState(0);
 
   // Keep the group valid for the chosen season (prefer one with a season setting).
   useEffect(() => {
@@ -85,16 +87,19 @@ export function SeasonTab({
     );
   }, [groupChoices, groupId, seasonId]);
 
+  // A failed load is shown as an error, never as "no settings".
   useEffect(() => {
     let alive = true;
+    setConfirm(null);
+    setConfirmError("");
     adminApi
       .seasonConfirm(password, siteId)
       .then((d) => alive && setConfirm(d))
-      .catch(() => alive && setConfirm({ settings: [], seasons: [], groups: [] }));
+      .catch((err) => alive && setConfirmError(errText(err)));
     return () => {
       alive = false;
     };
-  }, [password, siteId]);
+  }, [password, siteId, confirmReload]);
 
   useEffect(() => {
     if (!seasonId || !groupId) return;
@@ -180,6 +185,8 @@ export function SeasonTab({
             password={password}
             siteId={siteId}
             loaded={Boolean(confirm)}
+            loadError={confirmError}
+            onRetry={() => setConfirmReload((k) => k + 1)}
             settings={confirmSettings}
             seasons={confirm?.seasons || seasons}
           />
@@ -472,10 +479,16 @@ function SettlementSection({ management }: { management: SeasonManagementData | 
         {s.missingUsageCount ?? 0}；未關閉 {s.openEventCount ?? 0}；排除測試{" "}
         {s.testExcludedCount ?? 0}
       </p>
-      {(s.blockReasons || []).length ? (
-        <div className="ctl-notice">{(s.blockReasons || []).join("；")}</div>
-      ) : (
+      {s.canFinalize === true ? (
         <div className="ctl-notice is-ok">正式季末結算條件已完成。</div>
+      ) : (
+        <div className="ctl-notice">
+          {(s.blockReasons || []).length
+            ? (s.blockReasons || []).join("；")
+            : (s.eventCount ?? 0) === 0
+              ? "本季尚無正式聚會，暫不能結算。"
+              : "尚不能進行正式季末結算。"}
+        </div>
       )}
       {(s.eventBreakdown || []).length ? (
         <ul className="ctl-rows">
@@ -529,12 +542,16 @@ function ConfirmSection({
   password,
   siteId,
   loaded,
+  loadError,
+  onRetry,
   settings,
   seasons,
 }: {
   password: string;
   siteId: string;
   loaded: boolean;
+  loadError: string;
+  onRetry: () => void;
   settings: SeasonConfirmData["settings"];
   seasons: AdminSeason[];
 }) {
@@ -559,6 +576,17 @@ function ConfirmSection({
     };
   }, [password, siteId, settingId]);
 
+  if (loadError)
+    return (
+      <Section title="季打確認" note="讀取失敗">
+        <div className="ctl-error">
+          {loadError}{" "}
+          <button className="ctl-btn-ghost" type="button" onClick={onRetry}>
+            重試
+          </button>
+        </div>
+      </Section>
+    );
   if (!loaded) return null;
   return (
     <Section

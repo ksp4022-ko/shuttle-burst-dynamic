@@ -47,6 +47,7 @@ const CTL_CSS = `
   padding: 5px 12px; font-size: 14px; font-weight: 700; cursor: pointer;
 }
 .ctl-site.is-on { background: #ffd45c; color: var(--ink); }
+.ctl-site:disabled, .ctl-logout:disabled { opacity: .5; cursor: default; }
 .ctl-logout {
   border: 1px solid rgba(255,255,255,.35); background: transparent; color: #fff;
   border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer;
@@ -58,6 +59,8 @@ const CTL_CSS = `
   padding: 12px 16px calc(var(--dock-h) + max(16px, env(safe-area-inset-bottom)) + 16px);
   display: grid; gap: 12px;
 }
+.ctl-tab { display: grid; gap: 12px; }
+.ctl-tab[hidden] { display: none; }
 .ctl-card {
   background: var(--card); border: 1.5px solid var(--line); border-radius: 16px;
   padding: 12px 14px;
@@ -204,10 +207,11 @@ const CTL_CSS = `
 .ctl-btn.is-plain { background: var(--card); }
 
 /* ---------- Sheet ---------- */
-.ctl-sheet-wrap { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
+.ctl-sheet-wrap { position: fixed; inset: 0; z-index: 50; overscroll-behavior: contain; display: flex; align-items: flex-end; justify-content: center; }
 .ctl-sheet-scrim { position: absolute; inset: 0; border: 0; background: rgba(31,26,23,.45); cursor: default; }
 .ctl-sheet {
   position: relative; width: 100%; max-width: 560px; max-height: 88dvh; overflow: auto;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   background: var(--paper); border-radius: 22px 22px 0 0; border-top: 2px solid var(--ink);
   padding: 14px 16px max(18px, env(safe-area-inset-bottom));
   animation: ctl-sheet-in .2s ease-out both;

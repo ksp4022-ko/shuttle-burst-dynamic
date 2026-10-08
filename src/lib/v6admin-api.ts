@@ -87,7 +87,8 @@ const enc = encodeURIComponent;
 export type AdminSite = { id: string; name: string; status?: string; permission?: string };
 export type AdminSitesData = { admin?: { id?: string; name?: string }; sites: AdminSite[] };
 
-export type AdminEventRow = {
+// Event fields as returned by the Worker's getEvent (overview).
+export type AdminEvent = {
   id: string;
   siteId: string;
   seasonId: string | null;
@@ -102,6 +103,10 @@ export type AdminEventRow = {
   eventKind?: string;
   ballType?: string;
   eventNote?: string;
+};
+
+// Dashboard list rows: the event plus per-event counts.
+export type AdminEventRow = AdminEvent & {
   confirmedCount: number;
   waitingCount: number;
   leaveCount: number;
@@ -221,7 +226,7 @@ export type UsageInput = {
 };
 
 export type EventOverview = {
-  event: AdminEventRow;
+  event: AdminEvent;
   roster: {
     fixedConfirmed: RosterPerson[];
     tempConfirmed: RosterPerson[];
@@ -523,12 +528,13 @@ export function taipeiToday(): string {
 }
 
 // Default event: the nearest official, not-cancelled event today or later;
-// otherwise the most recent past one.
+// otherwise the most recent past one. Null when every event is cancelled
+// (those stay selectable by hand).
 export function pickDefaultEvent(events: AdminEventRow[]): AdminEventRow | null {
   const live = events.filter((e) => e.status !== "cancelled");
   const pool = live.filter((e) => (e.eventKind || "official") === "official");
   const list = pool.length ? pool : live;
-  if (!list.length) return events[0] || null;
+  if (!list.length) return null;
   const today = taipeiToday();
   const upcoming = list
     .filter((e) => e.eventDate >= today)

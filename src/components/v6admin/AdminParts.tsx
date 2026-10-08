@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 // Small shared pieces for the V6 admin panel tabs.
 
@@ -63,6 +63,35 @@ export function Section({
   );
 }
 
+// Panel-wide single-write lock (see AdminApp). acquire() is synchronous so a
+// double tap cannot start two writes.
+export type WriteLock = { acquire: () => boolean; release: () => void };
+
+// Freeze the page behind an open sheet. iOS Safari ignores overflow:hidden on
+// body, so pin the body at its scroll offset and restore it on close.
+function useBodyScrollLock() {
+  useEffect(() => {
+    const body = document.body;
+    const y = window.scrollY;
+    const prev = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      overflow: body.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${y}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.overflow = "hidden";
+    return () => {
+      Object.assign(body.style, prev);
+      window.scrollTo(0, y);
+    };
+  }, []);
+}
+
 // Bottom sheet used for every confirm / edit step before a write.
 export function Sheet({
   title,
@@ -75,6 +104,7 @@ export function Sheet({
   busy?: boolean | undefined;
   children: ReactNode;
 }) {
+  useBodyScrollLock();
   return (
     <div className="ctl-sheet-wrap" role="dialog" aria-modal="true" aria-label={title}>
       <button

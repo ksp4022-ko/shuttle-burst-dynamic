@@ -12,7 +12,7 @@ import {
   type TempPayment,
   type UsageInput,
 } from "@/lib/v6admin-api";
-import { Metric, SegButton, Sheet, Toast, type ToastState } from "./AdminParts";
+import { Metric, SegButton, Sheet, Toast, type ToastState, type WriteLock } from "./AdminParts";
 
 // ① 當次聚會: event picker, head-count summary, full roster, temp-fee
 // collection, actual expense and the day's profit (GET overview), plus the
@@ -37,38 +37,51 @@ export function EventTab({
   eventId,
   onEventChange,
   onDashboardRefresh,
+  writeLock,
+  writing,
 }: {
   password: string;
   dashboard: DashboardData;
   eventId: string;
   onEventChange: (id: string) => void;
   onDashboardRefresh: () => void;
+  writeLock: WriteLock;
+  writing: boolean;
 }) {
   const [overview, setOverview] = useState<EventOverview | null>(null);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const current = useRef(eventId);
   current.current = eventId;
+  // Every overview request takes a number; only the newest one may update
+  // state, so a slow older response can never overwrite newer data.
+  const seqRef = useRef(0);
 
   useEffect(() => {
     if (!eventId) return;
-    let alive = true;
+    const counter = seqRef;
+    const seq = ++seqRef.current;
     setOverview(null);
     setError("");
     adminApi
       .eventOverview(password, eventId)
-      .then((data) => alive && setOverview(data))
-      .catch((err) => alive && setError(errText(err)));
+      .then((data) => {
+        if (seq === seqRef.current) setOverview(data);
+      })
+      .catch((err) => {
+        if (seq === seqRef.current) setError(errText(err));
+      });
     return () => {
-      alive = false;
+      counter.current++; // invalidate this request
     };
   }, [password, eventId, reloadKey]);
 
   // Re-read after a write without blanking the page.
   const refresh = useCallback(async () => {
     const id = current.current;
+    const seq = ++seqRef.current;
     const data = await adminApi.eventOverview(password, id);
-    if (current.current === id) setOverview(data);
+    if (seq === seqRef.current && current.current === id) setOverview(data);
   }, [password]);
 
   const events = [...dashboard.events].sort((a, b) => b.eventDate.localeCompare(a.eventDate));
@@ -81,9 +94,14 @@ export function EventTab({
           id="ctl-event"
           className="ctl-select"
           value={eventId}
+          disabled={writing}
           onChange={(e) => onEventChange(e.target.value)}
         >
-          {!events.length ? <option value="">（沒有聚會）</option> : null}
+          {!events.length ? (
+            <option value="">（沒有聚會）</option>
+          ) : !eventId ? (
+            <option value="">請選擇聚會</option>
+          ) : null}
           {events.map((e) => (
             <option key={e.id} value={e.id}>
               {shortDate(e.eventDate)} {e.name}
@@ -115,6 +133,8 @@ export function EventTab({
           onReload={() => setReloadKey((k) => k + 1)}
           onRefresh={refresh}
           onDashboardRefresh={onDashboardRefresh}
+          writeLock={writeLock}
+          writing={writing}
         />
       )}
     </>
@@ -127,17 +147,21 @@ function EventBody({
   onReload,
   onRefresh,
   onDashboardRefresh,
+  writeLock,
+  writing,
 }: {
   password: string;
   overview: EventOverview;
   onReload: () => void;
   onRefresh: () => Promise<void>;
   onDashboardRefresh: () => void;
+  writeLock: WriteLock;
+  writing: boolean;
 }) {
   const { event, roster, payments, finance } = overview;
   const [view, setView] = useState<RosterView>("confirmed");
   const [pending, setPending] = useState<Pending | null>(null);
-  const [busy, setBusy] = useState(false);
+  const busy = writing;
   const [sheetError, setSheetError] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,29 +180,34 @@ function EventBody({
   }
 
   function open(p: Pending) {
+    if (writing) return;
     setSheetError("");
     setPending(p);
   }
 
+  // The panel-wide lock is held from the POST until the re-read has landed,
+  // so nothing can be written against stale data in between.
   async function run(work: () => Promise<unknown>, okText: string, dashboardToo = false) {
-    setBusy(true);
+    if (!writeLock.acquire()) return;
     setSheetError("");
     try {
-      await work();
-    } catch (err) {
-      setSheetError(errText(err));
-      setBusy(false);
-      return;
+      try {
+        await work();
+      } catch (err) {
+        setSheetError(errText(err));
+        return;
+      }
+      setPending(null);
+      showToast(okText);
+      if (dashboardToo) onDashboardRefresh();
+      try {
+        await onRefresh();
+      } catch {
+        showToast("已完成，但重新讀取失敗，請按重新整理。", "error");
+      }
+    } finally {
+      writeLock.release();
     }
-    setPending(null);
-    setBusy(false);
-    showToast(okText);
-    try {
-      await onRefresh();
-    } catch {
-      showToast("已完成，但重新讀取失敗，請按重新整理。", "error");
-    }
-    if (dashboardToo) onDashboardRefresh();
   }
 
   const isOpen = event.status === "open";
@@ -198,6 +227,7 @@ function EventBody({
 
   return (
     <>
+      {writing && !pending ? <div className="ctl-notice">處理中，請稍候…</div> : null}
       <section className="ctl-card">
         <div className="ctl-event-head">
           <h2>
@@ -226,10 +256,15 @@ function EventBody({
           <Metric label="臨打未付" value={unpaid.length} tone={unpaid.length ? "red" : undefined} />
         </div>
         <div className="ctl-actions">
-          <button className="ctl-act" type="button" onClick={() => open({ kind: "push" })}>
+          <button
+            className="ctl-act"
+            type="button"
+            disabled={writing}
+            onClick={() => open({ kind: "push" })}
+          >
             推送名單到 LINE
           </button>
-          <button className="ctl-btn-ghost" type="button" onClick={onReload}>
+          <button className="ctl-btn-ghost" type="button" onClick={onReload} disabled={writing}>
             重新整理
           </button>
         </div>
@@ -263,6 +298,7 @@ function EventBody({
                 person={p}
                 view={view}
                 canAct={isOpen}
+                disabled={writing}
                 onAction={(kind) => open({ kind, person: p })}
               />
             ))}
@@ -299,6 +335,7 @@ function EventBody({
                   <button
                     className="ctl-act is-done"
                     type="button"
+                    disabled={writing}
                     onClick={() => open({ kind: "unpay", payment: p })}
                   >
                     已收 ✓
@@ -307,6 +344,7 @@ function EventBody({
                   <button
                     className="ctl-act is-pay"
                     type="button"
+                    disabled={writing}
                     onClick={() => open({ kind: "pay", payment: p })}
                   >
                     收費
@@ -351,7 +389,12 @@ function EventBody({
           </p>
         ) : null}
         <div className="ctl-actions">
-          <button className="ctl-act is-pay" type="button" onClick={() => open({ kind: "usage" })}>
+          <button
+            className="ctl-act is-pay"
+            type="button"
+            disabled={writing}
+            onClick={() => open({ kind: "usage" })}
+          >
             {breakdown ? "修改支出" : "填寫支出"}
           </button>
         </div>
@@ -397,12 +440,18 @@ function EventBody({
             <button
               className="ctl-act is-danger"
               type="button"
+              disabled={writing}
               onClick={() => open({ kind: "close" })}
             >
               關閉聚會
             </button>
           ) : event.status === "closed" ? (
-            <button className="ctl-act" type="button" onClick={() => open({ kind: "reopen" })}>
+            <button
+              className="ctl-act"
+              type="button"
+              disabled={writing}
+              onClick={() => open({ kind: "reopen" })}
+            >
               重新開放
             </button>
           ) : null}
@@ -739,12 +788,14 @@ function PersonRow({
   person,
   view,
   canAct,
+  disabled,
   onAction,
 }: {
   index: number;
   person: RosterPerson;
   view: RosterView;
   canAct: boolean;
+  disabled: boolean;
   onAction: (kind: "leave" | "return" | "cancelTemp") => void;
 }) {
   const fixed = person.signupType === "fixed";
@@ -760,11 +811,21 @@ function PersonRow({
       {canAct ? (
         fixed ? (
           view === "leave" ? (
-            <button className="ctl-act" type="button" onClick={() => onAction("return")}>
+            <button
+              className="ctl-act"
+              type="button"
+              disabled={disabled}
+              onClick={() => onAction("return")}
+            >
               消假
             </button>
           ) : (
-            <button className="ctl-act" type="button" onClick={() => onAction("leave")}>
+            <button
+              className="ctl-act"
+              type="button"
+              disabled={disabled}
+              onClick={() => onAction("leave")}
+            >
               請假
             </button>
           )
@@ -772,6 +833,7 @@ function PersonRow({
           <button
             className="ctl-act is-danger"
             type="button"
+            disabled={disabled}
             onClick={() => onAction("cancelTemp")}
           >
             取消

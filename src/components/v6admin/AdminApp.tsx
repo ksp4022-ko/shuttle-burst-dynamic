@@ -1,7 +1,16 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { AdminStyles } from "./AdminStyles";
 import { EventTab } from "./EventTab";
 import { SeasonTab } from "./SeasonTab";
+import type { WriteLock } from "./AdminParts";
 import {
   adminApi,
   AdminApiError,
@@ -120,20 +129,44 @@ function Panel({
     return sites.some((s) => s.id === pref) ? pref : sites[0]?.id || "";
   });
   const [tab, setTab] = useState<TabKey>("event");
+  const [seasonVisited, setSeasonVisited] = useState(false);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [eventId, setEventId] = useState("");
+  // Only the newest dashboard request may update state (full load or silent refresh).
+  const dashSeq = useRef(0);
+
+  // One write at a time for the whole panel. Lives here (not in a tab) so
+  // switching dock tabs cannot drop the lock while a request is in flight.
+  const lockRef = useRef(false);
+  const [writing, setWriting] = useState(false);
+  const writeLock = useMemo<WriteLock>(
+    () => ({
+      acquire: () => {
+        if (lockRef.current) return false;
+        lockRef.current = true;
+        setWriting(true);
+        return true;
+      },
+      release: () => {
+        lockRef.current = false;
+        setWriting(false);
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (!siteId) return;
-    let alive = true;
+    const counter = dashSeq;
+    const seq = ++dashSeq.current;
     setDashboard(null);
     setError("");
     adminApi
       .dashboard(password, siteId)
       .then((data) => {
-        if (!alive) return;
+        if (seq !== dashSeq.current) return;
         setDashboard(data);
         setEventId((cur) =>
           cur && data.events.some((e) => e.id === cur)
@@ -141,28 +174,38 @@ function Panel({
             : pickDefaultEvent(data.events)?.id || "",
         );
       })
-      .catch((err) => alive && setError(err instanceof AdminApiError ? err.message : "讀取失敗。"));
+      .catch((err) => {
+        if (seq !== dashSeq.current) return;
+        setError(err instanceof AdminApiError ? err.message : "讀取失敗。");
+      });
     return () => {
-      alive = false;
+      counter.current++; // invalidate this request
     };
   }, [password, siteId, reloadKey]);
 
   // Silent re-read after a write (event status / counts in the picker).
-  function refreshDashboard() {
-    const site = siteId;
+  const refreshDashboard = useCallback(() => {
+    const seq = ++dashSeq.current;
     adminApi
-      .dashboard(password, site)
-      .then((data) => setDashboard((cur) => (cur && cur.site.id === site ? data : cur)))
+      .dashboard(password, siteId)
+      .then((data) => {
+        if (seq === dashSeq.current) setDashboard(data);
+      })
       .catch(() => {
         /* keep the current list; the next full reload will retry */
       });
-  }
+  }, [password, siteId]);
 
   function chooseSite(id: string) {
-    if (id === siteId) return;
+    if (id === siteId || writing) return;
     setEventId("");
     setSiteId(id);
     writeSitePref(id);
+  }
+
+  function chooseTab(next: TabKey) {
+    if (next === "season") setSeasonVisited(true);
+    setTab(next);
   }
 
   let body: ReactNode;
@@ -177,26 +220,36 @@ function Panel({
       </div>
     );
   else if (!dashboard) body = <div className="ctl-loading">讀取中…</div>;
-  else if (tab === "event")
-    body = (
-      <EventTab
-        password={password}
-        dashboard={dashboard}
-        eventId={eventId}
-        onEventChange={setEventId}
-        onDashboardRefresh={refreshDashboard}
-      />
-    );
-  else if (tab === "season")
-    body = <SeasonTab key={siteId} password={password} siteId={siteId} dashboard={dashboard} />;
   else
+    // Tabs stay mounted (hidden) so an in-flight write finishes and refreshes
+    // in the same component it started in.
     body = (
-      <div className="ctl-card">
-        <div className="ctl-card-title">
-          <h2>{tab === "manage" ? "聚會管理" : "系統設定"}</h2>
+      <>
+        <div className="ctl-tab" hidden={tab !== "event"}>
+          <EventTab
+            password={password}
+            dashboard={dashboard}
+            eventId={eventId}
+            onEventChange={setEventId}
+            onDashboardRefresh={refreshDashboard}
+            writeLock={writeLock}
+            writing={writing}
+          />
         </div>
-        <p className="ctl-empty">這一頁會在下一階段（P2）加入。</p>
-      </div>
+        {seasonVisited ? (
+          <div className="ctl-tab" hidden={tab !== "season"}>
+            <SeasonTab key={siteId} password={password} siteId={siteId} dashboard={dashboard} />
+          </div>
+        ) : null}
+        {tab === "manage" || tab === "system" ? (
+          <div className="ctl-card">
+            <div className="ctl-card-title">
+              <h2>{tab === "manage" ? "聚會管理" : "系統設定"}</h2>
+            </div>
+            <p className="ctl-empty">這一頁會在下一階段（P2）加入。</p>
+          </div>
+        ) : null}
+      </>
     );
 
   return (
@@ -213,6 +266,7 @@ function Panel({
                   role="tab"
                   aria-selected={s.id === siteId}
                   className={`ctl-site${s.id === siteId ? " is-on" : ""}`}
+                  disabled={writing}
                   onClick={() => chooseSite(s.id)}
                 >
                   {s.name || s.id}
@@ -222,13 +276,13 @@ function Panel({
           ) : (
             <div style={{ marginLeft: "auto" }} />
           )}
-          <button className="ctl-logout" type="button" onClick={onLogout}>
+          <button className="ctl-logout" type="button" onClick={onLogout} disabled={writing}>
             登出
           </button>
         </div>
       </header>
       <main className="ctl-main">{body}</main>
-      <Dock tab={tab} onChange={setTab} />
+      <Dock tab={tab} onChange={chooseTab} />
     </>
   );
 }
