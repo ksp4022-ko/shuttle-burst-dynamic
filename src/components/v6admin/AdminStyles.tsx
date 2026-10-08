@@ -273,6 +273,19 @@ html.ctl-lock-x body {
 .ctl-act.is-fix { min-width: 44px; min-height: 32px; background: #fff; box-shadow: 0 2px 0 var(--ink); }
 .ctl-act.is-fix:active { transform: translateY(2px); box-shadow: none; }
 
+/* ---------- ④ LINE 認領對照表 (T-05) ---------- */
+.ctl-claim-table { display: grid; font-size: 14px; }
+.ctl-claim-row {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1.15fr) 52px;
+  gap: 6px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line);
+}
+.ctl-claim-row:first-child { border-top: 0; }
+.ctl-claim-row > * { min-width: 0; overflow-wrap: anywhere; }
+.ctl-claim-row strong { font-weight: 800; }
+.ctl-claim-row small { display: block; color: var(--muted); font-size: 11px; }
+.ctl-claim-row.is-head { font-size: 12px; font-weight: 700; color: var(--muted); padding-top: 2px; }
+.ctl-claim-row .ctl-act { padding: 5px 8px; }
+
 /* ---------- Toast ---------- */
 .ctl-toast {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 60;

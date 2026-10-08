@@ -323,23 +323,27 @@ export function SystemTab({
           <div className="ctl-loading">讀取中…</div>
         ) : (
           <>
-            <p className="ctl-sub">季打成員 {claims.claims.length} 人（自訂稱呼 ← LINE 名稱）</p>
+            {/* T-05: three columns so a name on the roster can be matched to its
+                季打名 and LINE name at a glance. 名單顯示 = what the V9 roster
+                shows (custom name, else 季打名; V9-025). */}
+            <p className="ctl-sub">季打成員 {claims.claims.length} 人</p>
             {claims.claims.length ? (
-              <ul className="ctl-rows">
-                {claims.claims.map((c) => {
-                  const called = c.confirmedName || c.memberName || "";
-                  return (
-                    <li className="ctl-row" key={c.lineIdentityId}>
-                      <span className="ctl-row-name is-wrap">
-                        {called}
-                        <small>
-                          ← LINE {c.lineDisplayName || "—"}
-                          {c.memberName && c.memberName !== called
-                            ? ` · 季打名 ${c.memberName}`
-                            : ""}
-                          {c.memberStatus === "disabled" ? " · 季打名冊已停用" : ""}
-                        </small>
-                      </span>
+              <div className="ctl-claim-table" role="table" aria-label="季打 LINE 認領">
+                <div className="ctl-claim-row is-head" role="row">
+                  <span role="columnheader">名單顯示</span>
+                  <span role="columnheader">季打名</span>
+                  <span role="columnheader">LINE 名稱</span>
+                  <span role="columnheader" aria-label="操作" />
+                </div>
+                {claims.claims.map((c) => (
+                  <div className="ctl-claim-row" role="row" key={c.lineIdentityId}>
+                    <strong role="cell">{c.confirmedName || c.memberName || "—"}</strong>
+                    <span role="cell">
+                      {c.memberName || "—"}
+                      {c.memberStatus === "disabled" ? <small>（名冊已停用）</small> : null}
+                    </span>
+                    <span role="cell">{c.lineDisplayName || "—"}</span>
+                    <span role="cell">
                       <button
                         className="ctl-act is-danger"
                         type="button"
@@ -348,32 +352,37 @@ export function SystemTab({
                       >
                         解除
                       </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                    </span>
+                  </div>
+                ))}
+              </div>
             ) : (
               <p className="ctl-empty">目前沒有季打成員用 LINE 認領。</p>
             )}
 
             <p className="ctl-sub">
               臨打成員
-              {claims.tempIdentities ? ` ${claims.tempIdentities.length} 人` : ""}（自訂稱呼 ← LINE
-              名稱）
+              {claims.tempIdentities ? ` ${claims.tempIdentities.length} 人` : ""}
             </p>
             {!claims.tempIdentities ? (
               <p className="ctl-empty">Worker 更新（V6-026）部署後才會顯示。</p>
             ) : claims.tempIdentities.length ? (
-              <ul className="ctl-rows">
+              <div className="ctl-claim-table" role="table" aria-label="臨打 LINE 身分">
+                <div className="ctl-claim-row is-head" role="row">
+                  <span role="columnheader">名單顯示</span>
+                  <span role="columnheader">季打名</span>
+                  <span role="columnheader">LINE 名稱</span>
+                  <span role="columnheader" aria-label="操作" />
+                </div>
                 {claims.tempIdentities.map((t) => (
-                  <li className="ctl-row" key={t.lineIdentityId}>
-                    <span className="ctl-row-name is-wrap">
-                      {t.confirmedName || "（未填稱呼）"}
-                      <small>← LINE {t.lineDisplayName || "—"}</small>
-                    </span>
-                  </li>
+                  <div className="ctl-claim-row" role="row" key={t.lineIdentityId}>
+                    <strong role="cell">{t.confirmedName || "（未填稱呼）"}</strong>
+                    <span role="cell">—</span>
+                    <span role="cell">{t.lineDisplayName || "—"}</span>
+                    <span role="cell" />
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : (
               <p className="ctl-empty">目前沒有臨打成員用 LINE 登入。</p>
             )}
