@@ -31,7 +31,6 @@ import { V9JoinContent, V9RepickContent } from "./V9IdentitySheet";
 import { confirmV8LineProfile } from "@/lib/v8-line-auth";
 import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { v9PreloadArt } from "./V9Mascot";
-import { useV9Test } from "./useV9Test";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 
 // OnCourt (V9) -- Control Deck UX over the V8 API (docs/V9_BASELINE.md).
@@ -139,11 +138,10 @@ export function V9App() {
       eventId: selectedEventId,
     });
 
-  // V9-021 (/v9test): the admin can look at someone else's page, read-only.
+  // V9-021: the admin can look at someone else's page, read-only.
   // Their 本場 status comes from the same roster (季打) or from the admin's
   // view of this meetup's temp signups (臨打); nothing is ever submitted.
-  const test = useV9Test();
-  const isAdmin = test && lineIdentity?.role === "admin" && Boolean(lineToken);
+  const isAdmin = lineIdentity?.role === "admin" && Boolean(lineToken);
   const [viewAs, setViewAs] = useState<V8LineIdentity | null>(null);
   const viewing = isAdmin && viewAs !== null;
   const viewIdentity = useMemo<CurrentIdentity | null>(() => {
