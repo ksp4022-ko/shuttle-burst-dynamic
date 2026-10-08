@@ -190,7 +190,7 @@ html.ctl-lock-x body {
   background: var(--card); border-top: 1.5px solid var(--line);
   padding: 6px 8px max(8px, env(safe-area-inset-bottom));
 }
-.ctl-dock-inner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; max-width: 560px; margin: 0 auto; }
+.ctl-dock-inner { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; max-width: 560px; margin: 0 auto; }
 .ctl-dock button {
   border: 0; background: transparent; border-radius: 12px; height: var(--dock-h) ;
   display: grid; place-items: center; align-content: center; gap: 2px;
@@ -249,6 +249,27 @@ html.ctl-lock-x body {
 .ctl-field.is-wide { grid-column: 1 / -1; }
 .ctl-field input { border: 1.5px solid var(--ink); border-radius: 10px; padding: 9px 10px; font-size: 16px; font-weight: 700; color: var(--ink); background: #fff; width: 100%; }
 .ctl-sheet-actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; }
+
+/* ---------- 收款 ---------- */
+.ctl-collect-search { display: grid; gap: 10px; }
+.ctl-rows > li > .ctl-row { border-top: 1px solid var(--line); }
+.ctl-rows > li:first-child > .ctl-row { border-top: 0; }
+.ctl-person { width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.ctl-row-amt.is-owe { color: var(--red); }
+.ctl-chev { color: var(--muted); font-size: 20px; }
+.ctl-collect-head { display: flex; justify-content: space-between; }
+.ctl-bill-row { align-items: flex-start; cursor: pointer; }
+.ctl-bill-row input { width: 22px; height: 22px; flex: none; margin-top: 1px; }
+.ctl-row-name small.ctl-bill-detail, .ctl-bill-detail { display: block; margin-left: 0; white-space: normal; }
+.ctl-person .ctl-row-name small, .ctl-bill-row .ctl-row-name small { display: block; margin-left: 0; }
+.ctl-check-all { font-size: 14px; margin-bottom: 4px; }
+.ctl-collect-bar {
+  position: sticky; z-index: 20; bottom: calc(var(--dock-h) + max(8px, env(safe-area-inset-bottom)) + 10px);
+  display: grid;
+}
+.ctl-collect-bar .ctl-btn { width: 100%; padding: 14px; font-size: 17px; }
+.ctl-btn:disabled { opacity: .55; cursor: default; }
+.ctl-result-bad { border-color: var(--red); }
 
 /* ---------- Toast ---------- */
 .ctl-toast {

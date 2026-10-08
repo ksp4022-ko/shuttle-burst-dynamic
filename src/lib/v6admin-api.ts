@@ -521,6 +521,80 @@ export type SeasonPaymentAudit = {
   relationLimitations?: { paymentsWithoutStableCreditRelation?: number };
 };
 
+// V6-027 (P7 一站式收款): people on a site and one person's bill. The bill is
+// the same payload as V9's /me/billing (Worker respondV8Billing).
+export type BillingPerson = {
+  personId: string;
+  kind: "line" | "member";
+  displayName: string;
+  lineDisplayName?: string | null;
+  identityType?: string | null;
+  memberId?: string | null;
+  memberName?: string | null;
+  groupName?: string | null;
+  memberStatus?: string;
+  seasonOutstanding: number;
+  guestOutstanding: number;
+  outstandingTotal: number;
+};
+
+export type BillRefundSource = {
+  creditId: string;
+  sourceSeasonName: string;
+  leaveCount: number;
+  refundUnitAmount: number;
+  refundAmount: number;
+  leaveDates: string[];
+  leaveDateComplete: boolean;
+};
+
+export type BillGuestItem = {
+  paymentId: string;
+  eventId: string;
+  eventDate: string;
+  eventName: string;
+  guestName: string;
+  signupKind: "own" | "proxy" | string;
+  amount: number;
+  status: string;
+  signupStatus?: string;
+  outstanding: number;
+  paidAt?: string | null;
+};
+
+export type BillSeasonItem = {
+  paymentId: string;
+  seasonId: string;
+  seasonName: string;
+  groupName: string;
+  baseSeasonFee: number;
+  refundCreditTotal: number;
+  finalPayableAmount: number;
+  status: string;
+  outstanding: number;
+  paidAt?: string | null;
+  refundSources: BillRefundSource[];
+};
+
+type BillPage<T> = { items: T[]; nextCursor: string | null; hasMore: boolean };
+
+export type PersonBillPage = {
+  totals: {
+    totalAmountDue: number;
+    seasonOutstandingTotal: number;
+    otherGuestOutstandingTotal: number;
+  };
+  guestLedger: BillPage<BillGuestItem>;
+  seasonPaymentHistory: BillPage<BillSeasonItem>;
+};
+
+export type PersonBill = {
+  totalAmountDue: number;
+  guestItems: BillGuestItem[];
+  seasonItems: BillSeasonItem[];
+  complete: boolean;
+};
+
 // GET/POST refund-adjustments: per member, which source-season events count
 // as leave for the refund credit (system result + manual include/exclude).
 export type RefundAdjustment = {
@@ -674,6 +748,21 @@ export const adminApi = {
       `/admin/sites/${enc(siteId)}/refund-adjustments/preview?sourceSeasonId=${enc(scope.sourceSeasonId)}&targetSeasonId=${enc(scope.targetSeasonId)}&groupId=${enc(scope.groupId)}&memberId=${enc(scope.memberId)}`,
       pw,
     ),
+  billingPeople: (pw: string, siteId: string) =>
+    adminGet<{ people: BillingPerson[] }>(`/admin/sites/${enc(siteId)}/billing-people`, pw),
+  personBillPage: (
+    pw: string,
+    siteId: string,
+    personId: string,
+    guestCursor: string | null,
+    seasonCursor: string | null,
+  ) =>
+    adminGet<PersonBillPage>(
+      `/admin/sites/${enc(siteId)}/billing-people/${enc(personId)}/billing?guestLimit=50&seasonLimit=50` +
+        (guestCursor ? `&guestCursor=${enc(guestCursor)}` : "") +
+        (seasonCursor ? `&seasonCursor=${enc(seasonCursor)}` : ""),
+      pw,
+    ),
   refundCreditAudit: (pw: string, siteId: string, seasonId: string, groupId: string) =>
     adminGet<RefundCreditAudit>(
       `/admin/sites/${enc(siteId)}/refund-credits/audit?seasonId=${enc(seasonId)}&groupId=${enc(groupId)}`,
@@ -698,6 +787,45 @@ export const adminApi = {
 // ---------- Write endpoints (P3: ① 當次聚會) ----------
 // Same requests as the Worker's /admin page. Roster actions go through the
 // public signup API with reason "admin_action", exactly like /admin does.
+
+// Whole bill: follow both ledgers' cursors (each page holds up to 50 of each;
+// a ledger that has ended keeps returning page 1, so items are de-duplicated).
+export async function loadPersonBill(
+  pw: string,
+  siteId: string,
+  personId: string,
+): Promise<PersonBill> {
+  const guest = new Map<string, BillGuestItem>();
+  const season = new Map<string, BillSeasonItem>();
+  let guestCursor: string | null = null;
+  let seasonCursor: string | null = null;
+  let guestDone = false;
+  let seasonDone = false;
+  let total = 0;
+  for (let page = 0; page < 10; page++) {
+    const d: PersonBillPage = await adminApi.personBillPage(
+      pw,
+      siteId,
+      personId,
+      guestCursor,
+      seasonCursor,
+    );
+    if (page === 0) total = d.totals.totalAmountDue;
+    if (!guestDone) for (const i of d.guestLedger.items) guest.set(i.paymentId, i);
+    if (!seasonDone) for (const i of d.seasonPaymentHistory.items) season.set(i.paymentId, i);
+    guestDone = guestDone || !d.guestLedger.hasMore;
+    seasonDone = seasonDone || !d.seasonPaymentHistory.hasMore;
+    if (guestDone && seasonDone) break;
+    if (!guestDone) guestCursor = d.guestLedger.nextCursor;
+    if (!seasonDone) seasonCursor = d.seasonPaymentHistory.nextCursor;
+  }
+  return {
+    totalAmountDue: total,
+    guestItems: [...guest.values()],
+    seasonItems: [...season.values()],
+    complete: guestDone && seasonDone,
+  };
+}
 
 export const adminWriteApi = {
   tempPaymentStatus: (pw: string, paymentId: string, status: "paid" | "unpaid", amount: number) =>

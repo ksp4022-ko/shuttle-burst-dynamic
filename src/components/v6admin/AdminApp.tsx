@@ -10,6 +10,7 @@ import {
 import { AdminStyles } from "./AdminStyles";
 import { EventTab } from "./EventTab";
 import { ManageTab } from "./ManageTab";
+import { CollectTab } from "./CollectTab";
 import { SeasonTab } from "./SeasonTab";
 import { SystemTab } from "./SystemTab";
 import type { WriteLock } from "@/lib/v6admin-write";
@@ -24,7 +25,7 @@ import {
 // /v10CtlPanel: V6 admin panel running in parallel with the Worker's /admin.
 // See docs/V6_ADMIN_BASELINE.md. The password lives only in React state.
 
-type TabKey = "event" | "manage" | "season" | "system";
+type TabKey = "event" | "collect" | "manage" | "season" | "system";
 
 const SITE_KEY = "v10CtlPanel:site";
 
@@ -169,6 +170,7 @@ function Panel({
   // Tabs mount on first visit and then stay mounted (hidden) — see below.
   const [visited, setVisited] = useState<Record<TabKey, boolean>>({
     event: true,
+    collect: false,
     manage: false,
     season: false,
     system: false,
@@ -297,6 +299,19 @@ function Panel({
             writing={writing}
           />
         </div>
+        {visited.collect ? (
+          <div className="ctl-tab" hidden={tab !== "collect"}>
+            <CollectTab
+              key={siteId}
+              password={password}
+              siteId={siteId}
+              dataVersion={dataVersion}
+              writeLock={writeLock}
+              writing={writing}
+              onDataChanged={markDataChanged}
+            />
+          </div>
+        ) : null}
         {visited.manage ? (
           <div className="ctl-tab" hidden={tab !== "manage"}>
             <ManageTab
@@ -401,6 +416,23 @@ const DOCK: { key: TabKey; label: string; icon: ReactNode }[] = [
         <circle cx="9" cy="8" r="3.2" />
         <path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" />
         <path d="M16 5.2a3 3 0 0 1 0 5.6M18 14.6c1.5.6 2.4 2 2.7 4.4" />
+      </svg>
+    ),
+  },
+  {
+    key: "collect",
+    label: "收款",
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="2.5" y="6" width="19" height="13" rx="2.5" />
+        <path d="M2.5 10.5h19M6.5 15h3" />
       </svg>
     ),
   },
