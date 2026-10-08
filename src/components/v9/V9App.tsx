@@ -33,7 +33,6 @@ import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-
 import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
-import { useV9Test } from "./useV9Test";
 import { v9EventPhase, type V9EventPhase } from "@/lib/v9-event-time";
 import { chooseV9InitialEvent, loadV9Events } from "@/lib/v9-events";
 
@@ -394,12 +393,11 @@ export function V9App() {
 
   // A 季打 row shows the member's confirmed LINE name (same as V8 ACTIVE).
   // Temp signups have no memberId, hence the truthy claimedMemberId check.
-  const test = useV9Test();
-  // V9-025 (/v9test): every 季打 row shows its own custom name (Worker
+  // V9-025: every 季打 row shows its own custom name (Worker
   // V6-029 roster claimedName), not just the viewer's own row.
   const displayName = (person: AlphaSignup) => {
     const claimedName = (person as AlphaSignup & { claimedName?: string | null }).claimedName;
-    if (test && person.signupType === "fixed" && claimedName) return claimedName;
+    if (person.signupType === "fixed" && claimedName) return claimedName;
     const claimedMemberId = lineIdentity?.claimedMemberId;
     if (!lineIdentity || !claimedMemberId || person.memberId !== claimedMemberId)
       return person.name;
