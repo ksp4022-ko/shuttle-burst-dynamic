@@ -235,6 +235,27 @@ const CTL_CSS = `
   padding: 9px 16px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,.2);
 }
 .ctl-toast.is-error { background: var(--red); }
+/* ---------- ② 聚會管理 / ④ 系統設定 ---------- */
+.ctl-event-row {
+  width: 100%; display: flex; align-items: center; gap: 6px; text-align: left;
+  border: 0; border-top: 1px solid var(--line); background: transparent; padding: 9px 0; cursor: pointer;
+}
+.ctl-rows li:first-child > .ctl-event-row { border-top: 0; }
+.ctl-event-row:disabled { opacity: .6; cursor: default; }
+.ctl-event-row-main { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.ctl-event-row-main strong { font-size: 15px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctl-event-row-main small { font-size: 12px; color: var(--muted); }
+.ctl-event-row::after { content: "›"; color: var(--muted); font-size: 20px; margin-left: 2px; }
+.ctl-menu { display: grid; gap: 10px; }
+.ctl-btn.is-danger-text { color: var(--red); border-color: var(--red); box-shadow: 0 3px 0 var(--red); }
+.ctl-field select {
+  border: 1.5px solid var(--ink); border-radius: 10px; padding: 9px 10px; font-size: 16px; font-weight: 700;
+  color: var(--ink); background: #fff; width: 100%;
+}
+.ctl-check { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; }
+.ctl-check.is-wide { grid-column: 1 / -1; }
+.ctl-check input { width: 20px; height: 20px; }
+.ctl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .ctl-readonly-tag { display: inline-block; margin-top: 2px; font-size: 12px; color: var(--muted); }
 `;
 

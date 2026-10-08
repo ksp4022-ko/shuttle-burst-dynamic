@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   adminApi,
-  AdminApiError,
   adminWriteApi,
-  isUnknownResult,
   eventStatusLabel,
   money,
   shortDate,
@@ -13,7 +11,8 @@ import {
   type TempPayment,
   type UsageInput,
 } from "@/lib/v6admin-api";
-import { Metric, SegButton, Sheet, Toast, type ToastState, type WriteLock } from "./AdminParts";
+import { Metric, SegButton, Sheet, Toast } from "./AdminParts";
+import { errText, runWrite, useToast, type WriteLock } from "@/lib/v6admin-write";
 
 // ① 當次聚會: event picker, head-count summary, full roster, temp-fee
 // collection, actual expense and the day's profit (GET overview), plus the
@@ -28,10 +27,6 @@ type Pending =
   | { kind: "leave" | "return" | "cancelTemp"; person: RosterPerson }
   | { kind: "close" | "reopen" | "push" | "usage" };
 
-function errText(err: unknown) {
-  return err instanceof AdminApiError ? err.message : "操作失敗。";
-}
-
 export function EventTab({
   password,
   dashboard,
@@ -39,6 +34,7 @@ export function EventTab({
   onEventChange,
   onDashboardRefresh,
   onDataChanged,
+  dataVersion,
   writeLock,
   writing,
 }: {
@@ -48,6 +44,8 @@ export function EventTab({
   onEventChange: (id: string) => void;
   onDashboardRefresh: () => Promise<void>;
   onDataChanged: () => void;
+  // Bumped by the panel after any write (also ② 聚會管理 edits/sync/delete).
+  dataVersion: number;
   writeLock: WriteLock;
   writing: boolean;
 }) {
@@ -86,6 +84,16 @@ export function EventTab({
     const data = await adminApi.eventOverview(password, id);
     if (seq === seqRef.current && current.current === id) setOverview(data);
   }, [password]);
+
+  // A write elsewhere (e.g. ② editing or syncing this event) may have changed
+  // the current event: re-read it quietly. Writes made here already re-read,
+  // the extra request is harmless (sequenced, newest wins).
+  const seenVersion = useRef(dataVersion);
+  useEffect(() => {
+    if (seenVersion.current === dataVersion) return;
+    seenVersion.current = dataVersion;
+    if (current.current) refresh().catch(() => {});
+  }, [dataVersion, refresh]);
 
   const events = [...dashboard.events].sort((a, b) => b.eventDate.localeCompare(a.eventDate));
 
@@ -169,21 +177,7 @@ function EventBody({
   const [pending, setPending] = useState<Pending | null>(null);
   const busy = writing;
   const [sheetError, setSheetError] = useState("");
-  const [toast, setToast] = useState<ToastState>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    },
-    [],
-  );
-
-  function showToast(text: string, tone: "ok" | "error" = "ok") {
-    setToast({ text, tone });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), tone === "error" ? 6000 : 2600);
-  }
+  const [toast, showToast] = useToast();
 
   function open(p: Pending) {
     if (writing) return;
@@ -191,47 +185,21 @@ function EventBody({
     setPending(p);
   }
 
-  // The panel-wide lock is held from the POST until every re-read it needs
-  // (overview, and the dashboard when counts/status change) has landed, so
-  // nothing can be written against stale data in between.
-  // A timed-out write has an unknown outcome: close the sheet, re-read, and
-  // let the admin check before doing anything again (never auto-retry).
-  async function run(work: () => Promise<unknown>, okText: string, dashboardToo = false) {
-    if (!writeLock.acquire()) return;
-    setSheetError("");
-    try {
-      // Unknown outcome (timeout, dropped connection, unreadable reply): the
-      // Worker may have applied it, so no retry from the sheet.
-      let unknown: AdminApiError | null = null;
-      try {
-        await work();
-      } catch (err) {
-        if (isUnknownResult(err)) {
-          unknown = err;
-        } else {
-          setSheetError(errText(err));
-          return;
-        }
-      }
-      setPending(null);
-      onDataChanged();
-      const reads = await Promise.allSettled([
+  // Shared write flow (lock, unknown-result handling, re-read): see runWrite.
+  function run(work: () => Promise<unknown>, okText: string, dashboardToo = false) {
+    return runWrite({
+      writeLock,
+      work,
+      okText,
+      reread: (unknown) => [
         onRefresh(),
         dashboardToo || unknown ? onDashboardRefresh() : Promise.resolve(),
-      ]);
-      const readFailed = reads.some((r) => r.status === "rejected");
-      if (unknown)
-        showToast(
-          readFailed
-            ? `${unknown.message}，重新讀取也失敗。請稍後按重新整理核對，不要直接重做。`
-            : `${unknown.message}。已重新讀取，請先核對畫面資料，不要直接重做。`,
-          "error",
-        );
-      else if (readFailed) showToast(`${okText}，但重新讀取失敗，請按重新整理。`, "error");
-      else showToast(okText);
-    } finally {
-      writeLock.release();
-    }
+      ],
+      onDataChanged,
+      onRejected: setSheetError,
+      onClose: () => setPending(null),
+      toast: showToast,
+    });
   }
 
   const isOpen = event.status === "open";

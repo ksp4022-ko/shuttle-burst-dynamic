@@ -1,4 +1,7 @@
 import { useEffect, type ReactNode } from "react";
+import type { ToastState } from "@/lib/v6admin-write";
+
+export type { ToastState, WriteLock } from "@/lib/v6admin-write";
 
 // Small shared pieces for the V6 admin panel tabs.
 
@@ -62,10 +65,6 @@ export function Section({
     </details>
   );
 }
-
-// Panel-wide single-write lock (see AdminApp). acquire() is synchronous so a
-// double tap cannot start two writes.
-export type WriteLock = { acquire: () => boolean; release: () => void };
 
 // Freeze the page behind an open sheet. iOS Safari ignores overflow:hidden on
 // body, so pin the body at its scroll offset and restore it on close.
@@ -131,8 +130,6 @@ export function Sheet({
     </div>
   );
 }
-
-export type ToastState = { text: string; tone: "ok" | "error" } | null;
 
 export function Toast({ toast }: { toast: ToastState }) {
   if (!toast) return null;
