@@ -437,6 +437,14 @@ const V9_CSS = `
 .v9-bill-detail-name { flex: 1; min-width: 0; overflow-wrap: anywhere; display: grid; }
 .v9-bill-detail-name small { color: var(--v9-muted); font-size: 12px; }
 .v9-bill-detail-money { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v9-bill-season { padding: 8px 10px; border-radius: 12px; background: var(--v9-paper); font-size: 14px; display: grid; gap: 6px; }
+.v9-bill-season-head { display: flex; align-items: center; gap: 8px; font-weight: 800; }
+.v9-bill-season-lines { margin: 0; display: grid; gap: 4px; padding-left: 6px; border-left: 3px solid #eadfca; }
+.v9-bill-season-lines > div { display: flex; justify-content: space-between; gap: 8px; color: var(--v9-muted); font-size: 13px; }
+.v9-bill-season-lines dt, .v9-bill-season-lines dd { margin: 0; }
+.v9-bill-season-lines dd { font-variant-numeric: tabular-nums; }
+.v9-bill-season-lines > div.is-due { color: var(--v9-ink); font-weight: 800; }
+.v9-bill-season-lines .v9-bill-detail-row { background: #fff; }
 .v9-bill-total { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding: 12px 14px; border: var(--v9-line); border-radius: 16px; background: var(--v9-orange); font-weight: 900; }
 .v9-skel {
   display: block; height: 14px; border-radius: 7px; background: #eee4d2;

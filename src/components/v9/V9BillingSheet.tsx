@@ -1,10 +1,16 @@
 import type { ReactNode } from "react";
 import { useV8PersonalBillingTest } from "@/hooks/use-v8-personal-billing-test";
-import type { V8BillingGuestItem, V8BillingRefundSource } from "@/lib/v8-personal-billing";
+import type {
+  V8BillingGuestItem,
+  V8BillingRefundSource,
+  V8BillingSeasonPayment,
+} from "@/lib/v8-personal-billing";
+import { useV9Test } from "./useV9Test";
 
 // 帳單 sheet body: the same hook and GET /me/billing data as the official V8 bill (B3).
-// Display only -- every amount and status is the backend's value; V9 never
-// adds, subtracts or derives anything.
+// Display only -- every amount and status is the backend's value. The one
+// sum V9 shows itself is 歷史未收 on /v9test (V9-020): earlier seasons' unpaid
+// fees, which the backend already counts in 本次應繳, plus the guest arrears.
 
 function money(value: number) {
   return `$${value.toLocaleString("en-US")}`;
@@ -52,6 +58,41 @@ function RefundRow({ source }: { source: V8BillingRefundSource }) {
       <span className="v9-bill-detail-money">
         {source.leaveCount} × {money(source.refundUnitAmount)} = {money(source.refundAmount)}
       </span>
+    </li>
+  );
+}
+
+// An earlier season still unpaid (V9-020): its fee, the leave credit it got
+// (with the leave dates) and what is owed, all as the backend gives them.
+function PastSeasonRow({ season }: { season: V8BillingSeasonPayment }) {
+  return (
+    <li className="v9-bill-season">
+      <div className="v9-bill-season-head">
+        <span className="v9-bill-detail-name">{season.seasonName} 季費</span>
+        <span className="v9-badge is-red">未繳</span>
+        <span className="v9-bill-detail-money">{money(season.outstanding)}</span>
+      </div>
+      <dl className="v9-bill-season-lines">
+        <div>
+          <dt>季費</dt>
+          <dd>{money(season.baseSeasonFee)}</dd>
+        </div>
+        <div>
+          <dt>請假抵扣</dt>
+          <dd>{season.refundCreditTotal ? `-${money(season.refundCreditTotal)}` : money(0)}</dd>
+        </div>
+        {season.refundSources.length > 0 && (
+          <ul className="v9-bill-detail-list">
+            {season.refundSources.map((source) => (
+              <RefundRow key={source.creditId} source={source} />
+            ))}
+          </ul>
+        )}
+        <div className="is-due">
+          <dt>應繳</dt>
+          <dd>{money(season.finalPayableAmount)}</dd>
+        </div>
+      </dl>
     </li>
   );
 }
@@ -105,6 +146,7 @@ export function V9BillingContent({
     ...(eventId ? { eventId } : {}),
   });
   const { state } = billing;
+  const test = useV9Test();
 
   let body: ReactNode;
   if (state.kind === "idle" || state.kind === "loading") {
@@ -138,6 +180,16 @@ export function V9BillingContent({
   } else {
     const { totals, currentGuestItems, guestLedger, seasonPaymentHistory } = state.billing;
     const season = seasonPaymentHistory.items[0] ?? null;
+    // Earlier seasons still unpaid (V9-020, /v9test): the backend counts them
+    // in 本次應繳; list them under 歷史未收 so the lines add up.
+    const pastSeasons = test
+      ? seasonPaymentHistory.items
+          .slice(1)
+          .filter((item) => item.status === "unpaid" && item.outstanding > 0)
+      : [];
+    const historyTotal =
+      totals.otherGuestOutstandingTotal +
+      pastSeasons.reduce((sum, item) => sum + item.outstanding, 0);
     body = (
       <>
         <div className="v9-bill-lines">
@@ -169,7 +221,14 @@ export function V9BillingContent({
               <p className="v9-muted">本場沒有臨打帳務</p>
             )}
           </BillLine>
-          <BillLine label="歷史未收" value={money(totals.otherGuestOutstandingTotal)}>
+          <BillLine label="歷史未收" value={money(historyTotal)}>
+            {pastSeasons.length > 0 && (
+              <ul className="v9-bill-detail-list">
+                {pastSeasons.map((item) => (
+                  <PastSeasonRow key={item.paymentId} season={item} />
+                ))}
+              </ul>
+            )}
             {guestLedger.items.length ? (
               <ul className="v9-bill-detail-list">
                 {guestLedger.items.map((item) => (
@@ -177,7 +236,7 @@ export function V9BillingContent({
                 ))}
               </ul>
             ) : (
-              <p className="v9-muted">沒有其他臨打帳務</p>
+              !pastSeasons.length && <p className="v9-muted">沒有其他臨打帳務</p>
             )}
             {guestLedger.hasMore && (
               <button
