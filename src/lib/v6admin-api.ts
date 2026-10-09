@@ -1048,19 +1048,29 @@ export const adminWriteApi = {
       pw,
       { seasonId, groupId },
     ),
-  // V6-031: deductLeaveRefund = the ③ 「扣除請假退費」 toggle.
+  // ③ 「扣除請假退費」 toggle (T-07: the refund is the computed leave amount,
+  // = the Worker's fixedLeaveIncome). 是: the Worker's default save already
+  // stores the attendance-only figures, so only a note is added. 否: V6-031
+  // deductLeaveRefund:false adds the leave income back.
   saveSeasonProfitLoss: (
     pw: string,
     siteId: string,
     seasonId: string,
     groupId: string,
-    deductLeaveRefund: boolean,
+    deduct: boolean,
+    leaveRefund: number,
   ) =>
-    adminPost(`/admin/sites/${enc(siteId)}/season-profit-loss/save`, pw, {
-      seasonId,
-      groupId,
-      deductLeaveRefund,
-    }),
+    adminPost(
+      `/admin/sites/${enc(siteId)}/season-profit-loss/save`,
+      pw,
+      deduct
+        ? {
+            seasonId,
+            groupId,
+            note: `v10_leave_refund_deducted;leaveRefund=${leaveRefund}`,
+          }
+        : { seasonId, groupId, deductLeaveRefund: false },
+    ),
   // V6-031 (P8): pay an unused leave credit back in cash, or undo that.
   cashRefund: (pw: string, creditId: string, action: "refund" | "undo") =>
     adminPost<{ creditId: string; status: "refunded" | "due"; refundedAt: string | null }>(

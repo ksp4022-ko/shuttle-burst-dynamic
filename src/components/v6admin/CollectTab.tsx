@@ -34,6 +34,8 @@ type ItemResult = {
   amount: number;
   state: "ok" | "failed" | "unknown" | "skipped";
   message?: string;
+  // Pill text when it went through: 已收 / 已退款 (a refund has a negative amount).
+  okLabel: string;
 };
 
 function itemLabel(it: Item) {
@@ -108,11 +110,7 @@ export function CollectTab({
   const [billError, setBillError] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [refundChecked, setRefundChecked] = useState<Set<string>>(new Set());
-  const [result, setResult] = useState<{
-    title: string;
-    okLabel: string;
-    rows: ItemResult[];
-  } | null>(null);
+  const [result, setResult] = useState<{ title: string; rows: ItemResult[] } | null>(null);
   const billSeq = useRef(0);
   const loadBill = useCallback(
     async (id: string) => {
@@ -177,7 +175,6 @@ export function CollectTab({
   const refundTotal = refunds.reduce((sum, r) => sum + r.refundAmount, 0);
 
   const [confirming, setConfirming] = useState(false);
-  const [refunding, setRefunding] = useState(false);
 
   // C4: 已繳紀錄 → fix → 改回未收 (same requests as ① / ③'s 取消已收).
   // P8: the same fix undoes a cash refund (back to 待退款).
@@ -194,99 +191,76 @@ export function CollectTab({
     setFixing({ label, amount, run, refund });
   }
 
-  // Record the picked refunds one by one, same rules as collect().
-  async function refundCash() {
-    if (!refundPicked.length || !writeLock.acquire()) return;
-    const results: ItemResult[] = [];
-    let stopped = false;
-    try {
-      for (const r of refundPicked) {
-        const base = { id: r.creditId, label: refundLabel(r), amount: r.refundAmount };
-        if (stopped) {
-          results.push({ ...base, state: "skipped" });
-          continue;
-        }
-        try {
-          await adminWriteApi.cashRefund(password, r.creditId, "refund");
-          results.push({ ...base, state: "ok" });
-        } catch (err) {
-          stopped = true;
-          results.push({
-            ...base,
-            state: isUnknownResult(err) ? "unknown" : "failed",
-            message: errText(err),
-          });
-        }
-      }
-      setRefunding(false);
-      setResult({ title: "退款結果", okLabel: "已退款", rows: results });
-      onDataChanged();
-      const reads = await Promise.allSettled([loadBill(personId), loadPeople()]);
-      const readFailed = reads.some((x) => x.status === "rejected");
-      const ok = results.filter((x) => x.state === "ok");
-      const okSum = ok.reduce((sum, x) => sum + x.amount, 0);
-      if (!stopped)
-        showToast(
-          readFailed
-            ? `已退款 ${ok.length} 筆 ${money(okSum)}，但重新讀取失敗，請按重新整理。`
-            : `已退款 ${ok.length} 筆 ${money(okSum)}`,
-        );
-      else
-        showToast(
-          `已退款 ${ok.length} 筆 ${money(okSum)}；有一筆未完成${results.some((x) => x.state === "skipped") ? "，後面的沒有送出" : ""}。請看退款結果，不要直接重做。`,
-          "error",
-        );
-    } finally {
-      writeLock.release();
-    }
-  }
+  // T-06: someone who owes and is also owed a refund settles both in one go
+  // (net = 應收 − 待退). Items are sent one by one inside the panel-wide write
+  // lock (fees first, then refunds), stopping at the first failure; an
+  // unknown outcome is never resent.
+  const both = items.length > 0 && refunds.length > 0;
+  const net = pickedTotal - refundPickedTotal;
+  const netText = net >= 0 ? `淨收 ${money(net)}` : `淨退 ${money(-net)}`;
+  const pickedCount = picked.length + refundPicked.length;
+  const resultTitle = !refundPicked.length ? "收款結果" : !picked.length ? "退款結果" : "結清結果";
 
-  // Mark the picked items paid one by one inside the panel-wide write lock.
-  // Stops at the first failure; an unknown outcome is never resent.
-  async function collect() {
-    if (!picked.length || !writeLock.acquire()) return;
-    const todo = picked;
+  async function settle() {
+    if (!pickedCount || !writeLock.acquire()) return;
     const results: ItemResult[] = [];
     let stopped = false;
+    const steps = [
+      ...picked.map((it) => ({
+        base: { id: it.id, label: itemLabel(it), amount: it.amount, okLabel: "已收" },
+        run: () =>
+          it.kind === "season"
+            ? adminWriteApi.seasonPaymentStatus(password, it.id, "paid")
+            : adminWriteApi.tempPaymentStatus(password, it.id, "paid", it.guest.amount),
+      })),
+      ...refundPicked.map((r) => ({
+        base: {
+          id: r.creditId,
+          label: refundLabel(r),
+          amount: -r.refundAmount,
+          okLabel: "已退款",
+        },
+        run: () => adminWriteApi.cashRefund(password, r.creditId, "refund"),
+      })),
+    ];
     try {
-      for (const it of todo) {
-        const base = { id: it.id, label: itemLabel(it), amount: it.amount };
+      for (const step of steps) {
         if (stopped) {
-          results.push({ ...base, state: "skipped" });
+          results.push({ ...step.base, state: "skipped" });
           continue;
         }
         try {
-          if (it.kind === "season") {
-            await adminWriteApi.seasonPaymentStatus(password, it.id, "paid");
-          } else {
-            await adminWriteApi.tempPaymentStatus(password, it.id, "paid", it.guest.amount);
-          }
-          results.push({ ...base, state: "ok" });
+          await step.run();
+          results.push({ ...step.base, state: "ok" });
         } catch (err) {
           stopped = true;
           results.push({
-            ...base,
+            ...step.base,
             state: isUnknownResult(err) ? "unknown" : "failed",
             message: errText(err),
           });
         }
       }
       setConfirming(false);
-      setResult({ title: "收款結果", okLabel: "已收", rows: results });
+      setResult({ title: resultTitle, rows: results });
       onDataChanged();
       const reads = await Promise.allSettled([loadBill(personId), loadPeople()]);
-      const readFailed = reads.some((r) => r.status === "rejected");
-      const ok = results.filter((r) => r.state === "ok");
-      const okSum = ok.reduce((s, r) => s + r.amount, 0);
+      const readFailed = reads.some((x) => x.status === "rejected");
+      const ok = results.filter((x) => x.state === "ok");
+      const inSum = ok.filter((x) => x.amount > 0).reduce((sum, x) => sum + x.amount, 0);
+      const outSum = ok.filter((x) => x.amount < 0).reduce((sum, x) => sum - x.amount, 0);
+      const done = ok.length
+        ? [inSum ? `已收 ${money(inSum)}` : "", outSum ? `已退款 ${money(outSum)}` : ""]
+            .filter(Boolean)
+            .join("、")
+        : "沒有完成任何一筆";
       if (!stopped)
         showToast(
-          readFailed
-            ? `已收 ${ok.length} 筆 ${money(okSum)}，但重新讀取失敗，請按重新整理。`
-            : `已收 ${ok.length} 筆 ${money(okSum)}`,
+          readFailed ? `${done}，但重新讀取失敗，請按重新整理。` : `${done}（${ok.length} 筆）`,
         );
       else
         showToast(
-          `已收 ${ok.length} 筆 ${money(okSum)}；有一筆未完成${results.some((r) => r.state === "skipped") ? "，後面的沒有送出" : ""}。請看收款結果，不要直接重做。`,
+          `${done}；有一筆未完成${results.some((x) => x.state === "skipped") ? "，後面的沒有送出" : ""}。請看${resultTitle}，不要直接重做。`,
           "error",
         );
     } finally {
@@ -367,18 +341,7 @@ export function CollectTab({
                         ) : null}
                         {p.kind === "member" ? <small>未認領 LINE</small> : null}
                       </span>
-                      <span
-                        className={`ctl-row-amt${p.outstandingTotal ? " is-owe" : p.refundDue ? " is-refund" : ""}`}
-                      >
-                        {p.outstandingTotal
-                          ? money(p.outstandingTotal)
-                          : p.refundDue
-                            ? `待退 ${money(p.refundDue)}`
-                            : "已結清"}
-                        {p.outstandingTotal && p.refundDue ? (
-                          <small className="is-refund">待退 {money(p.refundDue)}</small>
-                        ) : null}
-                      </span>
+                      <PersonAmount p={p} />
                       <span className="ctl-chev" aria-hidden>
                         ›
                       </span>
@@ -428,12 +391,7 @@ export function CollectTab({
       </section>
 
       {result ? (
-        <ResultCard
-          title={result.title}
-          okLabel={result.okLabel}
-          results={result.rows}
-          onClose={() => setResult(null)}
-        />
+        <ResultCard title={result.title} results={result.rows} onClose={() => setResult(null)} />
       ) : null}
 
       {billError ? (
@@ -459,60 +417,84 @@ export function CollectTab({
               不一致，請先核對。
             </div>
           ) : null}
-          <Card
-            title="未繳項目"
-            side={<span className="ctl-sub">應繳 {money(bill.totalAmountDue)}</span>}
-          >
-            {items.length ? (
-              <>
-                <label className="ctl-check ctl-check-all">
-                  <input
-                    type="checkbox"
-                    checked={picked.length === items.length}
-                    disabled={writing}
-                    onChange={(e) =>
-                      setChecked(new Set(e.target.checked ? items.map((i) => i.id) : []))
-                    }
-                  />
-                  全選（{items.length} 筆）
-                </label>
-                <ul className="ctl-rows">
-                  {items.map((it) => (
-                    <li key={it.id}>
-                      <label className="ctl-row ctl-bill-row">
-                        <input
-                          type="checkbox"
-                          checked={checked.has(it.id)}
-                          disabled={writing}
-                          onChange={(e) => {
-                            const next = new Set(checked);
-                            if (e.target.checked) next.add(it.id);
-                            else next.delete(it.id);
-                            setChecked(next);
-                          }}
-                        />
-                        <span className="ctl-row-name is-wrap">
-                          {itemLabel(it)}
-                          {it.kind === "season" ? (
-                            <SeasonDetail s={it.season} />
-                          ) : (
-                            <small>{it.guest.eventName}</small>
-                          )}
-                        </span>
-                        <span className="ctl-row-amt">{money(it.amount)}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <p className="ctl-empty">
-                {refunds.length ? "沒有未繳項目。" : "沒有未繳項目，已結清。"}
-              </p>
-            )}
-          </Card>
-
-          {refunds.length ? (
+          {both ? (
+            <Card title="結算" side={<span className="ctl-sub">{netText}</span>}>
+              <label className="ctl-check ctl-check-all">
+                <input
+                  type="checkbox"
+                  checked={pickedCount === items.length + refunds.length}
+                  disabled={writing}
+                  onChange={(e) => {
+                    setChecked(new Set(e.target.checked ? items.map((i) => i.id) : []));
+                    setRefundChecked(
+                      new Set(e.target.checked ? refunds.map((r) => r.creditId) : []),
+                    );
+                  }}
+                />
+                全選（{items.length + refunds.length} 筆）
+              </label>
+              <h3 className="ctl-settle-sub">應收</h3>
+              <ul className="ctl-rows">
+                {items.map((it) => (
+                  <li key={it.id}>
+                    <label className="ctl-row ctl-bill-row">
+                      <input
+                        type="checkbox"
+                        checked={checked.has(it.id)}
+                        disabled={writing}
+                        onChange={(e) => {
+                          const next = new Set(checked);
+                          if (e.target.checked) next.add(it.id);
+                          else next.delete(it.id);
+                          setChecked(next);
+                        }}
+                      />
+                      <span className="ctl-row-name is-wrap">
+                        {itemLabel(it)}
+                        {it.kind === "season" ? (
+                          <SeasonDetail s={it.season} />
+                        ) : (
+                          <small>{it.guest.eventName}</small>
+                        )}
+                      </span>
+                      <span className="ctl-row-amt">{money(it.amount)}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <h3 className="ctl-settle-sub">
+                待退<small>請假退費抵扣，但沒有在下一季的季打名單，需要退現金</small>
+              </h3>
+              <ul className="ctl-rows">
+                {refunds.map((r) => (
+                  <li key={r.creditId}>
+                    <label className="ctl-row ctl-bill-row">
+                      <input
+                        type="checkbox"
+                        checked={refundChecked.has(r.creditId)}
+                        disabled={writing}
+                        onChange={(e) => {
+                          const next = new Set(refundChecked);
+                          if (e.target.checked) next.add(r.creditId);
+                          else next.delete(r.creditId);
+                          setRefundChecked(next);
+                        }}
+                      />
+                      <span className="ctl-row-name is-wrap">
+                        {refundLabel(r)}
+                        <small className="ctl-bill-detail">
+                          {r.groupName} 請假 {r.leaveCount} 次 × {money(r.refundUnit)}（原抵{" "}
+                          {r.toSeasonName}）
+                        </small>
+                      </span>
+                      <span className="ctl-row-amt is-refund">−{money(r.refundAmount)}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <SettleTotals inSum={pickedTotal} outSum={refundPickedTotal} netText={netText} />
+            </Card>
+          ) : refunds.length ? (
             <Card
               title="待退款"
               side={<span className="ctl-sub is-refund">待退 {money(refundTotal)}</span>}
@@ -550,7 +532,7 @@ export function CollectTab({
                   className="ctl-btn"
                   type="button"
                   disabled={writing || !refundPicked.length}
-                  onClick={() => setRefunding(true)}
+                  onClick={() => setConfirming(true)}
                 >
                   {refundPicked.length
                     ? `已退款 ${money(refundPickedTotal)}（${refundPicked.length} 筆）`
@@ -558,7 +540,60 @@ export function CollectTab({
                 </button>
               </div>
             </Card>
-          ) : null}
+          ) : (
+            <Card
+              title="未繳項目"
+              side={<span className="ctl-sub">應繳 {money(bill.totalAmountDue)}</span>}
+            >
+              {items.length ? (
+                <>
+                  <label className="ctl-check ctl-check-all">
+                    <input
+                      type="checkbox"
+                      checked={picked.length === items.length}
+                      disabled={writing}
+                      onChange={(e) =>
+                        setChecked(new Set(e.target.checked ? items.map((i) => i.id) : []))
+                      }
+                    />
+                    全選（{items.length} 筆）
+                  </label>
+                  <ul className="ctl-rows">
+                    {items.map((it) => (
+                      <li key={it.id}>
+                        <label className="ctl-row ctl-bill-row">
+                          <input
+                            type="checkbox"
+                            checked={checked.has(it.id)}
+                            disabled={writing}
+                            onChange={(e) => {
+                              const next = new Set(checked);
+                              if (e.target.checked) next.add(it.id);
+                              else next.delete(it.id);
+                              setChecked(next);
+                            }}
+                          />
+                          <span className="ctl-row-name is-wrap">
+                            {itemLabel(it)}
+                            {it.kind === "season" ? (
+                              <SeasonDetail s={it.season} />
+                            ) : (
+                              <small>{it.guest.eventName}</small>
+                            )}
+                          </span>
+                          <span className="ctl-row-amt">{money(it.amount)}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p className="ctl-empty">
+                  {refunds.length ? "沒有未繳項目。" : "沒有未繳項目，已結清。"}
+                </p>
+              )}
+            </Card>
+          )}
 
           {paidSeasons.length || paidGuests.length || refundedItems.length ? (
             <Section
@@ -654,12 +689,16 @@ export function CollectTab({
               <button
                 className="ctl-btn"
                 type="button"
-                disabled={writing || !picked.length}
+                disabled={writing || !(both ? pickedCount : picked.length)}
                 onClick={() => setConfirming(true)}
               >
-                {picked.length
-                  ? `收款 ${money(pickedTotal)}（${picked.length} 筆）`
-                  : "請勾選要收的項目"}
+                {both
+                  ? pickedCount
+                    ? `結清 ${netText}（${pickedCount} 筆）`
+                    : "請勾選要結清的項目"
+                  : picked.length
+                    ? `收款 ${money(pickedTotal)}（${picked.length} 筆）`
+                    : "請勾選要收的項目"}
               </button>
             </div>
           ) : null}
@@ -719,47 +758,25 @@ export function CollectTab({
         </Sheet>
       ) : null}
 
-      {refunding ? (
-        <Sheet title="確認已退款" onClose={() => !writing && setRefunding(false)} busy={writing}>
-          <p>
-            已退現金給 <strong>{person?.displayName || person?.memberName}</strong>{" "}
-            <strong>{money(refundPickedTotal)}</strong>，以下 {refundPicked.length} 筆標記為已退款：
-          </p>
-          <ul className="ctl-rows">
-            {refundPicked.map((r) => (
-              <li className="ctl-row" key={r.creditId}>
-                <span className="ctl-row-name is-wrap">{refundLabel(r)}</span>
-                <span className="ctl-row-amt">{money(r.refundAmount)}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="ctl-sub">只記錄退款，不改季費與損益；記錯可在已繳紀錄按 fix 改回。</p>
-          <div className="ctl-sheet-actions">
-            <button
-              className="ctl-btn is-plain"
-              type="button"
-              onClick={() => setRefunding(false)}
-              disabled={writing}
-            >
-              返回
-            </button>
-            <button
-              className="ctl-btn"
-              type="button"
-              disabled={writing}
-              onClick={() => void refundCash()}
-            >
-              {writing ? "處理中…" : `確定已退款 ${money(refundPickedTotal)}`}
-            </button>
-          </div>
-        </Sheet>
-      ) : null}
-
       {confirming ? (
-        <Sheet title="確認收款" onClose={() => !writing && setConfirming(false)} busy={writing}>
+        <Sheet
+          title={
+            picked.length && refundPicked.length
+              ? "確認結清"
+              : picked.length
+                ? "確認收款"
+                : "確認已退款"
+          }
+          onClose={() => !writing && setConfirming(false)}
+          busy={writing}
+        >
           <p>
-            <strong>{person?.displayName || person?.memberName}</strong> 收款{" "}
-            <strong>{money(pickedTotal)}</strong>，以下 {picked.length} 筆標記為已收：
+            <strong>{person?.displayName || person?.memberName}</strong>
+            {picked.length && refundPicked.length
+              ? "：以下應收標記為已收、待退標記為已退款。"
+              : picked.length
+                ? `：收款 ${money(pickedTotal)}，以下 ${picked.length} 筆標記為已收。`
+                : `：已退現金 ${money(refundPickedTotal)}，以下 ${refundPicked.length} 筆標記為已退款。`}
           </p>
           <ul className="ctl-rows">
             {picked.map((it) => (
@@ -768,8 +785,29 @@ export function CollectTab({
                 <span className="ctl-row-amt">{money(it.amount)}</span>
               </li>
             ))}
+            {refundPicked.map((r) => (
+              <li className="ctl-row" key={r.creditId}>
+                <span className="ctl-row-name is-wrap">
+                  {refundLabel(r)}
+                  <small>
+                    請假 {r.leaveCount} 次 × {money(r.refundUnit)}
+                  </small>
+                </span>
+                <span className="ctl-row-amt is-refund">−{money(r.refundAmount)}</span>
+              </li>
+            ))}
           </ul>
-          <p className="ctl-sub">逐筆送出；有一筆失敗就會停下，畫面會顯示哪些已收。</p>
+          {picked.length && refundPicked.length ? (
+            <SettleTotals
+              inSum={pickedTotal}
+              outSum={refundPickedTotal}
+              netText={net >= 0 ? `實收現金 ${money(net)}` : `實退現金 ${money(-net)}`}
+            />
+          ) : null}
+          <p className="ctl-sub">
+            逐筆送出（先收款、再退款）；有一筆失敗就會停下，畫面會顯示哪些已完成。退款只記錄，不改季費與損益；記錯可在已繳紀錄按
+            fix 改回。
+          </p>
           <div className="ctl-sheet-actions">
             <button
               className="ctl-btn is-plain"
@@ -783,9 +821,15 @@ export function CollectTab({
               className="ctl-btn"
               type="button"
               disabled={writing}
-              onClick={() => void collect()}
+              onClick={() => void settle()}
             >
-              {writing ? "收款中…" : `確定收款 ${money(pickedTotal)}`}
+              {writing
+                ? "處理中…"
+                : picked.length && refundPicked.length
+                  ? `確定結清 ${netText}`
+                  : picked.length
+                    ? `確定收款 ${money(pickedTotal)}`
+                    : `確定已退款 ${money(refundPickedTotal)}`}
             </button>
           </div>
         </Sheet>
@@ -823,14 +867,55 @@ const RESULT_LABEL: Record<ItemResult["state"], [string, string]> = {
   skipped: ["未送出", ""],
 };
 
+// T-06: list amount for someone with both: 淨收 / 淨退 with 應收・待退 below.
+function PersonAmount({ p }: { p: BillingPerson }) {
+  const owe = p.outstandingTotal;
+  const refund = p.refundDue ?? 0;
+  if (owe && refund) {
+    const n = owe - refund;
+    return (
+      <span className={`ctl-row-amt${n >= 0 ? " is-owe" : " is-refund"}`}>
+        {n >= 0 ? `淨收 ${money(n)}` : `淨退 ${money(-n)}`}
+        <small className="is-sub">
+          應收 {money(owe)}・待退 {money(refund)}
+        </small>
+      </span>
+    );
+  }
+  return (
+    <span className={`ctl-row-amt${owe ? " is-owe" : refund ? " is-refund" : ""}`}>
+      {owe ? money(owe) : refund ? `待退 ${money(refund)}` : "已結清"}
+    </span>
+  );
+}
+
+function SettleTotals({
+  inSum,
+  outSum,
+  netText,
+}: {
+  inSum: number;
+  outSum: number;
+  netText: string;
+}) {
+  return (
+    <dl className="ctl-kv ctl-settle-totals">
+      <dt>應收</dt>
+      <dd>{money(inSum)}</dd>
+      <dt>待退</dt>
+      <dd className="is-refund">−{money(outSum)}</dd>
+      <dt className="is-total">合計</dt>
+      <dd className="is-total">{netText}</dd>
+    </dl>
+  );
+}
+
 function ResultCard({
   title,
-  okLabel,
   results,
   onClose,
 }: {
   title: string;
-  okLabel: string;
   results: ItemResult[];
   onClose: () => void;
 }) {
@@ -850,9 +935,13 @@ function ResultCard({
               {r.label}
               {r.message ? <small>{r.message}</small> : null}
             </span>
-            <span className="ctl-row-amt">{money(r.amount)}</span>
-            <span className={`ctl-pill ${RESULT_LABEL[r.state][1]}`}>
-              {r.state === "ok" ? okLabel : RESULT_LABEL[r.state][0]}
+            <span className={`ctl-row-amt${r.amount < 0 ? " is-refund" : ""}`}>
+              {r.amount < 0 ? `−${money(-r.amount)}` : money(r.amount)}
+            </span>
+            <span
+              className={`ctl-pill ${r.state === "ok" && r.amount < 0 ? "blue" : RESULT_LABEL[r.state][1]}`}
+            >
+              {r.state === "ok" ? r.okLabel : RESULT_LABEL[r.state][0]}
             </span>
           </li>
         ))}

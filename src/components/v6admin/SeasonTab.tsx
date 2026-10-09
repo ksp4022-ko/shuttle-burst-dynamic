@@ -114,16 +114,21 @@ function writeDeductPref(siteId: string, value: boolean) {
   }
 }
 
-// Settlement figures with the toggle applied (same as the Worker's save with
-// deductLeaveRefund). null = the Worker does not send the leave figures yet.
+// Settlement figures with the toggle applied. T-07: 請假退費總額 is the same
+// for both sites = 季打請假人次 × 每場季費基準 over the counted events (the
+// Worker's fixedLeaveIncome); credits already generated (leaveRefundTotal)
+// are shown only for comparison. So 是 = the attendance-only figures the
+// Worker already returns, 否 = plus the leave income.
+// null = the Worker does not send the leave figures yet.
 function leaveView(s: Settlement, deduct: boolean) {
-  if (s.fixedLeaveIncome == null || s.leaveRefundTotal == null) return null;
+  if (s.fixedLeaveIncome == null) return null;
   const leaveIncome = s.fixedLeaveIncome;
-  const refund = s.leaveRefundTotal;
-  const delta = leaveIncome - (deduct ? refund : 0);
+  const refund = leaveIncome;
+  const delta = deduct ? 0 : leaveIncome;
   return {
     leaveIncome,
     refund,
+    credited: s.leaveRefundTotal ?? 0,
     fixedFull: (s.fixedOperatingIncome || 0) + leaveIncome,
     totalIncome: (s.totalIncome || 0) + delta,
     netProfit: (s.netProfit || 0) + delta,
@@ -649,7 +654,15 @@ export function SeasonTab({
           onClose={close}
           onConfirm={() =>
             submit(
-              () => adminWriteApi.saveSeasonProfitLoss(password, siteId, seasonId, groupId, deduct),
+              () =>
+                adminWriteApi.saveSeasonProfitLoss(
+                  password,
+                  siteId,
+                  seasonId,
+                  groupId,
+                  deduct,
+                  data?.management?.settlement?.fixedLeaveIncome ?? 0,
+                ),
               "本季損益已儲存",
             )
           }
@@ -1366,6 +1379,12 @@ function SettlementSection({
             <dd>{money(lv.fixedFull)}</dd>
             <dt>請假退費總額</dt>
             <dd>{deduct ? `−${money(lv.refund)}` : `${money(lv.refund)}（不扣）`}</dd>
+            {lv.credited ? (
+              <>
+                <dt>已產生抵扣（對照）</dt>
+                <dd>{money(lv.credited)}</dd>
+              </>
+            ) : null}
           </>
         ) : (
           <>
