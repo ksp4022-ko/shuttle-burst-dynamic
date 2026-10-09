@@ -185,3 +185,4 @@ Worker V6-027（唯讀，x-admin-password 驗證）：
 P7 追加（C4 已實作並部署，待 iPhone 驗收）：
 - C4：「已繳紀錄」每筆右側加按鈕「fix」（外觀是按鈕：有框線、可點的樣式，與綠色「已收」膠囊明顯不同），點後確認「改回未收」再送出（確認後送出；季費 POST season-payments/:id/status unpaid，臨打 POST temp-payments/:id/status unpaid，與 ①③ 相同 API）。
 - V6-028（Worker，commit ffbbb94，已部署 Cloudflare version 2d5cce6e-7d88-437d-b034-f13b50981403，待千賀收款實測）：季繳／臨打「改狀態」API 先把網址中的付款 ID 解碼再查詢。原因：Google Sheet 匯入的付款 ID 含中文，未解碼導致 SEASON_PAYMENT_NOT_FOUND（2026-10-09 千賀 2026 第3季）。
+- V6-030（2026-10-09）：③ 讀取常逾時。Worker e55bcaa 把季繳／退費抵扣報表與季末結算的逐筆查詢改為同時查（結果逐字相同，本機快約 2 倍），待 Codex 部署；前端 f461a19：各區塊各自顯示、失敗單區重試、季報表逾時 45 秒（已部署）。
