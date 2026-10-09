@@ -187,7 +187,7 @@ P7 追加（C4 已實作並部署，待 iPhone 驗收）：
 - V6-028（Worker，commit ffbbb94，已部署 Cloudflare version 2d5cce6e-7d88-437d-b034-f13b50981403，待千賀收款實測）：季繳／臨打「改狀態」API 先把網址中的付款 ID 解碼再查詢。原因：Google Sheet 匯入的付款 ID 含中文，未解碼導致 SEASON_PAYMENT_NOT_FOUND（2026-10-09 千賀 2026 第3季）。
 - V6-030（2026-10-09）：③ 讀取常逾時。Worker e55bcaa 把季繳／退費抵扣報表與季末結算的逐筆查詢改為同時查（結果逐字相同，本機快約 2 倍），已部署 Cloudflare 94b68261；前端 f461a19：各區塊各自顯示、失敗單區重試、季報表逾時 45 秒（已部署）。
 
-## 10. P8 不續打季打的待退款（已實作，待 Worker V6-031 部署與 iPhone 驗收）
+## 10. P8 不續打季打的待退款（已實作並部署，待 iPhone 驗收）
 
 問題（2026-10-09）：2026 第3季季打、第4季沒續打的人（例：蘇軾）有請假退費，產生下季抵扣時會建立「第3季→第4季」抵扣，但他沒有第4季季繳可抵，抵扣永遠停在「未使用」，收款、帳單都看不到；欠款的人（阿富）則照常顯示。
 
@@ -201,7 +201,7 @@ P7 追加（C4 已實作並部署，待 iPhone 驗收）：
 - 季末損益（2026-10-09 定案）：退款不另扣損益（請假本來就不計收入）。結算改顯示：季打收入（全額）＝（出席＋請假）×每場季費基準、請假退費總額＝本季實際抵扣合計；V10 ③ 開關「扣除請假退費：是／否」即時切換，瀏覽器記住每場地上次選擇（預設康軒是、日安否，日安請假不退費）；儲存本季損益存畫面目前結果並註明。Worker 結算多回每場請假人數與本季請假退費總額（只加欄位）。
 
 實作（2026-10-09）：
-- Worker V6-031（badminton-signup 58577ab，待 Codex 部署）：
+- Worker V6-031（badminton-signup 58577ab，已部署 Cloudflare version 421d8306-85e5-43ef-9895-7f9816795dfb，2026-10-09）：
   - 待退款判定：抵扣「未使用」、有金額、目標賽季該群組已有名單但此人不在名單、且此人在目標賽季沒有（未取消的）季繳。
   - POST /admin/refund-credits/:id/cash-refund {action:"refund"|"undo"}：已退款＝status used＋note cash_refund＋used_at；改回＝active、note cash_refund_undone；都寫 admin audit。
   - billing-people 每人多 refundDue；個人帳單與 /me/billing 多 refundItems（due／refunded）；退費抵扣報表多 refundDue、cashRefunded。
