@@ -422,6 +422,7 @@ const V9_CSS = `
 /* fee / billing */
 .v9-bill { margin-top: 4px; padding: 4px 14px 14px; background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 20px; }
 .v9-bill-lines { display: grid; }
+.v9-bill-lines.is-refund { margin-top: 10px; }
 .v9-bill-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 2px dashed #eadfca; font-weight: 700; }
 .v9-bill-line strong { font-variant-numeric: tabular-nums; }
 .v9-bill-line.is-expandable { display: block; padding: 0; }

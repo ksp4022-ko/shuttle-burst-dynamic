@@ -8,6 +8,7 @@ import {
   shortDate,
   type BillGuestItem,
   type BillingPerson,
+  type BillRefundItem,
   type BillSeasonItem,
   type PersonBill,
 } from "@/lib/v6admin-api";
@@ -19,6 +20,9 @@ import { Card, Section, Sheet, Toast } from "./AdminParts";
 // the ticked items paid in one go. The bill and totals come from the Worker
 // (same calculation as V9's bill); writes reuse the existing per-item APIs:
 // POST season-payments/:id/status and temp-payments/:id/status.
+// P8 (V6-031): a member with an unused leave credit who is not in the next
+// season's roster shows 待退 (refundItems); 已退款 records the cash refund
+// (POST refund-credits/:id/cash-refund) and fix undoes it.
 
 type Item =
   | { kind: "season"; id: string; amount: number; season: BillSeasonItem }
@@ -36,6 +40,16 @@ function itemLabel(it: Item) {
   if (it.kind === "season") return `${it.season.seasonName} 季費`;
   const g = it.guest;
   return `${shortDate(g.eventDate)} 臨打${g.signupKind === "proxy" ? `（代報 ${g.guestName}）` : ""}`;
+}
+
+function refundLabel(r: BillRefundItem) {
+  return `${r.fromSeasonName} 請假退費`;
+}
+
+function dueRefunds(bill: PersonBill): BillRefundItem[] {
+  return bill.refundItems
+    .filter((r) => r.status === "due")
+    .sort((a, b) => a.fromSeasonId.localeCompare(b.fromSeasonId));
 }
 
 function outstandingItems(bill: PersonBill): Item[] {
@@ -93,7 +107,12 @@ export function CollectTab({
   const [bill, setBill] = useState<PersonBill | null>(null);
   const [billError, setBillError] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [result, setResult] = useState<ItemResult[] | null>(null);
+  const [refundChecked, setRefundChecked] = useState<Set<string>>(new Set());
+  const [result, setResult] = useState<{
+    title: string;
+    okLabel: string;
+    rows: ItemResult[];
+  } | null>(null);
   const billSeq = useRef(0);
   const loadBill = useCallback(
     async (id: string) => {
@@ -104,6 +123,7 @@ export function CollectTab({
           setBill(b);
           setBillError("");
           setChecked(new Set(outstandingItems(b).map((i) => i.id)));
+          setRefundChecked(new Set(dueRefunds(b).map((r) => r.creditId)));
         }
       } catch (err) {
         if (seq === billSeq.current) setBillError(errText(err));
@@ -151,20 +171,74 @@ export function CollectTab({
   const picked = items.filter((i) => checked.has(i.id));
   const pickedTotal = picked.reduce((sum, i) => sum + i.amount, 0);
   const itemsTotal = items.reduce((sum, i) => sum + i.amount, 0);
+  const refunds = useMemo(() => (bill ? dueRefunds(bill) : []), [bill]);
+  const refundPicked = refunds.filter((r) => refundChecked.has(r.creditId));
+  const refundPickedTotal = refundPicked.reduce((sum, r) => sum + r.refundAmount, 0);
+  const refundTotal = refunds.reduce((sum, r) => sum + r.refundAmount, 0);
 
   const [confirming, setConfirming] = useState(false);
+  const [refunding, setRefunding] = useState(false);
 
   // C4: 已繳紀錄 → fix → 改回未收 (same requests as ① / ③'s 取消已收).
+  // P8: the same fix undoes a cash refund (back to 待退款).
   const [fixing, setFixing] = useState<{
     label: string;
     amount: number;
     run: () => Promise<unknown>;
+    refund?: boolean;
   } | null>(null);
   const [fixError, setFixError] = useState("");
-  function openFix(label: string, amount: number, run: () => Promise<unknown>) {
+  function openFix(label: string, amount: number, run: () => Promise<unknown>, refund = false) {
     if (writing) return;
     setFixError("");
-    setFixing({ label, amount, run });
+    setFixing({ label, amount, run, refund });
+  }
+
+  // Record the picked refunds one by one, same rules as collect().
+  async function refundCash() {
+    if (!refundPicked.length || !writeLock.acquire()) return;
+    const results: ItemResult[] = [];
+    let stopped = false;
+    try {
+      for (const r of refundPicked) {
+        const base = { id: r.creditId, label: refundLabel(r), amount: r.refundAmount };
+        if (stopped) {
+          results.push({ ...base, state: "skipped" });
+          continue;
+        }
+        try {
+          await adminWriteApi.cashRefund(password, r.creditId, "refund");
+          results.push({ ...base, state: "ok" });
+        } catch (err) {
+          stopped = true;
+          results.push({
+            ...base,
+            state: isUnknownResult(err) ? "unknown" : "failed",
+            message: errText(err),
+          });
+        }
+      }
+      setRefunding(false);
+      setResult({ title: "退款結果", okLabel: "已退款", rows: results });
+      onDataChanged();
+      const reads = await Promise.allSettled([loadBill(personId), loadPeople()]);
+      const readFailed = reads.some((x) => x.status === "rejected");
+      const ok = results.filter((x) => x.state === "ok");
+      const okSum = ok.reduce((sum, x) => sum + x.amount, 0);
+      if (!stopped)
+        showToast(
+          readFailed
+            ? `已退款 ${ok.length} 筆 ${money(okSum)}，但重新讀取失敗，請按重新整理。`
+            : `已退款 ${ok.length} 筆 ${money(okSum)}`,
+        );
+      else
+        showToast(
+          `已退款 ${ok.length} 筆 ${money(okSum)}；有一筆未完成${results.some((x) => x.state === "skipped") ? "，後面的沒有送出" : ""}。請看退款結果，不要直接重做。`,
+          "error",
+        );
+    } finally {
+      writeLock.release();
+    }
   }
 
   // Mark the picked items paid one by one inside the panel-wide write lock.
@@ -198,7 +272,7 @@ export function CollectTab({
         }
       }
       setConfirming(false);
-      setResult(results);
+      setResult({ title: "收款結果", okLabel: "已收", rows: results });
       onDataChanged();
       const reads = await Promise.allSettled([loadBill(personId), loadPeople()]);
       const readFailed = reads.some((r) => r.status === "rejected");
@@ -223,7 +297,7 @@ export function CollectTab({
   if (!personId) {
     const q = query.trim().toLowerCase();
     const list = (people || []).filter((p) => {
-      if (onlyOwing && p.outstandingTotal <= 0) return false;
+      if (onlyOwing && p.outstandingTotal <= 0 && !(p.refundDue ?? 0)) return false;
       if (!q) return true;
       return [p.displayName, p.lineDisplayName, p.memberName]
         .filter(Boolean)
@@ -246,7 +320,7 @@ export function CollectTab({
               checked={onlyOwing}
               onChange={(e) => setOnlyOwing(e.target.checked)}
             />
-            只看有未繳的人
+            只看有未繳／待退款的人
           </label>
         </section>
         {peopleError ? (
@@ -269,6 +343,9 @@ export function CollectTab({
               <span className="ctl-sub">
                 {list.length} 人 · 未繳合計{" "}
                 {money(list.reduce((s, p) => s + p.outstandingTotal, 0))}
+                {list.some((p) => p.refundDue)
+                  ? ` · 待退 ${money(list.reduce((s, p) => s + (p.refundDue ?? 0), 0))}`
+                  : ""}
               </span>
             </div>
             {list.length ? (
@@ -290,8 +367,17 @@ export function CollectTab({
                         ) : null}
                         {p.kind === "member" ? <small>未認領 LINE</small> : null}
                       </span>
-                      <span className={`ctl-row-amt${p.outstandingTotal ? " is-owe" : ""}`}>
-                        {p.outstandingTotal ? money(p.outstandingTotal) : "已結清"}
+                      <span
+                        className={`ctl-row-amt${p.outstandingTotal ? " is-owe" : p.refundDue ? " is-refund" : ""}`}
+                      >
+                        {p.outstandingTotal
+                          ? money(p.outstandingTotal)
+                          : p.refundDue
+                            ? `待退 ${money(p.refundDue)}`
+                            : "已結清"}
+                        {p.outstandingTotal && p.refundDue ? (
+                          <small className="is-refund">待退 {money(p.refundDue)}</small>
+                        ) : null}
                       </span>
                       <span className="ctl-chev" aria-hidden>
                         ›
@@ -301,7 +387,9 @@ export function CollectTab({
                 ))}
               </ul>
             ) : (
-              <p className="ctl-empty">{onlyOwing ? "沒有未繳的人。" : "找不到符合的球員。"}</p>
+              <p className="ctl-empty">
+                {onlyOwing ? "沒有未繳或待退款的人。" : "找不到符合的球員。"}
+              </p>
             )}
           </section>
         )}
@@ -312,6 +400,7 @@ export function CollectTab({
 
   const paidSeasons = (bill?.seasonItems || []).filter((s) => s.status === "paid");
   const paidGuests = (bill?.guestItems || []).filter((g) => g.status === "paid");
+  const refundedItems = (bill?.refundItems || []).filter((r) => r.status === "refunded");
 
   return (
     <>
@@ -338,7 +427,14 @@ export function CollectTab({
         </p>
       </section>
 
-      {result ? <ResultCard results={result} onClose={() => setResult(null)} /> : null}
+      {result ? (
+        <ResultCard
+          title={result.title}
+          okLabel={result.okLabel}
+          results={result.rows}
+          onClose={() => setResult(null)}
+        />
+      ) : null}
 
       {billError ? (
         <div className="ctl-error">
@@ -410,13 +506,93 @@ export function CollectTab({
                 </ul>
               </>
             ) : (
-              <p className="ctl-empty">沒有未繳項目，已結清。</p>
+              <p className="ctl-empty">
+                {refunds.length ? "沒有未繳項目。" : "沒有未繳項目，已結清。"}
+              </p>
             )}
           </Card>
 
-          {paidSeasons.length || paidGuests.length ? (
-            <Section title="已繳紀錄" note={`${paidSeasons.length + paidGuests.length} 筆`}>
+          {refunds.length ? (
+            <Card
+              title="待退款"
+              side={<span className="ctl-sub is-refund">待退 {money(refundTotal)}</span>}
+            >
+              <p className="ctl-sub">請假退費抵扣，但沒有在下一季的季打名單，需要退現金。</p>
               <ul className="ctl-rows">
+                {refunds.map((r) => (
+                  <li key={r.creditId}>
+                    <label className="ctl-row ctl-bill-row">
+                      <input
+                        type="checkbox"
+                        checked={refundChecked.has(r.creditId)}
+                        disabled={writing}
+                        onChange={(e) => {
+                          const next = new Set(refundChecked);
+                          if (e.target.checked) next.add(r.creditId);
+                          else next.delete(r.creditId);
+                          setRefundChecked(next);
+                        }}
+                      />
+                      <span className="ctl-row-name is-wrap">
+                        {refundLabel(r)}
+                        <small className="ctl-bill-detail">
+                          {r.groupName} 請假 {r.leaveCount} 次 × {money(r.refundUnit)}（原抵{" "}
+                          {r.toSeasonName}）
+                        </small>
+                      </span>
+                      <span className="ctl-row-amt is-refund">−{money(r.refundAmount)}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              <div className="ctl-refund-bar">
+                <button
+                  className="ctl-btn"
+                  type="button"
+                  disabled={writing || !refundPicked.length}
+                  onClick={() => setRefunding(true)}
+                >
+                  {refundPicked.length
+                    ? `已退款 ${money(refundPickedTotal)}（${refundPicked.length} 筆）`
+                    : "請勾選已退的項目"}
+                </button>
+              </div>
+            </Card>
+          ) : null}
+
+          {paidSeasons.length || paidGuests.length || refundedItems.length ? (
+            <Section
+              title="已繳紀錄"
+              note={`${paidSeasons.length + paidGuests.length + refundedItems.length} 筆`}
+            >
+              <ul className="ctl-rows">
+                {refundedItems.map((r) => (
+                  <li className="ctl-row" key={r.creditId}>
+                    <span className="ctl-row-name is-wrap">
+                      {refundLabel(r)}
+                      <small>
+                        {r.refundedAt ? r.refundedAt.replace("T", " ").slice(0, 16) : ""}
+                      </small>
+                    </span>
+                    <span className="ctl-row-amt is-refund">−{money(r.refundAmount)}</span>
+                    <span className="ctl-pill blue">已退款</span>
+                    <button
+                      className="ctl-act is-fix"
+                      type="button"
+                      disabled={writing}
+                      onClick={() =>
+                        openFix(
+                          refundLabel(r),
+                          r.refundAmount,
+                          () => adminWriteApi.cashRefund(password, r.creditId, "undo"),
+                          true,
+                        )
+                      }
+                    >
+                      fix
+                    </button>
+                  </li>
+                ))}
                 {paidSeasons.map((s) => (
                   <li className="ctl-row" key={s.paymentId}>
                     <span className="ctl-row-name is-wrap">
@@ -491,7 +667,11 @@ export function CollectTab({
       )}
 
       {fixing ? (
-        <Sheet title="改回未收" onClose={() => !writing && setFixing(null)} busy={writing}>
+        <Sheet
+          title={fixing.refund ? "改回待退款" : "改回未收"}
+          onClose={() => !writing && setFixing(null)}
+          busy={writing}
+        >
           <p>
             <strong>{person?.displayName || person?.memberName}</strong> 的這筆款項：
           </p>
@@ -501,7 +681,11 @@ export function CollectTab({
               <span className="ctl-row-amt">{money(fixing.amount)}</span>
             </li>
           </ul>
-          <p className="ctl-sub">改回「未付款」，原付款時間會清除，這筆會回到未繳項目。</p>
+          <p className="ctl-sub">
+            {fixing.refund
+              ? "取消退款紀錄，退款時間會清除，這筆會回到待退款。"
+              : "改回「未付款」，原付款時間會清除，這筆會回到未繳項目。"}
+          </p>
           {fixError ? <div className="ctl-error">{fixError}</div> : null}
           <div className="ctl-sheet-actions">
             <button
@@ -520,7 +704,7 @@ export function CollectTab({
                 runWrite({
                   writeLock,
                   work: fixing.run,
-                  okText: `${fixing.label} 已改回未收`,
+                  okText: `${fixing.label} 已改回${fixing.refund ? "待退款" : "未收"}`,
                   reread: () => [loadBill(personId), loadPeople()],
                   onDataChanged,
                   onRejected: setFixError,
@@ -529,7 +713,43 @@ export function CollectTab({
                 })
               }
             >
-              {writing ? "處理中…" : "確定改回未收"}
+              {writing ? "處理中…" : fixing.refund ? "確定改回待退款" : "確定改回未收"}
+            </button>
+          </div>
+        </Sheet>
+      ) : null}
+
+      {refunding ? (
+        <Sheet title="確認已退款" onClose={() => !writing && setRefunding(false)} busy={writing}>
+          <p>
+            已退現金給 <strong>{person?.displayName || person?.memberName}</strong>{" "}
+            <strong>{money(refundPickedTotal)}</strong>，以下 {refundPicked.length} 筆標記為已退款：
+          </p>
+          <ul className="ctl-rows">
+            {refundPicked.map((r) => (
+              <li className="ctl-row" key={r.creditId}>
+                <span className="ctl-row-name is-wrap">{refundLabel(r)}</span>
+                <span className="ctl-row-amt">{money(r.refundAmount)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="ctl-sub">只記錄退款，不改季費與損益；記錯可在已繳紀錄按 fix 改回。</p>
+          <div className="ctl-sheet-actions">
+            <button
+              className="ctl-btn is-plain"
+              type="button"
+              onClick={() => setRefunding(false)}
+              disabled={writing}
+            >
+              返回
+            </button>
+            <button
+              className="ctl-btn"
+              type="button"
+              disabled={writing}
+              onClick={() => void refundCash()}
+            >
+              {writing ? "處理中…" : `確定已退款 ${money(refundPickedTotal)}`}
             </button>
           </div>
         </Sheet>
@@ -603,12 +823,22 @@ const RESULT_LABEL: Record<ItemResult["state"], [string, string]> = {
   skipped: ["未送出", ""],
 };
 
-function ResultCard({ results, onClose }: { results: ItemResult[]; onClose: () => void }) {
+function ResultCard({
+  title,
+  okLabel,
+  results,
+  onClose,
+}: {
+  title: string;
+  okLabel: string;
+  results: ItemResult[];
+  onClose: () => void;
+}) {
   const bad = results.some((r) => r.state !== "ok");
   return (
     <section className={`ctl-card${bad ? " ctl-result-bad" : ""}`}>
       <div className="ctl-card-title">
-        <h2>收款結果</h2>
+        <h2>{title}</h2>
         <button className="ctl-btn-ghost" type="button" onClick={onClose}>
           關閉
         </button>
@@ -622,14 +852,14 @@ function ResultCard({ results, onClose }: { results: ItemResult[]; onClose: () =
             </span>
             <span className="ctl-row-amt">{money(r.amount)}</span>
             <span className={`ctl-pill ${RESULT_LABEL[r.state][1]}`}>
-              {RESULT_LABEL[r.state][0]}
+              {r.state === "ok" ? okLabel : RESULT_LABEL[r.state][0]}
             </span>
           </li>
         ))}
       </ul>
       {bad ? (
         <p className="ctl-sub">
-          「結果不明」那筆可能已寫入：請看下方帳單是否還列為未繳，再決定要不要重收。
+          「結果不明」那筆可能已寫入：請看下方帳單是否還列為未繳／待退款，再決定要不要重做。
         </p>
       ) : null}
     </section>

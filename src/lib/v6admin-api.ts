@@ -491,6 +491,10 @@ export type Settlement = {
   testExcludedCount?: number;
   canFinalize?: boolean;
   blockReasons?: string[];
+  // V6-031 (P8): 季打 income of members on leave (not in fixedOperatingIncome)
+  // and the leave refunds this season's members were given.
+  fixedLeaveIncome?: number;
+  leaveRefundTotal?: number;
   eventBreakdown?: SettlementRow[];
   collection?: {
     seasonReceivable?: number;
@@ -576,6 +580,23 @@ export type BillingPerson = {
   seasonOutstanding: number;
   guestOutstanding: number;
   outstandingTotal: number;
+  // V6-031 (P8): unused leave credit owed back in cash (not in the next roster).
+  refundDue?: number;
+};
+
+// V6-031 (P8): a leave credit whose member is not in the next season's roster.
+export type BillRefundItem = {
+  creditId: string;
+  fromSeasonId: string;
+  fromSeasonName: string;
+  toSeasonId: string;
+  toSeasonName: string;
+  groupName: string;
+  leaveCount: number;
+  refundUnit: number;
+  refundAmount: number;
+  status: "due" | "refunded";
+  refundedAt: string | null;
 };
 
 export type BillRefundSource = {
@@ -626,12 +647,14 @@ export type PersonBillPage = {
   };
   guestLedger: BillPage<BillGuestItem>;
   seasonPaymentHistory: BillPage<BillSeasonItem>;
+  refundItems?: BillRefundItem[];
 };
 
 export type PersonBill = {
   totalAmountDue: number;
   guestItems: BillGuestItem[];
   seasonItems: BillSeasonItem[];
+  refundItems: BillRefundItem[];
   complete: boolean;
 };
 
@@ -699,6 +722,9 @@ export type RefundCreditAuditRow = {
   refundAmount: number;
   status: string;
   auditWarning?: boolean;
+  // V6-031 (P8): 1 = member not in the next roster (待退款); 1 = paid back in cash.
+  refundDue?: number;
+  cashRefunded?: number;
 };
 
 export type RefundCreditAudit = {
@@ -845,6 +871,7 @@ export async function loadPersonBill(
   let guestDone = false;
   let seasonDone = false;
   let total = 0;
+  let refundItems: BillRefundItem[] = [];
   for (let page = 0; page < 10; page++) {
     const d: PersonBillPage = await adminApi.personBillPage(
       pw,
@@ -853,7 +880,10 @@ export async function loadPersonBill(
       guestCursor,
       seasonCursor,
     );
-    if (page === 0) total = d.totals.totalAmountDue;
+    if (page === 0) {
+      total = d.totals.totalAmountDue;
+      refundItems = d.refundItems ?? [];
+    }
     if (!guestDone) for (const i of d.guestLedger.items) guest.set(i.paymentId, i);
     if (!seasonDone) for (const i of d.seasonPaymentHistory.items) season.set(i.paymentId, i);
     guestDone = guestDone || !d.guestLedger.hasMore;
@@ -866,6 +896,7 @@ export async function loadPersonBill(
     totalAmountDue: total,
     guestItems: [...guest.values()],
     seasonItems: [...season.values()],
+    refundItems,
     complete: guestDone && seasonDone,
   };
 }
@@ -1017,8 +1048,26 @@ export const adminWriteApi = {
       pw,
       { seasonId, groupId },
     ),
-  saveSeasonProfitLoss: (pw: string, siteId: string, seasonId: string, groupId: string) =>
-    adminPost(`/admin/sites/${enc(siteId)}/season-profit-loss/save`, pw, { seasonId, groupId }),
+  // V6-031: deductLeaveRefund = the ③ 「扣除請假退費」 toggle.
+  saveSeasonProfitLoss: (
+    pw: string,
+    siteId: string,
+    seasonId: string,
+    groupId: string,
+    deductLeaveRefund: boolean,
+  ) =>
+    adminPost(`/admin/sites/${enc(siteId)}/season-profit-loss/save`, pw, {
+      seasonId,
+      groupId,
+      deductLeaveRefund,
+    }),
+  // V6-031 (P8): pay an unused leave credit back in cash, or undo that.
+  cashRefund: (pw: string, creditId: string, action: "refund" | "undo") =>
+    adminPost<{ creditId: string; status: "refunded" | "due"; refundedAt: string | null }>(
+      `/admin/refund-credits/${enc(creditId)}/cash-refund`,
+      pw,
+      { action },
+    ),
   unlinkLineClaim: (pw: string, siteId: string, lineIdentityId: string) =>
     adminPost(`/admin/sites/${enc(siteId)}/line-claims/${enc(lineIdentityId)}/unlink`, pw),
 };

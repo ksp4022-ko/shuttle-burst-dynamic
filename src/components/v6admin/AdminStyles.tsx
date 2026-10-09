@@ -171,6 +171,8 @@ html.ctl-lock-x body {
 .ctl-sec-body { padding: 0 14px 14px; display: grid; gap: 10px; }
 
 /* Key-value list */
+.ctl-deduct { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; margin-bottom: 8px; }
+.ctl-deduct .ctl-seg { margin: 0; min-width: 120px; }
 .ctl-kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; }
 .ctl-kv dt { color: var(--muted); }
 .ctl-kv dd { margin: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -256,6 +258,9 @@ html.ctl-lock-x body {
 .ctl-rows > li:first-child > .ctl-row { border-top: 0; }
 .ctl-person { width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .ctl-row-amt.is-owe { color: var(--red); }
+.ctl-row-amt.is-refund, .ctl-sub.is-refund, small.is-refund { color: var(--blue); }
+.ctl-row-amt small.is-refund { display: block; font-size: 12px; }
+.ctl-refund-bar { display: grid; margin-top: 10px; }
 .ctl-chev { color: var(--muted); font-size: 20px; }
 .ctl-collect-head { display: flex; justify-content: space-between; }
 .ctl-bill-row { align-items: flex-start; cursor: pointer; }

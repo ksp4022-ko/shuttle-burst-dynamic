@@ -17,6 +17,7 @@ import {
   type SeasonManagementData,
   type SeasonPaymentAudit,
   type SeasonPaymentAuditRow,
+  type Settlement,
 } from "@/lib/v6admin-api";
 import { runWrite, useToast, type WriteLock } from "@/lib/v6admin-write";
 import { Metric, Section, Sheet, Toast } from "./AdminParts";
@@ -90,6 +91,45 @@ type Pending =
   | { kind: "pay-gen" }
   | { kind: "pl-save" };
 
+// P8: 「扣除請假退費」 for the settlement. The browser remembers each site's
+// last choice only as a convenience; the built-in default is 康軒 是, 日安 否
+// (日安 does not refund leave).
+const DEDUCT_KEY = "v10CtlPanel:deductLeaveRefund:";
+
+function readDeductPref(siteId: string): boolean {
+  try {
+    const v = window.localStorage.getItem(DEDUCT_KEY + siteId);
+    if (v === "1") return true;
+    if (v === "0") return false;
+  } catch {
+    /* storage unavailable: use the default */
+  }
+  return siteId !== "rian";
+}
+function writeDeductPref(siteId: string, value: boolean) {
+  try {
+    window.localStorage.setItem(DEDUCT_KEY + siteId, value ? "1" : "0");
+  } catch {
+    /* storage unavailable: choice just isn't remembered */
+  }
+}
+
+// Settlement figures with the toggle applied (same as the Worker's save with
+// deductLeaveRefund). null = the Worker does not send the leave figures yet.
+function leaveView(s: Settlement, deduct: boolean) {
+  if (s.fixedLeaveIncome == null || s.leaveRefundTotal == null) return null;
+  const leaveIncome = s.fixedLeaveIncome;
+  const refund = s.leaveRefundTotal;
+  const delta = leaveIncome - (deduct ? refund : 0);
+  return {
+    leaveIncome,
+    refund,
+    fixedFull: (s.fixedOperatingIncome || 0) + leaveIncome,
+    totalIncome: (s.totalIncome || 0) + delta,
+    netProfit: (s.netProfit || 0) + delta,
+  };
+}
+
 export function SeasonTab({
   password,
   siteId,
@@ -119,6 +159,15 @@ export function SeasonTab({
   );
   const [groupId, setGroupId] = useState("");
   const [data, setData] = useState<Loaded | null>(null);
+  const [deductPref, setDeductPref] = useState<{ siteId: string; value: boolean }>(() => ({
+    siteId,
+    value: readDeductPref(siteId),
+  }));
+  const deduct = deductPref.siteId === siteId ? deductPref.value : readDeductPref(siteId);
+  function changeDeduct(value: boolean) {
+    writeDeductPref(siteId, value);
+    setDeductPref({ siteId, value });
+  }
   const [confirm, setConfirm] = useState<SeasonConfirmData | null>(null);
   const [confirmError, setConfirmError] = useState("");
   const [confirmReload, setConfirmReload] = useState(0);
@@ -373,6 +422,8 @@ export function SeasonTab({
           <CreditsSection audit={data.credits} />
           <SettlementSection
             management={data.management}
+            deduct={deduct}
+            onDeduct={changeDeduct}
             writing={writing}
             onSave={() => open({ kind: "pl-save" })}
           />
@@ -598,14 +649,19 @@ export function SeasonTab({
           onClose={close}
           onConfirm={() =>
             submit(
-              () => adminWriteApi.saveSeasonProfitLoss(password, siteId, seasonId, groupId),
+              () => adminWriteApi.saveSeasonProfitLoss(password, siteId, seasonId, groupId, deduct),
               "本季損益已儲存",
             )
           }
         >
           <p>
             把 <strong>{seasonLabel}</strong> 目前的季末結算結果（損益{" "}
-            {money(data?.management?.settlement?.netProfit)}）存成一筆正式紀錄。
+            {money(
+              (data?.management?.settlement &&
+                leaveView(data.management.settlement, deduct)?.netProfit) ??
+                data?.management?.settlement?.netProfit,
+            )}
+            ，請假退費{deduct ? "已扣除" : "不扣除"}）存成一筆正式紀錄。
           </p>
           <p className="ctl-sub">每按一次會新增一筆紀錄；之後資料有變可以再存一次。</p>
         </ConfirmSheet>
@@ -1233,9 +1289,9 @@ function CreditsSection({ audit }: { audit: RefundCreditAudit | null }) {
                 </span>
                 <span className="ctl-row-amt">{money(c.refundAmount)}</span>
                 <span
-                  className={`ctl-pill ${c.status === "used" ? "green" : c.status === "cancelled" ? "red" : "orange"}`}
+                  className={`ctl-pill ${c.cashRefunded ? "blue" : c.status === "used" ? "green" : c.status === "cancelled" ? "red" : "orange"}`}
                 >
-                  {creditLabel(c.status)}
+                  {c.cashRefunded ? "已退款" : c.refundDue ? "待退款" : creditLabel(c.status)}
                 </span>
               </li>
             ))}
@@ -1252,30 +1308,71 @@ function CreditsSection({ audit }: { audit: RefundCreditAudit | null }) {
 
 function SettlementSection({
   management,
+  deduct,
+  onDeduct,
   writing,
   onSave,
 }: {
   management: SeasonManagementData | null;
+  deduct: boolean;
+  onDeduct: (value: boolean) => void;
   writing: boolean;
   onSave: () => void;
 }) {
   const s = management?.settlement;
   if (!s) return null;
   const col = s.collection || {};
+  const lv = leaveView(s, deduct);
+  const totalIncome = lv ? lv.totalIncome : s.totalIncome;
+  const netProfit = lv ? lv.netProfit : s.netProfit;
   return (
-    <Section title="季末結算" note={`損益 ${money(s.netProfit)}`}>
+    <Section title="季末結算" note={`損益 ${money(netProfit)}`}>
+      {lv ? (
+        <div className="ctl-deduct" role="group" aria-label="扣除請假退費">
+          <span>扣除請假退費</span>
+          <div className="ctl-seg">
+            <button
+              type="button"
+              className={deduct ? "is-on" : ""}
+              aria-pressed={deduct}
+              onClick={() => onDeduct(true)}
+            >
+              是
+            </button>
+            <button
+              type="button"
+              className={!deduct ? "is-on" : ""}
+              aria-pressed={!deduct}
+              onClick={() => onDeduct(false)}
+            >
+              否
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="ctl-metrics is-3">
-        <Metric label="總收入" value={money(s.totalIncome)} />
+        <Metric label="總收入" value={money(totalIncome)} />
         <Metric label="實際支出" value={money(s.totalExpense)} />
         <Metric
           label="本季損益"
-          value={money(s.netProfit)}
-          tone={(s.netProfit || 0) < 0 ? "red" : "green"}
+          value={money(netProfit)}
+          tone={(netProfit || 0) < 0 ? "red" : "green"}
         />
       </div>
       <dl className="ctl-kv">
-        <dt>季打收入</dt>
-        <dd>{money(s.fixedOperatingIncome)}</dd>
+        {lv ? (
+          <>
+            <dt>季打收入（全額）</dt>
+            <dd>{money(lv.fixedFull)}</dd>
+            <dt>請假退費總額</dt>
+            <dd>{deduct ? `−${money(lv.refund)}` : `${money(lv.refund)}（不扣）`}</dd>
+          </>
+        ) : (
+          <>
+            <dt>季打收入</dt>
+            <dd>{money(s.fixedOperatingIncome)}</dd>
+          </>
+        )}
         <dt>臨打收入</dt>
         <dd>{money(s.tempOperatingIncome)}</dd>
         <dt>季打收款</dt>
