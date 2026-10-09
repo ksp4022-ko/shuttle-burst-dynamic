@@ -124,7 +124,7 @@ function Login({ onSuccess }: { onSuccess: (pw: string, sites: AdminSite[]) => v
       <form className="ctl-login-card" onSubmit={submit}>
         <div>
           <h1>V10 控制台</h1>
-          <span className="ctl-readonly-tag">羽球報名 V6 管理後台</span>
+          <span className="ctl-readonly-tag">羽球報名管理後台</span>
         </div>
         <input
           className="ctl-input"
@@ -270,6 +270,19 @@ function Panel({
   }
 
   let body: ReactNode;
+  // T-08: the header's height, so a bar can stick right under it.
+  const headerRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const set = () =>
+      document.documentElement.style.setProperty("--ctl-head-h", `${el.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   if (!siteId) body = <div className="ctl-card ctl-empty">這個管理員沒有可管理的場地。</div>;
   else if (error)
     body = (
@@ -368,7 +381,7 @@ function Panel({
 
   return (
     <>
-      <header className="ctl-header">
+      <header className="ctl-header" ref={headerRef}>
         <div className="ctl-header-row">
           <div className="ctl-title">V10 控制台</div>
           {sites.length > 1 ? (

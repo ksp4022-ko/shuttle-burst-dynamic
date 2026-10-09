@@ -22,6 +22,8 @@ type V9RefundItem = {
   refundUnit: number;
   refundAmount: number;
   status: "due" | "refunded";
+  leaveDates?: string[];
+  leaveDateComplete?: boolean;
 };
 
 function refundItemsOf(billing: unknown): V9RefundItem[] {
@@ -286,7 +288,12 @@ export function V9BillingContent({
                   <li key={item.creditId} className="v9-bill-detail-row is-refund">
                     <span className="v9-bill-detail-name">
                       {item.fromSeasonName}
-                      <small>請假退費・未續打</small>
+                      <small>
+                        {item.leaveDates?.length
+                          ? item.leaveDates.map(shortDate).join("、")
+                          : "請假退費・未續打"}
+                        {item.leaveDateComplete === false && "（日期資料不足）"}
+                      </small>
                     </span>
                     <span className={`v9-badge ${item.status === "due" ? "is-red" : "is-green"}`}>
                       {item.status === "due" ? "待退款" : "已退款"}

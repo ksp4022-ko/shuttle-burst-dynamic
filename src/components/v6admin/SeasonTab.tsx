@@ -1266,7 +1266,8 @@ function MembersSection({
 function creditLabel(status: string) {
   if (status === "active") return "未使用";
   if (status === "used") return "已使用";
-  if (status === "cancelled") return "已取消";
+  // T-09: a credit cancelled on recalculation means 0 leave (no refund).
+  if (status === "cancelled") return "無請假";
   return status || "其他";
 }
 
@@ -1301,7 +1302,7 @@ function CreditsSection({ audit }: { audit: RefundCreditAudit | null }) {
                 </span>
                 <span className="ctl-row-amt">{money(c.refundAmount)}</span>
                 <span
-                  className={`ctl-pill ${c.cashRefunded ? "blue" : c.status === "used" ? "green" : c.status === "cancelled" ? "red" : "orange"}`}
+                  className={`ctl-pill ${c.cashRefunded ? "blue" : c.status === "used" ? "green" : c.status === "cancelled" ? "" : "orange"}`}
                 >
                   {c.cashRefunded ? "已退款" : c.refundDue ? "待退款" : creditLabel(c.status)}
                 </span>
@@ -1317,6 +1318,31 @@ function CreditsSection({ audit }: { audit: RefundCreditAudit | null }) {
 }
 
 // ---------- 季末結算 ----------
+
+// S3: the latest saved 季末損益, so it is not saved twice by accident.
+function LastSaved({ last }: { last: SeasonManagementData["lastProfitLoss"] }) {
+  if (!last) return <p className="ctl-sub">尚未儲存過本季損益。</p>;
+  const note = String(last.note || "");
+  const mode = note.includes("leave_refund_deducted")
+    ? "，扣除請假退費＝是"
+    : note.includes("leave_refund_not_deducted")
+      ? "，扣除請假退費＝否"
+      : "";
+  const when = new Date(last.createdAt).toLocaleString("zh-TW", {
+    timeZone: "Asia/Taipei",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  return (
+    <p className="ctl-sub">
+      上次儲存：{when}
+      {mode}，損益 {money(last.netProfit)}
+    </p>
+  );
+}
 
 function SettlementSection({
   management,
@@ -1415,6 +1441,7 @@ function SettlementSection({
               儲存本季損益
             </button>
           </div>
+          <LastSaved last={management?.lastProfitLoss} />
         </>
       ) : (
         <div className="ctl-notice">

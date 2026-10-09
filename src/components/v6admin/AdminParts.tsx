@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { ToastState } from "@/lib/v6admin-write";
 
 export type { ToastState, WriteLock } from "@/lib/v6admin-write";
@@ -44,6 +44,35 @@ export function SegButton({
   );
 }
 
+// S2: each fold remembers whether it was last left open (per title, in this
+// browser only). Without a remembered choice it uses its default (T-13: folded,
+// S1: a few action cards open).
+const FOLD_KEY = "v10CtlPanel:fold:";
+
+function useFold(title: string, defaultOpen: boolean) {
+  const [open, setOpen] = useState(() => {
+    try {
+      const v = window.localStorage.getItem(FOLD_KEY + title);
+      if (v === "1") return true;
+      if (v === "0") return false;
+    } catch {
+      /* storage unavailable: use the default */
+    }
+    return defaultOpen;
+  });
+  function onToggle(e: { currentTarget: HTMLDetailsElement }) {
+    const next = e.currentTarget.open;
+    if (next === open) return;
+    setOpen(next);
+    try {
+      window.localStorage.setItem(FOLD_KEY + title, next ? "1" : "0");
+    } catch {
+      /* storage unavailable: choice just isn't remembered */
+    }
+  }
+  return { open, onToggle };
+}
+
 export function Section({
   title,
   note,
@@ -55,8 +84,9 @@ export function Section({
   defaultOpen?: boolean | undefined;
   children: ReactNode;
 }) {
+  const fold = useFold(title, defaultOpen ?? false);
   return (
-    <details className="ctl-sec" open={defaultOpen}>
+    <details className="ctl-sec" open={fold.open} onToggle={fold.onToggle}>
       <summary>
         {title}
         {note != null ? <span className="ctl-sum-note">{note}</span> : null}
@@ -70,14 +100,17 @@ export function Section({
 export function Card({
   title,
   side,
+  defaultOpen,
   children,
 }: {
   title: string;
   side?: ReactNode | undefined;
+  defaultOpen?: boolean | undefined;
   children: ReactNode;
 }) {
+  const fold = useFold(title, defaultOpen ?? false);
   return (
-    <details className="ctl-card ctl-fold">
+    <details className="ctl-card ctl-fold" open={fold.open} onToggle={fold.onToggle}>
       <summary className="ctl-card-title">
         <h2>{title}</h2>
         {side}

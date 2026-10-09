@@ -418,7 +418,7 @@ export function CollectTab({
             </div>
           ) : null}
           {both ? (
-            <Card title="結算" side={<span className="ctl-sub">{netText}</span>}>
+            <Card title="結算" defaultOpen side={<span className="ctl-sub">{netText}</span>}>
               <label className="ctl-check ctl-check-all">
                 <input
                   type="checkbox"
@@ -482,10 +482,7 @@ export function CollectTab({
                       />
                       <span className="ctl-row-name is-wrap">
                         {refundLabel(r)}
-                        <small className="ctl-bill-detail">
-                          {r.groupName} 請假 {r.leaveCount} 次 × {money(r.refundUnit)}（原抵{" "}
-                          {r.toSeasonName}）
-                        </small>
+                        <RefundDetail r={r} />
                       </span>
                       <span className="ctl-row-amt is-refund">−{money(r.refundAmount)}</span>
                     </label>
@@ -496,6 +493,7 @@ export function CollectTab({
             </Card>
           ) : refunds.length ? (
             <Card
+              defaultOpen
               title="待退款"
               side={<span className="ctl-sub is-refund">待退 {money(refundTotal)}</span>}
             >
@@ -517,10 +515,7 @@ export function CollectTab({
                       />
                       <span className="ctl-row-name is-wrap">
                         {refundLabel(r)}
-                        <small className="ctl-bill-detail">
-                          {r.groupName} 請假 {r.leaveCount} 次 × {money(r.refundUnit)}（原抵{" "}
-                          {r.toSeasonName}）
-                        </small>
+                        <RefundDetail r={r} />
                       </span>
                       <span className="ctl-row-amt is-refund">−{money(r.refundAmount)}</span>
                     </label>
@@ -542,6 +537,7 @@ export function CollectTab({
             </Card>
           ) : (
             <Card
+              defaultOpen
               title="未繳項目"
               side={<span className="ctl-sub">應繳 {money(bill.totalAmountDue)}</span>}
             >
@@ -789,9 +785,7 @@ export function CollectTab({
               <li className="ctl-row" key={r.creditId}>
                 <span className="ctl-row-name is-wrap">
                   {refundLabel(r)}
-                  <small>
-                    請假 {r.leaveCount} 次 × {money(r.refundUnit)}
-                  </small>
+                  <RefundDetail r={r} />
                 </span>
                 <span className="ctl-row-amt is-refund">−{money(r.refundAmount)}</span>
               </li>
@@ -837,6 +831,22 @@ export function CollectTab({
 
       <Toast toast={toast} />
     </>
+  );
+}
+
+// T-08: a refund's leave count × unit and the leave dates (same dates as a
+// season fee's refund sources).
+function RefundDetail({ r }: { r: BillRefundItem }) {
+  const dates = r.leaveDates ?? [];
+  return (
+    <small className="ctl-bill-detail">
+      {r.groupName} 請假 {r.leaveCount} 次 × {money(r.refundUnit)}（原抵 {r.toSeasonName}）
+      {r.leaveDateComplete === false ? (
+        <span className="ctl-bill-detail">日期資料不足</span>
+      ) : dates.length ? (
+        <span className="ctl-bill-detail">{dates.map((d) => shortDate(d)).join("、")}</span>
+      ) : null}
+    </small>
   );
 }
 

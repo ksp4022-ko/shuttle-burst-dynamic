@@ -511,6 +511,15 @@ export type SeasonManagementData = {
   groupId: string;
   setting: SeasonSetting | null;
   settlement: Settlement | null;
+  // V6-032: the latest saved 季末損益 of this season/group.
+  lastProfitLoss?: {
+    id: string;
+    netProfit: number;
+    totalIncome: number;
+    totalExpense: number;
+    note?: string | null;
+    createdAt: string;
+  } | null;
 };
 
 export type LinkedCredit = {
@@ -597,6 +606,9 @@ export type BillRefundItem = {
   refundAmount: number;
   status: "due" | "refunded";
   refundedAt: string | null;
+  // V6-032: leave dates behind the refund (as a season fee's refund sources).
+  leaveDates?: string[];
+  leaveDateComplete?: boolean;
 };
 
 export type BillRefundSource = {
