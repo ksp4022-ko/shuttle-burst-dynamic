@@ -66,7 +66,7 @@ export function Section({
   );
 }
 
-// A card whose title row folds it (open by default).
+// A card whose title row folds it (T-13: folded by default).
 export function Card({
   title,
   side,
@@ -77,7 +77,7 @@ export function Card({
   children: ReactNode;
 }) {
   return (
-    <details className="ctl-card ctl-fold" open>
+    <details className="ctl-card ctl-fold">
       <summary className="ctl-card-title">
         <h2>{title}</h2>
         {side}

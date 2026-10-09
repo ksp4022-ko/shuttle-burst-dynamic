@@ -1004,7 +1004,6 @@ function PaymentsSection({
   return (
     <Section
       title="季繳紀錄"
-      defaultOpen
       note={rows.length ? `未付 ${s.unpaidCount} / ${s.memberCount} 人` : "尚未建立"}
     >
       {rows.length ? (
