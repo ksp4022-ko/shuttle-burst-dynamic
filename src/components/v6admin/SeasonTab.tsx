@@ -1321,6 +1321,8 @@ function CreditsSection({ audit }: { audit: RefundCreditAudit | null }) {
 
 // S3: the latest saved 季末損益, so it is not saved twice by accident.
 function LastSaved({ last }: { last: SeasonManagementData["lastProfitLoss"] }) {
+  // undefined = the Worker does not send it yet (before V6-032): show nothing.
+  if (last === undefined) return null;
   if (!last) return <p className="ctl-sub">尚未儲存過本季損益。</p>;
   const note = String(last.note || "");
   const mode = note.includes("leave_refund_deducted")
