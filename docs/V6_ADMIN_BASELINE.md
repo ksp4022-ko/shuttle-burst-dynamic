@@ -168,7 +168,7 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 | T-13 | 2026-10-09 | 整個控制台所有可收合的卡片／區塊預設收合（Card、③ 季繳紀錄原本預設展開） | 已完成並部署（待 iPhone 驗收） |
 | T-14 | 2026-10-10 | 彈出視窗（Modal／底部 Sheet）用 motion 優化動畫。方案草案：沿用專案已裝的 motion（V9 已在用），V10 Sheet 改為由下滑入＋背景淡入、關閉時滑出（現在只有開啟 0.2 秒、關閉瞬間消失）；可下拉關閉；卡片展開／收合加高度動畫；系統「減少動態效果」時關閉動畫。只改 V10 控制台 | Pending（待確認範圍，未改程式） |
 | S1–S5 | 2026-10-09 | S1 收款帳單頁結算／未繳項目／待退款卡預設展開；S2 每張卡片記住上次開合（本機瀏覽器）；S3 季末結算顯示上次儲存（時間、扣除與否、損益）；S4 損益備註改記計算值（Worker V6-032）；S5 V9-026 待 /v9test 驗收後上 /v9 | S1–S4 已實作並部署（S3／S4 需 V6-032）；S5 待驗收 |
-| V6-032 | 2026-10-09 | Worker（badminton-signup ea1f8c9）：待退款項目附請假日期（同季費抵扣算法）；損益備註 leaveRefund＝計算值、credited＝已產生抵扣；season-management 多回 lastProfitLoss（唯讀） | 待 Codex 部署 |
+| V6-032 | 2026-10-09 | Worker（badminton-signup ea1f8c9）：待退款項目附請假日期（同季費抵扣算法）；損益備註 leaveRefund＝計算值、credited＝已產生抵扣；season-management 多回 lastProfitLoss（唯讀） | 已部署 Cloudflare 08a9815f-79df-444c-9a8d-c7f84daa6d7c（2026-10-10），待 iPhone 複驗 |
 
 P6（④ 系統設定寫入）、頁面左右鎖定、賽季預設修正、Worker V6-026（臨打成員清單）已部署；預設賽季、左右鎖定、場地設定、測試發送已驗收。
 
