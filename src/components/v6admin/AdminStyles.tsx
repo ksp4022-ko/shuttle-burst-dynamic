@@ -294,6 +294,9 @@ html.ctl-lock-x body {
 .ctl-member-order { width: 58px; flex: none; text-align: center; }
 .ctl-member-name { flex: 1; font-weight: 700; }
 
+.ctl-part-loading { color: var(--muted); font-size: 14px; font-weight: 700; }
+.ctl-part-error { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
 /* ---------- Toast ---------- */
 .ctl-toast {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 60;

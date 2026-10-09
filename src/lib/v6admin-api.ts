@@ -73,11 +73,19 @@ export function isUnknownResult(err: unknown): err is AdminApiError {
   return err instanceof AdminApiError && (err.code === "TIMEOUT" || err.code === "UNKNOWN_RESULT");
 }
 
-export async function adminGet<T>(path: string, password: string): Promise<T> {
+// The season reports recompute every leave credit on the Worker; they get
+// a longer deadline than other reads.
+const SLOW_GET_TIMEOUT_MS = 45000;
+
+export async function adminGet<T>(
+  path: string,
+  password: string,
+  timeoutMs = GET_TIMEOUT_MS,
+): Promise<T> {
   const { res, json } = await fetchJson<T>(
     path,
     { method: "GET", headers: { "x-admin-password": password } },
-    GET_TIMEOUT_MS,
+    timeoutMs,
     false,
   );
   if (!res.ok || !json || json.ok === false) {
@@ -769,11 +777,13 @@ export const adminApi = {
     adminGet<SeasonManagementData>(
       `/admin/sites/${enc(siteId)}/season-management?seasonId=${enc(seasonId)}&groupId=${enc(groupId)}`,
       pw,
+      SLOW_GET_TIMEOUT_MS,
     ),
   seasonPaymentAudit: (pw: string, siteId: string, seasonId: string, groupId: string) =>
     adminGet<SeasonPaymentAudit>(
       `/admin/sites/${enc(siteId)}/season-payments/audit?seasonId=${enc(seasonId)}&groupId=${enc(groupId)}`,
       pw,
+      SLOW_GET_TIMEOUT_MS,
     ),
   refundAdjustmentPreview: (pw: string, siteId: string, scope: RefundAdjustmentScope) =>
     adminGet<RefundAdjustmentPreview>(
@@ -799,6 +809,7 @@ export const adminApi = {
     adminGet<RefundCreditAudit>(
       `/admin/sites/${enc(siteId)}/refund-credits/audit?seasonId=${enc(seasonId)}&groupId=${enc(groupId)}`,
       pw,
+      SLOW_GET_TIMEOUT_MS,
     ),
   group: (pw: string, siteId: string, groupId: string, seasonId: string) =>
     adminGet<GroupSnapshot>(

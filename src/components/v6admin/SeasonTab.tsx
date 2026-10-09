@@ -39,7 +39,17 @@ type Loaded = {
   payments: SeasonPaymentAudit | null;
   credits: RefundCreditAudit | null;
   group: GroupSnapshot | null;
-  errors: string[];
+  // Each part shows as soon as it arrives; a failed part gets its own retry.
+  loading: Part[];
+  partErrors: Partial<Record<Part, string>>;
+};
+type Part = "management" | "payments" | "credits" | "group";
+const PARTS: Part[] = ["management", "payments", "credits", "group"];
+const PART_LABEL: Record<Part, string> = {
+  management: "期初設定／季末結算",
+  payments: "季繳紀錄",
+  credits: "退費抵扣",
+  group: "季打群組成員",
 };
 
 function errText(reason: unknown): string {
@@ -149,27 +159,63 @@ export function SeasonTab({
   // Sequenced so only the newest read lands. Rejects when any part failed so
   // runWrite can tell the re-read did not fully succeed.
   const loadSeq = useRef(0);
-  const loadSeason = useCallback(async () => {
-    if (!seasonId || !groupId) return;
-    const seq = ++loadSeq.current;
-    const [m, p, c, g] = await Promise.allSettled([
-      adminApi.seasonManagement(password, siteId, seasonId, groupId),
-      adminApi.seasonPaymentAudit(password, siteId, seasonId, groupId),
-      adminApi.refundCreditAudit(password, siteId, seasonId, groupId),
-      adminApi.group(password, siteId, groupId, seasonId),
-    ]);
-    const errors: string[] = [];
-    for (const r of [m, p, c, g]) if (r.status === "rejected") errors.push(errText(r.reason));
-    if (seq === loadSeq.current)
-      setData({
-        management: m.status === "fulfilled" ? m.value : null,
-        payments: p.status === "fulfilled" ? p.value : null,
-        credits: c.status === "fulfilled" ? c.value : null,
-        group: g.status === "fulfilled" ? g.value : null,
-        errors: Array.from(new Set(errors)),
-      });
-    if (errors.length) throw new Error(errors[0]);
-  }, [password, siteId, seasonId, groupId]);
+  const fetchPart = useCallback(
+    (part: Part): Promise<Loaded[Part]> => {
+      if (part === "management")
+        return adminApi.seasonManagement(password, siteId, seasonId, groupId);
+      if (part === "payments")
+        return adminApi.seasonPaymentAudit(password, siteId, seasonId, groupId);
+      if (part === "credits")
+        return adminApi.refundCreditAudit(password, siteId, seasonId, groupId);
+      return adminApi.group(password, siteId, groupId, seasonId);
+    },
+    [password, siteId, seasonId, groupId],
+  );
+  // Loads the given parts (default: all) in parallel; each lands on screen
+  // as soon as it arrives. Rejects when any of them failed (for runWrite).
+  const loadSeason = useCallback(
+    async (parts: Part[] = PARTS) => {
+      if (!seasonId || !groupId) return;
+      const seq = ++loadSeq.current;
+      setData((d) => (d ? { ...d, loading: Array.from(new Set([...d.loading, ...parts])) } : d));
+      const results = await Promise.allSettled(
+        parts.map((part) =>
+          fetchPart(part).then(
+            (value) => {
+              if (seq === loadSeq.current)
+                setData((d) => {
+                  if (!d) return d;
+                  const partErrors = { ...d.partErrors };
+                  delete partErrors[part];
+                  return {
+                    ...d,
+                    [part]: value,
+                    partErrors,
+                    loading: d.loading.filter((x) => x !== part),
+                  };
+                });
+            },
+            (err: unknown) => {
+              if (seq === loadSeq.current)
+                setData((d) =>
+                  d
+                    ? {
+                        ...d,
+                        partErrors: { ...d.partErrors, [part]: errText(err) },
+                        loading: d.loading.filter((x) => x !== part),
+                      }
+                    : d,
+                );
+              throw err;
+            },
+          ),
+        ),
+      );
+      const failed = results.find((r) => r.status === "rejected");
+      if (failed) throw new Error(errText(failed.reason));
+    },
+    [fetchPart, seasonId, groupId],
+  );
 
   // A new season/group starts from "loading"; a re-read after a write keeps
   // the current data on screen (and open rows open) until it lands.
@@ -179,7 +225,14 @@ export function SeasonTab({
     const key = `${siteId}|${seasonId}|${groupId}`;
     if (shownKey.current !== key) {
       shownKey.current = key;
-      setData(null);
+      setData({
+        management: null,
+        payments: null,
+        credits: null,
+        group: null,
+        loading: [...PARTS],
+        partErrors: {},
+      });
     }
     loadSeason().catch(() => {});
     return () => {
@@ -278,7 +331,11 @@ export function SeasonTab({
         <div className="ctl-loading">讀取賽季資料中…</div>
       ) : (
         <>
-          {data.errors.length ? <div className="ctl-error">{data.errors.join("；")}</div> : null}
+          <PartStatus
+            data={data}
+            parts={["payments"]}
+            onRetry={(p) => void loadSeason(p).catch(() => {})}
+          />
           <PaymentsSection
             audit={data.payments}
             writing={writing}
@@ -287,16 +344,31 @@ export function SeasonTab({
             onGenerate={() => open({ kind: "pay-gen" })}
             onRefundGen={() => open({ kind: "refund-gen" })}
           />
+          <PartStatus
+            data={data}
+            parts={["management"]}
+            onRetry={(p) => void loadSeason(p).catch(() => {})}
+          />
           <SettingSection
             management={data.management}
             writing={writing}
             onEdit={() => open({ kind: "setting" })}
+          />
+          <PartStatus
+            data={data}
+            parts={["group"]}
+            onRetry={(p) => void loadSeason(p).catch(() => {})}
           />
           <MembersSection
             group={data.group}
             writing={writing}
             onEdit={() => open({ kind: "members" })}
             onGroup={() => open({ kind: "group-edit" })}
+          />
+          <PartStatus
+            data={data}
+            parts={["credits"]}
+            onRetry={(p) => void loadSeason(p).catch(() => {})}
           />
           <CreditsSection audit={data.credits} />
           <SettlementSection
@@ -777,6 +849,49 @@ function AdjustSheet({
         </button>
       </div>
     </Sheet>
+  );
+}
+
+// A part still loading (nothing to show yet) or failed: a slim card in its
+// place, with a retry for just that part. A part that has data keeps showing
+// it while a re-read runs; a failed re-read says so above it.
+function PartStatus({
+  data,
+  parts,
+  onRetry,
+}: {
+  data: Loaded;
+  parts: Part[];
+  onRetry: (parts: Part[]) => void;
+}) {
+  return (
+    <>
+      {parts.map((part) => {
+        const error = data.partErrors[part];
+        const loading = data.loading.includes(part);
+        if (error)
+          return (
+            <div className="ctl-error ctl-part-error" key={part}>
+              {PART_LABEL[part]}：{error}{" "}
+              <button
+                className="ctl-btn-ghost"
+                type="button"
+                disabled={loading}
+                onClick={() => onRetry([part])}
+              >
+                {loading ? "讀取中…" : "重試"}
+              </button>
+            </div>
+          );
+        if (loading && data[part] == null)
+          return (
+            <div className="ctl-card ctl-part-loading" key={part}>
+              {PART_LABEL[part]} 讀取中…
+            </div>
+          );
+        return null;
+      })}
+    </>
   );
 }
 
