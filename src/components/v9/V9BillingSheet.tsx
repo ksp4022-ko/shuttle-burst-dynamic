@@ -5,14 +5,13 @@ import type {
   V8BillingRefundSource,
   V8BillingSeasonPayment,
 } from "@/lib/v8-personal-billing";
-import { useV9Test } from "./useV9Test";
 
 // 帳單 sheet body: the same hook and GET /me/billing data as the official V8 bill (B3).
 // Display only -- every amount and status is the backend's value. The one
 // sum V9 shows itself is 歷史未收 (V9-020): earlier seasons' unpaid
 // fees, which the backend already counts in 本次應繳, plus the guest arrears.
 
-// V9-026 (/v9test first): a leave credit the player gets back in cash because
+// V9-026 (on /v9 since 2026-10-11): a leave credit the player gets back in cash because
 // they are not in the next season's roster (Worker V6-031 refundItems on
 // /me/billing). Not part of 本次應繳; read here so the shared V8 types stay as is.
 type V9RefundItem = {
@@ -160,7 +159,6 @@ export function V9BillingContent({
   eventId: string;
   asIdentityId?: string | undefined;
 }) {
-  const showRefunds = useV9Test();
   const billing = useV8PersonalBillingTest({
     enabled: true,
     token,
@@ -207,7 +205,7 @@ export function V9BillingContent({
     const pastSeasons = seasonPaymentHistory.items
       .slice(1)
       .filter((item) => item.status === "unpaid" && item.outstanding > 0);
-    const refunds = showRefunds ? refundItemsOf(state.billing) : [];
+    const refunds = refundItemsOf(state.billing);
     const refundDue = refunds
       .filter((item) => item.status === "due")
       .reduce((sum, item) => sum + item.refundAmount, 0);
