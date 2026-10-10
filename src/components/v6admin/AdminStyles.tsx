@@ -262,6 +262,7 @@ html.ctl-lock-x body {
 .ctl-person { width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .ctl-row-amt.is-owe { color: var(--red); }
 .ctl-row-amt.is-refund, .ctl-sub.is-refund, small.is-refund { color: var(--blue); }
+.ctl-bill-detail.is-warn { color: var(--red); font-weight: 700; }
 .ctl-refund-bar { display: grid; margin-top: 10px; }
 .ctl-row-amt { text-align: right; }
 .ctl-row-amt small.is-sub { display: block; font-size: 13px; font-weight: 700; color: var(--muted); }

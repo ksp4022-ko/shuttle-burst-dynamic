@@ -841,10 +841,17 @@ function RefundDetail({ r }: { r: BillRefundItem }) {
   return (
     <small className="ctl-bill-detail">
       {r.groupName} 請假 {r.leaveCount} 次 × {money(r.refundUnit)}（原抵 {r.toSeasonName}）
-      {r.leaveDateComplete === false ? (
-        <span className="ctl-bill-detail">日期資料不足</span>
-      ) : dates.length ? (
+      {dates.length ? (
         <span className="ctl-bill-detail">{dates.map((d) => shortDate(d)).join("、")}</span>
+      ) : null}
+      {/* T-15: the dates the system finds now can differ from the credit's count
+          (e.g. a leave cancelled after the credit was generated). */}
+      {r.leaveDateComplete === false ? (
+        <span className="ctl-bill-detail is-warn">
+          {dates.length
+            ? `系統找到 ${dates.length} 次，抵扣記 ${r.leaveCount} 次`
+            : "找不到請假日期"}
+        </span>
       ) : null}
     </small>
   );
@@ -859,11 +866,12 @@ function SeasonDetail({ s }: { s: BillSeasonItem }) {
         <span key={r.creditId} className="ctl-bill-detail">
           {r.sourceSeasonName} 請假 {r.leaveCount} 次 × {money(r.refundUnitAmount)} ={" "}
           {money(r.refundAmount)}
+          {r.leaveDates.length ? `（${r.leaveDates.map((d) => shortDate(d)).join("、")}）` : ""}
           {r.leaveDateComplete === false
-            ? "（日期資料不足）"
-            : r.leaveDates.length
-              ? `（${r.leaveDates.map((d) => shortDate(d)).join("、")}）`
-              : ""}
+            ? r.leaveDates.length
+              ? `（系統找到 ${r.leaveDates.length} 次，抵扣記 ${r.leaveCount} 次）`
+              : "（找不到請假日期）"
+            : ""}
         </span>
       ))}
     </small>

@@ -292,7 +292,10 @@ export function V9BillingContent({
                         {item.leaveDates?.length
                           ? item.leaveDates.map(shortDate).join("、")
                           : "請假退費・未續打"}
-                        {item.leaveDateComplete === false && "（日期資料不足）"}
+                        {item.leaveDateComplete === false &&
+                          (item.leaveDates?.length
+                            ? `（系統找到 ${item.leaveDates.length} 次，抵扣記 ${item.leaveCount} 次）`
+                            : "（找不到請假日期）")}
                       </small>
                     </span>
                     <span className={`v9-badge ${item.status === "due" ? "is-red" : "is-green"}`}>
