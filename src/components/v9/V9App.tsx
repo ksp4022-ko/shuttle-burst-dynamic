@@ -710,6 +710,7 @@ export function V9App() {
                 token={lineToken}
                 siteId={siteId}
                 eventId={selectedEventId}
+                seasonId={flow.selectedEvent?.seasonId}
                 asIdentityId={viewing && viewAs ? viewAs.id : undefined}
               />
             ) : (

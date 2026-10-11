@@ -256,6 +256,10 @@ export function V9PlayerCard({
             <em className="v9-pc-due">
               應繳 <strong>${due.amount.toLocaleString("en-US")}</strong>
             </em>
+          ) : due.amount < 0 ? (
+            <em className="v9-pc-due is-refund">
+              應退 <strong>${(-due.amount).toLocaleString("en-US")}</strong>
+            </em>
           ) : (
             <em className="v9-pc-due is-clear">已繳清</em>
           ))}

@@ -11,12 +11,17 @@ import type {
 // sum V9 shows itself is 歷史未收 (V9-020): earlier seasons' unpaid
 // fees, which the backend already counts in 本次應繳, plus the guest arrears.
 
-// V9-026 (on /v9 since 2026-10-11): a leave credit the player gets back in cash because
-// they are not in the next season's roster (Worker V6-031 refundItems on
-// /me/billing). Not part of 本次應繳; read here so the shared V8 types stay as is.
+// V9-026: a leave credit the player gets back in cash because they are not in
+// the next season's roster (Worker V6-031 refundItems on /me/billing). Read
+// here so the shared V8 types stay as is.
+// V9-027: such a credit sits in 上季請假抵扣 like a renewed member's credit,
+// and 本次應繳 shows the backend's amount due minus these refunds (display
+// only, the same netting as the V10 收款 page); below zero it reads 本次應退.
 type V9RefundItem = {
   creditId: string;
   fromSeasonName: string;
+  toSeasonId?: string;
+  toSeasonName?: string;
   leaveCount: number;
   refundUnit: number;
   refundAmount: number;
@@ -28,6 +33,31 @@ type V9RefundItem = {
 function refundItemsOf(billing: unknown): V9RefundItem[] {
   const items = (billing as { refundItems?: unknown }).refundItems;
   return Array.isArray(items) ? (items as V9RefundItem[]) : [];
+}
+
+// A cash refund (V9-026/027) as a row of 上季請假抵扣.
+function CashRefundRow({ item }: { item: V9RefundItem }) {
+  const dates = item.leaveDates ?? [];
+  return (
+    <li className="v9-bill-detail-row is-refund">
+      <span className="v9-bill-detail-name">
+        {item.fromSeasonName}
+        <small>
+          {dates.length ? dates.map(shortDate).join("、") : `請假 ${item.leaveCount} 次`}
+          {item.leaveDateComplete === false &&
+            (dates.length
+              ? `（系統找到 ${dates.length} 次，抵扣記 ${item.leaveCount} 次）`
+              : "（找不到請假日期）")}
+        </small>
+      </span>
+      <span className={`v9-badge ${item.status === "due" ? "is-red" : "is-green"}`}>
+        {item.status === "due" ? "退現金" : "已退現金"}
+      </span>
+      <span className="v9-bill-detail-money">
+        {item.leaveCount} × {money(item.refundUnit)} = {money(item.refundAmount)}
+      </span>
+    </li>
+  );
 }
 
 function money(value: number) {
@@ -70,7 +100,10 @@ function RefundRow({ source }: { source: V8BillingRefundSource }) {
           {source.leaveDates.length
             ? source.leaveDates.map(shortDate).join("、")
             : `請假 ${source.leaveCount} 次`}
-          {!source.leaveDateComplete && "（日期資料不足）"}
+          {!source.leaveDateComplete &&
+            (source.leaveDates.length
+              ? `（系統找到 ${source.leaveDates.length} 次，抵扣記 ${source.leaveCount} 次）`
+              : "（找不到請假日期）")}
         </small>
       </span>
       <span className="v9-bill-detail-money">
@@ -152,11 +185,14 @@ export function V9BillingContent({
   token,
   siteId,
   eventId,
+  seasonId,
   asIdentityId,
 }: {
   token: string | null;
   siteId: string;
   eventId: string;
+  // V9-027: the selected meetup's season = 本季 for the first row.
+  seasonId?: string | undefined;
   asIdentityId?: string | undefined;
 }) {
   const billing = useV8PersonalBillingTest({
@@ -199,33 +235,59 @@ export function V9BillingContent({
     );
   } else {
     const { totals, currentGuestItems, guestLedger, seasonPaymentHistory } = state.billing;
-    const season = seasonPaymentHistory.items[0] ?? null;
-    // Earlier seasons still unpaid (V9-020): the backend counts them
-    // in 本次應繳; list them under 歷史未收 so the lines add up.
-    const pastSeasons = seasonPaymentHistory.items
-      .slice(1)
-      .filter((item) => item.status === "unpaid" && item.outstanding > 0);
+    const payments = seasonPaymentHistory.items;
+    // V9-027: 本季 = the selected meetup's season (falls back to the latest
+    // fee when the meetup has no season).
+    // The newest fee comes first; an unpaid fee newer than 本季 (next
+    // season already issued) stays on top, as before V9-027.
+    const currentIndex = seasonId ? payments.findIndex((item) => item.seasonId === seasonId) : 0;
+    const season =
+      currentIndex > 0 && payments[0]?.status === "unpaid"
+        ? payments[0]
+        : currentIndex >= 0
+          ? (payments[currentIndex] ?? null)
+          : null;
+    // Other seasons still unpaid (V9-020): the backend counts them in
+    // 本次應繳; list them under 歷史未收 so the lines add up.
+    const pastSeasons = payments.filter(
+      (item) => item !== season && item.status === "unpaid" && item.outstanding > 0,
+    );
     const refunds = refundItemsOf(state.billing);
     const refundDue = refunds
       .filter((item) => item.status === "due")
       .reduce((sum, item) => sum + item.refundAmount, 0);
+    // Anyone who ever had a 季費 or a leave credit gets the 季費 rows; a
+    // former 季打 without this season's fee shows 本季 季費 $0.
+    const formerFixed = payments.length > 0 || refunds.length > 0;
+    const seasonName =
+      season?.seasonName ||
+      refunds.find((item) => item.toSeasonId && item.toSeasonId === seasonId)?.toSeasonName ||
+      "本季";
+    const creditTotal = (season?.refundCreditTotal ?? 0) + refundDue;
     const historyTotal =
       totals.otherGuestOutstandingTotal +
       pastSeasons.reduce((sum, item) => sum + item.outstanding, 0);
+    const net = totals.totalAmountDue - refundDue;
     body = (
       <>
         <div className="v9-bill-lines">
-          {season && (
+          {(season || formerFixed) && (
             <>
-              <BillLine label={`${season.seasonName} 季費`} value={money(season.baseSeasonFee)} />
+              <BillLine
+                label={`${seasonName} 季費`}
+                value={money(season ? season.baseSeasonFee : 0)}
+              />
               <BillLine
                 label="上季請假抵扣"
-                value={season.refundCreditTotal ? `-${money(season.refundCreditTotal)}` : money(0)}
+                value={creditTotal ? `-${money(creditTotal)}` : money(0)}
               >
-                {season.refundSources.length ? (
+                {season?.refundSources.length || refunds.length ? (
                   <ul className="v9-bill-detail-list">
-                    {season.refundSources.map((source) => (
+                    {(season?.refundSources ?? []).map((source) => (
                       <RefundRow key={source.creditId} source={source} />
+                    ))}
+                    {refunds.map((item) => (
+                      <CashRefundRow key={item.creditId} item={item} />
                     ))}
                   </ul>
                 ) : null}
@@ -272,42 +334,12 @@ export function V9BillingContent({
             )}
           </BillLine>
         </div>
-        <div className="v9-bill-total">
-          <span>本次應繳</span>
-          <strong key={totals.totalAmountDue} className="v9-pop">
-            {money(totals.totalAmountDue)}
+        <div className={`v9-bill-total${net < 0 ? " is-refund" : ""}`}>
+          <span>{net < 0 ? "本次應退" : "本次應繳"}</span>
+          <strong key={net} className="v9-pop">
+            {money(Math.abs(net))}
           </strong>
         </div>
-        {refunds.length > 0 && (
-          <div className="v9-bill-lines is-refund">
-            <BillLine label="待退款" value={refundDue ? money(refundDue) : "已退款"}>
-              <ul className="v9-bill-detail-list">
-                {refunds.map((item) => (
-                  <li key={item.creditId} className="v9-bill-detail-row is-refund">
-                    <span className="v9-bill-detail-name">
-                      {item.fromSeasonName}
-                      <small>
-                        {item.leaveDates?.length
-                          ? item.leaveDates.map(shortDate).join("、")
-                          : "請假退費・未續打"}
-                        {item.leaveDateComplete === false &&
-                          (item.leaveDates?.length
-                            ? `（系統找到 ${item.leaveDates.length} 次，抵扣記 ${item.leaveCount} 次）`
-                            : "（找不到請假日期）")}
-                      </small>
-                    </span>
-                    <span className={`v9-badge ${item.status === "due" ? "is-red" : "is-green"}`}>
-                      {item.status === "due" ? "待退款" : "已退款"}
-                    </span>
-                    <span className="v9-bill-detail-money">
-                      {item.leaveCount} × {money(item.refundUnit)} = {money(item.refundAmount)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </BillLine>
-          </div>
-        )}
         {season && (
           <div className="v9-bill-line">
             <span>季費狀態</span>

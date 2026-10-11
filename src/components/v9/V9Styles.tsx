@@ -422,7 +422,7 @@ const V9_CSS = `
 /* fee / billing */
 .v9-bill { margin-top: 4px; padding: 4px 14px 14px; background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 20px; }
 .v9-bill-lines { display: grid; }
-.v9-bill-lines.is-refund { margin-top: 10px; }
+.v9-bill-total.is-refund { background: #8fc1ec; }
 .v9-bill-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 2px dashed #eadfca; font-weight: 700; }
 .v9-bill-line strong { font-variant-numeric: tabular-nums; }
 .v9-bill-line.is-expandable { display: block; padding: 0; }
@@ -569,6 +569,7 @@ const V9_CSS = `
 .v9-pc-due { flex: none; font-style: normal; font-size: 14px; font-weight: 800; color: var(--v9-muted); font-variant-numeric: tabular-nums; }
 .v9-pc-due strong { color: var(--v9-red); font-size: 17px; font-weight: 900; }
 .v9-pc-due.is-clear { color: var(--v9-green); }
+.v9-pc-due.is-refund, .v9-pc-due.is-refund strong { color: #2f6db0; }
 .v9-pc-due.is-loading { color: #c9bda6; }
 .v9-pc-viewas {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 0; border-top: 2px dashed #eadfca;
