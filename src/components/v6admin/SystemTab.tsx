@@ -7,8 +7,10 @@ import {
   type DiscordNotificationInput,
   type LineClaim,
   type LineClaimsData,
+  type BillingPerson,
   type LineNotificationInput,
   type NotificationStatus,
+  type TempIdentity,
 } from "@/lib/v6admin-api";
 import { errText, runWrite, useToast, type WriteLock } from "@/lib/v6admin-write";
 import { Metric, Section, Sheet, Toast } from "./AdminParts";
@@ -62,7 +64,9 @@ type Pending =
   | { kind: "line" }
   | { kind: "discord" }
   | { kind: "test"; channel: "line" | "discord" }
-  | { kind: "unlink"; claim: LineClaim };
+  | { kind: "unlink"; claim: LineClaim }
+  | { kind: "link"; temp: TempIdentity }
+  | { kind: "unlink-temp"; temp: TempIdentity };
 
 export function SystemTab({
   password,
@@ -377,9 +381,38 @@ export function SystemTab({
                 {claims.tempIdentities.map((t) => (
                   <div className="ctl-claim-row" role="row" key={t.lineIdentityId}>
                     <strong role="cell">{t.confirmedName || "（未填稱呼）"}</strong>
-                    <span role="cell">—</span>
+                    <span role="cell">
+                      {t.linkedMemberName ? (
+                        <>
+                          {t.linkedMemberName}
+                          <small>帳務連結</small>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </span>
                     <span role="cell">{t.lineDisplayName || "—"}</span>
-                    <span role="cell" />
+                    <span role="cell">
+                      {t.linkedMemberId ? (
+                        <button
+                          className="ctl-act is-danger"
+                          type="button"
+                          disabled={writing}
+                          onClick={() => open({ kind: "unlink-temp", temp: t })}
+                        >
+                          解除
+                        </button>
+                      ) : (
+                        <button
+                          className="ctl-act"
+                          type="button"
+                          disabled={writing}
+                          onClick={() => open({ kind: "link", temp: t })}
+                        >
+                          連結季打
+                        </button>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -590,8 +623,151 @@ export function SystemTab({
         </Sheet>
       ) : null}
 
+      {pending?.kind === "link" ? (
+        <LinkMemberSheet
+          password={password}
+          siteId={siteId}
+          temp={pending.temp}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onConfirm={(member) =>
+            run(
+              () =>
+                adminWriteApi.linkLineMember(
+                  password,
+                  siteId,
+                  pending.temp.lineIdentityId,
+                  member.memberId || "",
+                ),
+              `已把 ${pending.temp.confirmedName || pending.temp.lineDisplayName} 連結到季打 ${member.memberName}`,
+              () => [loadClaims()],
+            )
+          }
+        />
+      ) : null}
+
+      {pending?.kind === "unlink-temp" ? (
+        <Sheet title="解除帳務連結" onClose={close} busy={writing}>
+          <p>
+            確定解除臨打「{pending.temp.confirmedName || pending.temp.lineDisplayName}」和季打{" "}
+            <strong>{pending.temp.linkedMemberName}</strong> 的帳務連結？
+          </p>
+          <p className="ctl-sub">他仍是臨打身分，只是帳單不再顯示季打的季費與待退款。</p>
+          <ConfirmActions
+            busy={writing}
+            error={sheetError}
+            onClose={close}
+            confirmText="確定解除"
+            danger
+            onConfirm={() =>
+              run(
+                () => adminWriteApi.unlinkLineClaim(password, siteId, pending.temp.lineIdentityId),
+                `已解除 ${pending.temp.linkedMemberName} 的帳務連結`,
+                () => [loadClaims()],
+              )
+            }
+          />
+        </Sheet>
+      ) : null}
+
       <Toast toast={toast} />
     </>
+  );
+}
+
+// T-16 (V6-033): pick the 季打 member whose bill this 臨打 LINE should see.
+// Candidates are 季打 members not claimed by any LINE that still have 季打
+// accounts (unpaid fees or a refund due) — e.g. a player who did not renew.
+function LinkMemberSheet({
+  password,
+  siteId,
+  temp,
+  busy,
+  error,
+  onClose,
+  onConfirm,
+}: {
+  password: string;
+  siteId: string;
+  temp: TempIdentity;
+  busy: boolean;
+  error: string;
+  onClose: () => void;
+  onConfirm: (member: BillingPerson) => void;
+}) {
+  const [members, setMembers] = useState<BillingPerson[] | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [picked, setPicked] = useState("");
+  useEffect(() => {
+    let alive = true;
+    adminApi
+      .billingPeople(password, siteId)
+      .then(
+        (d) =>
+          alive &&
+          setMembers(
+            d.people.filter(
+              (p) =>
+                p.kind === "member" &&
+                p.memberId &&
+                (p.outstandingTotal > 0 || (p.refundDue ?? 0) > 0),
+            ),
+          ),
+      )
+      .catch((err) => alive && setLoadError(errText(err)));
+    return () => {
+      alive = false;
+    };
+  }, [password, siteId]);
+  const member = members?.find((m) => m.memberId === picked) || null;
+  return (
+    <Sheet title="連結季打帳務" onClose={onClose} busy={busy}>
+      <p>
+        把臨打「<strong>{temp.confirmedName || temp.lineDisplayName}</strong>」（LINE{" "}
+        {temp.lineDisplayName}）連結到季打成員：
+      </p>
+      {loadError ? (
+        <div className="ctl-error">{loadError}</div>
+      ) : !members ? (
+        <div className="ctl-loading">讀取季打成員中…</div>
+      ) : members.length ? (
+        <div className="ctl-picker">
+          <label htmlFor="ctl-link-member">季打成員（未認領、還有季打帳務）</label>
+          <select
+            id="ctl-link-member"
+            className="ctl-select"
+            value={picked}
+            disabled={busy}
+            onChange={(e) => setPicked(e.target.value)}
+          >
+            <option value="">請選擇</option>
+            {members.map((m) => (
+              <option key={m.memberId} value={m.memberId || ""}>
+                {m.memberName || m.displayName}
+                {m.refundDue ? `（待退 $${m.refundDue.toLocaleString("en-US")}）` : ""}
+                {m.outstandingTotal
+                  ? `（未繳 $${m.outstandingTotal.toLocaleString("en-US")}）`
+                  : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <p className="ctl-empty">沒有可連結的季打成員（未認領且還有季打帳務）。</p>
+      )}
+      <p className="ctl-sub">
+        他仍是臨打身分：照常自己報名臨打；帳單會另外顯示這位季打的季費與待退款。可隨時按「解除」取消。
+      </p>
+      <ConfirmActions
+        busy={busy}
+        error={error}
+        onClose={onClose}
+        confirmText="確定連結"
+        disabled={!member}
+        onConfirm={() => member && onConfirm(member)}
+      />
+    </Sheet>
   );
 }
 
@@ -606,6 +782,7 @@ function ConfirmActions({
   onConfirm,
   confirmText,
   danger,
+  disabled,
 }: {
   busy: boolean;
   error: string;
@@ -613,6 +790,7 @@ function ConfirmActions({
   onConfirm: () => void;
   confirmText: string;
   danger?: boolean | undefined;
+  disabled?: boolean | undefined;
 }) {
   return (
     <>
@@ -624,7 +802,7 @@ function ConfirmActions({
         <button
           className={`ctl-btn${danger ? " is-danger" : ""}`}
           type="button"
-          disabled={busy}
+          disabled={busy || disabled}
           onClick={onConfirm}
         >
           {busy ? "處理中…" : confirmText}

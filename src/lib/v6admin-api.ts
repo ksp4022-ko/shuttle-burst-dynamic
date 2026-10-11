@@ -271,6 +271,9 @@ export type TempIdentity = {
   confirmedName?: string;
   nameConfirmedAt?: string | null;
   updatedAt?: string;
+  // V6-033: 季打 member linked by the admin for billing (identity stays 臨打).
+  linkedMemberId?: string | null;
+  linkedMemberName?: string | null;
 };
 export type LineClaimsData = {
   claims: LineClaim[];
@@ -1089,6 +1092,13 @@ export const adminWriteApi = {
       `/admin/refund-credits/${enc(creditId)}/cash-refund`,
       pw,
       { action },
+    ),
+  // V6-033: link a 臨打 LINE identity to a 季打 member (billing only).
+  linkLineMember: (pw: string, siteId: string, lineIdentityId: string, memberId: string) =>
+    adminPost<{ memberName: string }>(
+      `/admin/sites/${enc(siteId)}/line-claims/${enc(lineIdentityId)}/link-member`,
+      pw,
+      { memberId },
     ),
   unlinkLineClaim: (pw: string, siteId: string, lineIdentityId: string) =>
     adminPost(`/admin/sites/${enc(siteId)}/line-claims/${enc(lineIdentityId)}/unlink`, pw),
