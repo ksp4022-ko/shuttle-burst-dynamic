@@ -756,11 +756,14 @@ export function V9App() {
               {events.map((item) => {
                 const itemDisplay = parseV8MeetupDisplay(item.name);
                 const current = item.id === selectedEventId;
+                // V9-029: a meetup past its end time or closed in the admin
+                // shows 已結束 instead of its seat count.
+                const ended = v9EventPhase(item, nowMs, { closedEnds: true }) === "ended";
                 return (
                   <li key={item.id}>
                     <button
                       type="button"
-                      className={`v9-meetup-row${current ? " is-current" : ""}`}
+                      className={`v9-meetup-row${current ? " is-current" : ""}${ended ? " is-ended" : ""}`}
                       aria-current={current}
                       disabled={busy}
                       onClick={() => selectEvent(item.id)}
@@ -772,7 +775,11 @@ export function V9App() {
                       <span className="v9-meetup-info">
                         <strong>
                           {itemDisplay.displayName || item.name}
-                          <V9SeatTag {...seatsOf(item)} />
+                          {ended ? (
+                            <span className="v9-seat-tag is-ended">已結束</span>
+                          ) : (
+                            <V9SeatTag {...seatsOf(item)} />
+                          )}
                         </strong>
                         <small>
                           {[

@@ -86,10 +86,9 @@ export function V9RosterContent({
                 className={`v9-roster-row${person.id === mySignupId ? " is-me" : ""}`}
               >
                 <span className={`v9-roster-no ${active.tone}`}>{index + 1}</span>
-                <span className="v9-roster-name">
-                  {displayName(person)}
-                  {person.id === mySignupId && <span className="v9-me-tag">我</span>}
-                </span>
+                <span className="v9-roster-name">{displayName(person)}</span>
+                {/* V9-028: own cell so a long name never clips it. */}
+                {person.id === mySignupId && <span className="v9-me-tag">我</span>}
                 <span
                   className={`v9-badge ${person.signupType === "fixed" ? "is-blue" : "is-paper"}`}
                 >

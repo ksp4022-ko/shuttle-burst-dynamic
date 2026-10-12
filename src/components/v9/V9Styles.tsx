@@ -406,7 +406,7 @@ const V9_CSS = `
 .v9-roster-no.is-red { background: var(--v9-rose); }
 .v9-roster-name { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v9-roster-row .v9-badge { font-size: 10px; padding: 0 6px; }
-.v9-me-tag { margin-left: 4px; font-size: 10px; padding: 0 5px; border-radius: 999px; background: var(--v9-ink); color: #fff; vertical-align: 1px; }
+.v9-me-tag { flex: none; margin-left: -4px; font-size: 10px; padding: 0 5px; border-radius: 999px; background: var(--v9-ink); color: #fff; vertical-align: 1px; }
 
 .v9-badge {
   display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px;
@@ -497,6 +497,8 @@ const V9_CSS = `
 .v9-seat-tag.is-open { background: var(--v9-red); color: #fff; }
 .v9-seat-tag.is-waiting { background: var(--v9-yellow); }
 .v9-seat-tag.is-full { background: var(--v9-green); color: #fff; }
+.v9-seat-tag.is-ended { background: #d9d2c5; color: #6f655b; }
+.v9-meetup-row.is-ended .v9-meetup-date { background: #e4ddd0; color: #6f655b; }
 .v9-meetup-info small { font-size: 12px; color: var(--v9-muted); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* my status */
