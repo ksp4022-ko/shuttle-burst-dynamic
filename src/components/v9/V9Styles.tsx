@@ -289,8 +289,21 @@ const V9_CSS = `
 .v9-intro-title { display: block; width: min(80%, 300px); height: auto; }
 .v9-intro.is-shooting .v9-busy-x { visibility: hidden; }
 .v9-intro-flyer {
-  position: fixed; left: 0; top: 0; z-index: 901; width: 40px; height: auto; visibility: hidden;
+  position: fixed; left: 0; top: 0; z-index: 901; width: 40px; height: 34px; visibility: hidden;
   pointer-events: none; will-change: transform, opacity;
+}
+.v9-intro-flyer img { position: relative; display: block; width: 40px; height: 34px; }
+/* Manga speed trail: halftone dots streaming out behind the shuttle (it
+   flies cork-first to the right in its own frame), dense at the shuttle,
+   thinning and tapering away. Length/opacity follow its speed (V9Intro). */
+.v9-intro-trail {
+  position: absolute; right: 55%; top: 50%; width: 96px; height: 30px; opacity: 0;
+  transform: translateY(-50%) scaleX(.05); transform-origin: 100% 50%;
+  background-image: radial-gradient(circle, var(--v9-ink) 0 1.3px, transparent 1.7px);
+  background-size: 5px 5px;
+  clip-path: polygon(0 46%, 100% 8%, 100% 92%, 0 54%);
+  -webkit-mask-image: linear-gradient(to left, #000 15%, transparent);
+  mask-image: linear-gradient(to left, #000 15%, transparent);
 }
 .v9-app.is-intro .v9-main, .v9-app.is-intro .v9-dock, .v9-app.is-intro .v9-viewas-bar { opacity: 0; }
 /* Fades in when is-intro goes. The hero keeps its own mount animation (no

@@ -30,6 +30,9 @@ const HANG_END = 0.7;
 const PEAK_SCALE = 3;
 // Extra cork-down tilt on the drop (degrees past the travel direction).
 const FALL_TILT = 25;
+// Halftone trail length per sqrt(speed / top speed); 1.25 keeps it full
+// for most of the launch and the last part of the drop.
+const TRAIL_GAIN = 1.25;
 const SHUTTLE_W = 40;
 const SHUTTLE_H = 34;
 // The rally's hit point on the dragon's racket, in .v9-busy-art px
@@ -64,7 +67,12 @@ function near(prev: number, angle: number) {
 // them linearly. Rise eases out hard (fast, then a long slow-down into the
 // top), the fall eases in (gravity). The peak sits just left of the 龍虎圓
 // (2026-10-14 real-device tuning), so the drop curves right and down into it.
-function flightFrames(start: Point, peak: Point, end: Point, endScale: number): Keyframe[] {
+function flightFrames(
+  start: Point,
+  peak: Point,
+  end: Point,
+  endScale: number,
+): { flight: Keyframe[]; trail: Keyframe[] } {
   const riseCtl: Point = {
     x: start.x + (peak.x - start.x) * 0.3,
     y: peak.y + (start.y - peak.y) * 0.15,
@@ -76,17 +84,21 @@ function flightFrames(start: Point, peak: Point, end: Point, endScale: number): 
   const riseTurn = heading(start, riseCtl, peak, 1);
   const fallTurn = near(riseTurn, heading(peak, fallCtl, end, 0) + FALL_TILT);
 
+  const points: { p: Point; offset: number }[] = [];
   const frame = (
     p: Point,
     rotate: number,
     scale: number,
     offset: number,
     opacity = 1,
-  ): Keyframe => ({
-    offset,
-    opacity,
-    transform: `translate(${(p.x - SHUTTLE_W / 2).toFixed(1)}px, ${(p.y - SHUTTLE_H / 2).toFixed(1)}px) rotate(${rotate.toFixed(1)}deg) scale(${scale.toFixed(3)})`,
-  });
+  ): Keyframe => {
+    points.push({ p, offset });
+    return {
+      offset,
+      opacity,
+      transform: `translate(${(p.x - SHUTTLE_W / 2).toFixed(1)}px, ${(p.y - SHUTTLE_H / 2).toFixed(1)}px) rotate(${rotate.toFixed(1)}deg) scale(${scale.toFixed(3)})`,
+    };
+  };
   const frames: Keyframe[] = [];
   const RISE_STEPS = 14;
   for (let i = 0; i <= RISE_STEPS; i += 1) {
@@ -130,7 +142,25 @@ function flightFrames(start: Point, peak: Point, end: Point, endScale: number): 
       ),
     );
   }
-  return frames;
+  // Halftone speed trail: as long and as dark as the shuttle is fast, so it
+  // streams on the launch, all but vanishes in the hang, returns on the drop.
+  const speeds = points.map(({ p, offset }, i) => {
+    const other = points[i === 0 ? 1 : i - 1];
+    const dt = other ? Math.abs(offset - other.offset) * FLIGHT_MS : 0;
+    return dt > 0 && other ? Math.hypot(p.x - other.p.x, p.y - other.p.y) / dt : 0;
+  });
+  // Relative to this flight's top speed, on a square-root curve so the
+  // trail lingers through the slow-down instead of blinking out.
+  const top = Math.max(...speeds, 0.001);
+  const trail = points.map(({ offset }, i) => {
+    const k = Math.min(1, Math.sqrt((speeds[i] ?? 0) / top) * TRAIL_GAIN);
+    return {
+      offset,
+      opacity: (k * 0.9).toFixed(3),
+      transform: `translateY(-50%) scaleX(${Math.max(0.05, k).toFixed(3)})`,
+    };
+  });
+  return { flight: frames, trail };
 }
 
 export function V9Intro({
@@ -144,7 +174,7 @@ export function V9Intro({
   onDone: () => void;
 }) {
   const coverRef = useRef<HTMLDivElement>(null);
-  const flyerRef = useRef<HTMLImageElement>(null);
+  const flyerRef = useRef<HTMLSpanElement>(null);
   const [minPassed, setMinPassed] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const animations = useRef<Animation[]>([]);
@@ -240,18 +270,21 @@ export function V9Intro({
     later(launchIn, () => {
       cover.classList.add("is-shooting");
       flyer.style.visibility = "visible";
+      const { flight, trail } = flightFrames(start, peak, end, endScale);
+      const trailEl = flyer.querySelector<HTMLElement>(".v9-intro-trail");
       animations.current.push(
-        flyer.animate(flightFrames(start, peak, end, endScale), {
-          duration: FLIGHT_MS,
-          easing: "linear",
-          fill: "forwards",
-        }),
+        flyer.animate(flight, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
         cover.animate([{ opacity: 1 }, { opacity: 0 }], {
           duration: FADE_MS,
           easing: "cubic-bezier(0.23, 1, 0.32, 1)",
           fill: "forwards",
         }),
       );
+      if (trailEl) {
+        animations.current.push(
+          trailEl.animate(trail, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
+        );
+      }
     });
     later(launchIn + ENTER_AFTER_LAUNCH_MS, () => onStage("entering"));
     later(launchIn + FLIGHT_MS, () => {
@@ -300,15 +333,10 @@ export function V9Intro({
           <V9Busy />
         </div>
       </div>
-      <img
-        ref={flyerRef}
-        className="v9-intro-flyer"
-        src={`${base}v9/mascot/shuttle.webp`}
-        alt=""
-        width={SHUTTLE_W}
-        height={SHUTTLE_H}
-        aria-hidden="true"
-      />
+      <span ref={flyerRef} className="v9-intro-flyer" aria-hidden="true">
+        <span className="v9-intro-trail" />
+        <img src={`${base}v9/mascot/shuttle.webp`} alt="" width={SHUTTLE_W} height={SHUTTLE_H} />
+      </span>
     </>
   );
 }
