@@ -272,6 +272,43 @@ const V9_CSS = `
 .v9-busy-x { position: absolute; left: 0; top: 0; animation: v9-rally-move 1.6s linear infinite; }
 .v9-busy-shuttle { display: block; width: 40px; height: auto; margin: -17px 0 0 -20px; animation: v9-rally-turn 1.6s linear infinite; }
 .v9-busy-label { margin: 0; font-size: 15px; font-weight: 900; color: var(--v9-muted); }
+/* V9-040/041 (/v9test): opening screen centred over the app, then the
+   shuttle shot into the deck (V9Intro). */
+.v9-intro {
+  position: fixed; inset: 0; z-index: 900; display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 12% 4%, rgba(255, 212, 92, .28) 0 120px, transparent 121px),
+    radial-gradient(circle at 92% 30%, rgba(76, 183, 130, .14) 0 90px, transparent 91px),
+    var(--v9-paper);
+}
+.v9-intro-card {
+  display: grid; justify-items: center; gap: 22px; width: 100%; max-width: 480px; padding: 30px 18px 34px;
+  background: var(--v9-cream); border: var(--v9-line); border-radius: 30px; box-shadow: 0 6px 0 var(--v9-ink);
+}
+.v9-intro-title { display: block; width: min(80%, 300px); height: auto; }
+.v9-intro.is-shooting .v9-busy-x { visibility: hidden; }
+.v9-intro-flyer {
+  position: fixed; left: 0; top: 0; z-index: 901; width: 40px; height: auto; visibility: hidden;
+  pointer-events: none; will-change: transform, opacity;
+}
+.v9-app.is-intro .v9-main, .v9-app.is-intro .v9-dock, .v9-app.is-intro .v9-viewas-bar { opacity: 0; }
+/* Fades in when is-intro goes. The hero keeps its own mount animation (no
+   new one here), so dropping is-entering later can't replay it. */
+.v9-app .v9-main, .v9-app .v9-viewas-bar { transition: opacity .2s ease; }
+.v9-app.is-entering .v9-hero > .v9-hero-top,
+.v9-app.is-entering .v9-hero > .v9-hero-body,
+.v9-app.is-entering .v9-hero > .v9-hero-status,
+.v9-app.is-entering .v9-hero > .v9-cta,
+.v9-app.is-entering .v9-hero > .v9-roster-strip { animation: v9-rise .24s cubic-bezier(0.23, 1, 0.32, 1) backwards; }
+.v9-app.is-entering .v9-hero > .v9-hero-body { animation-delay: .05s; }
+.v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .1s; }
+.v9-app.is-entering .v9-hero > .v9-cta { animation-delay: .15s; }
+.v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .2s; }
+.v9-app.is-entering .v9-dock { transition: opacity .24s ease .2s; }
+@media (prefers-reduced-motion: reduce) {
+  .v9-app.is-entering .v9-hero > * { animation: v9-fade .2s ease backwards; animation-delay: 0s; }
+}
 @keyframes v9-rally-move { 0% { transform: translate(104.0px, 34.0px); } 5% { transform: translate(111.8px, 17.4px); } 10% { transform: translate(119.6px, 4.6px); } 15% { transform: translate(127.4px, -4.6px); } 20% { transform: translate(135.2px, -10.2px); } 25% { transform: translate(143.0px, -12.0px); } 30% { transform: translate(150.8px, -10.2px); } 35% { transform: translate(158.6px, -4.6px); } 40% { transform: translate(166.4px, 4.6px); } 45% { transform: translate(174.2px, 17.4px); } 50% { transform: translate(182.0px, 34.0px); } 55% { transform: translate(174.2px, 17.4px); } 60% { transform: translate(166.4px, 4.6px); } 65% { transform: translate(158.6px, -4.6px); } 70% { transform: translate(150.8px, -10.2px); } 75% { transform: translate(143.0px, -12.0px); } 80% { transform: translate(135.2px, -10.2px); } 85% { transform: translate(127.4px, -4.6px); } 90% { transform: translate(119.6px, 4.6px); } 95% { transform: translate(111.8px, 17.4px); } 100% { transform: translate(104.0px, 34.0px); } }
 @keyframes v9-rally-turn { 0% { transform: scaleX(1) rotate(-60deg); } 5% { transform: scaleX(1) rotate(-60deg); } 10% { transform: scaleX(1) rotate(-55deg); } 15% { transform: scaleX(1) rotate(-43deg); } 20% { transform: scaleX(1) rotate(-25deg); } 25% { transform: scaleX(1) rotate(-0deg); } 30% { transform: scaleX(1) rotate(25deg); } 35% { transform: scaleX(1) rotate(43deg); } 40% { transform: scaleX(1) rotate(55deg); } 45% { transform: scaleX(1) rotate(60deg); } 49.9% { transform: scaleX(1) rotate(60deg); } 50% { transform: scaleX(1) rotate(60deg); } 55% { transform: scaleX(-1) rotate(-60deg); } 60% { transform: scaleX(-1) rotate(-55deg); } 65% { transform: scaleX(-1) rotate(-43deg); } 70% { transform: scaleX(-1) rotate(-25deg); } 75% { transform: scaleX(-1) rotate(-0deg); } 80% { transform: scaleX(-1) rotate(25deg); } 85% { transform: scaleX(-1) rotate(43deg); } 90% { transform: scaleX(-1) rotate(55deg); } 95% { transform: scaleX(-1) rotate(60deg); } 100% { transform: scaleX(-1) rotate(60deg); } }
 @keyframes v9-rally-hit-dragon { 0% { transform: rotate(-5deg); } 12%, 100% { transform: rotate(0); } }

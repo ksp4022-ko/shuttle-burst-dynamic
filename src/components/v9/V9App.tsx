@@ -16,6 +16,7 @@ import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Busy } from "./V9Busy";
+import { V9Intro, type V9IntroStage } from "./V9Intro";
 import { V9Styles } from "./V9Styles";
 import { V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
 import { v9IdentityName, v9ShortDate, v9Weekday } from "@/lib/v9-display";
@@ -117,6 +118,19 @@ export function V9App() {
   const auth = useV8LineAuth();
   // V9-036 Discord 通知 kinds are on /v9test until accepted for /v9.
   const v9Test = useV9Test();
+  // V9-040/041 (/v9test): opening screen over the app, then the shot in.
+  const [introStage, setIntroStage] = useState<V9IntroStage | "done">("cover");
+  const introDone = useCallback(() => setIntroStage("done"), []);
+  // The deck's rise outlives the intro itself; drop the class once it ends.
+  const [introEntering, setIntroEntering] = useState(false);
+  useEffect(() => {
+    if (introStage === "entering") setIntroEntering(true);
+  }, [introStage]);
+  useEffect(() => {
+    if (!introEntering) return;
+    const id = window.setTimeout(() => setIntroEntering(false), 800);
+    return () => window.clearTimeout(id);
+  }, [introEntering]);
   const flow = useHomepageFlow({
     preHoldMs: 0,
     realFadeMs: 0,
@@ -582,11 +596,19 @@ export function V9App() {
   const dockActive: V9DockKey | null =
     sheet === "meetup" || sheet === "roster" || sheet === "proxy" || sheet === "me" ? sheet : null;
 
+  const intro = v9Test && introStage !== "done";
+  const dataSettled =
+    phase === "load-error" || Boolean(selectedEvent && roster) || (!loading && events.length === 0);
+
   return (
-    <div className="v9-app">
+    <div
+      className={`v9-app${intro && introStage === "cover" ? " is-intro" : ""}${introEntering ? " is-entering" : ""}`}
+    >
       <V9Styles />
 
-      {loading && (
+      {intro && <V9Intro ready={dataSettled} onStage={setIntroStage} onDone={introDone} />}
+
+      {loading && !v9Test && (
         <main className="v9-main">
           <section className="v9-hero v9-hero-message v9-busy-card" aria-busy="true">
             <V9Busy />
