@@ -33,6 +33,7 @@ import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-
 import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
+import { useV9Test } from "./useV9Test";
 import { v9EventPhase, type V9EventPhase } from "@/lib/v9-event-time";
 import { chooseV9InitialEvent, loadV9Events } from "@/lib/v9-events";
 
@@ -114,6 +115,8 @@ function rankOf(
 export function V9App() {
   const [siteId] = useState(() => configuredSiteId());
   const auth = useV8LineAuth();
+  // V9-030 Discord 通知 is on /v9test until accepted for /v9.
+  const v9Test = useV9Test();
   const flow = useHomepageFlow({
     preHoldMs: 0,
     realFadeMs: 0,
@@ -902,6 +905,7 @@ export function V9App() {
                 onLogout={logout}
                 onViewAs={isAdmin ? () => setSheet("viewas") : undefined}
                 due={billDue}
+                discordToken={v9Test ? lineToken : null}
               />
             )}
           </V9Sheet>

@@ -1,4 +1,5 @@
 import type { V9BillDue } from "./useV9BillDue";
+import { V9DiscordNotify } from "./V9DiscordNotify";
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import type { AlphaEvent, V8SeasonProgress, V8SeasonProgressEvent } from "@/lib/database-alpha";
@@ -171,6 +172,7 @@ export function V9PlayerCard({
   readOnly = false,
   onViewAs,
   due,
+  discordToken,
 }: {
   identity: CurrentIdentity;
   rank: number | null;
@@ -187,6 +189,8 @@ export function V9PlayerCard({
   onViewAs?: (() => void) | undefined;
   // V9-022: 本次應繳 shown at the end of the 我的帳單 row.
   due?: V9BillDue | undefined;
+  // V9-030: LINE token for the Discord 通知 block (/v9test only for now).
+  discordToken?: string | null | undefined;
 }) {
   const fixed = identity.signupType === "fixed";
   const position =
@@ -273,6 +277,8 @@ export function V9PlayerCard({
           <V9Icon name="chevron" size={16} />
         </button>
       )}
+
+      {!readOnly && discordToken && <V9DiscordNotify token={discordToken} />}
 
       {!readOnly && <V9Account onRepick={onRepick} onLogout={onLogout} />}
     </article>
