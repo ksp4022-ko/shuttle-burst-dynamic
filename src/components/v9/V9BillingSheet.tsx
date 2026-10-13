@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useV8PersonalBillingTest } from "@/hooks/use-v8-personal-billing-test";
+import { V9PaymentMethods } from "./V9PaymentMethods";
 import type {
   V8BillingGuestItem,
   V8BillingRefundSource,
@@ -348,6 +349,7 @@ export function V9BillingContent({
             </span>
           </div>
         )}
+        <V9PaymentMethods />
       </>
     );
   }

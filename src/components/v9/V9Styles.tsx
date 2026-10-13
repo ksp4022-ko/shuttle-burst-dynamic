@@ -407,6 +407,18 @@ const V9_CSS = `
 .v9-roster-name { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v9-roster-row .v9-badge { font-size: 10px; padding: 0 6px; }
 .v9-me-tag { flex: none; margin-left: -4px; font-size: 10px; padding: 0 5px; border-radius: 999px; background: var(--v9-ink); color: #fff; vertical-align: 1px; }
+.v9-tag-short { display: none; }
+/* V9-030: the home-screen app (PWA) is narrower; keep room for 4 characters
+   of the name. Web pages are unchanged. */
+@media (display-mode: standalone) {
+  .v9-roster-row { gap: 4px; padding-left: 5px; padding-right: 5px; }
+  .v9-roster-no { width: 22px; height: 22px; font-size: 11px; }
+  .v9-roster-name { font-size: 13px; min-width: 4.2em; }
+  .v9-me-tag { margin-left: 0; font-size: 9px; padding: 0 4px; }
+  .v9-roster-row .v9-badge { padding: 0 5px; }
+  .v9-tag-long { display: none; }
+  .v9-tag-short { display: inline; }
+}
 
 .v9-badge {
   display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px;
@@ -430,13 +442,23 @@ const V9_CSS = `
 .v9-bill-line summary::-webkit-details-marker { display: none; }
 .v9-bill-line summary > span { display: inline-flex; align-items: center; gap: 4px; }
 .v9-chevron { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: transform .18s ease; }
-.v9-bill-line[open] .v9-chevron { transform: rotate(90deg); }
+.v9-bill-line[open] > summary .v9-chevron { transform: rotate(90deg); }
 .v9-bill-detail { padding: 0 0 10px; display: grid; gap: 8px; justify-items: start; animation: v9-fade .2s ease-out both; }
 .v9-bill-detail-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: 100%; }
 .v9-bill-detail-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--v9-paper); font-size: 14px; }
 .v9-bill-detail-date { font-weight: 800; font-variant-numeric: tabular-nums; }
 .v9-bill-detail-name { flex: 1; min-width: 0; overflow-wrap: anywhere; display: grid; }
 .v9-bill-detail-name small { color: var(--v9-muted); font-size: 12px; }
+.v9-pay { border-bottom: 0; margin-top: 4px; }
+.v9-pay-list { justify-items: stretch; }
+.v9-pay-method { border: 2px solid var(--v9-ink); border-radius: 14px; background: #fff; }
+.v9-pay-method > summary { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; font-weight: 800; cursor: pointer; list-style: none; }
+.v9-pay-method > summary::-webkit-details-marker { display: none; }
+.v9-pay-method[open] > summary .v9-chevron { transform: rotate(90deg); }
+.v9-pay-detail { display: grid; gap: 4px; justify-items: start; padding: 0 12px 12px; font-size: 14px; }
+.v9-pay-detail p { margin: 0; }
+.v9-pay-detail small { color: var(--v9-muted); font-size: 12px; }
+.v9-pay-account b { font-size: 18px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
 .v9-bill-detail-money { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .v9-bill-season { padding: 8px 10px; border-radius: 12px; background: var(--v9-paper); font-size: 14px; display: grid; gap: 6px; }
 .v9-bill-season-head { display: flex; align-items: center; gap: 8px; font-weight: 800; }

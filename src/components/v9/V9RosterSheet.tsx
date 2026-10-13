@@ -92,7 +92,13 @@ export function V9RosterContent({
                 <span
                   className={`v9-badge ${person.signupType === "fixed" ? "is-blue" : "is-paper"}`}
                 >
-                  {person.signupType === "fixed" ? "季打" : "臨打"}
+                  {/* V9-030: the PWA shows the one-letter form (CSS). */}
+                  <span className="v9-tag-long">
+                    {person.signupType === "fixed" ? "季打" : "臨打"}
+                  </span>
+                  <span className="v9-tag-short" aria-hidden="true">
+                    {person.signupType === "fixed" ? "季" : "臨"}
+                  </span>
                 </span>
               </li>
             ))}
