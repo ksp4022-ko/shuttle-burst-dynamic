@@ -173,6 +173,7 @@ export function V9PlayerCard({
   onViewAs,
   due,
   discordToken,
+  discordMoreKinds,
 }: {
   identity: CurrentIdentity;
   rank: number | null;
@@ -189,8 +190,10 @@ export function V9PlayerCard({
   onViewAs?: (() => void) | undefined;
   // V9-022: 本次應繳 shown at the end of the 我的帳單 row.
   due?: V9BillDue | undefined;
-  // V9-030: LINE token for the Discord 通知 block (/v9test only for now).
+  // V9-030: LINE token for the Discord 通知 block (/v9 since V9-035).
   discordToken?: string | null | undefined;
+  // V9-036: show the 報名／請假／取消／回歸 switches (/v9test first).
+  discordMoreKinds?: boolean;
 }) {
   const fixed = identity.signupType === "fixed";
   const position =
@@ -278,7 +281,9 @@ export function V9PlayerCard({
         </button>
       )}
 
-      {!readOnly && discordToken && <V9DiscordNotify token={discordToken} />}
+      {!readOnly && discordToken && (
+        <V9DiscordNotify token={discordToken} moreKinds={Boolean(discordMoreKinds)} />
+      )}
 
       {!readOnly && <V9Account onRepick={onRepick} onLogout={onLogout} />}
     </article>

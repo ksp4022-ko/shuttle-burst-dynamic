@@ -6,11 +6,22 @@ import {
   unlinkV9Discord,
   updateV9DiscordLink,
   type V9DiscordLink,
+  type V9DiscordSwitch,
 } from "@/lib/v9-discord";
 
 // V9-030: 球員卡「Discord 通知」. Link a Discord account once, then pick
 // which of your own status changes the bot DMs you about. Hidden when the
 // Worker has no Discord app configured or the request fails.
+
+const SWITCHES: { key: V9DiscordSwitch; label: string; more?: boolean }[] = [
+  { key: "notifyPromoted", label: "備取 → 正取 時通知我" },
+  { key: "notifyDemoted", label: "正取 → 備取 時通知我" },
+  // V9-036: off by default; the member turns them on.
+  { key: "notifySignup", label: "臨打報名成功", more: true },
+  { key: "notifyLeave", label: "請假成功", more: true },
+  { key: "notifyReturn", label: "消假回歸", more: true },
+  { key: "notifyCancel", label: "取消報名", more: true },
+];
 
 // The Worker's redirect after linking: read it once and strip it from the URL.
 function takeDiscordResult() {
@@ -24,7 +35,9 @@ function takeDiscordResult() {
   return result;
 }
 
-export function V9DiscordNotify({ token }: { token: string }) {
+// moreKinds: V9-036 switches (/v9test first); each shows only once the
+// Worker returns it.
+export function V9DiscordNotify({ token, moreKinds = false }: { token: string; moreKinds?: boolean }) {
   const [link, setLink] = useState<V9DiscordLink | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
@@ -77,18 +90,19 @@ export function V9DiscordNotify({ token }: { token: string }) {
 
       {link.linked ? (
         <>
-          <V9Switch
-            label="備取 → 正取 時通知我"
-            checked={link.notifyPromoted}
-            disabled={busy}
-            onChange={(value) => run(() => updateV9DiscordLink(token, { notifyPromoted: value }))}
-          />
-          <V9Switch
-            label="正取 → 備取 時通知我"
-            checked={link.notifyDemoted}
-            disabled={busy}
-            onChange={(value) => run(() => updateV9DiscordLink(token, { notifyDemoted: value }))}
-          />
+          {SWITCHES.map(({ key, label, more }) => {
+            const checked = link[key];
+            if (typeof checked !== "boolean" || (more && !moreKinds)) return null;
+            return (
+              <V9Switch
+                key={key}
+                label={label}
+                checked={checked}
+                disabled={busy}
+                onChange={(value) => run(() => updateV9DiscordLink(token, { [key]: value }))}
+              />
+            );
+          })}
           <p className="v9-pc-discord-foot">
             {confirmUnlink ? (
               <>
@@ -122,7 +136,9 @@ export function V9DiscordNotify({ token }: { token: string }) {
       ) : (
         <>
           <p className="v9-pc-discord-text">
-            報名狀態有變（備取轉正取、正取轉備取）時，用 Discord 私訊通知你。
+            {moreKinds
+              ? "報名狀態有變（轉正取、轉備取，也可選報名、請假、取消）時，用 Discord 私訊通知你。"
+              : "報名狀態有變（備取轉正取、正取轉備取）時，用 Discord 私訊通知你。"}
           </p>
           <button
             type="button"

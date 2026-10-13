@@ -115,7 +115,7 @@ function rankOf(
 export function V9App() {
   const [siteId] = useState(() => configuredSiteId());
   const auth = useV8LineAuth();
-  // V9-030 Discord 通知 is on /v9test until accepted for /v9.
+  // V9-036 Discord 通知 kinds are on /v9test until accepted for /v9.
   const v9Test = useV9Test();
   const flow = useHomepageFlow({
     preHoldMs: 0,
@@ -905,7 +905,8 @@ export function V9App() {
                 onLogout={logout}
                 onViewAs={isAdmin ? () => setSheet("viewas") : undefined}
                 due={billDue}
-                discordToken={v9Test ? lineToken : null}
+                discordToken={lineToken}
+                discordMoreKinds={v9Test}
               />
             )}
           </V9Sheet>

@@ -279,7 +279,7 @@ export type TempIdentity = {
 // identity, so both sites list the same people; the switches are per site.
 export type DiscordMemberDm = {
   at: string;
-  kind: "welcome" | "promoted" | "demoted" | "test" | string;
+  kind: "welcome" | "promoted" | "demoted" | "signup" | "leave" | "cancel" | "return" | "test" | string;
   ok: boolean;
   error: string;
 };
@@ -294,14 +294,24 @@ export type DiscordMember = {
   discordUsername: string;
   notifyPromoted: boolean;
   notifyDemoted: boolean;
+  // V9-036 (Worker V6-035): absent until that Worker is deployed.
+  notifySignup?: boolean;
+  notifyLeave?: boolean;
+  notifyCancel?: boolean;
+  notifyReturn?: boolean;
   linkedAt: string;
   lastDm: DiscordMemberDm | null;
 };
 export type DiscordMemberSettings = {
   notifyPromoted: boolean;
   notifyDemoted: boolean;
+  notifySignup?: boolean;
+  notifyLeave?: boolean;
+  notifyCancel?: boolean;
+  notifyReturn?: boolean;
   updatedAt: string | null;
 };
+export type DiscordNotifyKey = Exclude<keyof DiscordMemberSettings, "updatedAt">;
 export type DiscordMembersData = {
   configured: boolean;
   guildConfigured: boolean;
@@ -1146,7 +1156,7 @@ export const adminWriteApi = {
   saveDiscordMemberSettings: (
     pw: string,
     siteId: string,
-    input: Pick<DiscordMemberSettings, "notifyPromoted" | "notifyDemoted">,
+    input: Partial<Record<DiscordNotifyKey, boolean>>,
   ) =>
     adminPost<{ settings: DiscordMemberSettings }>(
       `/admin/sites/${enc(siteId)}/discord-settings`,

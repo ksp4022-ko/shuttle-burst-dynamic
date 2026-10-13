@@ -2,7 +2,7 @@ import { alphaFetch } from "./database-alpha";
 
 // V9-030: member Discord DMs for their own signup status (Worker
 // badminton-signup /me/discord*). The Worker does all the work; V9 only
-// links the account and flips the two switches.
+// links the account and flips the switches.
 
 export type V9DiscordLink = {
   configured: boolean;
@@ -10,7 +10,20 @@ export type V9DiscordLink = {
   discordUsername: string | null;
   notifyPromoted: boolean;
   notifyDemoted: boolean;
+  // V9-036 (Worker V6-035): absent until that Worker is deployed.
+  notifySignup?: boolean;
+  notifyLeave?: boolean;
+  notifyCancel?: boolean;
+  notifyReturn?: boolean;
 };
+
+export type V9DiscordSwitch =
+  | "notifyPromoted"
+  | "notifyDemoted"
+  | "notifySignup"
+  | "notifyLeave"
+  | "notifyCancel"
+  | "notifyReturn";
 
 function bearer(token: string) {
   return { authorization: `Bearer ${token}` };
@@ -26,7 +39,7 @@ export function fetchV9DiscordLink(token: string, signal?: AbortSignal) {
 
 export function updateV9DiscordLink(
   token: string,
-  patch: Partial<Pick<V9DiscordLink, "notifyPromoted" | "notifyDemoted">>,
+  patch: Partial<Pick<V9DiscordLink, V9DiscordSwitch>>,
 ) {
   return alphaFetch<V9DiscordLink>("/me/discord", {
     method: "POST",

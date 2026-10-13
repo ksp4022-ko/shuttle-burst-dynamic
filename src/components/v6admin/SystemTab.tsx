@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   AdminApiError,
   adminApi,
@@ -6,7 +6,9 @@ import {
   type AdminSite,
   type DashboardData,
   type DiscordMember,
+  type DiscordMemberSettings,
   type DiscordMembersData,
+  type DiscordNotifyKey,
   type DiscordNotificationInput,
   type LineClaim,
   type LineClaimsData,
@@ -520,10 +522,14 @@ export function SystemTab({
               {dc.configured ? "" : " 目前 Worker 尚未設定 Discord 金鑰，不會發送。"}
             </p>
             <dl className="ctl-kv">
-              <dt>備取→正取</dt>
-              <dd>{dc.settings.notifyPromoted ? "開" : "關"}</dd>
-              <dt>正取→備取</dt>
-              <dd>{dc.settings.notifyDemoted ? "開" : "關"}</dd>
+              {DC_KINDS.filter(({ key }) => typeof dc.settings[key] === "boolean").map(
+                ({ key, label }) => (
+                  <Fragment key={key}>
+                    <dt>{label}</dt>
+                    <dd>{dc.settings[key] ? "開" : "關"}</dd>
+                  </Fragment>
+                ),
+              )}
             </dl>
             <p className="ctl-sub">
               這是{site.name}的總開關：關掉時，即使球員自己開著也不發（只影響{site.name}的聚會）。
@@ -549,8 +555,7 @@ export function SystemTab({
                         Discord：{m.discordUsername || "—"} · 連結 {twTime(m.linkedAt)}
                       </small>
                       <small>
-                        本人設定：轉正取{m.notifyPromoted ? "開" : "關"}、轉備取
-                        {m.notifyDemoted ? "開" : "關"}
+                        本人設定：{memberSwitchText(m)}
                       </small>
                       <small className={m.lastDm && !m.lastDm.ok ? "is-red" : undefined}>
                         {dmText(m)}
@@ -1345,8 +1350,29 @@ const DM_KIND: Record<string, string> = {
   welcome: "連結確認",
   promoted: "轉正取",
   demoted: "轉備取",
+  signup: "報名成功",
+  leave: "請假成功",
+  cancel: "取消報名",
+  return: "消假回歸",
   test: "測試",
 };
+
+// T-17 + V9-036: switches in Worker order; the four V6-035 ones show only
+// once the Worker returns them.
+const DC_KINDS: { key: DiscordNotifyKey; label: string; short: string }[] = [
+  { key: "notifyPromoted", label: "備取→正取", short: "轉正取" },
+  { key: "notifyDemoted", label: "正取→備取", short: "轉備取" },
+  { key: "notifySignup", label: "臨打報名成功", short: "報名" },
+  { key: "notifyLeave", label: "請假成功", short: "請假" },
+  { key: "notifyReturn", label: "消假回歸", short: "回歸" },
+  { key: "notifyCancel", label: "取消報名", short: "取消" },
+];
+
+function memberSwitchText(m: DiscordMember) {
+  return DC_KINDS.filter(({ key }) => typeof m[key] === "boolean")
+    .map(({ key, short }) => `${short}${m[key] ? "開" : "關"}`)
+    .join("、");
+}
 
 // Discord timestamps are stored as UTC ISO; show Taiwan time.
 function twTime(iso: string) {
@@ -1384,17 +1410,17 @@ function DiscordMemberSettingsForm({
   onClose,
   onSubmit,
 }: {
-  initial: { notifyPromoted: boolean; notifyDemoted: boolean };
+  initial: DiscordMemberSettings;
   siteName: string;
   busy: boolean;
   error: string;
   onClose: () => void;
-  onSubmit: (input: { notifyPromoted: boolean; notifyDemoted: boolean }) => void;
+  onSubmit: (input: Partial<Record<DiscordNotifyKey, boolean>>) => void;
 }) {
-  const [f, setF] = useState({
-    notifyPromoted: initial.notifyPromoted,
-    notifyDemoted: initial.notifyDemoted,
-  });
+  const kinds = DC_KINDS.filter(({ key }) => typeof initial[key] === "boolean");
+  const [f, setF] = useState<Partial<Record<DiscordNotifyKey, boolean>>>(() =>
+    Object.fromEntries(kinds.map(({ key }) => [key, Boolean(initial[key])])),
+  );
   return (
     <FormShell
       busy={busy}
@@ -1404,18 +1430,15 @@ function DiscordMemberSettingsForm({
       onSubmit={() => onSubmit(f)}
     >
       <div className="ctl-form">
-        <Check
-          wide
-          label="備取→正取（轉為正取時私訊）"
-          checked={f.notifyPromoted}
-          onChange={(v) => setF((cur) => ({ ...cur, notifyPromoted: v }))}
-        />
-        <Check
-          wide
-          label="正取→備取（轉為備取時私訊）"
-          checked={f.notifyDemoted}
-          onChange={(v) => setF((cur) => ({ ...cur, notifyDemoted: v }))}
-        />
+        {kinds.map(({ key, label }) => (
+          <Check
+            key={key}
+            wide
+            label={`${label}（私訊）`}
+            checked={Boolean(f[key])}
+            onChange={(v) => setF((cur) => ({ ...cur, [key]: v }))}
+          />
+        ))}
       </div>
       <p className="ctl-sub">只影響{siteName}的聚會；球員自己的開關仍然有效（兩邊都開才發）。</p>
     </FormShell>
