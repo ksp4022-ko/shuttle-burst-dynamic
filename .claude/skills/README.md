@@ -7,6 +7,7 @@ They load automatically in every Claude Code session on this repo.
 |---|---|---|---|
 | `impeccable/` | github.com/pbakaus/impeccable (`.claude/skills/impeccable`) | 245ad82 | Apache-2.0 |
 | `ui-ux-pro-max/` | github.com/nextlevelbuilder/ui-ux-pro-max-skill (`.claude/skills/ui-ux-pro-max`, tests dropped) | 7246805 | MIT |
+| `design-taste-frontend/`, `redesign-existing-projects/` | github.com/Leonxlnx/taste-skill (`skills/taste-skill` v2, `skills/redesign-skill`) | d237dd3 | MIT |
 | `emil-*` | github.com/emilkowalski/skills (`skills/<name>`, renamed `emil-<name>`; web-relevant ones only) | 2d22863 | MIT |
 
 Project rules win: OnCourt / V9 visuals follow `docs/V9_BASELINE.md` and `CLAUDE.md`
