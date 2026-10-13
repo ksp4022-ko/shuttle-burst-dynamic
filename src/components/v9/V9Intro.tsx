@@ -8,18 +8,21 @@ import { V9Busy } from "./V9Busy";
 // It leaves once the data has settled and MIN_MS has passed; data slower
 // than that leaves the moment it lands.
 //
-// The exit: the dragon swings, the shuttle flies up-right growing toward the
-// viewer (fast, then slowing), hangs and flips cork-down, then drops faster
-// and faster into the deck's 龍虎圓 (top right), which bounces on the catch.
-// The deck's rows rise in meanwhile. A tap skips to the end; reduced motion
+// The exit waits for the rally to bring the shuttle back to the dragon
+// (under one rally, 1.6s), so the shot leaves from where the shuttle really
+// is: the dragon swings, the shuttle flies up growing toward the viewer
+// (fast, then slowing), hangs beside the 龍虎圓 and turns cork-down, then
+// drops faster and faster into it; the circle bounces on the catch. The deck
+// crossfades in under the climbing shuttle, its rows rising one by one. A tap skips to the end; reduced motion
 // gets a 200ms crossfade instead.
 
 const MIN_MS = 3000;
 const SWING_MS = 260;
-const LAUNCH_MS = 150; // the shuttle leaves the racket on the forward swing
+const SWING_HIT = 0.45; // where in the swing the racket meets the shuttle
+const RALLY_MS = 1600; // .v9-busy rally loop; at 0% the shuttle is on the dragon's racket
 const FLIGHT_MS = 1150; // launch → landing (≈1.3s in total)
-const ENTER_AT_MS = 720; // deck rows start rising (as the shuttle hangs)
-const FADE_MS = 350; // the opening screen fades from LAUNCH_MS
+const ENTER_AFTER_LAUNCH_MS = 200; // the deck crossfades in under the climbing shuttle
+const FADE_MS = 350; // the opening screen fades from the launch
 const CATCH_MS = 280;
 // Flight phases as fractions of FLIGHT_MS.
 const RISE_END = 0.5;
@@ -123,7 +126,7 @@ function flightFrames(start: Point, peak: Point, end: Point, endScale: number): 
         near(fallTurn, heading(hangEnd, fallCtl, end, t) + FALL_TILT),
         PEAK_SCALE + (endScale - PEAK_SCALE) * t,
         offset,
-        s > 0.92 ? 0 : 1,
+        s > 0.85 ? Math.max(0, 1 - (s - 0.85) / 0.15) : 1,
       ),
     );
   }
@@ -212,21 +215,30 @@ export function V9Intro({
     };
     const endScale = Math.max(0.6, Math.min(1, (rect.width * 0.32) / SHUTTLE_W));
 
-    cover.classList.add("is-shooting");
+    // Wait for the rally to bring the shuttle back to the dragon, so the
+    // shot leaves its racket where the shuttle really is (no jump).
+    const rally = cover.querySelector<HTMLElement>(".v9-busy-x")?.getAnimations()[0];
+    const into = Number(rally?.currentTime ?? 0) % RALLY_MS;
+    const launchIn = rally ? (RALLY_MS - into) % RALLY_MS : 0;
+    const windUp = SWING_MS * SWING_HIT;
+
     if (dragon) {
-      animations.current.push(
-        dragon.animate(
-          [
-            { transform: "rotate(0deg)" },
-            { transform: "rotate(-10deg)", offset: 0.45 },
-            { transform: "rotate(6deg)", offset: 0.7 },
-            { transform: "rotate(0deg)" },
-          ],
-          { duration: SWING_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
-        ),
-      );
+      later(Math.max(0, launchIn - windUp), () => {
+        animations.current.push(
+          dragon.animate(
+            [
+              { transform: "rotate(0deg)" },
+              { transform: "rotate(-12deg)", offset: SWING_HIT },
+              { transform: "rotate(6deg)", offset: 0.7 },
+              { transform: "rotate(0deg)" },
+            ],
+            { duration: SWING_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
+          ),
+        );
+      });
     }
-    later(LAUNCH_MS, () => {
+    later(launchIn, () => {
+      cover.classList.add("is-shooting");
       flyer.style.visibility = "visible";
       animations.current.push(
         flyer.animate(flightFrames(start, peak, end, endScale), {
@@ -241,10 +253,13 @@ export function V9Intro({
         }),
       );
     });
-    later(ENTER_AT_MS, () => onStage("entering"));
-    later(LAUNCH_MS + FLIGHT_MS, () => {
-      // Not tracked: the catch outlives this component.
-      void target.animate(
+    later(launchIn + ENTER_AFTER_LAUNCH_MS, () => onStage("entering"));
+    later(launchIn + FLIGHT_MS, () => {
+      // Not tracked: the catch outlives this component. It squashes from the
+      // circle's base, like the mascot taking the hit.
+      const origin = target.style.transformOrigin;
+      target.style.transformOrigin = "50% 85%";
+      const catchAnim = target.animate(
         [
           { transform: "scale(1)" },
           { transform: "scale(1.08)", offset: 0.35 },
@@ -253,8 +268,11 @@ export function V9Intro({
         ],
         { duration: CATCH_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
       );
+      catchAnim.onfinish = () => {
+        target.style.transformOrigin = origin;
+      };
     });
-    later(LAUNCH_MS + FLIGHT_MS + 40, () => {
+    later(launchIn + FLIGHT_MS + 40, () => {
       finished.current = true;
       onDone();
     });
@@ -274,6 +292,8 @@ export function V9Intro({
             className="v9-intro-title"
             src={`${base}v9/brand/title.webp`}
             alt="OnCourt"
+            fetchPriority="high"
+            decoding="async"
             width={320}
             height={106}
           />
