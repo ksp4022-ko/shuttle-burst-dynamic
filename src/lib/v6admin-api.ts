@@ -1013,6 +1013,11 @@ export const adminWriteApi = {
       { reason },
     ),
   // ③ 賽季管理 (P5-b): same requests as the Worker's /admin page.
+  saveSeason: (
+    pw: string,
+    siteId: string,
+    input: { seasonId?: string; name: string; startDate: string; endDate: string; status: string },
+  ) => adminPost<{ season: AdminSeason }>(`/admin/sites/${enc(siteId)}/seasons`, pw, input),
   previewSeasonSetting: (pw: string, siteId: string, input: SeasonSettingInput) =>
     adminPost<{ setting: SeasonSetting; existing: SeasonSetting | null }>(
       `/admin/sites/${enc(siteId)}/season-settings/preview`,
