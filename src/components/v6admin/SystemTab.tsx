@@ -1,4 +1,12 @@
-import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import {
   AdminApiError,
   adminApi,
@@ -554,9 +562,7 @@ export function SystemTab({
                       <small>
                         Discord：{m.discordUsername || "—"} · 連結 {twTime(m.linkedAt)}
                       </small>
-                      <small>
-                        本人設定：{memberSwitchText(m)}
-                      </small>
+                      <small>本人設定：{memberSwitchText(m)}</small>
                       <small className={m.lastDm && !m.lastDm.ok ? "is-red" : undefined}>
                         {dmText(m)}
                       </small>
@@ -1354,6 +1360,10 @@ const DM_KIND: Record<string, string> = {
   leave: "請假成功",
   cancel: "取消報名",
   return: "消假回歸",
+  proxy_signup: "代報成功",
+  proxy_cancel: "代退",
+  proxy_promoted: "代報的人轉正取",
+  proxy_demoted: "代報的人轉備取",
   test: "測試",
 };
 
@@ -1366,6 +1376,7 @@ const DC_KINDS: { key: DiscordNotifyKey; label: string; short: string }[] = [
   { key: "notifyLeave", label: "請假成功", short: "請假" },
   { key: "notifyReturn", label: "消假回歸", short: "回歸" },
   { key: "notifyCancel", label: "取消報名", short: "取消" },
+  { key: "notifyProxy", label: "代報／代退", short: "代報" },
 ];
 
 function memberSwitchText(m: DiscordMember) {

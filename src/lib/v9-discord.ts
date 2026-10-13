@@ -15,6 +15,8 @@ export type V9DiscordLink = {
   notifyLeave?: boolean;
   notifyCancel?: boolean;
   notifyReturn?: boolean;
+  // V9-039 (Worker V6-038).
+  notifyProxy?: boolean;
 };
 
 export type V9DiscordSwitch =
@@ -23,7 +25,8 @@ export type V9DiscordSwitch =
   | "notifySignup"
   | "notifyLeave"
   | "notifyCancel"
-  | "notifyReturn";
+  | "notifyReturn"
+  | "notifyProxy";
 
 function bearer(token: string) {
   return { authorization: `Bearer ${token}` };

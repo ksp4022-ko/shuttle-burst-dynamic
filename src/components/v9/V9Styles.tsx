@@ -626,6 +626,16 @@ const V9_CSS = `
 .v9-pc .v9-pc-discord-connect:active { transform: translateY(3px); box-shadow: none; }
 .v9-pc .v9-pc-discord-connect:disabled { opacity: .6; cursor: default; }
 .v9-pc-discord-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 800; cursor: pointer; }
+/* V9-039: collapsible header, per-switch hint */
+.v9-pc .v9-pc-discord-head.is-toggle {
+  width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.v9-pc-discord-sum { margin-left: auto; flex: none; font-size: 13px; font-weight: 800; color: #4a4fc4; }
+.v9-pc-discord-chev { flex: none; font-size: 22px; font-weight: 900; line-height: 1; color: var(--v9-ink); transition: transform .15s ease; }
+.v9-pc-discord-chev.is-open { transform: rotate(90deg); }
+.v9-pc-discord-row-text { display: grid; gap: 1px; min-width: 0; }
+.v9-pc-discord-row-text small { font-size: 12px; font-weight: 600; line-height: 1.4; color: #7a7066; }
+@media (prefers-reduced-motion: reduce) { .v9-pc-discord-chev { transition: none; } }
 .v9-switch {
   appearance: none; position: relative; flex: none; width: 44px; height: 26px; margin: 0; border: 2.5px solid var(--v9-ink);
   border-radius: 999px; background: #e3ddd0; cursor: pointer; transition: background-color .15s ease;

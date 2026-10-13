@@ -282,7 +282,7 @@ export function V9PlayerCard({
       )}
 
       {!readOnly && discordToken && (
-        <V9DiscordNotify token={discordToken} moreKinds={Boolean(discordMoreKinds)} />
+        <V9DiscordNotify token={discordToken} moreKinds={Boolean(discordMoreKinds)} fixed={fixed} />
       )}
 
       {!readOnly && <V9Account onRepick={onRepick} onLogout={onLogout} />}

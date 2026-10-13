@@ -279,7 +279,9 @@ export type TempIdentity = {
 // identity, so both sites list the same people; the switches are per site.
 export type DiscordMemberDm = {
   at: string;
-  kind: "welcome" | "promoted" | "demoted" | "signup" | "leave" | "cancel" | "return" | "test" | string;
+  kind:
+    "welcome" | "promoted" | "demoted" | "signup" | "leave" | "cancel" | "return" | "test" | string;
+  // V9-039: proxy_signup / proxy_cancel / proxy_promoted / proxy_demoted.
   ok: boolean;
   error: string;
 };
@@ -299,6 +301,7 @@ export type DiscordMember = {
   notifyLeave?: boolean;
   notifyCancel?: boolean;
   notifyReturn?: boolean;
+  notifyProxy?: boolean;
   linkedAt: string;
   lastDm: DiscordMemberDm | null;
 };
@@ -309,6 +312,7 @@ export type DiscordMemberSettings = {
   notifyLeave?: boolean;
   notifyCancel?: boolean;
   notifyReturn?: boolean;
+  notifyProxy?: boolean;
   updatedAt: string | null;
 };
 export type DiscordNotifyKey = Exclude<keyof DiscordMemberSettings, "updatedAt">;
