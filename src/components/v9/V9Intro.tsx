@@ -17,14 +17,16 @@ import { V9Busy } from "./V9Busy";
 const MIN_MS = 3000;
 const SWING_MS = 260;
 const LAUNCH_MS = 150; // the shuttle leaves the racket on the forward swing
-const FLIGHT_MS = 1000; // launch → landing (≈1.15s in total)
-const ENTER_AT_MS = 650; // deck rows start rising (as the shuttle turns)
+const FLIGHT_MS = 1150; // launch → landing (≈1.3s in total)
+const ENTER_AT_MS = 720; // deck rows start rising (as the shuttle hangs)
 const FADE_MS = 350; // the opening screen fades from LAUNCH_MS
 const CATCH_MS = 280;
 // Flight phases as fractions of FLIGHT_MS.
-const RISE_END = 0.45;
-const HANG_END = 0.6;
+const RISE_END = 0.5;
+const HANG_END = 0.7;
 const PEAK_SCALE = 3;
+// Extra cork-down tilt on the drop (degrees past the travel direction).
+const FALL_TILT = 25;
 const SHUTTLE_W = 40;
 const SHUTTLE_H = 34;
 // The rally's hit point on the dragon's racket, in .v9-busy-art px
@@ -50,22 +52,26 @@ function heading(a: Point, c: Point, b: Point, t: number) {
   return (Math.atan2(dy, dx) * 180) / Math.PI;
 }
 
+// The angle nearest to prev (no full spins between samples).
+function near(prev: number, angle: number) {
+  return angle + 360 * Math.round((prev - angle) / 360);
+}
+
 // Sampled keyframes: the easing lives in the samples, so the browser plays
-// them linearly. Rise eases out (fast → slow), the fall eases in (gravity).
-function flightFrames(start: Point, end: Point, endScale: number): Keyframe[] {
-  const vw = window.innerWidth;
-  const peak: Point = {
-    x: Math.min(vw - 36, end.x + vw * 0.06),
-    y: Math.max(48, Math.min(end.y - 90, window.innerHeight * 0.1)),
-  };
+// them linearly. Rise eases out hard (fast, then a long slow-down into the
+// top), the fall eases in (gravity). The peak sits just left of the 龍虎圓
+// (2026-10-14 real-device tuning), so the drop curves right and down into it.
+function flightFrames(start: Point, peak: Point, end: Point, endScale: number): Keyframe[] {
   const riseCtl: Point = {
     x: start.x + (peak.x - start.x) * 0.3,
     y: peak.y + (start.y - peak.y) * 0.15,
   };
-  const fallCtl: Point = { x: peak.x + 6, y: peak.y + (end.y - peak.y) * 0.45 };
+  const fallCtl: Point = {
+    x: peak.x + (end.x - peak.x) * 0.5,
+    y: peak.y + (end.y - peak.y) * 0.15,
+  };
   const riseTurn = heading(start, riseCtl, peak, 1);
-  let fallTurn = heading(peak, fallCtl, end, 0);
-  if (fallTurn < riseTurn) fallTurn += 360;
+  const fallTurn = near(riseTurn, heading(peak, fallCtl, end, 0) + FALL_TILT);
 
   const frame = (
     p: Point,
@@ -82,7 +88,7 @@ function flightFrames(start: Point, end: Point, endScale: number): Keyframe[] {
   const RISE_STEPS = 14;
   for (let i = 0; i <= RISE_STEPS; i += 1) {
     const s = i / RISE_STEPS;
-    const t = 1 - (1 - s) ** 3;
+    const t = 1 - (1 - s) ** 4;
     frames.push(
       frame(
         quad(start, riseCtl, peak, t),
@@ -114,8 +120,7 @@ function flightFrames(start: Point, end: Point, endScale: number): Keyframe[] {
     frames.push(
       frame(
         quad(hangEnd, fallCtl, end, t),
-        heading(hangEnd, fallCtl, end, t) +
-          (heading(hangEnd, fallCtl, end, t) < riseTurn ? 360 : 0),
+        near(fallTurn, heading(hangEnd, fallCtl, end, t) + FALL_TILT),
         PEAK_SCALE + (endScale - PEAK_SCALE) * t,
         offset,
         s > 0.92 ? 0 : 1,
@@ -200,6 +205,11 @@ export function V9Intro({
     const start = { x: artRect.left + RACKET.x, y: artRect.top + RACKET.y };
     // The shuttle lands a little above the circle's centre, on the art.
     const end = { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.42 };
+    // Peak: just left of the 龍虎圓, a third of the way down it.
+    const peak = {
+      x: Math.max(28, rect.left - rect.width * 0.29),
+      y: Math.max(28, rect.top + rect.height * 0.32),
+    };
     const endScale = Math.max(0.6, Math.min(1, (rect.width * 0.32) / SHUTTLE_W));
 
     cover.classList.add("is-shooting");
@@ -219,7 +229,7 @@ export function V9Intro({
     later(LAUNCH_MS, () => {
       flyer.style.visibility = "visible";
       animations.current.push(
-        flyer.animate(flightFrames(start, end, endScale), {
+        flyer.animate(flightFrames(start, peak, end, endScale), {
           duration: FLIGHT_MS,
           easing: "linear",
           fill: "forwards",
