@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
+  AdminApiError,
   adminApi,
   adminWriteApi,
   type AdminSite,
   type DashboardData,
+  type DiscordMember,
+  type DiscordMembersData,
   type DiscordNotificationInput,
   type LineClaim,
   type LineClaimsData,
@@ -66,7 +69,10 @@ type Pending =
   | { kind: "test"; channel: "line" | "discord" }
   | { kind: "unlink"; claim: LineClaim }
   | { kind: "link"; temp: TempIdentity }
-  | { kind: "unlink-temp"; temp: TempIdentity };
+  | { kind: "unlink-temp"; temp: TempIdentity }
+  | { kind: "dc-settings" }
+  | { kind: "dc-test"; member: DiscordMember }
+  | { kind: "dc-unlink"; member: DiscordMember };
 
 export function SystemTab({
   password,
@@ -129,6 +135,41 @@ export function SystemTab({
       counter.current++; // drop a read still in flight
     };
   }, [loadClaims, claimsReload, dataVersion]);
+
+  // T-17: Discord 個人通知. null + no error = loading; "missing" = the Worker
+  // routes are not deployed yet (404).
+  const [dc, setDc] = useState<DiscordMembersData | "missing" | null>(null);
+  const [dcError, setDcError] = useState("");
+  const [dcReload, setDcReload] = useState(0);
+  const dcSeq = useRef(0);
+  const loadDiscord = useCallback(async () => {
+    const seq = ++dcSeq.current;
+    try {
+      const d = await adminApi.discordMembers(password, siteId);
+      if (seq === dcSeq.current) {
+        setDc(d);
+        setDcError("");
+      }
+    } catch (err) {
+      if (seq !== dcSeq.current) return;
+      if (err instanceof AdminApiError && err.status === 404 && err.code === "NOT_FOUND") {
+        setDc("missing");
+        setDcError("");
+        return;
+      }
+      setDcError(errText(err));
+      throw err;
+    }
+  }, [password, siteId]);
+  useEffect(() => {
+    const counter = dcSeq;
+    setDc(null);
+    setDcError("");
+    loadDiscord().catch(() => {});
+    return () => {
+      counter.current++;
+    };
+  }, [loadDiscord, dcReload, dataVersion]);
 
   function open(p: Pending) {
     if (writing) return;
@@ -445,6 +486,104 @@ export function SystemTab({
         )}
       </Section>
 
+      <Section
+        title="Discord 個人通知"
+        note={
+          dc === "missing"
+            ? "尚未部署"
+            : dc
+              ? `${dc.members.length} 人連結`
+              : dcError
+                ? "讀取失敗"
+                : "讀取中"
+        }
+      >
+        {dcError ? (
+          <div className="ctl-error">
+            {dcError}{" "}
+            <button
+              className="ctl-btn-ghost"
+              type="button"
+              onClick={() => setDcReload((k) => k + 1)}
+            >
+              重試
+            </button>
+          </div>
+        ) : dc === "missing" ? (
+          <p className="ctl-empty">Worker 更新（V9-035／T-17）部署後才會顯示。</p>
+        ) : !dc ? (
+          <div className="ctl-loading">讀取中…</div>
+        ) : (
+          <>
+            <p className="ctl-sub">
+              球員在 V9 球員卡連結自己的 Discord 後，報名狀態變動時機器人會私訊他。
+              {dc.configured ? "" : " 目前 Worker 尚未設定 Discord 金鑰，不會發送。"}
+            </p>
+            <dl className="ctl-kv">
+              <dt>備取→正取</dt>
+              <dd>{dc.settings.notifyPromoted ? "開" : "關"}</dd>
+              <dt>正取→備取</dt>
+              <dd>{dc.settings.notifyDemoted ? "開" : "關"}</dd>
+            </dl>
+            <p className="ctl-sub">
+              這是{site.name}的總開關：關掉時，即使球員自己開著也不發（只影響{site.name}的聚會）。
+            </p>
+            <div className="ctl-actions">
+              <button
+                className="ctl-act"
+                type="button"
+                disabled={writing}
+                onClick={() => open({ kind: "dc-settings" })}
+              >
+                修改總開關
+              </button>
+            </div>
+            <p className="ctl-sub">已連結 {dc.members.length} 人（兩個場地共用同一份名單）</p>
+            {dc.members.length ? (
+              <ul className="ctl-rows">
+                {dc.members.map((m) => (
+                  <li className="ctl-row ctl-dc-row" key={m.lineIdentityId}>
+                    <span className="ctl-row-name is-wrap">
+                      {m.displayName || m.lineDisplayName || "（未填稱呼）"}
+                      <small>
+                        Discord：{m.discordUsername || "—"} · 連結 {twTime(m.linkedAt)}
+                      </small>
+                      <small>
+                        本人設定：轉正取{m.notifyPromoted ? "開" : "關"}、轉備取
+                        {m.notifyDemoted ? "開" : "關"}
+                      </small>
+                      <small className={m.lastDm && !m.lastDm.ok ? "is-red" : undefined}>
+                        {dmText(m)}
+                      </small>
+                    </span>
+                    <span className="ctl-dc-acts">
+                      <button
+                        className="ctl-act"
+                        type="button"
+                        disabled={writing || !dc.configured}
+                        onClick={() => open({ kind: "dc-test", member: m })}
+                      >
+                        測試
+                      </button>
+                      <button
+                        className="ctl-act is-danger"
+                        type="button"
+                        disabled={writing}
+                        onClick={() => open({ kind: "dc-unlink", member: m })}
+                      >
+                        解除
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="ctl-empty">目前沒有球員連結 Discord。</p>
+            )}
+          </>
+        )}
+      </Section>
+
       <Section title="進階資訊">
         <p className="ctl-sub">資料筆數</p>
         <div className="ctl-chips">
@@ -665,6 +804,79 @@ export function SystemTab({
                 () => adminWriteApi.unlinkLineClaim(password, siteId, pending.temp.lineIdentityId),
                 `已解除 ${pending.temp.linkedMemberName} 的帳務連結`,
                 () => [loadClaims()],
+              )
+            }
+          />
+        </Sheet>
+      ) : null}
+
+      {pending?.kind === "dc-settings" && dc && dc !== "missing" ? (
+        <Sheet title="Discord 個人通知總開關" onClose={close} busy={writing}>
+          <DiscordMemberSettingsForm
+            initial={dc.settings}
+            siteName={site.name}
+            busy={writing}
+            error={sheetError}
+            onClose={close}
+            onSubmit={(input) =>
+              run(
+                () => adminWriteApi.saveDiscordMemberSettings(password, siteId, input),
+                "Discord 個人通知總開關已儲存",
+                () => [loadDiscord()],
+              )
+            }
+          />
+        </Sheet>
+      ) : null}
+
+      {pending?.kind === "dc-test" ? (
+        <Sheet title="測試 Discord 私訊" onClose={close} busy={writing}>
+          <p>
+            會<strong>立即</strong>私訊一則測試訊息給{" "}
+            <strong>{pending.member.displayName || pending.member.lineDisplayName}</strong>
+            （Discord：{pending.member.discordUsername}）。
+          </p>
+          <ConfirmActions
+            busy={writing}
+            error={sheetError}
+            onClose={close}
+            confirmText="確定發送"
+            onConfirm={() =>
+              run(
+                () =>
+                  adminWriteApi.discordMemberTest(password, siteId, pending.member.lineIdentityId),
+                (r) =>
+                  r?.ok ? "測試私訊已送出" : `測試私訊沒有送到（${dmErrorText(r?.error || "")}）`,
+                () => [loadDiscord()],
+              )
+            }
+          />
+        </Sheet>
+      ) : null}
+
+      {pending?.kind === "dc-unlink" ? (
+        <Sheet title="解除 Discord 連結" onClose={close} busy={writing}>
+          <p>
+            確定解除 <strong>{pending.member.displayName || pending.member.lineDisplayName}</strong>{" "}
+            和 Discord「{pending.member.discordUsername}」的連結？
+          </p>
+          <p className="ctl-sub">解除後不再私訊他；他可以在 V9 球員卡重新連結。</p>
+          <ConfirmActions
+            busy={writing}
+            error={sheetError}
+            onClose={close}
+            confirmText="確定解除"
+            danger
+            onConfirm={() =>
+              run(
+                () =>
+                  adminWriteApi.unlinkDiscordMember(
+                    password,
+                    siteId,
+                    pending.member.lineIdentityId,
+                  ),
+                `已解除 ${pending.member.displayName || pending.member.lineDisplayName} 的 Discord 連結`,
+                () => [loadDiscord()],
               )
             }
           />
@@ -1124,6 +1336,88 @@ function DiscordForm({
         Discord Webhook：{n.discordConfigured ? "已設定" : "未設定"}。網址只保存在 Cloudflare
         secret。
       </p>
+    </FormShell>
+  );
+}
+
+// T-17: last DM line in the Discord 個人通知 list.
+const DM_KIND: Record<string, string> = {
+  welcome: "連結確認",
+  promoted: "轉正取",
+  demoted: "轉備取",
+  test: "測試",
+};
+
+// Discord timestamps are stored as UTC ISO; show Taiwan time.
+function twTime(iso: string) {
+  const t = new Date(iso);
+  if (Number.isNaN(t.getTime())) return when(iso);
+  return new Intl.DateTimeFormat("zh-TW", {
+    timeZone: "Asia/Taipei",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(t);
+}
+
+function dmErrorText(error: string) {
+  if (/\b50007\b/.test(error)) return "對方不接受私訊：請他在 Discord 開啟「允許伺服器成員私訊」";
+  if (/\b10013\b/.test(error)) return "找不到這個 Discord 帳號";
+  if (/^401\b/.test(error)) return "機器人金鑰錯誤";
+  return error || "原因不明";
+}
+
+function dmText(m: DiscordMember) {
+  const d = m.lastDm;
+  if (!d) return "最近私訊：尚無";
+  const kind = DM_KIND[d.kind] || d.kind;
+  return `最近私訊：${twTime(d.at)} ${kind} ${d.ok ? "成功" : `失敗（${dmErrorText(d.error)}）`}`;
+}
+
+function DiscordMemberSettingsForm({
+  initial,
+  siteName,
+  busy,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  initial: { notifyPromoted: boolean; notifyDemoted: boolean };
+  siteName: string;
+  busy: boolean;
+  error: string;
+  onClose: () => void;
+  onSubmit: (input: { notifyPromoted: boolean; notifyDemoted: boolean }) => void;
+}) {
+  const [f, setF] = useState({
+    notifyPromoted: initial.notifyPromoted,
+    notifyDemoted: initial.notifyDemoted,
+  });
+  return (
+    <FormShell
+      busy={busy}
+      error={error}
+      onClose={onClose}
+      submitText="儲存總開關"
+      onSubmit={() => onSubmit(f)}
+    >
+      <div className="ctl-form">
+        <Check
+          wide
+          label="備取→正取（轉為正取時私訊）"
+          checked={f.notifyPromoted}
+          onChange={(v) => setF((cur) => ({ ...cur, notifyPromoted: v }))}
+        />
+        <Check
+          wide
+          label="正取→備取（轉為備取時私訊）"
+          checked={f.notifyDemoted}
+          onChange={(v) => setF((cur) => ({ ...cur, notifyDemoted: v }))}
+        />
+      </div>
+      <p className="ctl-sub">只影響{siteName}的聚會；球員自己的開關仍然有效（兩邊都開才發）。</p>
     </FormShell>
   );
 }

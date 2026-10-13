@@ -302,6 +302,10 @@ html.ctl-lock-x body {
 .ctl-claim-row small { display: block; color: var(--muted); font-size: 12px; }
 .ctl-claim-row.is-head { font-size: 13px; font-weight: 700; color: var(--muted); padding-top: 2px; }
 .ctl-claim-row .ctl-act { padding: 5px 8px; }
+.ctl-dc-row { align-items: flex-start; }
+.ctl-dc-row small.is-red { color: var(--red); }
+.ctl-dc-acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.ctl-dc-acts .ctl-act { padding: 5px 10px; }
 
 /* ---------- ③ 賽季管理 writes (P5-b) ---------- */
 .ctl-picker-actions { margin-top: -4px; }

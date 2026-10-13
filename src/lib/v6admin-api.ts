@@ -275,6 +275,39 @@ export type TempIdentity = {
   linkedMemberId?: string | null;
   linkedMemberName?: string | null;
 };
+// T-17: Discord 個人通知 (Worker discord-members). Links belong to a LINE
+// identity, so both sites list the same people; the switches are per site.
+export type DiscordMemberDm = {
+  at: string;
+  kind: "welcome" | "promoted" | "demoted" | "test" | string;
+  ok: boolean;
+  error: string;
+};
+export type DiscordMember = {
+  lineIdentityId: string;
+  displayName: string;
+  lineDisplayName: string;
+  memberName: string | null;
+  memberSiteId: string | null;
+  identityType: string | null;
+  identityActive: boolean;
+  discordUsername: string;
+  notifyPromoted: boolean;
+  notifyDemoted: boolean;
+  linkedAt: string;
+  lastDm: DiscordMemberDm | null;
+};
+export type DiscordMemberSettings = {
+  notifyPromoted: boolean;
+  notifyDemoted: boolean;
+  updatedAt: string | null;
+};
+export type DiscordMembersData = {
+  configured: boolean;
+  guildConfigured: boolean;
+  settings: DiscordMemberSettings;
+  members: DiscordMember[];
+};
 export type LineClaimsData = {
   claims: LineClaim[];
   // Missing until Worker V6-026 is deployed.
@@ -866,6 +899,8 @@ export const adminApi = {
     ),
   lineClaims: (pw: string, siteId: string) =>
     adminGet<LineClaimsData>(`/admin/sites/${enc(siteId)}/line-claims`, pw),
+  discordMembers: (pw: string, siteId: string) =>
+    adminGet<DiscordMembersData>(`/admin/sites/${enc(siteId)}/discord-members`, pw),
 };
 
 // ---------- Write endpoints (P3: ① 當次聚會) ----------
@@ -1107,6 +1142,24 @@ export const adminWriteApi = {
     ),
   unlinkLineClaim: (pw: string, siteId: string, lineIdentityId: string) =>
     adminPost(`/admin/sites/${enc(siteId)}/line-claims/${enc(lineIdentityId)}/unlink`, pw),
+  // T-17: Discord 個人通知.
+  saveDiscordMemberSettings: (
+    pw: string,
+    siteId: string,
+    input: Pick<DiscordMemberSettings, "notifyPromoted" | "notifyDemoted">,
+  ) =>
+    adminPost<{ settings: DiscordMemberSettings }>(
+      `/admin/sites/${enc(siteId)}/discord-settings`,
+      pw,
+      input,
+    ),
+  discordMemberTest: (pw: string, siteId: string, lineIdentityId: string) =>
+    adminPost<{ ok: boolean; error: string }>(
+      `/admin/sites/${enc(siteId)}/discord-members/${enc(lineIdentityId)}/test`,
+      pw,
+    ),
+  unlinkDiscordMember: (pw: string, siteId: string, lineIdentityId: string) =>
+    adminPost(`/admin/sites/${enc(siteId)}/discord-members/${enc(lineIdentityId)}/unlink`, pw),
 };
 
 export type LineNotificationInput = {
