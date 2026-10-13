@@ -61,6 +61,7 @@ export function V9Hero({
   tired = false,
   onLogoParty,
   hintPaused,
+  ctaShuttle,
 }: {
   siteName: string;
   event: AlphaEvent;
@@ -87,6 +88,9 @@ export function V9Hero({
   tired?: boolean;
   onLogoParty: () => void;
   hintPaused: boolean;
+  // V9-041 (/v9test): the intro's shuttle lands on the CTA and stays there,
+  // cork to the lower right. "hidden" until it lands.
+  ctaShuttle?: "hidden" | "shown" | undefined;
 }) {
   const display = parseV8MeetupDisplay(event.name);
   const meetupName = display.displayName || event.name;
@@ -245,6 +249,16 @@ export function V9Hero({
         >
           {busy ? busyLabel : cta.label}
         </motion.button>
+      )}
+      {ctaShuttle && (
+        <img
+          className={`v9-cta-shuttle${ctaShuttle === "shown" ? " is-shown" : ""}`}
+          src={`${import.meta.env.BASE_URL}v9/mascot/shuttle.webp`}
+          alt=""
+          width={40}
+          height={34}
+          aria-hidden="true"
+        />
       )}
     </section>
   );

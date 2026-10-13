@@ -12,7 +12,8 @@ import { V9Busy } from "./V9Busy";
 // (under one rally, 1.6s), so the shot leaves from where the shuttle really
 // is: the dragon swings, the shuttle flies up growing toward the viewer
 // (fast, then slowing), hangs beside the 龍虎圓 and turns cork-down, then
-// drops faster and faster into it; the circle bounces on the catch. The deck
+// drops faster and faster onto the CTA's right side, where it stays (cork to
+// the lower right, V9Hero ctaShuttle). The deck
 // crossfades in under the climbing shuttle, its rows rising one by one. A tap skips to the end; reduced motion
 // gets a 200ms crossfade instead.
 
@@ -28,6 +29,8 @@ const CATCH_MS = 280;
 const RISE_END = 0.5;
 const HANG_END = 0.7;
 const PEAK_SCALE = 3;
+// The shuttle left on the CTA points its cork to the lower right.
+const REST_ROTATE = 45;
 // Extra cork-down tilt on the drop (degrees past the travel direction).
 const FALL_TILT = 25;
 // Halftone trail length per sqrt(speed / top speed); 1.25 keeps it full
@@ -72,6 +75,8 @@ function flightFrames(
   peak: Point,
   end: Point,
   endScale: number,
+  // Final rotation (the shuttle left on the CTA), or null to keep heading.
+  endRotate: number | null,
 ): { flight: Keyframe[]; trail: Keyframe[] } {
   const riseCtl: Point = {
     x: start.x + (peak.x - start.x) * 0.3,
@@ -127,6 +132,19 @@ function flightFrames(
     );
   }
   const hangEnd = { x: peak.x + 4, y: peak.y };
+  // On the last 35% of the drop the shuttle turns to its resting angle, so
+  // it lands exactly as the one left on the CTA.
+  let lastTurn = fallTurn;
+  const fallRotate = (angle: number, s: number) => {
+    let turn = near(lastTurn, angle);
+    if (endRotate !== null && s > 0.65) {
+      const k = (s - 0.65) / 0.35;
+      const ease = k * k * (3 - 2 * k);
+      turn += (near(turn, endRotate) - turn) * ease;
+    }
+    lastTurn = turn;
+    return turn;
+  };
   const FALL_STEPS = 12;
   for (let i = 1; i <= FALL_STEPS; i += 1) {
     const s = i / FALL_STEPS;
@@ -135,10 +153,10 @@ function flightFrames(
     frames.push(
       frame(
         quad(hangEnd, fallCtl, end, t),
-        near(fallTurn, heading(hangEnd, fallCtl, end, t) + FALL_TILT),
+        fallRotate(heading(hangEnd, fallCtl, end, t) + FALL_TILT, s),
         PEAK_SCALE + (endScale - PEAK_SCALE) * t,
         offset,
-        s > 0.85 ? Math.max(0, 1 - (s - 0.85) / 0.15) : 1,
+        endRotate === null && s > 0.85 ? Math.max(0, 1 - (s - 0.85) / 0.15) : 1,
       ),
     );
   }
@@ -152,8 +170,11 @@ function flightFrames(
   // Relative to this flight's top speed, on a square-root curve so the
   // trail lingers through the slow-down instead of blinking out.
   const top = Math.max(...speeds, 0.001);
+  // It thins out over the last bit of the drop so nothing trails the landing.
+  const fadeFrom = HANG_END + (1 - HANG_END) * 0.8;
   const trail = points.map(({ offset }, i) => {
-    const k = Math.min(1, Math.sqrt((speeds[i] ?? 0) / top) * TRAIL_GAIN);
+    const fade = offset > fadeFrom ? Math.max(0, 1 - (offset - fadeFrom) / (1 - fadeFrom)) : 1;
+    const k = Math.min(1, Math.sqrt((speeds[i] ?? 0) / top) * TRAIL_GAIN) * fade;
     return {
       offset,
       opacity: (k * 0.9).toFixed(3),
@@ -236,14 +257,24 @@ export function V9Intro({
 
     const artRect = art.getBoundingClientRect();
     const start = { x: artRect.left + RACKET.x, y: artRect.top + RACKET.y };
-    // The shuttle lands a little above the circle's centre, on the art.
-    const end = { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.42 };
+    // It lands on the CTA, onto the resting shuttle (2026-10-14 real-device
+    // tuning); without one, on the 龍虎圓 as before.
+    const rest = document.querySelector<HTMLElement>(".v9-hero > .v9-cta-shuttle");
+    const restRect = rest?.getBoundingClientRect();
+    const landOnCta = Boolean(rest && restRect && restRect.width > 0);
+    const end =
+      landOnCta && restRect
+        ? { x: restRect.left + restRect.width / 2, y: restRect.top + restRect.height / 2 }
+        : { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.42 };
     // Peak: just left of the 龍虎圓, a third of the way down it.
     const peak = {
       x: Math.max(28, rect.left - rect.width * 0.29),
       y: Math.max(28, rect.top + rect.height * 0.32),
     };
-    const endScale = Math.max(0.6, Math.min(1, (rect.width * 0.32) / SHUTTLE_W));
+    const endScale =
+      landOnCta && rest
+        ? rest.offsetWidth / SHUTTLE_W
+        : Math.max(0.6, Math.min(1, (rect.width * 0.32) / SHUTTLE_W));
 
     // Wait for the rally to bring the shuttle back to the dragon, so the
     // shot leaves its racket where the shuttle really is (no jump).
@@ -270,7 +301,13 @@ export function V9Intro({
     later(launchIn, () => {
       cover.classList.add("is-shooting");
       flyer.style.visibility = "visible";
-      const { flight, trail } = flightFrames(start, peak, end, endScale);
+      const { flight, trail } = flightFrames(
+        start,
+        peak,
+        end,
+        endScale,
+        landOnCta ? REST_ROTATE : null,
+      );
       const trailEl = flyer.querySelector<HTMLElement>(".v9-intro-trail");
       animations.current.push(
         flyer.animate(flight, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
@@ -288,6 +325,8 @@ export function V9Intro({
     });
     later(launchIn + ENTER_AFTER_LAUNCH_MS, () => onStage("entering"));
     later(launchIn + FLIGHT_MS, () => {
+      // On the CTA the resting shuttle settles in by itself (CSS).
+      if (landOnCta) return;
       // Not tracked: the catch outlives this component. It squashes from the
       // circle's base, like the mascot taking the hit.
       const origin = target.style.transformOrigin;
@@ -305,7 +344,8 @@ export function V9Intro({
         target.style.transformOrigin = origin;
       };
     });
-    later(launchIn + FLIGHT_MS + 40, () => {
+    // Hand over the moment it lands: the resting shuttle shows in its place.
+    later(launchIn + FLIGHT_MS + (landOnCta ? 0 : 40), () => {
       finished.current = true;
       onDone();
     });

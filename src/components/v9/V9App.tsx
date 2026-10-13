@@ -702,6 +702,7 @@ export function V9App() {
               tired={!switching && eventPhase === "ended"}
               onLogoParty={logoParty}
               hintPaused={sheet !== null}
+              ctaShuttle={v9Test ? (introStage === "done" ? "shown" : "hidden") : undefined}
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />

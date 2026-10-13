@@ -288,6 +288,15 @@ const V9_CSS = `
 }
 .v9-intro-title { display: block; width: min(80%, 300px); height: auto; }
 .v9-intro.is-shooting .v9-busy-x { visibility: hidden; }
+/* Where the intro's shuttle lands: on the CTA's right side, cork to the
+   lower right; it settles in once the flying one hands over. */
+.v9-hero > .v9-cta-shuttle {
+  position: absolute; right: 22px; bottom: 25px; z-index: 2; width: 36px; height: auto;
+  transform: rotate(45deg); opacity: 0; pointer-events: none;
+}
+.v9-hero > .v9-cta-shuttle.is-shown { opacity: 1; animation: v9-cta-shuttle-land .26s cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes v9-cta-shuttle-land { from { transform: rotate(45deg) scale(1.15); } to { transform: rotate(45deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .v9-hero > .v9-cta-shuttle.is-shown { animation: none; } }
 .v9-intro-flyer {
   position: fixed; left: 0; top: 0; z-index: 901; width: 40px; height: 34px; visibility: hidden;
   pointer-events: none; will-change: transform, opacity;
