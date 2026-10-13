@@ -68,7 +68,8 @@ NEXT STEP
 Use detailed root-cause reports only when a failure, regression, or architecture conflict is found.
 
 Reply format (user preference):
-- Traditional Chinese; the report goes in ONE copyable code block.
+- Traditional Chinese.
+- Use a copyable code block only for content meant to be handed off (e.g. to Codex: deploy commands, update-round reports). Otherwise reply in plain text, kept short and easy to read.
 - If there is a NEXT STEP with a checklist the user must do (e.g. real-iPhone test items),
   put the checklist OUTSIDE the code block, as normal text after it.
   Inside the block, NEXT STEP keeps only a one-line summary.
