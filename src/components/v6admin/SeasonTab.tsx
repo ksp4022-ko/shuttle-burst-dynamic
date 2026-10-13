@@ -27,6 +27,7 @@ import {
   MembersSheet,
   RefundGenSheet,
   SettingSheet,
+  SeasonDateSheet,
 } from "./SeasonWrites";
 
 // ③ 賽季管理: season + group picker, then 期初設定, 群組成員, 季繳紀錄,
@@ -60,6 +61,40 @@ function errText(reason: unknown): string {
 // The Worker already sorts seasons like the old /admin (sortAdminSeasonRows:
 // the current season first, by name "20xx 第N季" + season-setting months), so
 // the default is simply the first one.
+function sortSeasonsByDate(
+  seasons: AdminSeason[],
+  today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date()),
+): AdminSeason[] {
+  const period = (s: AdminSeason): [string, string] | null => {
+    if (s.startDate && s.endDate && s.startDate <= s.endDate) return [s.startDate, s.endDate];
+    const match = s.name?.match(/(20\d{2}).*?第\s*([1-4])\s*季/);
+    if (!match) return null;
+    const year = Number(match[1]),
+      q = Number(match[2]);
+    const start = `${year}-${String((q - 1) * 3 + 1).padStart(2, "0")}-01`;
+    const end = `${year}-${String(q * 3).padStart(2, "0")}-${new Date(Date.UTC(year, q * 3, 0)).getUTCDate()}`;
+    return [start, end];
+  };
+  return [...seasons].sort((a, b) => {
+    const ap = period(a),
+      bp = period(b);
+    if (!ap || !bp) return ap ? -1 : bp ? 1 : 0;
+    const bucket = (p: [string, string]) =>
+      p[0] <= today && today <= p[1] ? 0 : p[0] > today ? 1 : 2;
+    const ab = bucket(ap),
+      bb = bucket(bp);
+    if (ab !== bb) return ab - bb;
+    if (ab === 0 && a.status !== b.status)
+      return a.status === "active" ? -1 : b.status === "active" ? 1 : 0;
+    return ab === 1 ? ap[0].localeCompare(bp[0]) : bp[1].localeCompare(ap[1]);
+  });
+}
+
 function defaultSeason(seasons: AdminSeason[]): string {
   return seasons[0]?.id || "";
 }
@@ -84,6 +119,8 @@ type Pending =
   | { kind: "adjust"; payment: SeasonPaymentAuditRow }
   // P5-b
   | { kind: "setting" }
+  | { kind: "season-create" }
+  | { kind: "season-edit" }
   | { kind: "group-create" }
   | { kind: "group-edit" }
   | { kind: "members" }
@@ -156,7 +193,7 @@ export function SeasonTab({
   // Groups / seasons live in the dashboard payload (re-read after group writes).
   onDashboardRefresh: () => Promise<void>;
 }) {
-  const seasons = dashboard.seasons || [];
+  const seasons = sortSeasonsByDate(dashboard.seasons || []);
   const [seasonId, setSeasonId] = useState(() => defaultSeason(seasons));
   const groupChoices = useMemo(
     () => groupsForSeason(dashboard.groups || [], seasonId),
@@ -373,6 +410,22 @@ export function SeasonTab({
           className="ctl-btn-ghost"
           type="button"
           disabled={writing}
+          onClick={() => open({ kind: "season-create" })}
+        >
+          ＋ 新增賽季
+        </button>
+        <button
+          className="ctl-btn-ghost"
+          type="button"
+          disabled={writing || !seasonId}
+          onClick={() => open({ kind: "season-edit" })}
+        >
+          修改賽季日期
+        </button>
+        <button
+          className="ctl-btn-ghost"
+          type="button"
+          disabled={writing}
           onClick={() => open({ kind: "group-create" })}
         >
           ＋ 新增群組
@@ -523,6 +576,22 @@ export function SeasonTab({
         />
       ) : null}
 
+      {pending?.kind === "season-create" || pending?.kind === "season-edit" ? (
+        <SeasonDateSheet
+          season={
+            pending.kind === "season-edit" ? seasons.find((s) => s.id === seasonId) : undefined
+          }
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onSubmit={(input) =>
+            submit(() => adminWriteApi.saveSeason(password, siteId, input), "賽季已儲存", {
+              dashboard: true,
+              onSuccess: (result) => setSeasonId(result.season.id),
+            })
+          }
+        />
+      ) : null}
       {pending?.kind === "setting" ? (
         <SettingSheet
           password={password}

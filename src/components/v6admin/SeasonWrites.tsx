@@ -560,3 +560,78 @@ export function ConfirmSheet({
     </Sheet>
   );
 }
+
+// Dates belong to the season, not its fee setting or group name.
+export function SeasonDateSheet({
+  season,
+  busy,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  season?: AdminSeason | undefined;
+  busy: boolean;
+  error: string;
+  onClose: () => void;
+  onSubmit: (input: {
+    seasonId?: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+  }) => void;
+}) {
+  const [name, setName] = useState(season?.name || "");
+  const [startDate, setStartDate] = useState(season?.startDate || "");
+  const [endDate, setEndDate] = useState(season?.endDate || "");
+  const valid = Boolean(name.trim() && startDate && endDate && startDate <= endDate);
+  return (
+    <Sheet title={season ? "修改賽季日期" : "新增賽季"} busy={busy} onClose={onClose}>
+      <p>日期可跨年，例如 2026-12-14～2027-03-29。期初設定的預估聚會次數請另填完整場次。</p>
+      <div className="ctl-form-grid">
+        <label>
+          賽季名稱
+          <input value={name} disabled={busy} onChange={(e) => setName(e.target.value)} />
+        </label>
+        <label>
+          開始日期
+          <input
+            type="date"
+            value={startDate}
+            disabled={busy}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </label>
+        <label>
+          結束日期
+          <input
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            disabled={busy}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </label>
+      </div>
+      {startDate && endDate && startDate > endDate ? (
+        <p className="ctl-error">結束日期不可早於開始日期。</p>
+      ) : null}
+      <Actions
+        busy={busy}
+        error={error}
+        onClose={onClose}
+        confirmText="儲存賽季"
+        disabled={!valid}
+        onConfirm={() =>
+          onSubmit({
+            ...(season ? { seasonId: season.id } : {}),
+            name: name.trim(),
+            startDate,
+            endDate,
+            status: season?.status || "active",
+          })
+        }
+      />
+    </Sheet>
+  );
+}
