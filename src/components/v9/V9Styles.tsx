@@ -458,7 +458,12 @@ const V9_CSS = `
 .v9-pay-detail { display: grid; gap: 4px; justify-items: start; padding: 0 12px 12px; font-size: 14px; }
 .v9-pay-detail p { margin: 0; }
 .v9-pay-detail small { color: var(--v9-muted); font-size: 12px; }
+.v9-pay-account { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .v9-pay-account b { font-size: 18px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+.v9-pay-btn { display: inline-flex; align-items: center; padding: 5px 14px; border-radius: 999px; border: 2px solid var(--v9-ink); box-shadow: 0 2px 0 var(--v9-ink); color: #fff; font-weight: 800; font-size: 13px; text-decoration: none; cursor: pointer; }
+.v9-pay-btn.is-line { background: #06c755; }
+.v9-pay-btn.is-copy { background: #2f6fe0; }
+.v9-pay-note { color: var(--v9-muted); font-size: 12px; }
 .v9-bill-detail-money { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .v9-bill-season { padding: 8px 10px; border-radius: 12px; background: var(--v9-paper); font-size: 14px; display: grid; gap: 6px; }
 .v9-bill-season-head { display: flex; align-items: center; gap: 8px; font-weight: 800; }

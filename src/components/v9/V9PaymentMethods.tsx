@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
-// V9-031: 付款方式 under the V9 bill -- the same three methods and wording as
-// the V8 bill (V8BillingTestPanel). Folded by default; each method folds too.
+// V9-031: 付款方式 under the V9 bill -- the same three methods as the V8 bill
+// (V8BillingTestPanel); V9-032 shortened wording and coloured buttons.
+// Folded by default; each method folds too.
 const LINE_PAY_URL = "https://line.me/ti/p/50-eOQgbFr";
 const BANK_ACCOUNT = "22168142043";
 
@@ -56,17 +57,15 @@ export function V9PaymentMethods() {
             <Chevron />
           </summary>
           <div className="v9-pay-detail">
-            <strong>歡迎使用 LINE Pay 轉帳</strong>
-            <p>完成後將由管理員確認付款。</p>
+            <p>LINE Pay 轉帳給管理員</p>
             <a
-              className="v9-btn is-small"
+              className="v9-pay-btn is-line"
               href={LINE_PAY_URL}
               target="_blank"
               rel="noopener noreferrer"
             >
               開啟管理員 LINE
             </a>
-            <small>付款後系統不會立即更新，待管理員確認後將顯示為已付款。</small>
           </div>
         </details>
         <details className="v9-pay-method">
@@ -75,19 +74,17 @@ export function V9PaymentMethods() {
             <Chevron />
           </summary>
           <div className="v9-pay-detail">
-            <strong>第一銀行</strong>
-            <p>銀行代碼 007</p>
+            <p>第一銀行 (007) 新店分行</p>
             <p className="v9-pay-account">
               帳號 <b>{BANK_ACCOUNT}</b>
+              <button
+                type="button"
+                className="v9-pay-btn is-copy"
+                onClick={() => void copyText(BANK_ACCOUNT).then(() => setCopied(true))}
+              >
+                {copied ? "已複製" : "複製"}
+              </button>
             </p>
-            <button
-              type="button"
-              className="v9-btn is-small"
-              onClick={() => void copyText(BANK_ACCOUNT).then(() => setCopied(true))}
-            >
-              {copied ? "已複製" : "複製帳號"}
-            </button>
-            <small>轉帳完成後，由管理員確認並更新付款狀態。</small>
           </div>
         </details>
         <details className="v9-pay-method">
@@ -96,10 +93,10 @@ export function V9PaymentMethods() {
             <Chevron />
           </summary>
           <div className="v9-pay-detail">
-            <strong>現金</strong>
-            <p>現場付款後，由管理員確認並更新付款狀態。</p>
+            <p>現場付給管理員</p>
           </div>
         </details>
+        <small className="v9-pay-note">付款後，請稍待管理員沖帳更新。</small>
       </div>
     </details>
   );
