@@ -406,7 +406,7 @@ const V9_CSS = `
 .v9-roster-no.is-red { background: var(--v9-rose); }
 .v9-roster-name { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v9-roster-row .v9-badge { font-size: 10px; padding: 0 6px; }
-.v9-me-tag { margin-left: 4px; font-size: 10px; padding: 0 5px; border-radius: 999px; background: var(--v9-ink); color: #fff; vertical-align: 1px; }
+.v9-me-tag { flex: none; margin-left: -4px; font-size: 10px; padding: 0 5px; border-radius: 999px; background: var(--v9-ink); color: #fff; vertical-align: 1px; }
 
 .v9-badge {
   display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px;
@@ -497,6 +497,8 @@ const V9_CSS = `
 .v9-seat-tag.is-open { background: var(--v9-red); color: #fff; }
 .v9-seat-tag.is-waiting { background: var(--v9-yellow); }
 .v9-seat-tag.is-full { background: var(--v9-green); color: #fff; }
+.v9-seat-tag.is-ended { background: #d9d2c5; color: #6f655b; }
+.v9-meetup-row.is-ended .v9-meetup-date { background: #e4ddd0; color: #6f655b; }
 .v9-meetup-info small { font-size: 12px; color: var(--v9-muted); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* my status */
@@ -576,6 +578,44 @@ const V9_CSS = `
   background: #eef4ff; color: var(--v9-ink); font-size: 15px; font-weight: 900; text-align: left; cursor: pointer;
 }
 .v9-pc-viewas span:nth-child(2) { flex: 1; }
+
+/* V9-030 球員卡 Discord 通知 */
+.v9-pc-discord { display: grid; gap: 8px; padding: 10px 12px; border-top: 2px dashed #eadfca; background: #f3f1ff; }
+.v9-pc-discord-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.v9-pc-discord-logo {
+  display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; border: 2px solid var(--v9-ink);
+  border-radius: 9px; background: #5865f2; color: #fff;
+}
+.v9-pc-discord-title { font-size: 15px; font-weight: 900; }
+.v9-pc-discord-user {
+  margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 13px; font-weight: 800; color: #4a4fc4;
+}
+.v9-pc-discord-text { margin: 0; font-size: 13px; line-height: 1.5; color: #6f655b; }
+.v9-pc .v9-pc-discord-connect {
+  justify-self: start; padding: 7px 16px; border: 2.5px solid var(--v9-ink); border-radius: 999px; background: #5865f2;
+  color: #fff; font: inherit; font-size: 14px; font-weight: 900; box-shadow: 0 3px 0 var(--v9-ink); cursor: pointer;
+}
+.v9-pc .v9-pc-discord-connect:active { transform: translateY(3px); box-shadow: none; }
+.v9-pc .v9-pc-discord-connect:disabled { opacity: .6; cursor: default; }
+.v9-pc-discord-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 800; cursor: pointer; }
+.v9-switch {
+  appearance: none; position: relative; flex: none; width: 44px; height: 26px; margin: 0; border: 2.5px solid var(--v9-ink);
+  border-radius: 999px; background: #e3ddd0; cursor: pointer; transition: background-color .15s ease;
+}
+.v9-switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 17px; height: 17px; border: 2px solid var(--v9-ink);
+  border-radius: 50%; background: #fff; transition: transform .15s ease;
+}
+.v9-switch:checked { background: var(--v9-green); }
+.v9-switch:checked::after { transform: translateX(18px); }
+.v9-switch:disabled { opacity: .6; cursor: default; }
+.v9-switch:focus-visible { outline: 3px solid var(--v9-blue); outline-offset: 2px; }
+.v9-pc-discord-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; font-size: 13px; }
+.v9-pc-discord-msg {
+  margin: 0; padding: 6px 10px; border: 2px solid var(--v9-ink); border-radius: 12px; background: #fff;
+  font-size: 13px; font-weight: 700;
+}
 
 /* V9-021 admin read-only view-as: the bar on top, the picker sheet */
 .v9-viewas-bar {

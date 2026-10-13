@@ -33,6 +33,7 @@ import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-
 import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
+import { useV9Test } from "./useV9Test";
 import { v9EventPhase, type V9EventPhase } from "@/lib/v9-event-time";
 import { chooseV9InitialEvent, loadV9Events } from "@/lib/v9-events";
 
@@ -114,6 +115,8 @@ function rankOf(
 export function V9App() {
   const [siteId] = useState(() => configuredSiteId());
   const auth = useV8LineAuth();
+  // V9-030 Discord 通知 is on /v9test until accepted for /v9.
+  const v9Test = useV9Test();
   const flow = useHomepageFlow({
     preHoldMs: 0,
     realFadeMs: 0,
@@ -756,11 +759,14 @@ export function V9App() {
               {events.map((item) => {
                 const itemDisplay = parseV8MeetupDisplay(item.name);
                 const current = item.id === selectedEventId;
+                // V9-029: a meetup past its end time or closed in the admin
+                // shows 已結束 instead of its seat count.
+                const ended = v9EventPhase(item, nowMs, { closedEnds: true }) === "ended";
                 return (
                   <li key={item.id}>
                     <button
                       type="button"
-                      className={`v9-meetup-row${current ? " is-current" : ""}`}
+                      className={`v9-meetup-row${current ? " is-current" : ""}${ended ? " is-ended" : ""}`}
                       aria-current={current}
                       disabled={busy}
                       onClick={() => selectEvent(item.id)}
@@ -772,7 +778,11 @@ export function V9App() {
                       <span className="v9-meetup-info">
                         <strong>
                           {itemDisplay.displayName || item.name}
-                          <V9SeatTag {...seatsOf(item)} />
+                          {ended ? (
+                            <span className="v9-seat-tag is-ended">已結束</span>
+                          ) : (
+                            <V9SeatTag {...seatsOf(item)} />
+                          )}
                         </strong>
                         <small>
                           {[
@@ -895,6 +905,7 @@ export function V9App() {
                 onLogout={logout}
                 onViewAs={isAdmin ? () => setSheet("viewas") : undefined}
                 due={billDue}
+                discordToken={v9Test ? lineToken : null}
               />
             )}
           </V9Sheet>
