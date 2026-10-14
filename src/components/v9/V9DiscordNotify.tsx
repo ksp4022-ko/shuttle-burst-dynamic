@@ -13,8 +13,8 @@ import {
 // which of your own status changes the bot DMs you about. Hidden when the
 // Worker has no Discord app configured or the request fails.
 
-// /v9 shows the first two with the old labels; /v9test (moreKinds) shows
-// the V9-036/039 set for this identity type, each with when it arrives.
+// Without moreKinds only the first two show (old labels); with it (V9 now) the
+// V9-036/039 set for this identity type shows, each with when it arrives.
 type SwitchDef = {
   key: V9DiscordSwitch;
   label: string;
@@ -88,9 +88,9 @@ function takeDiscordResult() {
   return result;
 }
 
-// moreKinds: V9-036 switches (/v9test first); each shows only once the
+// moreKinds: the V9-036/039 switches; each shows only once the
 // Worker returns it.
-// V9-039: on /v9test the block starts collapsed; the header opens it.
+// V9-039: with moreKinds the block starts collapsed; the header opens it.
 export function V9DiscordNotify({
   token,
   moreKinds = false,

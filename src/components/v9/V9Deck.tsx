@@ -88,7 +88,7 @@ export function V9Hero({
   tired?: boolean;
   onLogoParty: () => void;
   hintPaused: boolean;
-  // V9-041 (/v9test): the intro's shuttle lands on the CTA and stays there,
+  // V9-041: the intro's shuttle lands on the CTA and stays there,
   // cork to the lower right. "hidden" until it lands.
   ctaShuttle?: "hidden" | "shown" | undefined;
 }) {

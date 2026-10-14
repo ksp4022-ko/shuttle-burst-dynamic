@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { V9Busy } from "./V9Busy";
 
-// V9-040 / V9-041 (/v9test): the opening screen and the shot into the deck.
+// V9-040 / V9-041: the opening screen and the shot into the deck.
 //
 // The screen (OnCourt title + the rally + 讀取聚會中…) sits centred over the
 // app and stays at least MIN_MS, which leaves time to fetch the deck's art.

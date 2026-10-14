@@ -15,7 +15,6 @@ import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
-import { V9Busy } from "./V9Busy";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
 import { V9ErrorBoundary } from "./V9ErrorBoundary";
 import { V9Styles } from "./V9Styles";
@@ -35,7 +34,6 @@ import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-
 import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
-import { useV9Test } from "./useV9Test";
 import { v9EventPhase, type V9EventPhase } from "@/lib/v9-event-time";
 import { chooseV9InitialEvent, loadV9Events } from "@/lib/v9-events";
 
@@ -117,9 +115,7 @@ function rankOf(
 export function V9App() {
   const [siteId] = useState(() => configuredSiteId());
   const auth = useV8LineAuth();
-  // V9-036 Discord 通知 kinds are on /v9test until accepted for /v9.
-  const v9Test = useV9Test();
-  // V9-040/041 (/v9test): opening screen over the app, then the shot in.
+  // V9-040/041: opening screen over the app, then the shot in.
   const [introStage, setIntroStage] = useState<V9IntroStage | "done">("cover");
   const introDone = useCallback(() => setIntroStage("done"), []);
   // The deck's rise outlives the intro itself; drop the class once it ends.
@@ -597,7 +593,7 @@ export function V9App() {
   const dockActive: V9DockKey | null =
     sheet === "meetup" || sheet === "roster" || sheet === "proxy" || sheet === "me" ? sheet : null;
 
-  const intro = v9Test && introStage !== "done";
+  const intro = introStage !== "done";
   const dataSettled =
     phase === "load-error" || Boolean(selectedEvent && roster) || (!loading && events.length === 0);
 
@@ -612,14 +608,6 @@ export function V9App() {
         <V9ErrorBoundary onError={introDone}>
           <V9Intro ready={dataSettled} onStage={setIntroStage} onDone={introDone} />
         </V9ErrorBoundary>
-      )}
-
-      {loading && !v9Test && (
-        <main className="v9-main">
-          <section className="v9-hero v9-hero-message v9-busy-card" aria-busy="true">
-            <V9Busy />
-          </section>
-        </main>
       )}
 
       {phase === "load-error" && (
@@ -708,7 +696,7 @@ export function V9App() {
               tired={!switching && eventPhase === "ended"}
               onLogoParty={logoParty}
               hintPaused={sheet !== null}
-              ctaShuttle={v9Test ? (introStage === "done" ? "shown" : "hidden") : undefined}
+              ctaShuttle={introStage === "done" ? "shown" : "hidden"}
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
@@ -935,7 +923,7 @@ export function V9App() {
                 onViewAs={isAdmin ? () => setSheet("viewas") : undefined}
                 due={billDue}
                 discordToken={lineToken}
-                discordMoreKinds={v9Test}
+                discordMoreKinds
               />
             )}
           </V9Sheet>
