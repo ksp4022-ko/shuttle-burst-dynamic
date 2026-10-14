@@ -278,6 +278,8 @@ export type TempIdentity = {
   // V6-033: 季打 member linked by the admin for billing (identity stays 臨打).
   linkedMemberId?: string | null;
   linkedMemberName?: string | null;
+  // V9-043 (R7): each linked member on this site, unlinked one at a time.
+  linkedMembers?: { memberId: string; memberName: string }[];
 };
 // T-17: Discord 個人通知 (Worker discord-members). Links belong to a LINE
 // identity, so both sites list the same people; the switches are per site.

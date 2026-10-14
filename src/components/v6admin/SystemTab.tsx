@@ -80,7 +80,7 @@ type Pending =
   | { kind: "test"; channel: "line" | "discord" }
   | { kind: "unlink"; claim: LineClaim }
   | { kind: "link"; temp: TempIdentity }
-  | { kind: "unlink-temp"; temp: TempIdentity }
+  | { kind: "unlink-temp"; temp: TempIdentity; member: { memberId: string; memberName: string } }
   | { kind: "add-claim" }
   | { kind: "dc-settings" }
   | { kind: "dc-test"; member: DiscordMember }
@@ -467,14 +467,21 @@ export function SystemTab({
                     <span role="cell">{t.lineDisplayName || "—"}</span>
                     <span role="cell">
                       {t.linkedMemberId ? (
-                        <button
-                          className="ctl-act is-danger"
-                          type="button"
-                          disabled={writing}
-                          onClick={() => open({ kind: "unlink-temp", temp: t })}
-                        >
-                          解除
-                        </button>
+                        // V9-043 (R7): one 解除 per linked member.
+                        (t.linkedMembers?.length
+                          ? t.linkedMembers
+                          : [{ memberId: t.linkedMemberId, memberName: t.linkedMemberName || "" }]
+                        ).map((m, i, all) => (
+                          <button
+                            key={m.memberId}
+                            className="ctl-act is-danger"
+                            type="button"
+                            disabled={writing}
+                            onClick={() => open({ kind: "unlink-temp", temp: t, member: m })}
+                          >
+                            {all.length > 1 ? `解除 ${m.memberName}` : "解除"}
+                          </button>
+                        ))
                       ) : (
                         <button
                           className="ctl-act"
@@ -829,7 +836,7 @@ export function SystemTab({
         <Sheet title="解除帳務連結" onClose={close} busy={writing}>
           <p>
             確定解除臨打「{pending.temp.confirmedName || pending.temp.lineDisplayName}」和季打{" "}
-            <strong>{pending.temp.linkedMemberName}</strong> 的帳務連結？
+            <strong>{pending.member.memberName}</strong> 的帳務連結？
           </p>
           <p className="ctl-sub">他仍是臨打身分，只是帳單不再顯示季打的季費與待退款。</p>
           <ConfirmActions
@@ -845,9 +852,9 @@ export function SystemTab({
                     password,
                     siteId,
                     pending.temp.lineIdentityId,
-                    pending.temp.linkedMemberId || undefined,
+                    pending.member.memberId,
                   ),
-                `已解除 ${pending.temp.linkedMemberName} 的帳務連結`,
+                `已解除 ${pending.member.memberName} 的帳務連結`,
                 () => [loadClaims()],
               )
             }
