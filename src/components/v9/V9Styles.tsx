@@ -358,7 +358,8 @@ const V9_CSS = `
    new one here), so dropping is-entering later can't replay it. */
 .v9-app .v9-main, .v9-app .v9-viewas-bar { transition: opacity .2s ease; }
 /* V9-041: the deck appears in place of the morphed frame (no fade), then
-   its blocks slide up from below one by one; each slams into the one above
+   its blocks slide up from below one at a time (each a quick 0.32s hit,
+   0.29s apart, so every arrival reads on its own); each slams into the one above
    (which gets knocked up a little), squashes and springs back. */
 .v9-app.is-entering .v9-main { transition: none; }
 .v9-app.is-entering .v9-hero > .v9-hero-top,
@@ -369,13 +370,13 @@ const V9_CSS = `
 .v9-app.is-entering .v9-hero > .v9-cta {
   transform-origin: 50% 0;
   /* knock: no fill, so it can't override the slam while it waits. */
-  animation: v9-slam .65s backwards, v9-knock .22s cubic-bezier(0.23, 1, 0.32, 1);
+  animation: v9-slam .32s backwards, v9-knock .22s cubic-bezier(0.23, 1, 0.32, 1);
 }
-.v9-app.is-entering .v9-hero-body > .v9-rail { animation-delay: 0s, .635s; }
-.v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .18s, .815s; }
-.v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .36s, .995s; }
-.v9-app.is-entering .v9-hero > .v9-cta { animation: v9-slam .65s .54s backwards; }
-.v9-app.is-entering .v9-dock { transition: opacity .24s ease .6s; }
+.v9-app.is-entering .v9-hero-body > .v9-rail { animation-delay: 0s, .514s; }
+.v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .29s, .804s; }
+.v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .58s, 1.094s; }
+.v9-app.is-entering .v9-hero > .v9-cta { animation: v9-slam .32s .87s backwards; }
+.v9-app.is-entering .v9-dock { transition: opacity .24s ease .9s; }
 /* Slide up accelerating (it hits, it doesn't glide in), squash on impact,
    spring back. */
 @keyframes v9-slam {
