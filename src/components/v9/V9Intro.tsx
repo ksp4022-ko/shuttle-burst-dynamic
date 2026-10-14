@@ -36,12 +36,14 @@ const FALL_TILT = 25;
 // Halftone trail length per sqrt(speed / top speed); 1.25 keeps it full
 // for most of the launch and the last part of the drop.
 const TRAIL_GAIN = 1.25;
-// Long-axis spin bands (px per band in the shuttle's own 40px frame; bands
-// per second at rest and added at top speed). One flight is under ~20
-// bands, and the band strip (.v9-intro-spin-bands, 320px) covers that.
-const SPIN_PERIOD = 12;
-const SPIN_MIN = 3;
-const SPIN_MAX = 13;
+// Long-axis spin: one soft shadow about 1.5 feathers wide sweeps across the
+// skirt per turn (2026-10-14 real-device tuning: a full set of stripes was
+// too busy). SPIN_PERIOD (px, shuttle's own 40px frame) spaces the shadows
+// so only one is on the skirt at a time; turns per second at rest and added
+// at top speed. One flight is under ~8 turns; the strip is 400px.
+const SPIN_PERIOD = 44;
+const SPIN_MIN = 1.5;
+const SPIN_MAX = 5.5;
 const SHUTTLE_W = 40;
 const SHUTTLE_H = 34;
 // The rally's hit point on the dragon's racket, in .v9-busy-art px
