@@ -26,9 +26,10 @@ const HITSTOP_MS = 120;
 const IMPACT_MS = 320;
 const RALLY_MS = 1600; // .v9-busy rally loop; at 0% the shuttle is on the dragon's racket
 const FLIGHT_MS = 1750; // launch → landing; lands just after the CTA settles
-// The loading card's frame morphs into the deck's card frame over MORPH_MS
-// from the launch; then the deck takes over and its blocks slide in.
-const MORPH_MS = 350;
+// The loading card is laid out as the deck's card, so on the hit the deck
+// takes over in place and its blocks start sliding in at once. Only if the
+// deck's card came out a different size does the frame grow first (MORPH_MS).
+const MORPH_MS = 200;
 const FADE_MS = 350; // the opening screen fades from the launch
 const CATCH_MS = 280;
 // Flight phases as fractions of FLIGHT_MS.
@@ -275,6 +276,16 @@ export function V9Intro({
     [finish],
   );
 
+  // Once the deck has rendered (under the cover), give the loading card the
+  // deck card's exact height (content can make it taller than the CSS
+  // estimate), so on the hit the deck can take over in place.
+  useEffect(() => {
+    if (!ready) return;
+    const card = coverRef.current?.querySelector<HTMLElement>(".v9-intro-card");
+    const hero = document.querySelector<HTMLElement>(".v9-main > .v9-hero");
+    if (card && hero) card.style.height = `${hero.getBoundingClientRect().height}px`;
+  }, [ready]);
+
   useEffect(() => {
     if (!ready || !minPassed || leaving) return;
     setLeaving(true);
@@ -405,21 +416,43 @@ export function V9Intro({
         if (card && morph && heroEl) {
           const from = card.getBoundingClientRect();
           const to = heroEl.getBoundingClientRect();
+          // The loading card is laid out as the deck's card, so normally they
+          // match and the deck takes over on the hit itself. If the deck's
+          // card came out taller (more content), the frame grows first.
+          const same =
+            Math.abs(from.top - to.top) < 4 &&
+            Math.abs(from.left - to.left) < 4 &&
+            Math.abs(from.width - to.width) < 4 &&
+            Math.abs(from.height - to.height) < 4;
           const box = (r: DOMRect) => ({
             left: `${r.left}px`,
             top: `${r.top}px`,
             width: `${r.width}px`,
             height: `${r.height}px`,
           });
-          morph.style.visibility = "visible";
           cover.classList.add("is-morphing");
-          animations.current.push(
-            morph.animate([box(from), box(to)], {
-              duration: MORPH_MS,
-              easing: "cubic-bezier(0.77, 0, 0.175, 1)",
-              fill: "forwards",
-            }),
-          );
+          const handover = () => {
+            cover.classList.add("is-handover");
+            morph.style.visibility = "hidden";
+            onStage("entering");
+          };
+          if (same) {
+            handover();
+          } else {
+            morph.style.visibility = "visible";
+            animations.current.push(
+              morph.animate([box(from), box(to)], {
+                duration: MORPH_MS,
+                easing: "cubic-bezier(0.77, 0, 0.175, 1)",
+                fill: "forwards",
+              }),
+            );
+            later(MORPH_MS, handover);
+          }
+          // The fading rally stays over the deck a moment, then the cover goes.
+          later(MORPH_MS + 300, () => {
+            cover.style.visibility = "hidden";
+          });
         } else {
           animations.current.push(
             cover.animate([{ opacity: 1 }, { opacity: 0 }], {
@@ -428,6 +461,7 @@ export function V9Intro({
               fill: "forwards",
             }),
           );
+          onStage("entering");
         }
         if (trailEl) {
           animations.current.push(
@@ -442,10 +476,6 @@ export function V9Intro({
       });
       // The frame has become the deck's card: show the deck in its place
       // (no fade) and drop the cover; the deck's blocks slide in (CSS).
-      later(launchIn + HITSTOP_MS + MORPH_MS, () => {
-        onStage("entering");
-        cover.style.visibility = "hidden";
-      });
       later(launchIn + HITSTOP_MS + FLIGHT_MS, () => {
         // On the CTA the resting shuttle settles in by itself (CSS).
         if (landOnCta) return;

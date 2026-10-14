@@ -275,15 +275,20 @@ const V9_CSS = `
 /* V9-040/041 (/v9test): opening screen centred over the app, then the
    shuttle shot into the deck (V9Intro). */
 .v9-intro {
-  position: fixed; inset: 0; z-index: 900; display: grid; place-items: center;
-  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  position: fixed; inset: 0; z-index: 900; display: grid; place-items: start center;
+  /* Same box as the deck's card (.v9-app padding + hero height), so on the
+     hit the deck takes over in place with no frame to grow. */
+  padding: max(10px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+  padding-top: inherit;
   background:
     radial-gradient(circle at 12% 4%, rgba(255, 212, 92, .28) 0 120px, transparent 121px),
     radial-gradient(circle at 92% 30%, rgba(76, 183, 130, .14) 0 90px, transparent 91px),
     var(--v9-paper);
 }
 .v9-intro-card {
-  display: grid; justify-items: center; gap: 22px; width: 100%; max-width: 480px; padding: 30px 18px 34px;
+  display: grid; justify-items: center; align-content: center; gap: 22px; width: 100%; max-width: 480px;
+  height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 66px), 700px);
+  padding: 30px 18px 34px; transition: height .25s cubic-bezier(0.23, 1, 0.32, 1);
   background: var(--v9-cream); border: var(--v9-line); border-radius: 30px; box-shadow: 0 6px 0 var(--v9-ink);
 }
 .v9-intro-title { display: block; width: min(80%, 300px); height: auto; }
@@ -293,6 +298,8 @@ const V9_CSS = `
    contents fade meanwhile. */
 .v9-intro.is-morphing .v9-intro-card { background: transparent; border-color: transparent; box-shadow: none; }
 .v9-intro.is-morphing .v9-intro-card > * { opacity: 0; transition: opacity .22s ease; }
+/* Same box: the cover turns see-through and the deck shows in place. */
+.v9-intro.is-handover { background: transparent; }
 .v9-intro-morph {
   position: fixed; left: 0; top: 0; visibility: hidden; pointer-events: none;
   background: var(--v9-cream); border: var(--v9-line); border-radius: 30px; box-shadow: 0 6px 0 var(--v9-ink);
@@ -383,7 +390,7 @@ const V9_CSS = `
 .v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .6s, 1.024s; }
 .v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .8s, 1.224s; }
 .v9-app.is-entering .v9-hero > .v9-cta { animation: v9-slam .32s 1s backwards; }
-.v9-app.is-entering .v9-dock { transition: opacity .25s ease 1.4s; }
+.v9-app.is-entering .v9-dock { transition: opacity .25s ease 1.75s; }
 /* Slide up accelerating (it hits, it doesn't glide in), squash on impact,
    spring back. */
 @keyframes v9-slam {
