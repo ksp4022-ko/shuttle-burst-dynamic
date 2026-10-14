@@ -247,138 +247,160 @@ export function V9Intro({
     onDone();
   }, [onDone, onStage]);
 
-  const later = (ms: number, task: () => void) => {
-    timers.current.push(window.setTimeout(task, ms));
-  };
+  // Timer callbacks run outside React, so a throw there would leave the
+  // cover up for good: any failure skips to the app instead.
+  const later = useCallback(
+    (ms: number, task: () => void) => {
+      timers.current.push(
+        window.setTimeout(() => {
+          try {
+            task();
+          } catch (error) {
+            console.error("V9 intro failed", error);
+            finish();
+          }
+        }, ms),
+      );
+    },
+    [finish],
+  );
 
   useEffect(() => {
     if (!ready || !minPassed || leaving) return;
     setLeaving(true);
-    const cover = coverRef.current;
-    const flyer = flyerRef.current;
-    const art = cover?.querySelector<HTMLElement>(".v9-busy-art");
-    const dragon = cover?.querySelector<HTMLElement>(".v9-busy-dragon");
-    const target = document.querySelector<HTMLElement>(".v9-hero-mascot");
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const rect = target?.getBoundingClientRect();
+    try {
+      leave();
+    } catch (error) {
+      console.error("V9 intro failed", error);
+      finish();
+    }
+    function leave() {
+      const cover = coverRef.current;
+      const flyer = flyerRef.current;
+      const art = cover?.querySelector<HTMLElement>(".v9-busy-art");
+      const dragon = cover?.querySelector<HTMLElement>(".v9-busy-dragon");
+      const target = document.querySelector<HTMLElement>(".v9-hero-mascot");
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const rect = target?.getBoundingClientRect();
 
-    if (reduce || !cover || !flyer || !art || !target || !rect || rect.width === 0) {
-      // No deck to land in (empty list / error) or reduced motion: crossfade.
-      onStage("entering");
-      if (cover) {
+      if (reduce || !cover || !flyer || !art || !target || !rect || rect.width === 0) {
+        // No deck to land in (empty list / error) or reduced motion: crossfade.
+        onStage("entering");
+        if (cover) {
+          animations.current.push(
+            cover.animate([{ opacity: 1 }, { opacity: 0 }], {
+              duration: 200,
+              easing: "ease",
+              fill: "forwards",
+            }),
+          );
+        }
+        later(200, finish);
+        return;
+      }
+
+      const artRect = art.getBoundingClientRect();
+      const start = { x: artRect.left + RACKET.x, y: artRect.top + RACKET.y };
+      // It lands on the CTA, onto the resting shuttle (2026-10-14 real-device
+      // tuning); without one, on the 龍虎圓 as before.
+      const rest = document.querySelector<HTMLElement>(".v9-hero > .v9-cta-shuttle");
+      const restRect = rest?.getBoundingClientRect();
+      const landOnCta = Boolean(rest && restRect && restRect.width > 0);
+      const end =
+        landOnCta && restRect
+          ? { x: restRect.left + restRect.width / 2, y: restRect.top + restRect.height / 2 }
+          : { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.42 };
+      // Peak: just left of the 龍虎圓, a third of the way down it.
+      const peak = {
+        x: Math.max(28, rect.left - rect.width * 0.29),
+        y: Math.max(28, rect.top + rect.height * 0.32),
+      };
+      const endScale =
+        landOnCta && rest
+          ? rest.offsetWidth / SHUTTLE_W
+          : Math.max(0.6, Math.min(1, (rect.width * 0.32) / SHUTTLE_W));
+
+      // Wait for the rally to bring the shuttle back to the dragon, so the
+      // shot leaves its racket where the shuttle really is (no jump).
+      const rally = cover.querySelector<HTMLElement>(".v9-busy-x")?.getAnimations()[0];
+      const into = Number(rally?.currentTime ?? 0) % RALLY_MS;
+      const launchIn = rally ? (RALLY_MS - into) % RALLY_MS : 0;
+      const windUp = SWING_MS * SWING_HIT;
+
+      if (dragon) {
+        later(Math.max(0, launchIn - windUp), () => {
+          animations.current.push(
+            dragon.animate(
+              [
+                { transform: "rotate(0deg)" },
+                { transform: "rotate(-12deg)", offset: SWING_HIT },
+                { transform: "rotate(6deg)", offset: 0.7 },
+                { transform: "rotate(0deg)" },
+              ],
+              { duration: SWING_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
+            ),
+          );
+        });
+      }
+      later(launchIn, () => {
+        cover.classList.add("is-shooting");
+        flyer.style.visibility = "visible";
+        const { flight, trail, spin } = flightFrames(
+          start,
+          peak,
+          end,
+          endScale,
+          landOnCta ? REST_ROTATE : null,
+        );
+        const trailEl = flyer.querySelector<HTMLElement>(".v9-intro-trail");
+        const bandsEl = flyer.querySelector<HTMLElement>(".v9-intro-spin-bands");
         animations.current.push(
+          flyer.animate(flight, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
           cover.animate([{ opacity: 1 }, { opacity: 0 }], {
-            duration: 200,
-            easing: "ease",
+            duration: FADE_MS,
+            easing: "cubic-bezier(0.23, 1, 0.32, 1)",
             fill: "forwards",
           }),
         );
-      }
-      later(200, finish);
-      return;
-    }
-
-    const artRect = art.getBoundingClientRect();
-    const start = { x: artRect.left + RACKET.x, y: artRect.top + RACKET.y };
-    // It lands on the CTA, onto the resting shuttle (2026-10-14 real-device
-    // tuning); without one, on the 龍虎圓 as before.
-    const rest = document.querySelector<HTMLElement>(".v9-hero > .v9-cta-shuttle");
-    const restRect = rest?.getBoundingClientRect();
-    const landOnCta = Boolean(rest && restRect && restRect.width > 0);
-    const end =
-      landOnCta && restRect
-        ? { x: restRect.left + restRect.width / 2, y: restRect.top + restRect.height / 2 }
-        : { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.42 };
-    // Peak: just left of the 龍虎圓, a third of the way down it.
-    const peak = {
-      x: Math.max(28, rect.left - rect.width * 0.29),
-      y: Math.max(28, rect.top + rect.height * 0.32),
-    };
-    const endScale =
-      landOnCta && rest
-        ? rest.offsetWidth / SHUTTLE_W
-        : Math.max(0.6, Math.min(1, (rect.width * 0.32) / SHUTTLE_W));
-
-    // Wait for the rally to bring the shuttle back to the dragon, so the
-    // shot leaves its racket where the shuttle really is (no jump).
-    const rally = cover.querySelector<HTMLElement>(".v9-busy-x")?.getAnimations()[0];
-    const into = Number(rally?.currentTime ?? 0) % RALLY_MS;
-    const launchIn = rally ? (RALLY_MS - into) % RALLY_MS : 0;
-    const windUp = SWING_MS * SWING_HIT;
-
-    if (dragon) {
-      later(Math.max(0, launchIn - windUp), () => {
-        animations.current.push(
-          dragon.animate(
-            [
-              { transform: "rotate(0deg)" },
-              { transform: "rotate(-12deg)", offset: SWING_HIT },
-              { transform: "rotate(6deg)", offset: 0.7 },
-              { transform: "rotate(0deg)" },
-            ],
-            { duration: SWING_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
-          ),
+        if (trailEl) {
+          animations.current.push(
+            trailEl.animate(trail, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
+          );
+        }
+        if (bandsEl) {
+          animations.current.push(
+            bandsEl.animate(spin, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
+          );
+        }
+      });
+      later(launchIn + ENTER_AFTER_LAUNCH_MS, () => onStage("entering"));
+      later(launchIn + FLIGHT_MS, () => {
+        // On the CTA the resting shuttle settles in by itself (CSS).
+        if (landOnCta) return;
+        // Not tracked: the catch outlives this component. It squashes from the
+        // circle's base, like the mascot taking the hit.
+        const origin = target.style.transformOrigin;
+        target.style.transformOrigin = "50% 85%";
+        const catchAnim = target.animate(
+          [
+            { transform: "scale(1)" },
+            { transform: "scale(1.08)", offset: 0.35 },
+            { transform: "scale(0.98)", offset: 0.7 },
+            { transform: "scale(1)" },
+          ],
+          { duration: CATCH_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
         );
+        catchAnim.onfinish = () => {
+          target.style.transformOrigin = origin;
+        };
+      });
+      // Hand over the moment it lands: the resting shuttle shows in its place.
+      later(launchIn + FLIGHT_MS + (landOnCta ? 0 : 40), () => {
+        finished.current = true;
+        onDone();
       });
     }
-    later(launchIn, () => {
-      cover.classList.add("is-shooting");
-      flyer.style.visibility = "visible";
-      const { flight, trail, spin } = flightFrames(
-        start,
-        peak,
-        end,
-        endScale,
-        landOnCta ? REST_ROTATE : null,
-      );
-      const trailEl = flyer.querySelector<HTMLElement>(".v9-intro-trail");
-      const bandsEl = flyer.querySelector<HTMLElement>(".v9-intro-spin-bands");
-      animations.current.push(
-        flyer.animate(flight, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
-        cover.animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: FADE_MS,
-          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-          fill: "forwards",
-        }),
-      );
-      if (trailEl) {
-        animations.current.push(
-          trailEl.animate(trail, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
-        );
-      }
-      if (bandsEl) {
-        animations.current.push(
-          bandsEl.animate(spin, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
-        );
-      }
-    });
-    later(launchIn + ENTER_AFTER_LAUNCH_MS, () => onStage("entering"));
-    later(launchIn + FLIGHT_MS, () => {
-      // On the CTA the resting shuttle settles in by itself (CSS).
-      if (landOnCta) return;
-      // Not tracked: the catch outlives this component. It squashes from the
-      // circle's base, like the mascot taking the hit.
-      const origin = target.style.transformOrigin;
-      target.style.transformOrigin = "50% 85%";
-      const catchAnim = target.animate(
-        [
-          { transform: "scale(1)" },
-          { transform: "scale(1.08)", offset: 0.35 },
-          { transform: "scale(0.98)", offset: 0.7 },
-          { transform: "scale(1)" },
-        ],
-        { duration: CATCH_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
-      );
-      catchAnim.onfinish = () => {
-        target.style.transformOrigin = origin;
-      };
-    });
-    // Hand over the moment it lands: the resting shuttle shows in its place.
-    later(launchIn + FLIGHT_MS + (landOnCta ? 0 : 40), () => {
-      finished.current = true;
-      onDone();
-    });
-  }, [ready, minPassed, leaving, finish, onDone, onStage]);
+  }, [ready, minPassed, leaving, finish, later, onDone, onStage]);
 
   const base = import.meta.env.BASE_URL;
   return (

@@ -11,7 +11,7 @@ import {
   type V8SeasonConfirmMe,
   type V8SeasonIntentKind,
 } from "@/lib/v8-season-confirm";
-import { v9StorageKey } from "@/lib/v9-route";
+import { isV9TestRoute, v9StorageKey } from "@/lib/v9-route";
 import {
   v9Deadline,
   v9Money,
@@ -21,6 +21,7 @@ import {
   v9SeasonSource,
 } from "@/lib/v9-season";
 import { V9App } from "./V9App";
+import { V9CrashNotice, V9ErrorBoundary } from "./V9ErrorBoundary";
 import { V9MascotArt } from "./V9Mascot";
 import { V9Sheet } from "./V9Sheet";
 import { V9Styles } from "./V9Styles";
@@ -52,10 +53,16 @@ function hasTestFlag() {
 
 // The page for every /v9 route.
 export function V9Page() {
-  return (
+  const page = (
     <V9SeasonGate>
       <V9App />
     </V9SeasonGate>
+  );
+  // /v9test: a crash shows what broke instead of the root error page (the
+  // boundary renders no DOM of its own, so /v9 and the first render match).
+  if (typeof window === "undefined" || !isV9TestRoute()) return page;
+  return (
+    <V9ErrorBoundary fallback={(error) => <V9CrashNotice error={error} />}>{page}</V9ErrorBoundary>
   );
 }
 

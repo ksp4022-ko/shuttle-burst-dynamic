@@ -17,6 +17,7 @@ import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Busy } from "./V9Busy";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
+import { V9ErrorBoundary } from "./V9ErrorBoundary";
 import { V9Styles } from "./V9Styles";
 import { V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
 import { v9IdentityName, v9ShortDate, v9Weekday } from "@/lib/v9-display";
@@ -606,7 +607,12 @@ export function V9App() {
     >
       <V9Styles />
 
-      {intro && <V9Intro ready={dataSettled} onStage={setIntroStage} onDone={introDone} />}
+      {intro && (
+        // The intro is decoration: if it ever throws, skip straight to the app.
+        <V9ErrorBoundary onError={introDone}>
+          <V9Intro ready={dataSettled} onStage={setIntroStage} onDone={introDone} />
+        </V9ErrorBoundary>
+      )}
 
       {loading && !v9Test && (
         <main className="v9-main">
