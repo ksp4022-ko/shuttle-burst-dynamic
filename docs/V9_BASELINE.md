@@ -160,3 +160,14 @@ V9 第一版不含 `V8SeasonConfirmGate`；季打確認仍在 V8 完成。
 | 7 | 小動畫與視覺 refinement |
 
 驗收：`npx tsc --noEmit --pretty false`、`npm run build`、`git diff --check`、`/v8` regression smoke；real iPhone Safari 為最終驗收。
+
+## 11. 動畫效果名稱對照（2026-10-14）
+
+使用者以後提到這些名稱，就是指下面的效果（程式在 `src/components/v9/V9Intro.tsx`，樣式在 `V9Styles.tsx`）。要用在別處時，沿用同一套做法與參數。
+
+| 名稱 | 效果 | 程式位置 |
+|---|---|---|
+| 黃色撞擊線 | 擊中瞬間在接觸點周圍跳出 6 條黃色短線（#f6b41c，6×18px 圓角，離中心 30px），先放大跳出、再往外散開淡掉，約 0.32 秒；樣子參考品牌貼圖羽球旁的黃色線條 | `.v9-intro-impact`、`IMPACT_MS` |
+| 打擊停頓 | 擊中瞬間所有動作定格約 0.12 秒（hit-stop），再繼續 | `HITSTOP_MS` |
+| 網點尾巴 | 飛行物後方的漫畫網點速度尾巴，長度與深淺跟速度走 | `.v9-intro-trail`、`TRAIL_GAIN` |
+| 自轉陰影 | 羽球羽毛裙上一條約一片半羽毛寬的深灰陰影掃過，表示沿長軸自轉，轉速跟速度走 | `.v9-intro-spin-bands`、`SPIN_*` |
