@@ -49,7 +49,21 @@ export type V8LineIdentity = {
   confirmedName: string | null;
   nameConfirmedAt: string | null;
   profileComplete: boolean;
+  // V9-043: every 季打 member this account claimed (several 場地 / 時段).
+  // claimedMemberId stays the first one. Missing on older stored identities.
+  claims?: V8LineClaim[];
 };
+
+export type V8LineClaim = { memberId: string; siteId: string; memberName: string };
+
+// V9-043: all claimed member ids (claims plus the legacy single claim).
+export function v8ClaimedMemberIds(identity: V8LineIdentity | null | undefined): Set<string> {
+  const ids = new Set<string>();
+  if (!identity) return ids;
+  if (identity.claimedMemberId) ids.add(identity.claimedMemberId);
+  for (const claim of identity.claims || []) if (claim.memberId) ids.add(claim.memberId);
+  return ids;
+}
 
 type StoredV8LineToken = { token: string; expiresAt: string };
 
@@ -118,7 +132,10 @@ export type V8LineHandoff = { secret: string; startedAt: number };
 
 export function saveV8LineHandoff(secret: string) {
   try {
-    window.localStorage.setItem(V8_LINE_HANDOFF_STORAGE_KEY, JSON.stringify({ secret, startedAt: Date.now() }));
+    window.localStorage.setItem(
+      V8_LINE_HANDOFF_STORAGE_KEY,
+      JSON.stringify({ secret, startedAt: Date.now() }),
+    );
   } catch {
     // Without storage the PWA can't redeem the handoff; login still lands in Safari.
   }

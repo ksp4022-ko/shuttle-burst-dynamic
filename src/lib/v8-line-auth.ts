@@ -39,15 +39,22 @@ export function getV8LineLoginStartUrl(returnTo?: string, handoffHash?: string):
 export function isV8StandaloneApp(): boolean {
   if (typeof window === "undefined") return false;
   const nav = window.navigator as Navigator & { standalone?: boolean };
-  return nav.standalone === true || (window.matchMedia?.("(display-mode: standalone)").matches ?? false);
+  return (
+    nav.standalone === true || (window.matchMedia?.("(display-mode: standalone)").matches ?? false)
+  );
 }
 
 export async function createV8LineHandoff(): Promise<{ secret: string; hash: string } | null> {
   try {
     const bytes = crypto.getRandomValues(new Uint8Array(32));
-    const secret = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const secret = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
-    const hash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    const hash = [...new Uint8Array(digest)]
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
     return { secret, hash };
   } catch {
     return null;
@@ -82,14 +89,23 @@ export async function fetchV8AuthMe(token: string): Promise<V8LineIdentity | nul
     // that directly rather than pattern-matching error.message, which is
     // just whatever human-readable text the server's error.message says
     // (e.g. "Bearer token is invalid or expired", not "(401)").
-    if (error && typeof error === "object" && "status" in error && (error as { status?: number }).status === 401) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "status" in error &&
+      (error as { status?: number }).status === 401
+    ) {
       return null;
     }
     throw error;
   }
 }
 
-export async function fetchV8ClaimOptions(token: string, siteId: string, eventId?: string): Promise<V8ClaimOption[]> {
+export async function fetchV8ClaimOptions(
+  token: string,
+  siteId: string,
+  eventId?: string,
+): Promise<V8ClaimOption[]> {
   const result = await alphaFetch<{ siteId: string; members: V8ClaimOption[] }>(
     `/sites/${encodeURIComponent(siteId)}/claim-options`,
     {
@@ -107,6 +123,8 @@ export async function confirmV8LineProfile(
     identityType: V8ProfileIdentityType;
     memberId?: string;
     displayName: string;
+    // V9-043: 選錯名字了 -- the claim this one corrects (others stay).
+    replaceMemberId?: string;
   },
 ): Promise<V8LineIdentity> {
   const result = await alphaFetch<{ identity: V8LineIdentity }>("/auth/profile", {
@@ -121,7 +139,11 @@ export async function resetV8LineProfile(
   token: string,
   input: { revokeSessions?: boolean; resetSeasonConfirm?: boolean; siteId?: string } = {},
 ): Promise<{ identity: V8LineIdentity; sessionRevoked: boolean; seasonConfirmReset?: boolean }> {
-  return alphaFetch<{ identity: V8LineIdentity; sessionRevoked: boolean; seasonConfirmReset?: boolean }>("/auth/profile/reset", {
+  return alphaFetch<{
+    identity: V8LineIdentity;
+    sessionRevoked: boolean;
+    seasonConfirmReset?: boolean;
+  }>("/auth/profile/reset", {
     method: "POST",
     headers: { authorization: `Bearer ${token}` },
     body: JSON.stringify(input),

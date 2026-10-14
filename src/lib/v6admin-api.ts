@@ -251,6 +251,10 @@ export type LineClaim = {
   lineIdentityId: string;
   lineDisplayName?: string;
   confirmedName?: string;
+  // V9-043: one row per claimed member (an account may hold several).
+  memberId?: string;
+  groupName?: string | null;
+  claimCount?: number;
   memberName?: string;
   memberStatus?: string;
   nameConfirmedAt?: string | null;
@@ -322,8 +326,18 @@ export type DiscordMembersData = {
   settings: DiscordMemberSettings;
   members: DiscordMember[];
 };
+// V9-043: any active account, to add a claim on this site.
+export type LineAccount = {
+  lineIdentityId: string;
+  lineDisplayName: string;
+  confirmedName: string | null;
+  identityType: string | null;
+  claims: { siteId: string; memberName: string }[];
+};
 export type LineClaimsData = {
   claims: LineClaim[];
+  // Missing until Worker V6-041 (V9-043) is deployed.
+  accounts?: LineAccount[];
   // Missing until Worker V6-026 is deployed.
   tempIdentities?: TempIdentity[];
   logs: LineClaimLog[];
@@ -1154,8 +1168,13 @@ export const adminWriteApi = {
       pw,
       { memberId },
     ),
-  unlinkLineClaim: (pw: string, siteId: string, lineIdentityId: string) =>
-    adminPost(`/admin/sites/${enc(siteId)}/line-claims/${enc(lineIdentityId)}/unlink`, pw),
+  // V9-043: memberId picks the claim when the account holds several here.
+  unlinkLineClaim: (pw: string, siteId: string, lineIdentityId: string, memberId?: string) =>
+    adminPost(
+      `/admin/sites/${enc(siteId)}/line-claims/${enc(lineIdentityId)}/unlink`,
+      pw,
+      memberId ? { memberId } : {},
+    ),
   // T-17: Discord 個人通知.
   saveDiscordMemberSettings: (
     pw: string,

@@ -29,8 +29,13 @@ import { V9Toast } from "./V9Toast";
 import { V9Celebrate } from "./V9Celebrate";
 import { V9PlayerCard } from "./V9PlayerCard";
 import { V9JoinContent, V9RepickContent } from "./V9IdentitySheet";
+import { useV9Test } from "./useV9Test";
 import { confirmV8LineProfile } from "@/lib/v8-line-auth";
-import { clearV8LineAuthStorage, type V8LineIdentity } from "@/lib/v8-line-auth-storage";
+import {
+  clearV8LineAuthStorage,
+  v8ClaimedMemberIds,
+  type V8LineIdentity,
+} from "@/lib/v8-line-auth-storage";
 import { v9PreloadArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
@@ -149,6 +154,8 @@ export function V9App() {
   const { enterActive, setNotice } = flow;
   const lineToken = auth.token;
   const lineIdentity = auth.identity;
+  // New V9 features stay on /v9test until accepted (V9-043: 我也是這裡的季打).
+  const v9Test = useV9Test();
   const { identity, cancellableTempSignups, cancellableLoading, refreshCancellableTempSignups } =
     useCurrentIdentity({
       roster,
@@ -156,6 +163,14 @@ export function V9App() {
       lineAuthToken: lineToken,
       eventId: selectedEventId,
     });
+
+  // V9-043: the claimed member behind my 季打 row on this meetup (選錯名字了
+  // corrects exactly that claim; other 場地 / 時段 claims stay).
+  const myMemberId = useMemo(() => {
+    if (!roster || identity?.signupType !== "fixed") return null;
+    const rows = [...roster.fixedConfirmed, ...roster.fixedWaiting, ...roster.fixedLeave];
+    return rows.find((person) => person.id === identity.signupId)?.memberId || null;
+  }, [roster, identity]);
 
   // V9-021: the admin can look at someone else's page, read-only.
   // Their 本場 status comes from the same roster (季打) or from the admin's
@@ -412,8 +427,8 @@ export function V9App() {
   const displayName = (person: AlphaSignup) => {
     const claimedName = (person as AlphaSignup & { claimedName?: string | null }).claimedName;
     if (person.signupType === "fixed" && claimedName) return claimedName;
-    const claimedMemberId = lineIdentity?.claimedMemberId;
-    if (!lineIdentity || !claimedMemberId || person.memberId !== claimedMemberId)
+    // V9-043: any member this account claimed.
+    if (!lineIdentity || !person.memberId || !v8ClaimedMemberIds(lineIdentity).has(person.memberId))
       return person.name;
     return (
       lineIdentity.confirmedName ||
@@ -520,15 +535,21 @@ export function V9App() {
       return true;
     });
   // ✎ 改名字: same identity (type and claimed member), new name shown.
+  // V9-043: the claim sent is this meetup's own (or one on this site, else
+  // the first one with its own site) -- re-sending a claim keeps it as is.
   const renameIdentity = async (name: string) => {
     if (!lineToken || !lineIdentity?.identityType) return false;
+    const claims = lineIdentity.claims || [];
+    const keep =
+      claims.find((claim) => claim.memberId === myMemberId) ||
+      claims.find((claim) => claim.siteId === siteId) ||
+      claims[0] ||
+      (lineIdentity.claimedMemberId ? { memberId: lineIdentity.claimedMemberId, siteId } : null);
     try {
       const next = await confirmV8LineProfile(lineToken, {
-        siteId,
+        siteId: lineIdentity.identityType === "fixed" && keep ? keep.siteId : siteId,
         identityType: lineIdentity.identityType,
-        ...(lineIdentity.identityType === "fixed" && lineIdentity.claimedMemberId
-          ? { memberId: lineIdentity.claimedMemberId }
-          : {}),
+        ...(lineIdentity.identityType === "fixed" && keep ? { memberId: keep.memberId } : {}),
         displayName: name,
       });
       await storeIdentity(next);
@@ -893,6 +914,7 @@ export function V9App() {
                 siteId={siteId}
                 eventId={selectedEventId}
                 lineIdentity={lineIdentity}
+                replaceMemberId={myMemberId}
                 onConfirmed={confirmIdentity}
                 onCancel={() => setRepicking(false)}
               />
@@ -919,6 +941,18 @@ export function V9App() {
                 onBill={() => setSheet("bill")}
                 onRename={renameIdentity}
                 onRepick={() => setRepicking(true)}
+                // V9-043: 季打 elsewhere, 臨打 here -- bind this site's 季打 name.
+                // Only with a claims-aware Worker (V6-041) and no claim on this
+                // site yet; /v9test until accepted.
+                onClaimHere={
+                  v9Test &&
+                  lineIdentity?.identityType === "fixed" &&
+                  identity.signupType === "temp" &&
+                  lineIdentity.claims &&
+                  !lineIdentity.claims.some((claim) => claim.siteId === siteId)
+                    ? () => setRepicking(true)
+                    : undefined
+                }
                 onLogout={logout}
                 onViewAs={isAdmin ? () => setSheet("viewas") : undefined}
                 due={billDue}

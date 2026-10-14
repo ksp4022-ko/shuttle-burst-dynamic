@@ -5,7 +5,7 @@ import {
   type AlphaRoster,
   type AlphaSignup,
 } from "@/lib/database-alpha";
-import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
+import { v8ClaimedMemberIds, type V8LineIdentity } from "@/lib/v8-line-auth-storage";
 
 export type CurrentIdentity = {
   signupId: string;
@@ -21,14 +21,18 @@ type UseCurrentIdentityInput = {
   eventId: string;
 };
 
-const fixedIdentityPools = (roster: AlphaRoster): Array<[AlphaSignup[], CurrentIdentity["status"]]> => [
+const fixedIdentityPools = (
+  roster: AlphaRoster,
+): Array<[AlphaSignup[], CurrentIdentity["status"]]> => [
   [roster.fixedConfirmed, "confirmed"],
   [roster.fixedWaiting, "waiting"],
   [roster.fixedLeave, "leave"],
 ];
 
 function lineDisplayName(lineIdentity: V8LineIdentity): string {
-  return lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName || "";
+  return (
+    lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName || ""
+  );
 }
 
 // Exported for the V8TEST ACTIVE prewarm (exact stamp/text before ACTIVE mounts).
@@ -36,11 +40,18 @@ export function findFixedIdentity(
   roster: AlphaRoster | null,
   lineIdentity: V8LineIdentity,
 ): CurrentIdentity | null {
-  const claimedMemberId = lineIdentity.claimedMemberId;
-  if (!roster || !claimedMemberId) return null;
+  // V9-043: any claimed member (one per 場地 / 時段) on this meetup.
+  const claimed = v8ClaimedMemberIds(lineIdentity);
+  if (!roster || !claimed.size) return null;
   for (const [list, status] of fixedIdentityPools(roster)) {
-    const found = list.find((person) => person.memberId === claimedMemberId);
-    if (found) return { signupId: found.id, name: lineDisplayName(lineIdentity) || found.name, signupType: "fixed", status };
+    const found = list.find((person) => Boolean(person.memberId && claimed.has(person.memberId)));
+    if (found)
+      return {
+        signupId: found.id,
+        name: lineDisplayName(lineIdentity) || found.name,
+        signupType: "fixed",
+        status,
+      };
   }
   return null;
 }
@@ -70,7 +81,9 @@ export function useCurrentIdentity({
   lineAuthToken,
   eventId,
 }: UseCurrentIdentityInput) {
-  const [cancellableTempSignups, setCancellableTempSignups] = useState<AlphaCancellableTempSignup[]>([]);
+  const [cancellableTempSignups, setCancellableTempSignups] = useState<
+    AlphaCancellableTempSignup[]
+  >([]);
   const [cancellableLoading, setCancellableLoading] = useState(false);
 
   const profileComplete = Boolean(lineIdentity?.profileComplete);
@@ -132,7 +145,10 @@ export function useCurrentIdentity({
       );
     }
     if (lineIdentity.identityType === "temp") {
-      return toTempIdentity(cancellableTempSignups.find((signup) => signup.participantIsMe)) || toUnregisteredTempIdentity(lineIdentity);
+      return (
+        toTempIdentity(cancellableTempSignups.find((signup) => signup.participantIsMe)) ||
+        toUnregisteredTempIdentity(lineIdentity)
+      );
     }
     return null;
   }, [cancellableTempSignups, lineIdentity, profileComplete, roster]);

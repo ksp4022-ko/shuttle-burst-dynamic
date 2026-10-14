@@ -19,6 +19,7 @@ import {
   type DiscordNotifyKey,
   type DiscordNotificationInput,
   type LineClaim,
+  type LineAccount,
   type LineClaimsData,
   type BillingPerson,
   type LineNotificationInput,
@@ -80,6 +81,7 @@ type Pending =
   | { kind: "unlink"; claim: LineClaim }
   | { kind: "link"; temp: TempIdentity }
   | { kind: "unlink-temp"; temp: TempIdentity }
+  | { kind: "add-claim" }
   | { kind: "dc-settings" }
   | { kind: "dc-test"; member: DiscordMember }
   | { kind: "dc-unlink"; member: DiscordMember };
@@ -381,7 +383,19 @@ export function SystemTab({
             {/* T-05: three columns so a name on the roster can be matched to its
                 季打名 and LINE name at a glance. 名單顯示 = what the V9 roster
                 shows (custom name, else 季打名; V9-025). */}
-            <p className="ctl-sub">季打成員 {claims.claims.length} 人</p>
+            <p className="ctl-sub">季打認領 {claims.claims.length} 筆</p>
+            {claims.accounts ? (
+              <div className="ctl-actions">
+                <button
+                  className="ctl-act"
+                  type="button"
+                  disabled={writing}
+                  onClick={() => open({ kind: "add-claim" })}
+                >
+                  新增認領
+                </button>
+              </div>
+            ) : null}
             {claims.claims.length ? (
               <div className="ctl-claim-table" role="table" aria-label="季打 LINE 認領">
                 <div className="ctl-claim-row is-head" role="row">
@@ -391,10 +405,18 @@ export function SystemTab({
                   <span role="columnheader" aria-label="操作" />
                 </div>
                 {claims.claims.map((c) => (
-                  <div className="ctl-claim-row" role="row" key={c.lineIdentityId}>
-                    <strong role="cell">{c.confirmedName || c.memberName || "—"}</strong>
+                  <div
+                    className="ctl-claim-row"
+                    role="row"
+                    key={`${c.lineIdentityId}:${c.memberId || ""}`}
+                  >
+                    <strong role="cell">
+                      {c.confirmedName || c.memberName || "—"}
+                      {(c.claimCount ?? 1) > 1 ? <small>共認領 {c.claimCount} 筆</small> : null}
+                    </strong>
                     <span role="cell">
                       {c.memberName || "—"}
+                      {c.groupName ? <small>{c.groupName}</small> : null}
                       {c.memberStatus === "disabled" ? <small>（名冊已停用）</small> : null}
                     </span>
                     <span role="cell">{c.lineDisplayName || "—"}</span>
@@ -764,7 +786,13 @@ export function SystemTab({
             danger
             onConfirm={() =>
               run(
-                () => adminWriteApi.unlinkLineClaim(password, siteId, pending.claim.lineIdentityId),
+                () =>
+                  adminWriteApi.unlinkLineClaim(
+                    password,
+                    siteId,
+                    pending.claim.lineIdentityId,
+                    pending.claim.memberId,
+                  ),
                 `已解除 ${pending.claim.memberName} 的認領`,
                 () => [loadClaims()],
               )
@@ -812,13 +840,43 @@ export function SystemTab({
             danger
             onConfirm={() =>
               run(
-                () => adminWriteApi.unlinkLineClaim(password, siteId, pending.temp.lineIdentityId),
+                () =>
+                  adminWriteApi.unlinkLineClaim(
+                    password,
+                    siteId,
+                    pending.temp.lineIdentityId,
+                    pending.temp.linkedMemberId || undefined,
+                  ),
                 `已解除 ${pending.temp.linkedMemberName} 的帳務連結`,
                 () => [loadClaims()],
               )
             }
           />
         </Sheet>
+      ) : null}
+
+      {pending?.kind === "add-claim" && claims?.accounts ? (
+        <AddClaimSheet
+          password={password}
+          siteId={siteId}
+          accounts={claims.accounts}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onConfirm={(account, member) =>
+            run(
+              () =>
+                adminWriteApi.linkLineMember(
+                  password,
+                  siteId,
+                  account.lineIdentityId,
+                  member.memberId || "",
+                ),
+              `已把 ${member.memberName || member.displayName} 認領給 ${account.confirmedName || account.lineDisplayName}`,
+              () => [loadClaims()],
+            )
+          }
+        />
       ) : null}
 
       {pending?.kind === "dc-settings" && dc && dc !== "missing" ? (
@@ -989,6 +1047,125 @@ function LinkMemberSheet({
         confirmText="確定連結"
         disabled={!member}
         onConfirm={() => member && onConfirm(member)}
+      />
+    </Sheet>
+  );
+}
+
+// V9-043: give an unclaimed 季打 member of this site to any LINE account --
+// e.g. someone already 季打 on another 場地, or a second 時段 here. The
+// account keeps its other claims; 臨打 accounts stay 臨打 (billing link).
+function AddClaimSheet({
+  password,
+  siteId,
+  accounts,
+  busy,
+  error,
+  onClose,
+  onConfirm,
+}: {
+  password: string;
+  siteId: string;
+  accounts: LineAccount[];
+  busy: boolean;
+  error: string;
+  onClose: () => void;
+  onConfirm: (account: LineAccount, member: BillingPerson) => void;
+}) {
+  const [members, setMembers] = useState<BillingPerson[] | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [memberId, setMemberId] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    let alive = true;
+    adminApi
+      .billingPeople(password, siteId)
+      .then((d) => alive && setMembers(d.people.filter((p) => p.kind === "member" && p.memberId)))
+      .catch((err) => alive && setLoadError(errText(err)));
+    return () => {
+      alive = false;
+    };
+  }, [password, siteId]);
+  const member = members?.find((m) => m.memberId === memberId) || null;
+  const account = accounts.find((a) => a.lineIdentityId === accountId) || null;
+  const q = query.trim().toLowerCase();
+  const shown = accounts.filter(
+    (a) => !q || `${a.confirmedName || ""} ${a.lineDisplayName}`.toLowerCase().includes(q),
+  );
+  const siteName = (id: string) => (id === "rian" ? "日安" : id === "kangxuan" ? "康軒" : id);
+  return (
+    <Sheet title="新增認領" onClose={onClose} busy={busy}>
+      {loadError ? (
+        <div className="ctl-error">{loadError}</div>
+      ) : !members ? (
+        <div className="ctl-loading">讀取季打成員中…</div>
+      ) : (
+        <>
+          <div className="ctl-picker">
+            <label htmlFor="ctl-add-claim-member">季打成員（本場地、尚未認領）</label>
+            <select
+              id="ctl-add-claim-member"
+              className="ctl-select"
+              value={memberId}
+              disabled={busy}
+              onChange={(e) => setMemberId(e.target.value)}
+            >
+              <option value="">請選擇</option>
+              {members.map((m) => (
+                <option key={m.memberId} value={m.memberId || ""}>
+                  {m.memberName || m.displayName}
+                  {m.groupName ? `（${m.groupName}）` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="ctl-picker">
+            <label htmlFor="ctl-add-claim-account">LINE 帳號</label>
+            <input
+              className="ctl-input"
+              type="search"
+              placeholder="搜尋名字"
+              value={query}
+              disabled={busy}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <select
+              id="ctl-add-claim-account"
+              className="ctl-select"
+              value={accountId}
+              disabled={busy}
+              onChange={(e) => setAccountId(e.target.value)}
+            >
+              <option value="">請選擇</option>
+              {shown.map((a) => (
+                <option key={a.lineIdentityId} value={a.lineIdentityId}>
+                  {a.confirmedName || a.lineDisplayName}
+                  {a.confirmedName && a.lineDisplayName !== a.confirmedName
+                    ? `（LINE ${a.lineDisplayName}）`
+                    : ""}
+                  {a.claims.length
+                    ? ` · 已認領 ${a.claims.map((c) => `${siteName(c.siteId)}${c.memberName}`).join("、")}`
+                    : a.identityType === "temp"
+                      ? " · 臨打"
+                      : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
+      <p className="ctl-sub">
+        認領後，這個 LINE
+        在這位成員的時段就是季打（名單顯示「我」、帳單合併）；他原本的其他認領不變。臨打帳號維持臨打，只多了這位成員的帳務。
+      </p>
+      <ConfirmActions
+        busy={busy}
+        error={error}
+        onClose={onClose}
+        confirmText="確定認領"
+        disabled={!member || !account}
+        onConfirm={() => member && account && onConfirm(account, member)}
       />
     </Sheet>
   );

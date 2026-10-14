@@ -168,6 +168,7 @@ export function V9PlayerCard({
   onBill,
   onRename,
   onRepick,
+  onClaimHere,
   onLogout,
   readOnly = false,
   onViewAs,
@@ -183,6 +184,8 @@ export function V9PlayerCard({
   // Saves a new display name (same identity); resolves true when stored.
   onRename: (name: string) => Promise<boolean>;
   onRepick: () => void;
+  // V9-043: 季打 on another 場地 / 時段, 臨打 here -- bind a 季打 name here.
+  onClaimHere?: (() => void) | undefined;
   onLogout: () => void;
   // V9-021: an admin viewing someone else's card -- no editing, no account.
   readOnly?: boolean;
@@ -285,7 +288,7 @@ export function V9PlayerCard({
         <V9DiscordNotify token={discordToken} moreKinds={Boolean(discordMoreKinds)} fixed={fixed} />
       )}
 
-      {!readOnly && <V9Account onRepick={onRepick} onLogout={onLogout} />}
+      {!readOnly && <V9Account onRepick={onRepick} onClaimHere={onClaimHere} onLogout={onLogout} />}
     </article>
   );
 }
@@ -364,7 +367,15 @@ function V9NameEdit({
 }
 
 // 帳號: rarely needed, so small and at the very bottom.
-function V9Account({ onRepick, onLogout }: { onRepick: () => void; onLogout: () => void }) {
+function V9Account({
+  onRepick,
+  onClaimHere,
+  onLogout,
+}: {
+  onRepick: () => void;
+  onClaimHere?: (() => void) | undefined;
+  onLogout: () => void;
+}) {
   const [confirmLogout, setConfirmLogout] = useState(false);
   return (
     <footer className="v9-pc-account">
@@ -380,9 +391,15 @@ function V9Account({ onRepick, onLogout }: { onRepick: () => void; onLogout: () 
         </>
       ) : (
         <>
-          <button type="button" className="v9-pc-link" onClick={onRepick}>
-            選錯名字了
-          </button>
+          {onClaimHere ? (
+            <button type="button" className="v9-pc-link" onClick={onClaimHere}>
+              我也是這裡的季打
+            </button>
+          ) : (
+            <button type="button" className="v9-pc-link" onClick={onRepick}>
+              選錯名字了
+            </button>
+          )}
           <button type="button" className="v9-pc-link" onClick={() => setConfirmLogout(true)}>
             登出 LINE
           </button>

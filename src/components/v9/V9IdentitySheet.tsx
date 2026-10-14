@@ -134,11 +134,14 @@ function V9ClaimForm({
   onConfirmed,
   tempAction,
   tempOnlyWhenEmpty = false,
+  replaceMemberId,
 }: {
   token: string;
   siteId: string;
   eventId: string;
   submitLabel: string;
+  // V9-043: the claim this pick corrects (選錯名字了); others stay.
+  replaceMemberId?: string | null | undefined;
   onConfirmed: (identity: V8LineIdentity) => Promise<void> | void;
   // 「我是臨打」: a small link under the list; the main button when the
   // list is empty (V9-015).
@@ -160,6 +163,7 @@ function V9ClaimForm({
         identityType: "fixed",
         memberId: picked.memberId,
         displayName: picked.name,
+        ...(replaceMemberId ? { replaceMemberId } : {}),
       });
       await onConfirmed(identity);
     } catch (reason) {
@@ -348,6 +352,7 @@ export function V9RepickContent({
   siteId,
   eventId,
   lineIdentity,
+  replaceMemberId,
   onConfirmed,
   onCancel,
 }: {
@@ -355,6 +360,8 @@ export function V9RepickContent({
   siteId: string;
   eventId: string;
   lineIdentity: V8LineIdentity;
+  // V9-043: my 季打 member on this meetup, if any (the claim to correct).
+  replaceMemberId?: string | null | undefined;
   onConfirmed: (identity: V8LineIdentity) => Promise<void> | void;
   // Absent when there is no identity to go back to.
   onCancel?: (() => void) | undefined;
@@ -394,7 +401,8 @@ export function V9RepickContent({
             token={token}
             siteId={siteId}
             eventId={eventId}
-            submitLabel="改成"
+            submitLabel={replaceMemberId ? "改成" : "我是"}
+            replaceMemberId={replaceMemberId}
             onConfirmed={onConfirmed}
             tempAction={{
               label: "我是臨打",

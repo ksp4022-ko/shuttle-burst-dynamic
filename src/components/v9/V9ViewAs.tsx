@@ -45,17 +45,19 @@ export function V9ViewAsPicker({
     const list = (people || [])
       .filter((person) => person.id !== selfId && person.profileComplete)
       .filter((person) => !q || nameOf(person).toLowerCase().includes(q));
-    const fixed = list.filter(
-      (person) => person.identityType === "fixed" && person.claimedMemberId,
-    );
-    const temp = list.filter(
-      (person) => !(person.identityType === "fixed" && person.claimedMemberId),
-    );
+    // V9-043: 季打 here = a claim on this site (claims), else the old single claim.
+    const isFixedHere = (person: V8LineIdentity) =>
+      person.identityType === "fixed" &&
+      (person.claims
+        ? person.claims.some((claim) => claim.siteId === siteId)
+        : Boolean(person.claimedMemberId));
+    const fixed = list.filter(isFixedHere);
+    const temp = list.filter((person) => !isFixedHere(person));
     return [
       { key: "fixed", label: "季打", items: fixed },
       { key: "temp", label: "臨打", items: temp },
     ];
-  }, [people, query, selfId]);
+  }, [people, query, selfId, siteId]);
 
   if (failed) return <p className="v9-muted">讀取成員失敗，請稍後再試。</p>;
   if (!people) return <p className="v9-muted">讀取成員中…</p>;
