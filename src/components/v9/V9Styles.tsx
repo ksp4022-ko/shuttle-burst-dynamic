@@ -302,6 +302,20 @@ const V9_CSS = `
   pointer-events: none; will-change: transform, opacity;
 }
 .v9-intro-flyer img { position: relative; display: block; width: 40px; height: 34px; }
+/* Long-axis spin: dark-grey bands sliding across the feather skirt (left
+   ~62% of the shuttle, fading out before the cork), clipped to the shuttle's
+   own shape by an image mask set inline. Slid by V9Intro. */
+.v9-intro-spin {
+  position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+.v9-intro-spin-bands {
+  position: absolute; left: 0; top: 0; width: 64%; height: 320px; will-change: transform;
+  background: repeating-linear-gradient(to bottom,
+    rgba(70, 66, 62, 0) 0, rgba(70, 66, 62, .45) 4px, rgba(70, 66, 62, .12) 7px, rgba(70, 66, 62, 0) 12px);
+  -webkit-mask-image: linear-gradient(to right, #000 55%, transparent);
+  mask-image: linear-gradient(to right, #000 55%, transparent);
+}
 /* Manga speed trail: halftone dots streaming out behind the shuttle (it
    flies cork-first to the right in its own frame), dense at the shuttle,
    thinning and tapering away. Length/opacity follow its speed (V9Intro). */

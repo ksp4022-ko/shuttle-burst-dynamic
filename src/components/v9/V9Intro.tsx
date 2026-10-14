@@ -36,6 +36,12 @@ const FALL_TILT = 25;
 // Halftone trail length per sqrt(speed / top speed); 1.25 keeps it full
 // for most of the launch and the last part of the drop.
 const TRAIL_GAIN = 1.25;
+// Long-axis spin bands (px per band in the shuttle's own 40px frame; bands
+// per second at rest and added at top speed). One flight is under ~20
+// bands, and the band strip (.v9-intro-spin-bands, 320px) covers that.
+const SPIN_PERIOD = 12;
+const SPIN_MIN = 3;
+const SPIN_MAX = 13;
 const SHUTTLE_W = 40;
 const SHUTTLE_H = 34;
 // The rally's hit point on the dragon's racket, in .v9-busy-art px
@@ -77,7 +83,7 @@ function flightFrames(
   endScale: number,
   // Final rotation (the shuttle left on the CTA), or null to keep heading.
   endRotate: number | null,
-): { flight: Keyframe[]; trail: Keyframe[] } {
+): { flight: Keyframe[]; trail: Keyframe[]; spin: Keyframe[] } {
   const riseCtl: Point = {
     x: start.x + (peak.x - start.x) * 0.3,
     y: peak.y + (start.y - peak.y) * 0.15,
@@ -181,7 +187,24 @@ function flightFrames(
       transform: `translateY(-50%) scaleX(${Math.max(0.05, k).toFixed(3)})`,
     };
   });
-  return { flight: frames, trail };
+  // Spin about the long axis: dark-grey bands slide across the feather skirt,
+  // faster when the shuttle is fast. Phase accumulates so it never jumps
+  // back; the bands fade out before the landing (the resting one is still).
+  let phase = 0;
+  const spin = points.map(({ offset }, i) => {
+    const prev = points[i - 1];
+    if (prev) {
+      const rate = SPIN_MIN + SPIN_MAX * Math.sqrt((speeds[i] ?? 0) / top); // bands per second
+      phase += (rate * (offset - prev.offset) * FLIGHT_MS) / 1000;
+    }
+    const fade = offset > fadeFrom ? Math.max(0, 1 - (offset - fadeFrom) / (1 - fadeFrom)) : 1;
+    return {
+      offset,
+      opacity: fade.toFixed(3),
+      transform: `translateY(${(-phase * SPIN_PERIOD).toFixed(2)}px)`,
+    };
+  });
+  return { flight: frames, trail, spin };
 }
 
 export function V9Intro({
@@ -301,7 +324,7 @@ export function V9Intro({
     later(launchIn, () => {
       cover.classList.add("is-shooting");
       flyer.style.visibility = "visible";
-      const { flight, trail } = flightFrames(
+      const { flight, trail, spin } = flightFrames(
         start,
         peak,
         end,
@@ -309,6 +332,7 @@ export function V9Intro({
         landOnCta ? REST_ROTATE : null,
       );
       const trailEl = flyer.querySelector<HTMLElement>(".v9-intro-trail");
+      const bandsEl = flyer.querySelector<HTMLElement>(".v9-intro-spin-bands");
       animations.current.push(
         flyer.animate(flight, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
         cover.animate([{ opacity: 1 }, { opacity: 0 }], {
@@ -320,6 +344,11 @@ export function V9Intro({
       if (trailEl) {
         animations.current.push(
           trailEl.animate(trail, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
+        );
+      }
+      if (bandsEl) {
+        animations.current.push(
+          bandsEl.animate(spin, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
         );
       }
     });
@@ -376,6 +405,16 @@ export function V9Intro({
       <span ref={flyerRef} className="v9-intro-flyer" aria-hidden="true">
         <span className="v9-intro-trail" />
         <img src={`${base}v9/mascot/shuttle.webp`} alt="" width={SHUTTLE_W} height={SHUTTLE_H} />
+        {/* Masked to the shuttle's own shape, so the bands only shade it. */}
+        <span
+          className="v9-intro-spin"
+          style={{
+            WebkitMaskImage: `url(${base}v9/mascot/shuttle.webp)`,
+            maskImage: `url(${base}v9/mascot/shuttle.webp)`,
+          }}
+        >
+          <span className="v9-intro-spin-bands" />
+        </span>
       </span>
     </>
   );
