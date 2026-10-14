@@ -391,6 +391,8 @@ function EditLoader({
       alive = false;
     };
   }, [password, event.id]);
+  // V9-042: a lower cap that would move people to 備取 is confirmed first.
+  const [demote, setDemote] = useState<{ input: EventFormInput; names: string[] } | null>(null);
   if (state.status === "loading") return <div className="ctl-loading">讀取聚會資料中…</div>;
   if (state.status === "error")
     return (
@@ -401,6 +403,47 @@ function EditLoader({
         </button>
       </>
     );
+  if (demote)
+    return (
+      <>
+        <p>
+          人數上限 {state.overview.event.maxPeople} → <strong>{demote.input.maxPeople}</strong>
+          ，以下 {demote.names.length} 位會從<strong>正取移到備取</strong>
+          （照報名順位，最後面的先移）：
+        </p>
+        <ul className="ctl-rows">
+          {demote.names.map((name, i) => (
+            <li className="ctl-row" key={`${name}-${i}`}>
+              <span className="ctl-row-name">{name}</span>
+              <span className="ctl-pill orange">移到備取</span>
+            </li>
+          ))}
+        </ul>
+        <p className="ctl-sub">
+          儲存後會私訊通知本人（有連結 Discord
+          且開著「轉備取」）並通知管理員頻道；被移到備取的臨打，未繳的臨打費會取消。
+        </p>
+        {error ? <div className="ctl-error">{error}</div> : null}
+        <div className="ctl-sheet-actions">
+          <button
+            className="ctl-btn is-plain"
+            type="button"
+            onClick={() => setDemote(null)}
+            disabled={busy}
+          >
+            返回修改
+          </button>
+          <button
+            className="ctl-btn is-danger"
+            type="button"
+            disabled={busy}
+            onClick={() => onSubmit(demote.input)}
+          >
+            {busy ? "處理中…" : "確定調低上限"}
+          </button>
+        </div>
+      </>
+    );
   return (
     <EventForm
       mode="edit"
@@ -409,9 +452,23 @@ function EditLoader({
       busy={busy}
       error={error}
       onClose={onClose}
-      onSubmit={(input) => onSubmit(input)}
+      onSubmit={(input) => {
+        const names = demotedByCap(state.overview, Number(input.maxPeople));
+        if (names.length) setDemote({ input, names });
+        else onSubmit(input);
+      }}
     />
   );
+}
+
+// V9-042: lowering the cap is the only thing that moves 正取 back to 備取 —
+// the last 正取 by signup order (same rule as the Worker's rearrangeSignups).
+function demotedByCap(overview: EventOverview, nextMax: number) {
+  if (!Number.isFinite(nextMax) || nextMax >= Number(overview.event.maxPeople)) return [];
+  const confirmed = [...overview.roster.fixedConfirmed, ...overview.roster.tempConfirmed].sort(
+    (a, b) => Number(a.orderNo) - Number(b.orderNo),
+  );
+  return confirmed.slice(Math.max(0, nextMax)).map((p) => p.name || "（未填名字）");
 }
 
 const NUMBER_FIELDS: { key: keyof EventFormInput; label: string; step: string; hot?: boolean }[] = [
