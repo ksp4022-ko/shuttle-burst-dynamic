@@ -20,6 +20,10 @@ import { V9Busy } from "./V9Busy";
 const MIN_MS = 3000;
 const SWING_MS = 260;
 const SWING_HIT = 0.45; // where in the swing the racket meets the shuttle
+// Hit-stop: everything freezes on contact while yellow impact marks pop
+// around the shuttle, then the shot takes off (2026-10-14 real-device ask).
+const HITSTOP_MS = 120;
+const IMPACT_MS = 320;
 const RALLY_MS = 1600; // .v9-busy rally loop; at 0% the shuttle is on the dragon's racket
 const FLIGHT_MS = 1150; // launch → landing (≈1.3s in total)
 const ENTER_AFTER_LAUNCH_MS = 200; // the deck crossfades in under the climbing shuttle
@@ -221,6 +225,7 @@ export function V9Intro({
 }) {
   const coverRef = useRef<HTMLDivElement>(null);
   const flyerRef = useRef<HTMLSpanElement>(null);
+  const impactRef = useRef<HTMLSpanElement>(null);
   const [minPassed, setMinPassed] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const animations = useRef<Animation[]>([]);
@@ -329,31 +334,61 @@ export function V9Intro({
       const launchIn = rally ? (RALLY_MS - into) % RALLY_MS : 0;
       const windUp = SWING_MS * SWING_HIT;
 
+      let swing: Animation | null = null;
       if (dragon) {
         later(Math.max(0, launchIn - windUp), () => {
-          animations.current.push(
-            dragon.animate(
-              [
-                { transform: "rotate(0deg)" },
-                { transform: "rotate(-12deg)", offset: SWING_HIT },
-                { transform: "rotate(6deg)", offset: 0.7 },
-                { transform: "rotate(0deg)" },
-              ],
-              { duration: SWING_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
-            ),
+          swing = dragon.animate(
+            [
+              { transform: "rotate(0deg)" },
+              { transform: "rotate(-12deg)", offset: SWING_HIT },
+              { transform: "rotate(6deg)", offset: 0.7 },
+              { transform: "rotate(0deg)" },
+            ],
+            { duration: SWING_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
           );
+          animations.current.push(swing);
         });
       }
+      const { flight, trail, spin } = flightFrames(
+        start,
+        peak,
+        end,
+        endScale,
+        landOnCta ? REST_ROTATE : null,
+      );
+      // Contact: freeze the swing and the rally, park the shuttle on the
+      // racket and pop the impact marks.
+      const frozen: Animation[] = [];
       later(launchIn, () => {
         cover.classList.add("is-shooting");
+        for (const anim of cover.getAnimations({ subtree: true })) {
+          if (anim.playState === "running") {
+            anim.pause();
+            frozen.push(anim);
+          }
+        }
+        const first = flight[0];
+        if (first && typeof first["transform"] === "string")
+          flyer.style.transform = first["transform"];
         flyer.style.visibility = "visible";
-        const { flight, trail, spin } = flightFrames(
-          start,
-          peak,
-          end,
-          endScale,
-          landOnCta ? REST_ROTATE : null,
-        );
+        const impact = impactRef.current;
+        if (impact) {
+          const at = `translate(${start.x.toFixed(1)}px, ${start.y.toFixed(1)}px)`;
+          animations.current.push(
+            impact.animate(
+              [
+                { opacity: 1, transform: `${at} scale(0.6)` },
+                { opacity: 1, transform: `${at} scale(1.15)`, offset: 0.3 },
+                { opacity: 1, transform: `${at} scale(1.1)`, offset: 0.55 },
+                { opacity: 0, transform: `${at} scale(1.3)` },
+              ],
+              { duration: IMPACT_MS, easing: "cubic-bezier(0.23, 1, 0.32, 1)", fill: "forwards" },
+            ),
+          );
+        }
+      });
+      later(launchIn + HITSTOP_MS, () => {
+        for (const anim of frozen) anim.play();
         const trailEl = flyer.querySelector<HTMLElement>(".v9-intro-trail");
         const bandsEl = flyer.querySelector<HTMLElement>(".v9-intro-spin-bands");
         animations.current.push(
@@ -375,8 +410,8 @@ export function V9Intro({
           );
         }
       });
-      later(launchIn + ENTER_AFTER_LAUNCH_MS, () => onStage("entering"));
-      later(launchIn + FLIGHT_MS, () => {
+      later(launchIn + HITSTOP_MS + ENTER_AFTER_LAUNCH_MS, () => onStage("entering"));
+      later(launchIn + HITSTOP_MS + FLIGHT_MS, () => {
         // On the CTA the resting shuttle settles in by itself (CSS).
         if (landOnCta) return;
         // Not tracked: the catch outlives this component. It squashes from the
@@ -397,7 +432,7 @@ export function V9Intro({
         };
       });
       // Hand over the moment it lands: the resting shuttle shows in its place.
-      later(launchIn + FLIGHT_MS + (landOnCta ? 0 : 40), () => {
+      later(launchIn + HITSTOP_MS + FLIGHT_MS + (landOnCta ? 0 : 40), () => {
         finished.current = true;
         onDone();
       });
@@ -426,6 +461,14 @@ export function V9Intro({
           <V9Busy />
         </div>
       </div>
+      <span ref={impactRef} className="v9-intro-impact" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+      </span>
       <span ref={flyerRef} className="v9-intro-flyer" aria-hidden="true">
         <span className="v9-intro-trail" />
         <img src={`${base}v9/mascot/shuttle.webp`} alt="" width={SHUTTLE_W} height={SHUTTLE_H} />

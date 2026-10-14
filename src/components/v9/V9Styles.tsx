@@ -302,6 +302,19 @@ const V9_CSS = `
   pointer-events: none; will-change: transform, opacity;
 }
 .v9-intro-flyer img { position: relative; display: block; width: 40px; height: 34px; }
+/* Hit-stop impact marks: short yellow strokes bursting around the contact
+   point (like the brand sticker's shuttle). V9Intro moves and pops it. */
+.v9-intro-impact { position: fixed; left: 0; top: 0; z-index: 902; width: 0; height: 0; opacity: 0; pointer-events: none; }
+.v9-intro-impact i {
+  position: absolute; left: -3px; top: -9px; width: 6px; height: 18px; border-radius: 3px;
+  background: #f6b41c; transform: rotate(var(--a)) translateY(-30px);
+}
+.v9-intro-impact i:nth-child(1) { --a: -150deg; }
+.v9-intro-impact i:nth-child(2) { --a: -105deg; }
+.v9-intro-impact i:nth-child(3) { --a: -60deg; }
+.v9-intro-impact i:nth-child(4) { --a: 30deg; }
+.v9-intro-impact i:nth-child(5) { --a: 75deg; }
+.v9-intro-impact i:nth-child(6) { --a: 120deg; }
 /* Long-axis spin: one dark-grey shadow sweeping across the feather skirt (left
    ~62% of the shuttle, fading out before the cork), clipped to the shuttle's
    own shape by an image mask set inline. Slid by V9Intro. */
