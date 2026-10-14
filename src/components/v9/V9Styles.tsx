@@ -757,6 +757,7 @@ const V9_CSS = `
   font-size: 13px; font-weight: 800; color: #4a4fc4;
 }
 .v9-pc-discord-text { margin: 0; font-size: 13px; line-height: 1.5; color: #6f655b; }
+.v9-pc-discord-text.is-note { font-size: 12px; text-align: center; }
 .v9-pc .v9-pc-discord-connect {
   justify-self: start; padding: 7px 16px; border: 2.5px solid var(--v9-ink); border-radius: 999px; background: #5865f2;
   color: #fff; font: inherit; font-size: 14px; font-weight: 900; box-shadow: 0 3px 0 var(--v9-ink); cursor: pointer;
