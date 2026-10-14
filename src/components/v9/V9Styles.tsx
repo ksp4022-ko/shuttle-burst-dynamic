@@ -314,7 +314,7 @@ const V9_CSS = `
   /* One ~12px shadow (about 1.5 of the 4 feathers) every 44px, so a single
      shadow crosses the skirt at a time. */
   background: repeating-linear-gradient(to bottom,
-    rgba(70, 66, 62, 0) 0, rgba(70, 66, 62, .38) 6px, rgba(70, 66, 62, 0) 12px, rgba(70, 66, 62, 0) 44px);
+    rgba(60, 56, 52, 0) 0, rgba(60, 56, 52, .62) 6px, rgba(60, 56, 52, 0) 12px, rgba(60, 56, 52, 0) 44px);
   -webkit-mask-image: linear-gradient(to right, #000 55%, transparent);
   mask-image: linear-gradient(to right, #000 55%, transparent);
 }

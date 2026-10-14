@@ -42,8 +42,8 @@ const TRAIL_GAIN = 1.25;
 // so only one is on the skirt at a time; turns per second at rest and added
 // at top speed. One flight is under ~8 turns; the strip is 400px.
 const SPIN_PERIOD = 44;
-const SPIN_MIN = 1.5;
-const SPIN_MAX = 5.5;
+const SPIN_MIN = 0.8;
+const SPIN_MAX = 2.8;
 const SHUTTLE_W = 40;
 const SHUTTLE_H = 34;
 // The rally's hit point on the dragon's racket, in .v9-busy-art px
