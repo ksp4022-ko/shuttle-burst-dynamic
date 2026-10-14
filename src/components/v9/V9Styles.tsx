@@ -369,13 +369,13 @@ const V9_CSS = `
 .v9-app.is-entering .v9-hero > .v9-cta {
   transform-origin: 50% 0;
   /* knock: no fill, so it can't override the slam while it waits. */
-  animation: v9-slam .48s backwards, v9-knock .22s cubic-bezier(0.23, 1, 0.32, 1);
+  animation: v9-slam .65s backwards, v9-knock .22s cubic-bezier(0.23, 1, 0.32, 1);
 }
-.v9-app.is-entering .v9-hero-body > .v9-rail { animation-delay: 0s, .466s; }
-.v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .13s, .596s; }
-.v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .26s, .726s; }
-.v9-app.is-entering .v9-hero > .v9-cta { animation: v9-slam .48s .39s backwards; }
-.v9-app.is-entering .v9-dock { transition: opacity .24s ease .45s; }
+.v9-app.is-entering .v9-hero-body > .v9-rail { animation-delay: 0s, .635s; }
+.v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .18s, .815s; }
+.v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .36s, .995s; }
+.v9-app.is-entering .v9-hero > .v9-cta { animation: v9-slam .65s .54s backwards; }
+.v9-app.is-entering .v9-dock { transition: opacity .24s ease .6s; }
 /* Slide up accelerating (it hits, it doesn't glide in), squash on impact,
    spring back. */
 @keyframes v9-slam {

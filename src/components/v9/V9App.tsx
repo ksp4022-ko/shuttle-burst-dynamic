@@ -129,7 +129,7 @@ export function V9App() {
   }, [introStage]);
   useEffect(() => {
     if (!introEntering) return;
-    const id = window.setTimeout(() => setIntroEntering(false), 1100);
+    const id = window.setTimeout(() => setIntroEntering(false), 1400);
     return () => window.clearTimeout(id);
   }, [introEntering]);
   const flow = useHomepageFlow({
