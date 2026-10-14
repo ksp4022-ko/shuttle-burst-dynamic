@@ -357,13 +357,17 @@ const V9_CSS = `
 /* Fades in when is-intro goes. The hero keeps its own mount animation (no
    new one here), so dropping is-entering later can't replay it. */
 .v9-app .v9-main, .v9-app .v9-viewas-bar { transition: opacity .2s ease; }
-/* V9-041: the deck appears in place of the morphed frame (no fade), then
-   its blocks slide up from below one at a time (each a quick 0.32s hit,
-   0.29s apart, so every arrival reads on its own); each slams into the one above
-   (which gets knocked up a little), squashes and springs back. */
+/* V9-041 (2026-10-14 agreed timeline): the deck appears in place of the
+   morphed frame (no fade) while the shuttle is still climbing, then its six
+   blocks slide up from below top to bottom, 0.2s apart (each a quick 0.32s
+   hit): ① top bar ② meetup (calendar + 龍虎圓, with the yellow circle behind
+   it) ③ info rail ④ roster strip ⑤ status ⑥ CTA. Each slams into the one
+   above (which gets knocked up a little), squashes and springs back. The
+   Dock fades in last, after the shuttle lands on the CTA. */
 .v9-app.is-entering .v9-main { transition: none; }
 .v9-app.is-entering .v9-hero > .v9-hero-top,
-.v9-app.is-entering .v9-hero-body > .v9-hero-stage { animation: v9-fade .18s ease backwards; }
+.v9-app.is-entering .v9-hero-body > .v9-hero-stage,
+.v9-app.is-entering .v9-hero::before,
 .v9-app.is-entering .v9-hero-body > .v9-rail,
 .v9-app.is-entering .v9-hero > .v9-roster-strip,
 .v9-app.is-entering .v9-hero > .v9-hero-status,
@@ -372,11 +376,14 @@ const V9_CSS = `
   /* knock: no fill, so it can't override the slam while it waits. */
   animation: v9-slam .32s backwards, v9-knock .22s cubic-bezier(0.23, 1, 0.32, 1);
 }
-.v9-app.is-entering .v9-hero-body > .v9-rail { animation-delay: 0s, .514s; }
-.v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .29s, .804s; }
-.v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .58s, 1.094s; }
-.v9-app.is-entering .v9-hero > .v9-cta { animation: v9-slam .32s .87s backwards; }
-.v9-app.is-entering .v9-dock { transition: opacity .24s ease .9s; }
+.v9-app.is-entering .v9-hero > .v9-hero-top { animation-delay: 0s, .424s; }
+.v9-app.is-entering .v9-hero-body > .v9-hero-stage,
+.v9-app.is-entering .v9-hero::before { animation-delay: .2s, .624s; }
+.v9-app.is-entering .v9-hero-body > .v9-rail { animation-delay: .4s, .824s; }
+.v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .6s, 1.024s; }
+.v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .8s, 1.224s; }
+.v9-app.is-entering .v9-hero > .v9-cta { animation: v9-slam .32s 1s backwards; }
+.v9-app.is-entering .v9-dock { transition: opacity .25s ease 1.4s; }
 /* Slide up accelerating (it hits, it doesn't glide in), squash on impact,
    spring back. */
 @keyframes v9-slam {
@@ -392,7 +399,9 @@ const V9_CSS = `
 }
 @media (prefers-reduced-motion: reduce) {
   .v9-app.is-entering .v9-hero > *,
-  .v9-app.is-entering .v9-hero-body > * { animation: v9-fade .2s ease backwards; animation-delay: 0s; }
+  .v9-app.is-entering .v9-hero-body > *,
+  .v9-app.is-entering .v9-hero::before { animation: v9-fade .2s ease backwards; animation-delay: 0s; }
+  .v9-app.is-entering .v9-dock { transition-delay: 0s; }
 }
 @keyframes v9-rally-move { 0% { transform: translate(104.0px, 34.0px); } 5% { transform: translate(111.8px, 17.4px); } 10% { transform: translate(119.6px, 4.6px); } 15% { transform: translate(127.4px, -4.6px); } 20% { transform: translate(135.2px, -10.2px); } 25% { transform: translate(143.0px, -12.0px); } 30% { transform: translate(150.8px, -10.2px); } 35% { transform: translate(158.6px, -4.6px); } 40% { transform: translate(166.4px, 4.6px); } 45% { transform: translate(174.2px, 17.4px); } 50% { transform: translate(182.0px, 34.0px); } 55% { transform: translate(174.2px, 17.4px); } 60% { transform: translate(166.4px, 4.6px); } 65% { transform: translate(158.6px, -4.6px); } 70% { transform: translate(150.8px, -10.2px); } 75% { transform: translate(143.0px, -12.0px); } 80% { transform: translate(135.2px, -10.2px); } 85% { transform: translate(127.4px, -4.6px); } 90% { transform: translate(119.6px, 4.6px); } 95% { transform: translate(111.8px, 17.4px); } 100% { transform: translate(104.0px, 34.0px); } }
 @keyframes v9-rally-turn { 0% { transform: scaleX(1) rotate(-60deg); } 5% { transform: scaleX(1) rotate(-60deg); } 10% { transform: scaleX(1) rotate(-55deg); } 15% { transform: scaleX(1) rotate(-43deg); } 20% { transform: scaleX(1) rotate(-25deg); } 25% { transform: scaleX(1) rotate(-0deg); } 30% { transform: scaleX(1) rotate(25deg); } 35% { transform: scaleX(1) rotate(43deg); } 40% { transform: scaleX(1) rotate(55deg); } 45% { transform: scaleX(1) rotate(60deg); } 49.9% { transform: scaleX(1) rotate(60deg); } 50% { transform: scaleX(1) rotate(60deg); } 55% { transform: scaleX(-1) rotate(-60deg); } 60% { transform: scaleX(-1) rotate(-55deg); } 65% { transform: scaleX(-1) rotate(-43deg); } 70% { transform: scaleX(-1) rotate(-25deg); } 75% { transform: scaleX(-1) rotate(-0deg); } 80% { transform: scaleX(-1) rotate(25deg); } 85% { transform: scaleX(-1) rotate(43deg); } 90% { transform: scaleX(-1) rotate(55deg); } 95% { transform: scaleX(-1) rotate(60deg); } 100% { transform: scaleX(-1) rotate(60deg); } }
