@@ -25,15 +25,15 @@ const SWING_HIT = 0.45; // where in the swing the racket meets the shuttle
 const HITSTOP_MS = 120;
 const IMPACT_MS = 320;
 const RALLY_MS = 1600; // .v9-busy rally loop; at 0% the shuttle is on the dragon's racket
-const FLIGHT_MS = 1150; // launch → landing (≈1.3s in total)
+const FLIGHT_MS = 1520; // launch → landing; lands just after the CTA settles
 // The loading card's frame morphs into the deck's card frame over MORPH_MS
 // from the launch; then the deck takes over and its blocks slide in.
-const MORPH_MS = 420;
+const MORPH_MS = 600;
 const FADE_MS = 350; // the opening screen fades from the launch
 const CATCH_MS = 280;
 // Flight phases as fractions of FLIGHT_MS.
-const RISE_END = 0.5;
-const HANG_END = 0.7;
+const RISE_END = 0.378; // rise 575ms
+const HANG_END = 0.641; // hang 400ms, then the drop
 const PEAK_SCALE = 3;
 // The shuttle left on the CTA points its cork to the lower right.
 const REST_ROTATE = 45;
