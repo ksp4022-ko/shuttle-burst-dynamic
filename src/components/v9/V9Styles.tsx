@@ -288,6 +288,16 @@ const V9_CSS = `
 }
 .v9-intro-title { display: block; width: min(80%, 300px); height: auto; }
 .v9-intro.is-shooting .v9-busy-x { visibility: hidden; }
+/* V9-041: on the launch the card's own frame hands over to .v9-intro-morph
+   (same border, radius, fill), which grows into the deck's card; the card's
+   contents fade meanwhile. */
+.v9-intro.is-morphing .v9-intro-card { background: transparent; border-color: transparent; box-shadow: none; }
+.v9-intro.is-morphing .v9-intro-card > * { opacity: 0; transition: opacity .22s ease; }
+.v9-intro-morph {
+  position: fixed; left: 0; top: 0; visibility: hidden; pointer-events: none;
+  background: var(--v9-cream); border: var(--v9-line); border-radius: 30px; box-shadow: 0 6px 0 var(--v9-ink);
+}
+.v9-intro-card { position: relative; z-index: 1; }
 /* Where the intro's shuttle lands: on the CTA's right side, cork to the
    lower right; it settles in once the flying one hands over. */
 .v9-hero > .v9-cta-shuttle {
@@ -347,18 +357,41 @@ const V9_CSS = `
 /* Fades in when is-intro goes. The hero keeps its own mount animation (no
    new one here), so dropping is-entering later can't replay it. */
 .v9-app .v9-main, .v9-app .v9-viewas-bar { transition: opacity .2s ease; }
+/* V9-041: the deck appears in place of the morphed frame (no fade), then
+   its blocks slide up from below one by one; each slams into the one above
+   (which gets knocked up a little), squashes and springs back. */
+.v9-app.is-entering .v9-main { transition: none; }
 .v9-app.is-entering .v9-hero > .v9-hero-top,
-.v9-app.is-entering .v9-hero > .v9-hero-body,
+.v9-app.is-entering .v9-hero-body > .v9-hero-stage { animation: v9-fade .18s ease backwards; }
+.v9-app.is-entering .v9-hero-body > .v9-rail,
+.v9-app.is-entering .v9-hero > .v9-roster-strip,
 .v9-app.is-entering .v9-hero > .v9-hero-status,
-.v9-app.is-entering .v9-hero > .v9-cta,
-.v9-app.is-entering .v9-hero > .v9-roster-strip { animation: v9-rise .24s cubic-bezier(0.23, 1, 0.32, 1) backwards; }
-.v9-app.is-entering .v9-hero > .v9-hero-body { animation-delay: .05s; }
-.v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .1s; }
-.v9-app.is-entering .v9-hero > .v9-cta { animation-delay: .15s; }
-.v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .2s; }
-.v9-app.is-entering .v9-dock { transition: opacity .24s ease .2s; }
+.v9-app.is-entering .v9-hero > .v9-cta {
+  transform-origin: 50% 0;
+  /* knock: no fill, so it can't override the slam while it waits. */
+  animation: v9-slam .34s backwards, v9-knock .22s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.v9-app.is-entering .v9-hero-body > .v9-rail { animation-delay: 0s, .33s; }
+.v9-app.is-entering .v9-hero > .v9-roster-strip { animation-delay: .09s, .42s; }
+.v9-app.is-entering .v9-hero > .v9-hero-status { animation-delay: .18s, .51s; }
+.v9-app.is-entering .v9-hero > .v9-cta { animation: v9-slam .34s .27s backwards; }
+.v9-app.is-entering .v9-dock { transition: opacity .24s ease .3s; }
+/* Slide up accelerating (it hits, it doesn't glide in), squash on impact,
+   spring back. */
+@keyframes v9-slam {
+  0% { transform: translateY(75vh); animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.4); }
+  70% { transform: translateY(0) scale(1.03, .88); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
+  86% { transform: translateY(-2px) scale(.99, 1.04); animation-timing-function: ease-out; }
+  100% { transform: none; }
+}
+/* The block above takes the hit: a small jolt upward. */
+@keyframes v9-knock {
+  0%, 100% { transform: none; }
+  40% { transform: translateY(-4px) scale(1.01, .97); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .v9-app.is-entering .v9-hero > * { animation: v9-fade .2s ease backwards; animation-delay: 0s; }
+  .v9-app.is-entering .v9-hero > *,
+  .v9-app.is-entering .v9-hero-body > * { animation: v9-fade .2s ease backwards; animation-delay: 0s; }
 }
 @keyframes v9-rally-move { 0% { transform: translate(104.0px, 34.0px); } 5% { transform: translate(111.8px, 17.4px); } 10% { transform: translate(119.6px, 4.6px); } 15% { transform: translate(127.4px, -4.6px); } 20% { transform: translate(135.2px, -10.2px); } 25% { transform: translate(143.0px, -12.0px); } 30% { transform: translate(150.8px, -10.2px); } 35% { transform: translate(158.6px, -4.6px); } 40% { transform: translate(166.4px, 4.6px); } 45% { transform: translate(174.2px, 17.4px); } 50% { transform: translate(182.0px, 34.0px); } 55% { transform: translate(174.2px, 17.4px); } 60% { transform: translate(166.4px, 4.6px); } 65% { transform: translate(158.6px, -4.6px); } 70% { transform: translate(150.8px, -10.2px); } 75% { transform: translate(143.0px, -12.0px); } 80% { transform: translate(135.2px, -10.2px); } 85% { transform: translate(127.4px, -4.6px); } 90% { transform: translate(119.6px, 4.6px); } 95% { transform: translate(111.8px, 17.4px); } 100% { transform: translate(104.0px, 34.0px); } }
 @keyframes v9-rally-turn { 0% { transform: scaleX(1) rotate(-60deg); } 5% { transform: scaleX(1) rotate(-60deg); } 10% { transform: scaleX(1) rotate(-55deg); } 15% { transform: scaleX(1) rotate(-43deg); } 20% { transform: scaleX(1) rotate(-25deg); } 25% { transform: scaleX(1) rotate(-0deg); } 30% { transform: scaleX(1) rotate(25deg); } 35% { transform: scaleX(1) rotate(43deg); } 40% { transform: scaleX(1) rotate(55deg); } 45% { transform: scaleX(1) rotate(60deg); } 49.9% { transform: scaleX(1) rotate(60deg); } 50% { transform: scaleX(1) rotate(60deg); } 55% { transform: scaleX(-1) rotate(-60deg); } 60% { transform: scaleX(-1) rotate(-55deg); } 65% { transform: scaleX(-1) rotate(-43deg); } 70% { transform: scaleX(-1) rotate(-25deg); } 75% { transform: scaleX(-1) rotate(-0deg); } 80% { transform: scaleX(-1) rotate(25deg); } 85% { transform: scaleX(-1) rotate(43deg); } 90% { transform: scaleX(-1) rotate(55deg); } 95% { transform: scaleX(-1) rotate(60deg); } 100% { transform: scaleX(-1) rotate(60deg); } }

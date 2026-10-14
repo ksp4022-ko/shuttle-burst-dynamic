@@ -26,7 +26,9 @@ const HITSTOP_MS = 120;
 const IMPACT_MS = 320;
 const RALLY_MS = 1600; // .v9-busy rally loop; at 0% the shuttle is on the dragon's racket
 const FLIGHT_MS = 1150; // launch → landing (≈1.3s in total)
-const ENTER_AFTER_LAUNCH_MS = 200; // the deck crossfades in under the climbing shuttle
+// The loading card's frame morphs into the deck's card frame over MORPH_MS
+// from the launch; then the deck takes over and its blocks slide in.
+const MORPH_MS = 420;
 const FADE_MS = 350; // the opening screen fades from the launch
 const CATCH_MS = 280;
 // Flight phases as fractions of FLIGHT_MS.
@@ -226,6 +228,7 @@ export function V9Intro({
   const coverRef = useRef<HTMLDivElement>(null);
   const flyerRef = useRef<HTMLSpanElement>(null);
   const impactRef = useRef<HTMLSpanElement>(null);
+  const morphRef = useRef<HTMLSpanElement>(null);
   const [minPassed, setMinPassed] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const animations = useRef<Animation[]>([]);
@@ -393,12 +396,39 @@ export function V9Intro({
         const bandsEl = flyer.querySelector<HTMLElement>(".v9-intro-spin-bands");
         animations.current.push(
           flyer.animate(flight, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
-          cover.animate([{ opacity: 1 }, { opacity: 0 }], {
-            duration: FADE_MS,
-            easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-            fill: "forwards",
-          }),
         );
+        // The card's contents fade while its frame (a stand-in with the same
+        // border, radius and fill) grows into the deck's card.
+        const card = cover.querySelector<HTMLElement>(".v9-intro-card");
+        const morph = morphRef.current;
+        const heroEl = document.querySelector<HTMLElement>(".v9-main > .v9-hero");
+        if (card && morph && heroEl) {
+          const from = card.getBoundingClientRect();
+          const to = heroEl.getBoundingClientRect();
+          const box = (r: DOMRect) => ({
+            left: `${r.left}px`,
+            top: `${r.top}px`,
+            width: `${r.width}px`,
+            height: `${r.height}px`,
+          });
+          morph.style.visibility = "visible";
+          cover.classList.add("is-morphing");
+          animations.current.push(
+            morph.animate([box(from), box(to)], {
+              duration: MORPH_MS,
+              easing: "cubic-bezier(0.77, 0, 0.175, 1)",
+              fill: "forwards",
+            }),
+          );
+        } else {
+          animations.current.push(
+            cover.animate([{ opacity: 1 }, { opacity: 0 }], {
+              duration: FADE_MS,
+              easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+              fill: "forwards",
+            }),
+          );
+        }
         if (trailEl) {
           animations.current.push(
             trailEl.animate(trail, { duration: FLIGHT_MS, easing: "linear", fill: "forwards" }),
@@ -410,7 +440,12 @@ export function V9Intro({
           );
         }
       });
-      later(launchIn + HITSTOP_MS + ENTER_AFTER_LAUNCH_MS, () => onStage("entering"));
+      // The frame has become the deck's card: show the deck in its place
+      // (no fade) and drop the cover; the deck's blocks slide in (CSS).
+      later(launchIn + HITSTOP_MS + MORPH_MS, () => {
+        onStage("entering");
+        cover.style.visibility = "hidden";
+      });
       later(launchIn + HITSTOP_MS + FLIGHT_MS, () => {
         // On the CTA the resting shuttle settles in by itself (CSS).
         if (landOnCta) return;
@@ -460,6 +495,7 @@ export function V9Intro({
           />
           <V9Busy />
         </div>
+        <span ref={morphRef} className="v9-intro-morph" aria-hidden="true" />
       </div>
       <span ref={impactRef} className="v9-intro-impact" aria-hidden="true">
         <i />

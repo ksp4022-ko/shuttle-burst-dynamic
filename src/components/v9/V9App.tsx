@@ -603,7 +603,7 @@ export function V9App() {
 
   return (
     <div
-      className={`v9-app${intro && introStage === "cover" ? " is-intro" : ""}${introEntering ? " is-entering" : ""}`}
+      className={`v9-app${intro && introStage === "cover" ? " is-intro" : ""}${introEntering || (intro && introStage === "entering") ? " is-entering" : ""}`}
     >
       <V9Styles />
 
