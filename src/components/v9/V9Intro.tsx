@@ -24,6 +24,11 @@ const SWING_HIT = 0.45; // where in the swing the racket meets the shuttle
 // Hit-stop: everything freezes on contact while yellow impact marks pop
 // around the shuttle, then the shot takes off (2026-10-14 real-device ask).
 const HITSTOP_MS = 120;
+// V9-046 蓄力停頓 (/v9test): before the last shot the dragon leans back to
+// CHARGE_ANGLE and everything holds (shuttle in mid-air in front of it), then
+// it snaps forward into the hit.
+const CHARGE_MS = 280;
+const CHARGE_ANGLE = -16;
 const IMPACT_MS = 320;
 const RALLY_MS = 1600; // .v9-busy rally loop; at 0% the shuttle is on the dragon's racket
 const FLIGHT_MS = 1750; // launch → landing; lands just after the CTA settles
@@ -356,10 +361,46 @@ export function V9Intro({
       const into = Number(rally?.currentTime ?? 0) % RALLY_MS;
       const launchIn = rally ? (RALLY_MS - into) % RALLY_MS : 0;
       const windUp = SWING_MS * SWING_HIT;
+      const swingAt = Math.max(0, launchIn - windUp);
+      const charge = dragon && isV9TestRoute() ? CHARGE_MS : 0;
+      // Contact, pushed back by the charge hold.
+      const hitAt = launchIn + charge;
 
       let swing: Animation | null = null;
-      if (dragon) {
-        later(Math.max(0, launchIn - windUp), () => {
+      if (dragon && charge) {
+        // 蓄力停頓: freeze the rally with the shuttle in front of the dragon,
+        // lean the dragon back, hold, then let everything run again.
+        const held: Animation[] = [];
+        let lean: Animation | null = null;
+        later(swingAt, () => {
+          for (const anim of cover.getAnimations({ subtree: true })) {
+            if (anim.playState === "running") {
+              anim.pause();
+              held.push(anim);
+            }
+          }
+          lean = dragon.animate(
+            [{ transform: "rotate(0deg)" }, { transform: `rotate(${CHARGE_ANGLE}deg)` }],
+            { duration: charge * 0.6, easing: "cubic-bezier(0.23, 1, 0.32, 1)", fill: "forwards" },
+          );
+          animations.current.push(lean);
+        });
+        later(swingAt + charge, () => {
+          lean?.cancel();
+          for (const anim of held) anim.play();
+          swing = dragon.animate(
+            [
+              { transform: `rotate(${CHARGE_ANGLE}deg)` },
+              { transform: "rotate(-4deg)", offset: SWING_HIT },
+              { transform: "rotate(8deg)", offset: 0.7 },
+              { transform: "rotate(0deg)" },
+            ],
+            { duration: SWING_MS, easing: "cubic-bezier(0.55, 0, 0.1, 1)" },
+          );
+          animations.current.push(swing);
+        });
+      } else if (dragon) {
+        later(swingAt, () => {
           swing = dragon.animate(
             [
               { transform: "rotate(0deg)" },
@@ -382,7 +423,7 @@ export function V9Intro({
       // Contact: freeze the swing and the rally, park the shuttle on the
       // racket and pop the impact marks.
       const frozen: Animation[] = [];
-      later(launchIn, () => {
+      later(hitAt, () => {
         cover.classList.add("is-shooting");
         for (const anim of cover.getAnimations({ subtree: true })) {
           if (anim.playState === "running") {
@@ -410,7 +451,7 @@ export function V9Intro({
           );
         }
       });
-      later(launchIn + HITSTOP_MS, () => {
+      later(hitAt + HITSTOP_MS, () => {
         for (const anim of frozen) anim.play();
         const trailEl = flyer.querySelector<HTMLElement>(".v9-intro-trail");
         const bandsEl = flyer.querySelector<HTMLElement>(".v9-intro-spin-bands");
@@ -485,7 +526,7 @@ export function V9Intro({
       });
       // The frame has become the deck's card: show the deck in its place
       // (no fade) and drop the cover; the deck's blocks slide in (CSS).
-      later(launchIn + HITSTOP_MS + FLIGHT_MS, () => {
+      later(hitAt + HITSTOP_MS + FLIGHT_MS, () => {
         // On the CTA the resting shuttle settles in by itself (CSS).
         if (landOnCta) return;
         // Not tracked: the catch outlives this component. It squashes from the
@@ -506,7 +547,7 @@ export function V9Intro({
         };
       });
       // Hand over the moment it lands: the resting shuttle shows in its place.
-      later(launchIn + HITSTOP_MS + FLIGHT_MS + (landOnCta ? 0 : 40), () => {
+      later(hitAt + HITSTOP_MS + FLIGHT_MS + (landOnCta ? 0 : 40), () => {
         finished.current = true;
         onDone();
       });
