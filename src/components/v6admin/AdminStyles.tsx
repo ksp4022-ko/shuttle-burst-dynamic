@@ -247,7 +247,8 @@ html.ctl-lock-x body {
 @keyframes ctl-sheet-in { from { transform: translateY(24px); opacity: .4; } to { transform: none; opacity: 1; } }
 .ctl-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .ctl-sheet-head h2 { font-size: 19px; font-weight: 900; }
-.ctl-sheet-body { display: grid; gap: 12px; }
+/* minmax(0, 1fr): a wide child (iOS Safari sizes inputs ~20 chars) must not widen the sheet. */
+.ctl-sheet-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .ctl-sheet-body p { font-size: 16px; }
 .ctl-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ctl-field { display: grid; gap: 4px; font-size: 13px; font-weight: 700; color: var(--muted); }
@@ -325,7 +326,7 @@ html.ctl-lock-x body {
 .ctl-member-edit:first-child { border-top: 0; }
 .ctl-member-edit input { border: 1.5px solid var(--ink); border-radius: 10px; padding: 8px; font-size: 17px; background: #fff; min-width: 0; }
 .ctl-member-order { width: 58px; flex: none; text-align: center; }
-.ctl-member-name { flex: 1; font-weight: 700; }
+.ctl-member-name { flex: 1; width: 0; font-weight: 700; }
 
 .ctl-part-loading { color: var(--muted); font-size: 15px; font-weight: 700; }
 .ctl-part-error { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
