@@ -360,6 +360,16 @@ export function SystemTab({
                   ["回歸", n.discordNotifyReturn],
                 ])}
               </dd>
+              {typeof n.discordRosterReminderEnabled === "boolean" && (
+                <>
+                  <dt>Discord 名單提醒</dt>
+                  <dd>
+                    {n.discordRosterReminderEnabled
+                      ? `開（${n.discordRosterReminderTime || "19:00"}）`
+                      : "關"}
+                  </dd>
+                </>
+              )}
             </dl>
             <div className="ctl-actions">
               <button
@@ -1561,22 +1571,38 @@ function DiscordForm({
   onClose: () => void;
   onSubmit: (input: DiscordNotificationInput) => void;
 }) {
-  const [f, setF] = useState<DiscordNotificationInput>({
+  // T-28: the 名單提醒 fields only once the Worker reports them (V6-045).
+  const hasReminder = typeof n.discordRosterReminderEnabled === "boolean";
+  const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const [f, setF] = useState({
     discordEnabled: Boolean(n.discordEnabled),
     discordNotifySignup: Boolean(n.discordNotifySignup),
     discordNotifyCancel: Boolean(n.discordNotifyCancel),
     discordNotifyLeave: Boolean(n.discordNotifyLeave),
     discordNotifyReturn: Boolean(n.discordNotifyReturn),
+    discordRosterReminderEnabled: Boolean(n.discordRosterReminderEnabled),
+    discordRosterReminderTime: timeRe.test(String(n.discordRosterReminderTime || ""))
+      ? String(n.discordRosterReminderTime)
+      : "19:00",
   });
-  const set = (k: keyof DiscordNotificationInput, v: boolean) =>
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) =>
     setF((cur) => ({ ...cur, [k]: v }));
+  const timeOk = timeRe.test(f.discordRosterReminderTime);
+  const submit = () => {
+    const { discordRosterReminderEnabled, discordRosterReminderTime, ...base } = f;
+    const input: DiscordNotificationInput = hasReminder
+      ? { ...base, discordRosterReminderEnabled, discordRosterReminderTime }
+      : base;
+    onSubmit(input);
+  };
   return (
     <FormShell
       busy={busy}
       error={error}
       onClose={onClose}
       submitText="儲存 Discord 設定"
-      onSubmit={() => onSubmit(f)}
+      canSubmit={!hasReminder || timeOk}
+      onSubmit={submit}
     >
       <div className="ctl-form">
         <Check
@@ -1605,6 +1631,26 @@ function DiscordForm({
           checked={f.discordNotifyReturn}
           onChange={(v) => set("discordNotifyReturn", v)}
         />
+        {hasReminder && (
+          <>
+            <p className="ctl-sub is-wide">聚會名單提醒</p>
+            <Check
+              wide
+              label="啟用聚會前一天名單通知"
+              checked={f.discordRosterReminderEnabled}
+              onChange={(v) => set("discordRosterReminderEnabled", v)}
+            />
+            <label className="ctl-field is-wide">
+              通知時間（台灣時間）
+              <input
+                type="time"
+                required
+                value={f.discordRosterReminderTime}
+                onChange={(e) => set("discordRosterReminderTime", e.target.value)}
+              />
+            </label>
+          </>
+        )}
       </div>
       <p className="ctl-sub">
         Discord Webhook：{n.discordConfigured ? "已設定" : "未設定"}。網址只保存在 Cloudflare
