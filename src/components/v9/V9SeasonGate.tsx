@@ -610,7 +610,10 @@ function V9SeasonPage({
                   </div>
                   <div>
                     <dt>時間</dt>
-                    <dd>每週四 22:00～24:00</dd>
+                    <dd>
+                      {/* /v9test until accepted: 日安 plays Thursday mornings. */}
+                      {trimmed && siteId === "rian" ? "每週四 10:00～12:00" : "每週四 22:00～24:00"}
+                    </dd>
                   </div>
                   <div>
                     <dt>用球</dt>
