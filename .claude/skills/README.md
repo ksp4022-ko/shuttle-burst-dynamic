@@ -17,3 +17,8 @@ for critique, motion review and options, not to restyle the product on their own
 Not enabled: Impeccable's detector hooks (`/impeccable hooks on`) and its downloaded
 engine binary -- ask the user first. To update a skill, re-copy it from the source
 commit and record the new commit here.
+
+## Project skills (ours)
+
+`pending/`, `codex-round/`, `local-verify/` are this project's own workflow skills (T-26, 2026-10-15),
+not vendored. The local-verify scripts live in `ksp4022-ko/badminton-signup` `worker/tools/local-verify/`.
