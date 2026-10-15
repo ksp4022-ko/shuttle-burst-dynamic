@@ -975,7 +975,7 @@ export function V9App() {
                 due={billDue}
                 discordToken={lineToken}
                 discordMoreKinds
-                discordAllKinds={v9Test}
+                discordAllKinds
               />
             )}
           </V9Sheet>

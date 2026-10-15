@@ -198,7 +198,7 @@ export function V9PlayerCard({
   discordToken?: string | null | undefined;
   // V9-036: show the 報名／請假／取消／回歸 switches (/v9test first).
   discordMoreKinds?: boolean;
-  // V9-049: all Discord switches (/v9test first).
+  // V9-049: all Discord switches.
   discordAllKinds?: boolean;
 }) {
   const fixed = identity.signupType === "fixed";

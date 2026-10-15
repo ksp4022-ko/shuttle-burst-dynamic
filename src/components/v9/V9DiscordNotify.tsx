@@ -100,7 +100,7 @@ export function V9DiscordNotify({
   token: string;
   moreKinds?: boolean;
   fixed?: boolean;
-  // V9-049 (/v9test until accepted): every switch, whatever this meetup's
+  // V9-049: every switch, whatever this meetup's
   // identity -- since V9-043 phase 3 a 季打 can self-sign up as 臨打 on
   // another 時段, so 報名成功 must be reachable from a 季打 meetup too.
   allKinds?: boolean;
