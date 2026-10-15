@@ -217,6 +217,10 @@ export type NotificationStatus = {
   // T-28 (Worker V6-045): absent until that Worker is deployed.
   discordRosterReminderEnabled?: boolean;
   discordRosterReminderTime?: string;
+  // T-30 (Worker V6-047): absent until that Worker is deployed.
+  discordNotifyPromoted?: boolean;
+  discordNotifyDemoted?: boolean;
+  discordNotifyProxy?: boolean;
   lineConfigured: boolean;
   discordConfigured: boolean;
 };
@@ -1001,6 +1005,9 @@ export const adminWriteApi = {
     adminPost(`/admin/events/${enc(eventId)}/reopen`, pw),
   pushLineRoster: (pw: string, eventId: string) =>
     adminPost(`/admin/events/${enc(eventId)}/line-roster-push`, pw),
+  // T-29 (Worker V6-046): the same roster to the admin Discord channel.
+  pushDiscordRoster: (pw: string, eventId: string) =>
+    adminPost(`/admin/events/${enc(eventId)}/discord-roster-push`, pw),
   fixedLeave: (pw: string, siteId: string, eventId: string, signupId: string) =>
     adminPost(`/events/${enc(eventId)}/fixed-signups/${enc(signupId)}/leave`, pw, {
       siteId,
@@ -1311,6 +1318,10 @@ export type DiscordNotificationInput = {
   // T-28: sent only when the Worker reports them (V6-045).
   discordRosterReminderEnabled?: boolean;
   discordRosterReminderTime?: string;
+  // T-30: sent only when the Worker reports them (V6-047).
+  discordNotifyPromoted?: boolean;
+  discordNotifyDemoted?: boolean;
+  discordNotifyProxy?: boolean;
 };
 
 // ---------- Display helpers ----------
