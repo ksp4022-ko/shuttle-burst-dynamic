@@ -954,6 +954,7 @@ const V9_CSS = `
 
 /* ---------- 季打確認 (V9-006 6c) ---------- */
 .v9-sc { padding-bottom: 28px; }
+.v9-sc.is-more { padding-bottom: 0; }
 .v9-sc-head { display: grid; gap: 12px; padding-top: 18px; }
 .v9-sc-head::before { top: 40px; }
 .v9-sc-title { display: flex; align-items: center; gap: 10px; }

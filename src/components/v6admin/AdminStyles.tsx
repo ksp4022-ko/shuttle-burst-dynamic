@@ -327,6 +327,16 @@ html.ctl-lock-x body {
 .ctl-member-edit input { border: 1.5px solid var(--ink); border-radius: 10px; padding: 8px; font-size: 17px; background: #fff; min-width: 0; }
 .ctl-member-order { width: 58px; flex: none; text-align: center; }
 .ctl-member-name { flex: 1; width: 0; font-weight: 700; }
+/* T-21 / T-25: 「新」 and reply tags next to the name. */
+.ctl-member-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; }
+.ctl-member-field .ctl-member-name { width: 0; }
+.ctl-member-tag { flex: none; font-size: 12px; font-weight: 800; padding: 2px 6px; border-radius: 999px; background: var(--line); color: var(--muted); }
+.ctl-member-tag.is-new { background: var(--orange-bg); color: #8a4b0b; }
+.ctl-review { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.ctl-review p { font-size: 15px; overflow-wrap: anywhere; }
+.ctl-seg-wide button { flex: 1; }
+.ctl-btn-ghost.is-danger { color: var(--red); border-color: transparent; justify-self: center; }
+.ctl-step-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 
 .ctl-part-loading { color: var(--muted); font-size: 15px; font-weight: 700; }
 .ctl-part-error { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

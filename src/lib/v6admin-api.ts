@@ -830,7 +830,10 @@ export type SeasonConfirmSetting = {
   targetSeasonId: string;
   sourceSeasonId?: string | null;
   groupId: string;
+  enabled?: number | boolean;
   status: string;
+  leaveRulesText?: string | null;
+  publicNote?: string | null;
   phase: "off" | "preparing" | "open" | "closed";
   deadlineAt?: string | null;
   capacityLimit?: number | null;
@@ -1195,6 +1198,90 @@ export const adminWriteApi = {
     ),
   unlinkDiscordMember: (pw: string, siteId: string, lineIdentityId: string) =>
     adminPost(`/admin/sites/${enc(siteId)}/discord-members/${enc(lineIdentityId)}/unlink`, pw),
+  // T-23 (b): what saving the roster will cancel for members marked 停用.
+  groupMembersImpact: (
+    pw: string,
+    siteId: string,
+    groupId: string,
+    seasonId: string,
+    members: GroupMemberInput[],
+  ) =>
+    adminPost<{ impact: MemberDisableImpact }>(
+      `/admin/sites/${enc(siteId)}/groups/${enc(groupId)}/members`,
+      pw,
+      { seasonId, members, dryRun: true },
+    ),
+  // T-25 (P5-c): 季打確認 writes.
+  saveSeasonConfirm: (pw: string, siteId: string, input: SeasonConfirmInput) =>
+    adminPost<{ setting: SeasonConfirmSetting }>(
+      `/admin/sites/${enc(siteId)}/season-confirm`,
+      pw,
+      input,
+    ),
+  proxySeasonIntent: (
+    pw: string,
+    siteId: string,
+    settingId: string,
+    memberId: string,
+    intent: "renew" | "decline",
+  ) =>
+    adminPost(`/admin/sites/${enc(siteId)}/season-confirm/${enc(settingId)}/proxy`, pw, {
+      memberId,
+      intent,
+    }),
+  reviewSeasonApply: (
+    pw: string,
+    siteId: string,
+    settingId: string,
+    intentId: string,
+    input:
+      | { action: "reject" }
+      | { action: "approve"; resolution: "new"; memberName: string }
+      | { action: "approve"; resolution: "existing"; memberId: string },
+  ) =>
+    adminPost(
+      `/admin/sites/${enc(siteId)}/season-confirm/${enc(settingId)}/intents/${enc(intentId)}/review`,
+      pw,
+      input,
+    ),
+  seasonRosterDraft: (pw: string, siteId: string, settingId: string) =>
+    adminGet<SeasonRosterDraft>(
+      `/admin/sites/${enc(siteId)}/season-confirm/${enc(settingId)}/roster-draft`,
+      pw,
+    ),
+  finalizeSeasonConfirm: (pw: string, siteId: string, settingId: string) =>
+    adminPost(`/admin/sites/${enc(siteId)}/season-confirm/${enc(settingId)}/finalize`, pw),
+};
+
+export type MemberDisableImpact = {
+  unpaid: { id: string; memberId: string; memberName: string; amount: number }[];
+  paid: { id: string; memberId: string; memberName: string; amount: number }[];
+  seats: { signupId: string; memberId: string; name: string; eventId: string; eventDate: string }[];
+};
+
+export type SeasonConfirmInput = {
+  id?: string;
+  targetSeasonId: string;
+  sourceSeasonId: string;
+  groupId: string;
+  enabled: boolean;
+  status: "draft" | "open" | "finalized";
+  deadlineAt: string | null;
+  // Not edited in V10 (T-25); passed back unchanged so a save keeps them.
+  capacityLimit?: number | null;
+  leaveRulesText?: string | null;
+  publicNote?: string | null;
+};
+
+export type SeasonRosterDraft = {
+  rows: {
+    memberId: string;
+    name: string;
+    orderNo: number;
+    currentStatus: string | null;
+    suggestedStatus: "active" | "disabled";
+    reason: "renew" | "decline" | "no-reply" | "apply-approved" | "manual";
+  }[];
 };
 
 export type LineNotificationInput = {
