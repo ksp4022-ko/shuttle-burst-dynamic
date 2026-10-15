@@ -1004,6 +1004,22 @@ const V9_CSS = `
 .v9-sc-callout.is-warn { border-color: var(--v9-red); background: #fff1ec; }
 .v9-sc-steps { display: grid; gap: 4px; padding-left: 20px; font-size: 14px; font-weight: 700; line-height: 1.5; }
 .v9-sc-foot { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 12px; color: var(--v9-muted); font-size: 12px; font-weight: 800; }
+/* /v9test (V9-047): 申請加入 card + larger type on the confirm page */
+.v9-sc-apply { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border: 2.5px solid var(--v9-ink); border-radius: 18px; background: var(--v9-cream); }
+.v9-sc-apply h2 { margin: 0; font-size: 18px; font-weight: 900; }
+.v9-app .v9-sc-apply .v9-cta { display: grid; gap: 1px; padding-top: 10px; padding-bottom: 10px; }
+.v9-sc.is-big .v9-sc-kicker { font-size: 15px; }
+.v9-sc.is-big .v9-sc-deadline { font-size: 13px; }
+.v9-sc.is-big .v9-sc-hint { font-size: 14px; }
+.v9-sc.is-big .v9-sc-notice, .v9-sc.is-big .v9-sc-error { font-size: 15px; }
+.v9-app .v9-sc.is-big .v9-cta small { font-size: 13px; }
+.v9-sc.is-big .v9-sc-details summary { font-size: 18px; }
+.v9-sc.is-big .v9-sc-details summary b { font-size: 13px; }
+.v9-sc.is-big .v9-sc-lead { font-size: 16px; }
+.v9-sc.is-big .v9-sc-dl div { grid-template-columns: 64px 1fr; font-size: 16px; }
+.v9-sc.is-big .v9-sc-callout { font-size: 15px; }
+.v9-sc.is-big .v9-sc-steps { font-size: 16px; }
+.v9-sc.is-big .v9-sc-foot { font-size: 14px; }
 .v9-id-claim small { margin-left: auto; color: var(--v9-muted); font-size: 11px; font-weight: 800; }
 `;
 

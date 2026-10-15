@@ -423,7 +423,9 @@ function V9SeasonPage({
   // /v9test until accepted: no summary tiles, no 加場規則, no 冷氣費 line;
   // the sections after 01 move up one number.
   const trimmed = isV9TestRoute();
-  const no = (n: number) => String(trimmed && n > 2 ? n - 1 : n).padStart(2, "0");
+  const no = (n: number) => String(trimmed && n > 3 ? n - 2 : n).padStart(2, "0");
+  // /v9test: 申請加入 moves out of the choices into its own card below.
+  const canApply = showChoices && (!loggedIn || !inSource);
   const myName =
     identity?.confirmedName ||
     myIntent?.memberName ||
@@ -433,7 +435,7 @@ function V9SeasonPage({
 
   return (
     <main
-      className={`v9-main v9-sc${section ? " is-part" : ""}${section && !last ? " is-more" : ""}`}
+      className={`v9-main v9-sc${trimmed ? " is-big" : ""}${section ? " is-part" : ""}${section && !last ? " is-more" : ""}`}
     >
       <section className="v9-hero v9-sc-head">
         {first && <V9PreviewBadge />}
@@ -538,7 +540,7 @@ function V9SeasonPage({
                 </button>
               </>
             )}
-            {(!loggedIn || !inSource) && (
+            {!trimmed && (!loggedIn || !inSource) && (
               <button
                 type="button"
                 className="v9-cta is-paper"
@@ -563,6 +565,21 @@ function V9SeasonPage({
           </div>
         )}
       </section>
+
+      {trimmed && canApply && (
+        <section className="v9-sc-apply" aria-label="新球友申請加入">
+          <h2>新球友 申請加入季打</h2>
+          <button
+            type="button"
+            className="v9-cta is-paper"
+            disabled={busy}
+            onClick={() => choose("apply", me)}
+          >
+            申請加入
+            <small>{myIntent?.intent === "apply" ? "目前的回覆" : "送出後待管理員確認"}</small>
+          </button>
+        </section>
+      )}
 
       {phase !== "preparing" && (
         <>
@@ -606,7 +623,10 @@ function V9SeasonPage({
                 <dl className="v9-sc-dl">
                   <div>
                     <dt>期間</dt>
-                    <dd>{range.start && range.end ? `${range.start}～${range.end}` : "依公告"}</dd>
+                    <dd>
+                      {range.start && range.end ? `${range.start}～${range.end}` : "依公告"}
+                      {trimmed && info.eventCount ? `（共 ${info.eventCount} 次）` : ""}
+                    </dd>
                   </div>
                   <div>
                     <dt>時間</dt>
@@ -623,7 +643,7 @@ function V9SeasonPage({
                 <p className="v9-sc-callout">
                   <strong>季打費繳交</strong>
                   {range.firstDay ? `${range.firstDay} 首次開打時` : "首次開打時"}
-                  繳交，可使用 LINE Pay 付款。
+                  {trimmed ? "繳交，歡迎使用 LINE Pay 付款。" : "繳交，可使用 LINE Pay 付款。"}
                 </p>
                 {!trimmed && <p className="v9-sc-hint">本季不預收冷氣費，視天氣及現場需求加開。</p>}
               </details>
@@ -650,28 +670,30 @@ function V9SeasonPage({
                   </dl>
                 </details>
               )}
-              <details>
-                <summary>
-                  <b>{no(3)}</b>季打請假與退費
-                </summary>
-                <p className="v9-sc-lead">季打請假沒有次數限制。</p>
-                <dl className="v9-sc-dl">
-                  <div>
-                    <dt>有效期限</dt>
-                    <dd>聚會當天 13:00 前，必須在系統完成請假。</dd>
-                  </div>
-                  {perEventFee ? (
+              {!trimmed && (
+                <details>
+                  <summary>
+                    <b>{no(3)}</b>季打請假與退費
+                  </summary>
+                  <p className="v9-sc-lead">季打請假沒有次數限制。</p>
+                  <dl className="v9-sc-dl">
                     <div>
-                      <dt>下季抵扣</dt>
-                      <dd>有效請假約 ${perEventFee}／次。</dd>
+                      <dt>有效期限</dt>
+                      <dd>聚會當天 13:00 前，必須在系統完成請假。</dd>
                     </div>
-                  ) : null}
-                  <div>
-                    <dt>需要協助</dt>
-                    <dd>請在 LINE 聯絡 @管理員（柯Sammy）。</dd>
-                  </div>
-                </dl>
-              </details>
+                    {perEventFee ? (
+                      <div>
+                        <dt>下季抵扣</dt>
+                        <dd>有效請假約 ${perEventFee}／次。</dd>
+                      </div>
+                    ) : null}
+                    <div>
+                      <dt>需要協助</dt>
+                      <dd>請在 LINE 聯絡 @管理員（柯Sammy）。</dd>
+                    </div>
+                  </dl>
+                </details>
+              )}
               <details>
                 <summary>
                   <b>{no(4)}</b>LINE 登入與回覆方式
