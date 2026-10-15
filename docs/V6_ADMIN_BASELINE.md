@@ -151,7 +151,7 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 
 ## 8. 待辦（使用者提出，尚未實作）
 
-只留未完成項目；已完成／取消的搬到 `docs/V6_ADMIN_HISTORY.md`。新編號接續兩份文件中最大的 T 號（目前最大 T-26）。
+只留未完成項目；已完成／取消的搬到 `docs/V6_ADMIN_HISTORY.md`。新編號接續兩份文件中最大的 T 號（目前最大 T-27）。
 
 | # | 日期 | 內容 | 狀態 |
 |---|---|---|---|
@@ -161,6 +161,7 @@ API 路徑省略前綴 `/api/v6-alpha`；`:site` = 場地 ID。
 | T-13 | 2026-10-09 | 整個控制台所有可收合的卡片／區塊預設收合（Card、③ 季繳紀錄原本預設展開） | 已完成並部署（待 iPhone 驗收） |
 | T-18 | 2026-10-13 | V10 ④「Discord 個人通知」名單在每人名字旁標「康軒／日安」，表示他在哪個場地有報名或認領（連結綁 LINE 身分，兩場地共用名單；通知本身已依聚會場地發送、不會錯發，此項只為辨識）。標示依據待討論：認領季打的場地、近期臨打報名的場地，或兩者 | Pending：併入 V9-043 第 4 期（多筆認領後名單逐行列出「場地 時段 身分」），暫停 |
 | T-26 | 2026-10-15 | 節省 token：①一個主題一個對話（V6-042 部署驗收完就開新對話，開頭說「接續 ○○」，交接靠 CLAUDE.md 與 docs）；②建 3 個 skill：/pending（V9／V10 編號與記錄規則）、/codex-round（Codex 審查＋部署指令格式）、/local-verify（本機 wrangler＋vite＋假 LINE token＋Playwright 轉本機＋還原資料、iPhone 驗收清單）；③本機測試腳本移進 repo（例 badminton-signup tools/）；④本文件已完成項目搬到歷史檔，表格只留未完成項目 | 2026-10-15 已完成：3 個 skill（.claude/skills/pending、codex-round、local-verify）；本機測試腳本移到 badminton-signup worker/tools/local-verify/；已完成項目搬到 docs/V6_ADMIN_HISTORY.md |
+| T-27 | 2026-10-15 | 季打確認頁內容可在 V10 控制台編輯（V9-047 後續）：V10 ③「設定季打確認」加文字框（季打說明，如時間、請假期限、聯絡人；備註），每組設定（場地＋時段）各一份；開新一季自動帶入同場地／時段上一季內容當模板；V9 確認頁改顯示這些內容，拿掉寫死的時間、請假期限、聯絡人。Worker 已有 leave_rules_text／public_note 欄位可存，預計只改前端 | Pending（使用者 2026-10-15：這次先不做，記錄） |
 | S1–S5 | 2026-10-09 | S1 收款帳單頁結算／未繳項目／待退款卡預設展開；S2 每張卡片記住上次開合（本機瀏覽器）；S3 季末結算顯示上次儲存（時間、扣除與否、損益）；S4 損益備註改記計算值（Worker V6-032）；S5 V9-026 待 /v9test 驗收後上 /v9 | S1–S4 已實作並部署（S3 上次儲存 2026-10-11 iPhone 驗收）；S5 已上 /v9（2026-10-11，依本機截圖驗收） |
 | V6-032 | 2026-10-09 | Worker（badminton-signup ea1f8c9）：待退款項目附請假日期（同季費抵扣算法）；損益備註 leaveRefund＝計算值、credited＝已產生抵扣；season-management 多回 lastProfitLoss（唯讀） | 已部署 Cloudflare 08a9815f-79df-444c-9a8d-c7f84daa6d7c（2026-10-10），待 iPhone 複驗 |
 

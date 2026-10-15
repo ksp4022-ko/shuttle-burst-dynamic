@@ -420,6 +420,10 @@ function V9SeasonPage({
   const hours = info.hours || 2;
   const seasonFee = v9Money(info.seasonFee);
   const tempFee = v9Money(info.tempFee);
+  // /v9test until accepted: no summary tiles, no 加場規則, no 冷氣費 line;
+  // the sections after 01 move up one number.
+  const trimmed = isV9TestRoute();
+  const no = (n: number) => String(trimmed && n > 2 ? n - 1 : n).padStart(2, "0");
   const myName =
     identity?.confirmedName ||
     myIntent?.memberName ||
@@ -562,34 +566,36 @@ function V9SeasonPage({
 
       {phase !== "preparing" && (
         <>
-          <section className="v9-sc-tiles" aria-label="本季概要">
-            <div>
-              <span>聚會場地</span>
-              <strong>
-                {courtCount} 場 {hours} 小時
-              </strong>
-              <small>基本上限 15 人</small>
-            </div>
-            <div>
-              <span>季打費用</span>
-              <strong>{seasonFee || "待公布"}</strong>
-              {seasonFee && perEventFee ? (
-                <small>
-                  {info.eventCount ? `${info.eventCount} 次，` : ""}約 ${perEventFee}／次
-                </small>
-              ) : null}
-            </div>
-            <div>
-              <span>臨打費用</span>
-              <strong>{tempFee ? `${tempFee}／次` : "依聚會公告"}</strong>
-              <small>16 人起依規則加場</small>
-            </div>
-            <div>
-              <span>目前回覆</span>
-              <strong>{memberCount} 人</strong>
-              <small>截止前可修改</small>
-            </div>
-          </section>
+          {!trimmed && (
+            <section className="v9-sc-tiles" aria-label="本季概要">
+              <div>
+                <span>聚會場地</span>
+                <strong>
+                  {courtCount} 場 {hours} 小時
+                </strong>
+                <small>基本上限 15 人</small>
+              </div>
+              <div>
+                <span>季打費用</span>
+                <strong>{seasonFee || "待公布"}</strong>
+                {seasonFee && perEventFee ? (
+                  <small>
+                    {info.eventCount ? `${info.eventCount} 次，` : ""}約 ${perEventFee}／次
+                  </small>
+                ) : null}
+              </div>
+              <div>
+                <span>臨打費用</span>
+                <strong>{tempFee ? `${tempFee}／次` : "依聚會公告"}</strong>
+                <small>16 人起依規則加場</small>
+              </div>
+              <div>
+                <span>目前回覆</span>
+                <strong>{memberCount} 人</strong>
+                <small>截止前可修改</small>
+              </div>
+            </section>
+          )}
 
           {last && (
             <section className="v9-sc-details" aria-label="季打說明">
@@ -616,32 +622,34 @@ function V9SeasonPage({
                   {range.firstDay ? `${range.firstDay} 首次開打時` : "首次開打時"}
                   繳交，可使用 LINE Pay 付款。
                 </p>
-                <p className="v9-sc-hint">本季不預收冷氣費，視天氣及現場需求加開。</p>
+                {!trimmed && <p className="v9-sc-hint">本季不預收冷氣費，視天氣及現場需求加開。</p>}
               </details>
+              {!trimmed && (
+                <details>
+                  <summary>
+                    <b>02</b>加場規則
+                  </summary>
+                  <dl className="v9-sc-dl">
+                    <div>
+                      <dt>基本場地</dt>
+                      <dd>
+                        {courtCount} 場 {hours} 小時，上限 15 人
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>16～18 人</dt>
+                      <dd>加開 1 場 1 小時</dd>
+                    </div>
+                    <div>
+                      <dt>19～22 人</dt>
+                      <dd>加開 1 場 2 小時</dd>
+                    </div>
+                  </dl>
+                </details>
+              )}
               <details>
                 <summary>
-                  <b>02</b>加場規則
-                </summary>
-                <dl className="v9-sc-dl">
-                  <div>
-                    <dt>基本場地</dt>
-                    <dd>
-                      {courtCount} 場 {hours} 小時，上限 15 人
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>16～18 人</dt>
-                    <dd>加開 1 場 1 小時</dd>
-                  </div>
-                  <div>
-                    <dt>19～22 人</dt>
-                    <dd>加開 1 場 2 小時</dd>
-                  </div>
-                </dl>
-              </details>
-              <details>
-                <summary>
-                  <b>03</b>季打請假與退費
+                  <b>{no(3)}</b>季打請假與退費
                 </summary>
                 <p className="v9-sc-lead">季打請假沒有次數限制。</p>
                 <dl className="v9-sc-dl">
@@ -663,7 +671,7 @@ function V9SeasonPage({
               </details>
               <details>
                 <summary>
-                  <b>04</b>LINE 登入與回覆方式
+                  <b>{no(4)}</b>LINE 登入與回覆方式
                 </summary>
                 <p className="v9-sc-lead">
                   原季打球友請選「{renewLabel}」或「這季休息」；新球友請選「申請加入」。
@@ -679,7 +687,7 @@ function V9SeasonPage({
               </details>
               <details>
                 <summary>
-                  <b>05</b>代報、代退說明
+                  <b>{no(5)}</b>代報、代退說明
                 </summary>
                 <p className="v9-sc-lead">可以使用自己的 LINE 幫球友代報名。</p>
                 <p className="v9-sc-callout is-warn">
