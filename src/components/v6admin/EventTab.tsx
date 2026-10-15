@@ -25,7 +25,7 @@ type RosterView = "confirmed" | "waiting" | "leave";
 type Pending =
   | { kind: "pay" | "unpay"; payment: TempPayment }
   | { kind: "leave" | "return" | "cancelTemp"; person: RosterPerson }
-  | { kind: "close" | "reopen" | "push" | "usage" };
+  | { kind: "close" | "reopen" | "push" | "push-discord" | "usage" };
 
 export function EventTab({
   password,
@@ -255,6 +255,14 @@ function EventBody({
             onClick={() => open({ kind: "push" })}
           >
             推送名單到 LINE
+          </button>
+          <button
+            className="ctl-act"
+            type="button"
+            disabled={writing}
+            onClick={() => open({ kind: "push-discord" })}
+          >
+            推送名單到 Discord
           </button>
           <button className="ctl-btn-ghost" type="button" onClick={onReload} disabled={writing}>
             重新整理
@@ -515,6 +523,11 @@ function EventBody({
                 return run(() => adminWriteApi.reopenEvent(password, id), "聚會已重新開放", true);
               case "push":
                 return run(() => adminWriteApi.pushLineRoster(password, id), "名單已推送到 LINE");
+              case "push-discord":
+                return run(
+                  () => adminWriteApi.pushDiscordRoster(password, id),
+                  "名單已推送到 Discord",
+                );
               case "usage":
                 return extra.usage
                   ? run(() => adminWriteApi.saveUsage(password, id, extra.usage!), "支出已儲存")
@@ -658,6 +671,20 @@ function ActionSheet({
           </p>
           {event.eventKind === "test" ? (
             <div className="ctl-warn">這是測試聚會，推送一樣會發到正式 LINE 群組。</div>
+          ) : null}
+        </>
+      );
+      confirmText = "確定推送";
+      break;
+    case "push-discord":
+      title = "推送名單到 Discord";
+      message = (
+        <>
+          <p>
+            會<strong>立即</strong>把 {eventLabel} 的名單發到管理員 Discord 頻道。
+          </p>
+          {event.eventKind === "test" ? (
+            <div className="ctl-warn">這是測試聚會，推送一樣會發到正式 Discord 頻道。</div>
           ) : null}
         </>
       );

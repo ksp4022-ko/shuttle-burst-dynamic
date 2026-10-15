@@ -1001,6 +1001,9 @@ export const adminWriteApi = {
     adminPost(`/admin/events/${enc(eventId)}/reopen`, pw),
   pushLineRoster: (pw: string, eventId: string) =>
     adminPost(`/admin/events/${enc(eventId)}/line-roster-push`, pw),
+  // T-29 (Worker V6-046): the same roster to the admin Discord channel.
+  pushDiscordRoster: (pw: string, eventId: string) =>
+    adminPost(`/admin/events/${enc(eventId)}/discord-roster-push`, pw),
   fixedLeave: (pw: string, siteId: string, eventId: string, signupId: string) =>
     adminPost(`/events/${enc(eventId)}/fixed-signups/${enc(signupId)}/leave`, pw, {
       siteId,
