@@ -31,7 +31,8 @@ export type V9Cta =
 type RailItem = { icon: "time" | "shuttle" | "fee" | "court"; label: string; value: string };
 
 // V9-052: the 場地 value after 加場 - plain text, or a roller that turns the
-// admin's digit into the 加場 one (red). Only the digits that change roll.
+// admin's digit into the 加場 one (red) and back. Only the digits that change
+// roll.
 type CourtPart = { text: string; from?: string; red?: boolean };
 
 function courtBoostParts(rule: V9CourtRule, courtCount: number, hours: number): CourtPart[] {
@@ -39,9 +40,9 @@ function courtBoostParts(rule: V9CourtRule, courtCount: number, hours: number): 
     to === from ? { text: String(to) } : { text: String(to), from: String(from), red: true };
   const parts: CourtPart[] = [
     digit(rule.main.courts, courtCount),
-    { text: "面" },
+    { text: "面 / " },
     digit(rule.main.hours, hours),
-    { text: "Hr" },
+    { text: "hr" },
   ];
   // The admin value has no extra part, so all of it turns in from blank.
   if (rule.extra) {
@@ -49,17 +50,18 @@ function courtBoostParts(rule: V9CourtRule, courtCount: number, hours: number): 
       { text: `＋${rule.extra.courts}`, from: "", red: true },
       { text: "面", from: "" },
       { text: String(rule.extra.hours), from: "", red: true },
-      { text: "Hr", from: "" },
+      { text: "hr", from: "" },
     );
   }
   return parts;
 }
 
-// 場地: "2面 / 2時" (hours only when the event has them).
-function courtLabel(event: AlphaEvent) {
+// 場地: "2面 / 2時" (hours only when the event has them). V9-052: "hr" on
+// /v9test 康軒.
+function courtLabel(event: AlphaEvent, unit = "時") {
   if (typeof event.courtCount !== "number") return "—";
   return typeof event.hours === "number"
-    ? `${event.courtCount}面 / ${event.hours}時`
+    ? `${event.courtCount}面 / ${event.hours}${unit}`
     : `${event.courtCount}面`;
 }
 
@@ -146,7 +148,11 @@ export function V9Hero({
       label: "費用",
       value: typeof event.tempFee === "number" ? `$${event.tempFee}` : "—",
     },
-    { icon: "court", label: "場地", value: courtLabel(event) },
+    {
+      icon: "court",
+      label: "場地",
+      value: courtLabel(event, courtHint && courtRules?.length ? "hr" : "時"),
+    },
   ];
   // V9-052: 康軒 (/v9test) - when the 正取 count is in a 加場 band and the
   // band has more court-hours than the admin set, show the band's value.
@@ -310,6 +316,7 @@ export function V9Hero({
                             <span className="v9-slot-track">
                               <span>{part.from || "\u00a0"}</span>
                               <span>{part.text}</span>
+                              <span>{part.from || "\u00a0"}</span>
                             </span>
                           </span>
                         ),

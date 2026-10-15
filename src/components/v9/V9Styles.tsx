@@ -219,9 +219,9 @@ const V9_CSS = `
 }
 .v9-rail-item:nth-child(odd) { border-right: 2px dashed #eadfca; }
 .v9-rail-item:nth-child(n+3) { border-bottom: 0; }
-/* V9-052: 費用｜場地 slide to 40/60 while 場地 shows "＋1面1Hr". */
-.v9-rail.is-court-wide > .v9-rail-item:nth-child(3) { flex-basis: 40%; }
-.v9-rail.is-court-wide > .v9-rail-item:nth-child(4) { flex-basis: 60%; }
+/* V9-052: 費用｜場地 slide to 35/65 while 場地 shows "＋1面1hr". */
+.v9-rail.is-court-wide > .v9-rail-item:nth-child(3) { flex-basis: 35%; }
+.v9-rail.is-court-wide > .v9-rail-item:nth-child(4) { flex-basis: 65%; }
 .v9-rail-note {
   flex: 0 0 100%; display: flex; align-items: baseline; gap: 10px; padding: 5px 12px;
   border-top: 2px dashed #eadfca; background: #fffaf0;
@@ -264,24 +264,28 @@ const V9_CSS = `
   25% { opacity: .9; }
   45%, 100% { opacity: 0; }
 }
-/* V9-052: combination-lock roller - the admin digit turns up and out, the
-   加場 digit (red) turns in from below (0.4s, 0.08s apart), every 4s.
+/* V9-052: combination-lock roller, 4s a round - admin value ~1s, it turns
+   up and out as the 加場 value (red) turns in from below (0.8s, fast then
+   slow, 0.08s apart), holds ~1.4s, then turns on to the admin value again.
+   The track is [admin, 加場, admin] so the loop restart is invisible.
    Resting transform is the 加場 value, so reduced motion shows it still. */
-.v9-slot { display: inline-block; height: 1.25em; overflow: hidden; vertical-align: bottom; }
-.v9-slot-track { display: block; transform: translateY(-50%); animation: v9-slot-roll 4s linear infinite both; animation-delay: calc(var(--v9-slot-i, 0) * .08s); }
+.v9-slot { display: inline-block; height: 1.25em; vertical-align: bottom; clip-path: inset(0 -.3em); }
+.v9-slot-track { display: block; transform: translateY(-33.3333%); animation: v9-slot-roll 4s linear infinite both; animation-delay: calc(var(--v9-slot-i, 0) * .08s); }
 .v9-slot-track > span { display: block; height: 1.25em; }
-.v9-slot.is-red .v9-slot-track > span:last-child { color: var(--v9-red); }
+/* red 加場 glyphs ~1.15x, drawn bigger without taking more room */
+.v9-slot.is-red .v9-slot-track > span:nth-child(2) { color: var(--v9-red); transform: scale(1.15); transform-origin: 50% 88%; }
 /* the value now runs to the cell's right edge; the + start above it */
 .v9-court-boost ~ .v9-court-plus { bottom: 22px; }
 .v9-rail-item .v9-court-boost { text-overflow: clip; }
 .v9-court-boost.is-paused .v9-slot-track { animation-play-state: paused; }
 @keyframes v9-slot-roll {
-  0%, 10% { transform: translateY(0); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
-  20%, 100% { transform: translateY(-50%); }
+  0%, 25% { transform: translateY(0); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
+  45%, 80% { transform: translateY(-33.3333%); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
+  100% { transform: translateY(-66.6667%); }
 }
 @media (prefers-reduced-motion: reduce) {
   .v9-court-plus svg { animation: none !important; opacity: .85; }
-  .v9-slot-track { animation: none !important; transform: translateY(-50%); }
+  .v9-slot-track { animation: none !important; transform: translateY(-33.3333%); }
   .v9-rail-item { transition: none; }
 }
 .v9-court-rules ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
