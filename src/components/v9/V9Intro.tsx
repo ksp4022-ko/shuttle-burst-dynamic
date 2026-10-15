@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { isV9TestRoute } from "@/lib/v9-route";
 import { V9Busy } from "./V9Busy";
 
 // V9-040 / V9-041: the opening screen and the shot into the deck.
@@ -232,6 +233,13 @@ export function V9Intro({
   onDone: () => void;
 }) {
   const coverRef = useRef<HTMLDivElement>(null);
+  // V9-048 (/v9test until accepted): the deck now shrinks to its designed
+  // height, so the card drops V9-045's 550px floor -- before the first paint,
+  // not when .v9-app.is-fit lands a frame later.
+  useLayoutEffect(() => {
+    const card = coverRef.current?.querySelector<HTMLElement>(".v9-intro-card");
+    if (card && isV9TestRoute()) card.style.minHeight = "0";
+  }, []);
   const flyerRef = useRef<HTMLSpanElement>(null);
   const impactRef = useRef<HTMLSpanElement>(null);
   const morphRef = useRef<HTMLSpanElement>(null);

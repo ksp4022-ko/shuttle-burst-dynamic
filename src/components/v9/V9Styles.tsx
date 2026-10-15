@@ -61,6 +61,26 @@ const V9_CSS = `
   min-height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 66px), 700px);
 }
 .v9-main.has-dock > .v9-hero > .v9-roster-strip { flex: 1 0 auto; max-height: 150px; }
+/* V9-048 (/v9test, .v9-app.is-fit): the page ends right under the deck -- the Dock
+   is fixed, so the old Dock + 58px reserve only made the page scroll. The
+   hero then shrinks in steps (data-fit, set by V9Hero) until it fits its
+   min-height, so the intro card drops V9-045's 550px floor and uses that. */
+.v9-app.is-fit .v9-main.has-dock { padding-bottom: var(--v9-dock-h); }
+.v9-app.is-fit .v9-intro-card { min-height: 0; }
+.v9-hero[data-fit] { padding: 10px 12px 12px; }
+.v9-hero[data-fit] .v9-hero-stage { margin: 4px 0 6px; }
+.v9-hero[data-fit] .v9-rail-item { padding-top: 4px; padding-bottom: 4px; }
+.v9-hero[data-fit] .v9-rail-note { padding-top: 3px; padding-bottom: 3px; }
+.v9-main.has-dock > .v9-hero[data-fit] > .v9-roster-strip { min-height: 58px; margin-top: 6px; }
+.v9-hero[data-fit] .v9-rs-main { gap: 4px; padding-top: 5px; padding-bottom: 5px; }
+.v9-hero[data-fit] .v9-hero-status { margin-top: 6px; padding-top: 6px; padding-bottom: 6px; }
+.v9-hero[data-fit] > .v9-cta { margin-top: 6px; min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
+.v9-hero[data-fit="2"] .v9-lockup { height: 40px; }
+.v9-hero[data-fit="2"] .v9-hero-meetup { padding-bottom: 4px; }
+.v9-hero[data-fit="2"] .v9-cal-date { font-size: 30px; }
+.v9-hero[data-fit="2"] .v9-hero-mascot .v9-mascot-frame { transform: scale(.82); transform-origin: 100% 100%; }
+.v9-hero[data-fit="2"] .v9-rail-icon, .v9-hero[data-fit="2"] .v9-rail-icon img { width: 28px; height: 28px; }
+.v9-hero[data-fit="2"] .v9-rail-item { grid-template-columns: 28px minmax(0, 1fr); }
 .v9-muted { margin: 0; color: var(--v9-muted); font-size: 14px; line-height: 1.5; }
 .v9-icon { flex: none; display: block; }
 

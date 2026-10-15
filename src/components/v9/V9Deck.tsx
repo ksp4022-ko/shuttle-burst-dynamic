@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { motion, useAnimate, useReducedMotion } from "motion/react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
@@ -62,6 +62,7 @@ export function V9Hero({
   onLogoParty,
   hintPaused,
   ctaShuttle,
+  fit = false,
 }: {
   siteName: string;
   event: AlphaEvent;
@@ -91,6 +92,8 @@ export function V9Hero({
   // V9-041: the intro's shuttle lands on the CTA and stays there,
   // cork to the lower right. "hidden" until it lands.
   ctaShuttle?: "hidden" | "shown" | undefined;
+  // V9-048 (/v9test until accepted): shrink to fit above the Dock.
+  fit?: boolean;
 }) {
   const display = parseV8MeetupDisplay(event.name);
   const meetupName = display.displayName || event.name;
@@ -114,8 +117,42 @@ export function V9Hero({
   const statusHint =
     identity?.signupType === "fixed" && identity.status === "waiting" ? "請假會退出備取" : "";
 
+  // V9-048: on a short screen (iPhone Chrome's toolbars) the deck's content
+  // is taller than its designed height (min-height: room above the Dock) and
+  // the page scrolls. Try the normal size, then data-fit 1 (tighter rows),
+  // then 2 (smaller calendar / mascot / logo); keep the first whose content
+  // fits that height -- the intro card uses the same height, so the hand-over
+  // does not resize. Measured straight from the DOM, no re-render.
+  const heroRef = useRef<HTMLElement>(null);
+  const statusKey = identity ? `${identity.signupType}:${identity.status}` : "";
+  useLayoutEffect(() => {
+    const hero = heroRef.current;
+    if (!hero) return;
+    if (!fit) {
+      delete hero.dataset["fit"];
+      return;
+    }
+    const refit = () => {
+      const room = parseFloat(getComputedStyle(hero).minHeight) + 0.5;
+      if (!room) return;
+      for (const level of ["", "1", "2"]) {
+        if (level) hero.dataset["fit"] = level;
+        else delete hero.dataset["fit"];
+        if (hero.offsetHeight <= room) break;
+      }
+    };
+    refit();
+    const viewport = window.visualViewport;
+    window.addEventListener("resize", refit);
+    viewport?.addEventListener("resize", refit);
+    return () => {
+      window.removeEventListener("resize", refit);
+      viewport?.removeEventListener("resize", refit);
+    };
+  }, [fit, event.id, note, statusKey, statusHint, cta.kind, switching]);
+
   return (
-    <section className="v9-hero" aria-label="聚會控制台">
+    <section ref={heroRef} className="v9-hero" aria-label="聚會控制台">
       {/* V9-017: swims along a gap between the cards. */}
       <V9DragonCameo paused={hintPaused || busy} />
       <V9PreviewBadge />
