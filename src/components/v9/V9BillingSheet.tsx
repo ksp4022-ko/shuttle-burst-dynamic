@@ -116,7 +116,7 @@ function RefundRow({ source }: { source: V8BillingRefundSource }) {
 
 // An earlier season still unpaid (V9-020): its fee, the leave credit it got
 // (with the leave dates) and what is owed, all as the backend gives them.
-// V9-043 phase 4 (/v9test until accepted): 季費 names its 時段 too, so
+// V9-043 phase 4: 季費 names its 時段 too, so
 // two 時段 on one 場地 (日安 週一 / 週四) read apart.
 function seasonFeeLabel(
   season: V8BillingSeasonPayment | null,
@@ -234,7 +234,7 @@ export function V9BillingContent({
   // V9-027: the selected meetup's season = 本季 for the first row.
   seasonId?: string | undefined;
   asIdentityId?: string | undefined;
-  // V9-043 phase 4 (/v9test until accepted): every 場地 in one bill, this
+  // V9-043 phase 4: every 場地 in one bill, this
   // one first; omitted = this 場地 only, as before.
   sites?: { id: string; name: string }[] | undefined;
 }) {

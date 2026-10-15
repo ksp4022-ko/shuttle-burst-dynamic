@@ -92,7 +92,7 @@ export function V9Hero({
   // V9-041: the intro's shuttle lands on the CTA and stays there,
   // cork to the lower right. "hidden" until it lands.
   ctaShuttle?: "hidden" | "shown" | undefined;
-  // V9-048 (/v9test until accepted): shrink to fit above the Dock.
+  // V9-048: shrink to fit above the Dock.
   fit?: boolean;
 }) {
   const display = parseV8MeetupDisplay(event.name);

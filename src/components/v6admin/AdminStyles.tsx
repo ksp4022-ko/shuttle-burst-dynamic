@@ -317,6 +317,17 @@ html.ctl-lock-x body {
 .ctl-pick-row.is-on { background: var(--blue-soft, rgba(10,132,255,.12)); box-shadow: inset 3px 0 0 var(--blue); }
 .ctl-pick-chosen { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 4px; }
 .ctl-dc-row small.is-red { color: var(--red); }
+/* T-18: a Discord member's details as label / value rows. */
+.ctl-dc-info {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; row-gap: 4px;
+  margin: 6px 0 0; font-size: 13px; font-weight: 500; line-height: 1.4; white-space: normal;
+}
+.ctl-dc-info dt { color: var(--muted); font-weight: 700; }
+.ctl-dc-info dd { margin: 0; min-width: 0; color: var(--ink); overflow-wrap: anywhere; }
+.ctl-dc-info dd > span { display: block; }
+.ctl-row-name.is-wrap .ctl-dc-info dd > small { display: inline; margin: 0 0 0 6px; font-size: 12px; color: var(--muted); }
+.ctl-dc-info .is-muted { color: var(--muted); }
+.ctl-dc-info dd.is-red { color: var(--red); }
 .ctl-dc-acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
 .ctl-dc-acts .ctl-act { padding: 5px 10px; }
 

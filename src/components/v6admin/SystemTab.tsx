@@ -86,16 +86,55 @@ type Pending =
   | { kind: "dc-test"; member: DiscordMember }
   | { kind: "dc-unlink"; member: DiscordMember };
 
-// T-18: where this person plays -- each claim as "場地 時段 季打（成員名）",
-// then "場地 臨打（近 60 天有報名）" for sites with an own 臨打 signup.
-function dcPlacesText(m: DiscordMember) {
+// T-18: one Discord member as label / value rows -- each 季打 claim on its
+// own line (場地 時段（成員名）), 臨打 sites (own signup in the last 60
+// days), the Discord account, the switches split into 開 / 關, last DM.
+function DcMemberInfo({ m }: { m: DiscordMember }) {
   const site = (id: string) => (id === "rian" ? "日安" : id === "kangxuan" ? "康軒" : id);
   const fixed = (m.claims ?? []).map(
-    (c) =>
-      `${site(c.siteId)}${c.groupName ? ` ${c.groupName}` : ""} 季打（${c.memberName || "—"}）`,
+    (c) => `${site(c.siteId)}${c.groupName ? ` ${c.groupName}` : ""}（${c.memberName || "—"}）`,
   );
-  const temp = (m.tempSites ?? []).map((id) => `${site(id)} 臨打（近 60 天有報名）`);
-  return [...fixed, ...temp].join("・");
+  const temp = (m.tempSites ?? []).map(site);
+  const kinds = DC_KINDS.filter(({ key }) => typeof m[key] === "boolean");
+  const on = kinds.filter(({ key }) => m[key]).map(({ short }) => short);
+  const off = kinds.filter(({ key }) => !m[key]).map(({ short }) => short);
+  const d = m.lastDm;
+  return (
+    <dl className="ctl-dc-info">
+      {fixed.length > 0 && (
+        <>
+          <dt>季打</dt>
+          <dd>
+            {fixed.map((line) => (
+              <span key={line}>{line}</span>
+            ))}
+          </dd>
+        </>
+      )}
+      {temp.length > 0 && (
+        <>
+          <dt>臨打</dt>
+          <dd>{temp.join("、")}（近 60 天有報名）</dd>
+        </>
+      )}
+      <dt>Discord</dt>
+      <dd>
+        {m.discordUsername || "—"}
+        <small>{twTime(m.linkedAt)} 連結</small>
+      </dd>
+      <dt>通知</dt>
+      <dd>
+        {on.length > 0 && <span>開：{on.join("、")}</span>}
+        {off.length > 0 && <span className="is-muted">關：{off.join("、")}</span>}
+      </dd>
+      <dt>私訊</dt>
+      <dd className={d && !d.ok ? "is-red" : undefined}>
+        {d
+          ? `${twTime(d.at)} ${DM_KIND[d.kind] || d.kind}・${d.ok ? "成功" : `失敗（${dmErrorText(d.error)}）`}`
+          : "尚無"}
+      </dd>
+    </dl>
+  );
 }
 
 export function SystemTab({
@@ -600,14 +639,7 @@ export function SystemTab({
                   <li className="ctl-row ctl-dc-row" key={m.lineIdentityId}>
                     <span className="ctl-row-name is-wrap">
                       {m.displayName || m.lineDisplayName || "（未填稱呼）"}
-                      {dcPlacesText(m) && <small>{dcPlacesText(m)}</small>}
-                      <small>
-                        Discord：{m.discordUsername || "—"} · 連結 {twTime(m.linkedAt)}
-                      </small>
-                      <small>本人設定：{memberSwitchText(m)}</small>
-                      <small className={m.lastDm && !m.lastDm.ok ? "is-red" : undefined}>
-                        {dmText(m)}
-                      </small>
+                      <DcMemberInfo m={m} />
                     </span>
                     <span className="ctl-dc-acts">
                       <button
@@ -1610,12 +1642,6 @@ const DC_KINDS: { key: DiscordNotifyKey; label: string; short: string }[] = [
   { key: "notifyProxy", label: "代報／代退", short: "代報" },
 ];
 
-function memberSwitchText(m: DiscordMember) {
-  return DC_KINDS.filter(({ key }) => typeof m[key] === "boolean")
-    .map(({ key, short }) => `${short}${m[key] ? "開" : "關"}`)
-    .join("、");
-}
-
 // Discord timestamps are stored as UTC ISO; show Taiwan time.
 function twTime(iso: string) {
   const t = new Date(iso);
@@ -1635,13 +1661,6 @@ function dmErrorText(error: string) {
   if (/\b10013\b/.test(error)) return "找不到這個 Discord 帳號";
   if (/^401\b/.test(error)) return "機器人金鑰錯誤";
   return error || "原因不明";
-}
-
-function dmText(m: DiscordMember) {
-  const d = m.lastDm;
-  if (!d) return "最近私訊：尚無";
-  const kind = DM_KIND[d.kind] || d.kind;
-  return `最近私訊：${twTime(d.at)} ${kind} ${d.ok ? "成功" : `失敗（${dmErrorText(d.error)}）`}`;
 }
 
 function DiscordMemberSettingsForm({

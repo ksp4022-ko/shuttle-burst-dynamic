@@ -61,12 +61,12 @@ const V9_CSS = `
   min-height: min(calc(100dvh - var(--v9-dock-h) - max(12px, env(safe-area-inset-bottom)) - 66px), 700px);
 }
 .v9-main.has-dock > .v9-hero > .v9-roster-strip { flex: 1 0 auto; max-height: 150px; }
-/* V9-048 (/v9test, .v9-app.is-fit): the page ends right under the deck -- the Dock
+/* V9-048 (.v9-app.is-fit): the page ends right under the deck -- the Dock
    is fixed, so the old Dock + 58px reserve only made the page scroll. The
    hero then shrinks in steps (data-fit, set by V9Hero) until it fits its
-   min-height, so the intro card drops V9-045's 550px floor and uses that. */
+   min-height, so the intro card (same height, V9-045's 550px floor gone)
+   hands over without resizing. */
 .v9-app.is-fit .v9-main.has-dock { padding-bottom: var(--v9-dock-h); }
-.v9-app.is-fit .v9-intro-card { min-height: 0; }
 .v9-hero[data-fit] { padding: 10px 12px 12px; }
 .v9-hero[data-fit] .v9-hero-stage { margin: 4px 0 6px; }
 .v9-hero[data-fit] .v9-rail-item { padding-top: 4px; padding-bottom: 4px; }
@@ -311,10 +311,6 @@ const V9_CSS = `
   padding: 30px 18px 34px; transition: height .25s cubic-bezier(0.23, 1, 0.32, 1);
   background: var(--v9-cream); border: var(--v9-line); border-radius: 30px; box-shadow: 0 6px 0 var(--v9-ink);
 }
-/* V9-045: on a short screen (iPhone Chrome's toolbars) the deck card's
-   content needs about 550px, more than the estimate above, so the loading
-   card grew once when the deck rendered. Start at that floor instead. */
-.v9-intro-card { min-height: 550px; }
 .v9-intro-title { display: block; width: min(80%, 300px); height: auto; }
 .v9-intro.is-shooting .v9-busy-x { visibility: hidden; }
 /* V9-041: on the launch the card's own frame hands over to .v9-intro-morph
@@ -645,7 +641,7 @@ const V9_CSS = `
 .v9-skel.is-dark { height: 18px; background-color: rgba(31,26,23,.16); }
 .v9-bill-total.is-skel { background: #f7c98f; }
 .v9-bill-total strong { font-size: 24px; font-variant-numeric: tabular-nums; }
-/* V9-043 phase 4 (/v9test): 全部場地合計 on top (the orange total), each
+/* V9-043 phase 4: 全部場地合計 on top (the orange total), each
    場地's 小計 in a quieter cream so only one total shouts. */
 .v9-bill-total.is-grand { margin: 10px 0 4px; }
 .v9-bill-site { padding-top: 14px; }

@@ -613,11 +613,11 @@ export function V9App() {
     sheet === "meetup" || sheet === "roster" || sheet === "proxy" || sheet === "me" ? sheet : null;
 
   const intro = introStage !== "done";
-  // V9-048 (/v9test until accepted): once the deck is in, and on every
+  // V9-048: once the deck is in, and on every
   // meetup switch, back to the top (logo + date in view); if the CTA would
   // still sit under the Dock, scroll just enough to show it above the Dock.
   useEffect(() => {
-    if (!v9Test || intro) return;
+    if (intro) return;
     const id = window.requestAnimationFrame(() => {
       const cta = document.querySelector<HTMLElement>(".v9-main > .v9-hero > .v9-cta");
       const dock = document.querySelector<HTMLElement>(".v9-dock");
@@ -629,13 +629,13 @@ export function V9App() {
       if (Math.abs(window.scrollY - top) > 1) window.scrollTo({ top, behavior: "smooth" });
     });
     return () => window.cancelAnimationFrame(id);
-  }, [v9Test, intro, shownEventId]);
+  }, [intro, shownEventId]);
   const dataSettled =
     phase === "load-error" || Boolean(selectedEvent && roster) || (!loading && events.length === 0);
 
   return (
     <div
-      className={`v9-app${intro && introStage === "cover" ? " is-intro" : ""}${introEntering || (intro && introStage === "entering") ? " is-entering" : ""}${v9Test ? " is-fit" : ""}`}
+      className={`v9-app${intro && introStage === "cover" ? " is-intro" : ""}${introEntering || (intro && introStage === "entering") ? " is-entering" : ""} is-fit`}
     >
       <V9Styles />
 
@@ -733,7 +733,7 @@ export function V9App() {
               onLogoParty={logoParty}
               hintPaused={sheet !== null}
               ctaShuttle={introStage === "done" ? "shown" : "hidden"}
-              fit={v9Test}
+              fit
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
@@ -769,11 +769,7 @@ export function V9App() {
                 eventId={selectedEventId}
                 seasonId={flow.selectedEvent?.seasonId}
                 asIdentityId={viewing && viewAs ? viewAs.id : undefined}
-                sites={
-                  v9Test
-                    ? Object.entries(SITE_NAMES).map(([id, name]) => ({ id, name }))
-                    : undefined
-                }
+                sites={Object.entries(SITE_NAMES).map(([id, name]) => ({ id, name }))}
               />
             ) : (
               <div className="v9-sheet-empty">
