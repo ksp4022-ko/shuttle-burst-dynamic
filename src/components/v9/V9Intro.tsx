@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { V9Busy } from "./V9Busy";
+import { isV9TestRoute } from "@/lib/v9-route";
 
 // V9-040 / V9-041: the opening screen and the shot into the deck.
 //
@@ -275,6 +276,14 @@ export function V9Intro({
     },
     [finish],
   );
+
+  // /v9test: start the loading card at the deck's minimum height (see
+  // .has-floor). Set after mount, before paint, so it never differs from the
+  // server-rendered markup.
+  useLayoutEffect(() => {
+    if (!isV9TestRoute()) return;
+    coverRef.current?.querySelector(".v9-intro-card")?.classList.add("has-floor");
+  }, []);
 
   // Once the deck has rendered (under the cover), give the loading card the
   // deck card's exact height (content can make it taller than the CSS
