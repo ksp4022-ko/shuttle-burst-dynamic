@@ -202,7 +202,11 @@ export function V9App() {
     eventId: selectedEventId,
     seasonId: flow.selectedEvent?.seasonId,
     groupId: flow.selectedEvent?.groupId,
-    isFixed: Boolean(lineIdentity?.identityType === "fixed" && lineIdentity.claimedMemberId),
+    // V9-043 phase 3 (/v9test until accepted): 季打 on THIS meetup, by its
+    // 時段 roster -- not the account-wide identity type.
+    isFixed: v9Test
+      ? identity?.signupType === "fixed"
+      : Boolean(lineIdentity?.identityType === "fixed" && lineIdentity.claimedMemberId),
   });
 
   const [sheet, setSheet] = useState<SheetKind | null>(null);
@@ -323,12 +327,14 @@ export function V9App() {
       if (identity.signupType === "temp" && identity.status === "unregistered") {
         const submittedName =
           lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName;
-        // Backend selfSignup requires identityType "temp"; a fixed identity
-        // landing here is the ad-hoc-event fallback (see use-current-identity).
+        // V9-043 phase 3 (/v9test until accepted, needs Worker V6-043): not
+        // 季打 on this meetup = 臨打, and every account signs itself up, so the
+        // signup is its own (✓ 已報名, cancel). /v9 keeps the old rule: the
+        // backend's selfSignup used to require identityType "temp".
         const result = await flow.submitSignup(
           submittedName,
           lineToken,
-          lineIdentity.identityType === "temp" ? { selfSignup: true } : {},
+          v9Test || lineIdentity.identityType === "temp" ? { selfSignup: true } : {},
         );
         if (result.ok) {
           // Celebrate a 正取 seat only; landing on 備取 just gets the toast.
