@@ -48,7 +48,7 @@ function courtBoostParts(rule: V9CourtRule, courtCount: number, hours: number): 
   if (rule.extra) {
     parts.push(
       { text: `＋${rule.extra.courts}`, from: "", red: true },
-      { text: "面", from: "" },
+      { text: "面/", from: "" },
       { text: String(rule.extra.hours), from: "", red: true },
       { text: "hr", from: "" },
     );
