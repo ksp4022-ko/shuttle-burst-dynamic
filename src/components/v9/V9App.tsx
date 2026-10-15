@@ -735,7 +735,7 @@ export function V9App() {
               hintPaused={sheet !== null}
               ctaShuttle={introStage === "done" ? "shown" : "hidden"}
               fit
-              courtRules={v9Test ? V9_COURT_RULES[siteId] : undefined}
+              courtRules={V9_COURT_RULES[siteId]}
               onCourtRules={() => setSheet("courtRules")}
             />
           </main>
