@@ -13,6 +13,8 @@ import {
   type RefundAdjustmentScope,
   type RefundCreditAudit,
   type SeasonConfirmData,
+  type SeasonConfirmSetting,
+  type SeasonIntentReply,
   type SeasonIntentsData,
   type SeasonManagementData,
   type SeasonPaymentAudit,
@@ -22,12 +24,16 @@ import {
 import { runWrite, useToast, type WriteLock } from "@/lib/v6admin-write";
 import { Metric, Section, Sheet, Toast } from "./AdminParts";
 import {
+  ConfirmSettingSheet,
   ConfirmSheet,
   GroupSheet,
   MembersSheet,
+  ProxySheet,
   RefundGenSheet,
+  ReviewSheet,
   SettingSheet,
   SeasonDateSheet,
+  type SuggestedMember,
 } from "./SeasonWrites";
 
 // ③ 賽季管理: season + group picker, then 期初設定, 群組成員, 季繳紀錄,
@@ -123,10 +129,30 @@ type Pending =
   | { kind: "season-edit" }
   | { kind: "group-create" }
   | { kind: "group-edit" }
-  | { kind: "members" }
+  | { kind: "members"; suggested?: SuggestedMember[] }
+  // T-25 季打確認
+  | { kind: "confirm-setting"; setting: SeasonConfirmSetting | null }
+  | { kind: "confirm-toggle"; setting: SeasonConfirmSetting; enabled: boolean }
+  | { kind: "confirm-finalize"; setting: SeasonConfirmSetting }
+  | { kind: "confirm-proxy"; setting: SeasonConfirmSetting; memberId: string; memberName: string }
+  | { kind: "confirm-review"; setting: SeasonConfirmSetting; reply: SeasonIntentReply }
   | { kind: "refund-gen" }
   | { kind: "pay-gen" }
   | { kind: "pl-save" };
+
+// T-23: the sections follow the season-opening steps. Before the season is
+// billed every step starts folded (T-13); once 收費單 exist, ①～④ fold and
+// ⑤ opens. Open/closed is remembered per stage.
+type StepFold = { title: string; foldKey: string; defaultOpen: boolean };
+const STEP_MARKS = ["", "①", "②", "③", "④", "⑤", "⑥"];
+function stepFold(step: number, name: string, billed: boolean): StepFold {
+  const title = `${STEP_MARKS[step]} ${name}`;
+  return {
+    title,
+    foldKey: `${title}:${billed ? "billed" : "setup"}`,
+    defaultOpen: billed && step === 5,
+  };
+}
 
 // P8: 「扣除請假退費」 for the settlement. The browser remembers each site's
 // last choice only as a convenience; the built-in default is 康軒 是, 日安 否
@@ -361,6 +387,59 @@ export function SeasonTab({
     });
   }
   const seasonLabel = seasons.find((s) => s.id === seasonId)?.name || seasonId;
+  // T-23: billed once 收費單 exist for this season + group.
+  const billed = Boolean(data?.payments?.payments?.length);
+  const stage = billed ? "billed" : "setup";
+
+  // T-25: 季打確認 writes re-read the confirm list and this season.
+  function confirmWrite<R>(work: () => Promise<R>, okText: string) {
+    void runWrite<R>({
+      writeLock,
+      work,
+      okText,
+      reread: () => {
+        setConfirmReload((k) => k + 1);
+        return [loadSeason()];
+      },
+      onDataChanged,
+      onRejected: setSheetError,
+      onClose: close,
+      toast: showToast,
+    });
+  }
+  // 依回覆產生名單建議 -> the ② editor, prefilled. 未回覆 keeps the status
+  // it has in ② (T-25), unlike the Worker's suggestion (停用).
+  const REASON_TAG: Record<string, string> = {
+    renew: "續打",
+    decline: "休息",
+    "no-reply": "未回覆",
+    "apply-approved": "新加入",
+    manual: "",
+  };
+  async function openSuggestion(setting: SeasonConfirmSetting) {
+    if (writing) return;
+    try {
+      const draft = await adminWriteApi.seasonRosterDraft(password, siteId, setting.id);
+      const suggested: SuggestedMember[] = draft.rows.map((r) => ({
+        id: r.memberId,
+        name: r.name,
+        orderNo: r.orderNo,
+        status:
+          r.reason === "no-reply"
+            ? r.currentStatus === "disabled"
+              ? "disabled"
+              : r.currentStatus
+                ? "active"
+                : r.suggestedStatus
+            : r.suggestedStatus,
+        tag: REASON_TAG[r.reason] || "",
+      }));
+      setSheetError("");
+      setPending({ kind: "members", suggested });
+    } catch (err) {
+      showToast(errText(err), "error");
+    }
+  }
   const groupInfo = (dashboard.groups || []).find((g) => g.id === groupId);
 
   const confirmSettings = (confirm?.settings || []).filter(
@@ -440,23 +519,12 @@ export function SeasonTab({
         <>
           <PartStatus
             data={data}
-            parts={["payments"]}
-            onRetry={(p) => void loadSeason(p).catch(() => {})}
-          />
-          <PaymentsSection
-            audit={data.payments}
-            writing={writing}
-            onPay={(payment, next) => open({ kind: "pay", payment, next })}
-            onAdjust={(payment) => open({ kind: "adjust", payment })}
-            onGenerate={() => open({ kind: "pay-gen" })}
-            onRefundGen={() => open({ kind: "refund-gen" })}
-          />
-          <PartStatus
-            data={data}
             parts={["management"]}
             onRetry={(p) => void loadSeason(p).catch(() => {})}
           />
           <SettingSection
+            key={`1${stage}`}
+            fold={stepFold(1, "期初設定", billed)}
             management={data.management}
             writing={writing}
             onEdit={() => open({ kind: "setting" })}
@@ -467,25 +535,16 @@ export function SeasonTab({
             onRetry={(p) => void loadSeason(p).catch(() => {})}
           />
           <MembersSection
+            key={`2${stage}`}
+            fold={stepFold(2, "季打名單", billed)}
             group={data.group}
             writing={writing}
             onEdit={() => open({ kind: "members" })}
             onGroup={() => open({ kind: "group-edit" })}
           />
-          <PartStatus
-            data={data}
-            parts={["credits"]}
-            onRetry={(p) => void loadSeason(p).catch(() => {})}
-          />
-          <CreditsSection audit={data.credits} />
-          <SettlementSection
-            management={data.management}
-            deduct={deduct}
-            onDeduct={changeDeduct}
-            writing={writing}
-            onSave={() => open({ kind: "pl-save" })}
-          />
           <ConfirmSection
+            key={`3${stage}`}
+            fold={stepFold(3, "季打確認", billed)}
             password={password}
             siteId={siteId}
             loaded={Boolean(confirm)}
@@ -493,6 +552,51 @@ export function SeasonTab({
             onRetry={() => setConfirmReload((k) => k + 1)}
             settings={confirmSettings}
             seasons={confirm?.seasons || seasons}
+            reloadKey={confirmReload}
+            writing={writing}
+            onEdit={(setting) => open({ kind: "confirm-setting", setting })}
+            onToggle={(setting, enabled) => open({ kind: "confirm-toggle", setting, enabled })}
+            onFinalize={(setting) => open({ kind: "confirm-finalize", setting })}
+            onProxy={(setting, memberId, memberName) =>
+              open({ kind: "confirm-proxy", setting, memberId, memberName })
+            }
+            onReview={(setting, reply) => open({ kind: "confirm-review", setting, reply })}
+            onSuggest={(setting) => void openSuggestion(setting)}
+          />
+          <PartStatus
+            data={data}
+            parts={["credits"]}
+            onRetry={(p) => void loadSeason(p).catch(() => {})}
+          />
+          <CreditsSection
+            key={`4${stage}`}
+            fold={stepFold(4, "退費抵扣", billed)}
+            audit={data.credits}
+            writing={writing}
+            onGenerate={() => open({ kind: "refund-gen" })}
+          />
+          <PartStatus
+            data={data}
+            parts={["payments"]}
+            onRetry={(p) => void loadSeason(p).catch(() => {})}
+          />
+          <PaymentsSection
+            key={`5${stage}`}
+            fold={stepFold(5, "收費單／季繳紀錄", billed)}
+            audit={data.payments}
+            writing={writing}
+            onPay={(payment, next) => open({ kind: "pay", payment, next })}
+            onAdjust={(payment) => open({ kind: "adjust", payment })}
+            onGenerate={() => open({ kind: "pay-gen" })}
+          />
+          <SettlementSection
+            key={`6${stage}`}
+            fold={stepFold(6, "季末結算", billed)}
+            management={data.management}
+            deduct={deduct}
+            onDeduct={changeDeduct}
+            writing={writing}
+            onSave={() => open({ kind: "pl-save" })}
           />
         </>
       )}
@@ -658,16 +762,186 @@ export function SeasonTab({
       {pending?.kind === "members" && data?.group ? (
         <MembersSheet
           members={data.group.members}
+          suggested={pending.suggested}
           seasonName={seasonLabel}
           bootstrapDraft={data.group.bootstrapDraft}
           busy={writing}
           error={sheetError}
           onClose={close}
+          onPreview={async (members) =>
+            (await adminWriteApi.groupMembersImpact(password, siteId, groupId, seasonId, members))
+              .impact
+          }
           onSave={(members) =>
             submit(
               () => adminWriteApi.saveGroupMembers(password, siteId, groupId, seasonId, members),
               `已儲存 ${seasonLabel} 季打名單（${members.filter((m) => m.status === "active").length} 人有效）`,
               { dashboard: true },
+            )
+          }
+        />
+      ) : null}
+
+      {pending?.kind === "confirm-setting" ? (
+        <ConfirmSettingSheet
+          setting={pending.setting}
+          seasonId={seasonId}
+          groupId={groupId}
+          seasonName={seasonLabel}
+          groupName={groupInfo?.name || groupId}
+          seasons={seasons}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onSave={(input) =>
+            confirmWrite(
+              () => adminWriteApi.saveSeasonConfirm(password, siteId, input),
+              "季打確認設定已儲存",
+            )
+          }
+        />
+      ) : null}
+
+      {pending?.kind === "confirm-toggle" ? (
+        <ConfirmSheet
+          title={pending.enabled ? "開始季打確認" : "結束季打確認"}
+          confirmText={pending.enabled ? "開始確認" : "結束確認"}
+          danger={!pending.enabled}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onConfirm={() =>
+            confirmWrite(
+              () =>
+                adminWriteApi.saveSeasonConfirm(password, siteId, {
+                  id: pending.setting.id,
+                  targetSeasonId: pending.setting.targetSeasonId,
+                  sourceSeasonId: pending.setting.sourceSeasonId || "",
+                  groupId: pending.setting.groupId,
+                  enabled: pending.enabled,
+                  status: pending.enabled
+                    ? "open"
+                    : pending.setting.status === "finalized"
+                      ? "finalized"
+                      : "open",
+                  deadlineAt: pending.setting.deadlineAt || null,
+                  capacityLimit: pending.setting.capacityLimit ?? null,
+                  leaveRulesText: pending.setting.leaveRulesText ?? null,
+                  publicNote: pending.setting.publicNote ?? null,
+                }),
+              pending.enabled ? "季打確認已開始" : "季打確認已結束",
+            )
+          }
+        >
+          {pending.enabled ? (
+            <>
+              <p>
+                {seasonLabel}／{groupInfo?.name || groupId}：球員打開 V9
+                時會先看到季打確認畫面，回覆續打或休息。
+              </p>
+              <p className="ctl-sub">同一場地其他時段的確認不受影響，可以同時開。</p>
+            </>
+          ) : (
+            <p>球員端不再顯示這組季打確認，回到一般報名頁。已收到的回覆會保留。</p>
+          )}
+        </ConfirmSheet>
+      ) : null}
+
+      {pending?.kind === "confirm-finalize" ? (
+        <ConfirmSheet
+          title="定案"
+          confirmText="定案"
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onConfirm={() =>
+            confirmWrite(
+              () => adminWriteApi.finalizeSeasonConfirm(password, siteId, pending.setting.id),
+              "季打確認已定案",
+            )
+          }
+        >
+          <p>定案後不能再代登或審核，名單之後改用「② 編輯成員」調整。</p>
+          <p className="ctl-sub">要先儲存好本季名單、審核完所有申請加入。</p>
+        </ConfirmSheet>
+      ) : null}
+
+      {pending?.kind === "confirm-proxy" ? (
+        <ProxySheet
+          memberName={pending.memberName}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onSave={(intent) =>
+            confirmWrite(
+              () =>
+                adminWriteApi.proxySeasonIntent(
+                  password,
+                  siteId,
+                  pending.setting.id,
+                  pending.memberId,
+                  intent,
+                ),
+              `已代登 ${pending.memberName}：${intent === "renew" ? "續打" : "這季休息"}`,
+            )
+          }
+        />
+      ) : null}
+
+      {pending?.kind === "confirm-review" ? (
+        <ReviewSheet
+          reply={pending.reply}
+          groupMembers={data?.group?.members || []}
+          busy={writing}
+          error={sheetError}
+          onClose={close}
+          onApproveNew={(name) =>
+            confirmWrite(
+              () =>
+                adminWriteApi.reviewSeasonApply(
+                  password,
+                  siteId,
+                  pending.setting.id,
+                  pending.reply.id,
+                  {
+                    action: "approve",
+                    resolution: "new",
+                    memberName: name,
+                  },
+                ),
+              `已核准 ${name}`,
+            )
+          }
+          onApproveExisting={(memberId) =>
+            confirmWrite(
+              () =>
+                adminWriteApi.reviewSeasonApply(
+                  password,
+                  siteId,
+                  pending.setting.id,
+                  pending.reply.id,
+                  {
+                    action: "approve",
+                    resolution: "existing",
+                    memberId,
+                  },
+                ),
+              "已核准",
+            )
+          }
+          onReject={() =>
+            confirmWrite(
+              () =>
+                adminWriteApi.reviewSeasonApply(
+                  password,
+                  siteId,
+                  pending.setting.id,
+                  pending.reply.id,
+                  {
+                    action: "reject",
+                  },
+                ),
+              "已婉拒",
             )
           }
         />
@@ -710,7 +984,9 @@ export function SeasonTab({
             依 <strong>{seasonLabel}</strong> 的期初設定與退費抵扣，為「{groupInfo?.name || groupId}
             」的有效季打成員建立或更新季繳收費單。
           </p>
-          <p className="ctl-sub">已付款的收費單不會被覆蓋；有抵扣的請先「產生下季退費抵扣」。</p>
+          <p className="ctl-sub">
+            已付款的收費單不會被覆蓋；上一季有請假退費的，請先在 ④「從上一季產生退費抵扣」。
+          </p>
         </ConfirmSheet>
       ) : null}
 
@@ -1043,26 +1319,23 @@ function seasonPayLabel(status: string) {
 }
 
 function PaymentsSection({
+  fold,
   audit,
   writing,
   onPay,
   onAdjust,
   onGenerate,
-  onRefundGen,
 }: {
+  fold: StepFold;
   audit: SeasonPaymentAudit | null;
   writing: boolean;
   onPay: (payment: SeasonPaymentAuditRow, next: "paid" | "unpaid") => void;
   onAdjust: (payment: SeasonPaymentAuditRow) => void;
   onGenerate: () => void;
-  onRefundGen: () => void;
 }) {
   if (!audit) return null;
   const tools = (
     <div className="ctl-actions">
-      <button className="ctl-act" type="button" disabled={writing} onClick={onRefundGen}>
-        產生下季退費抵扣
-      </button>
       <button className="ctl-act is-pay" type="button" disabled={writing} onClick={onGenerate}>
         建立／更新收費單
       </button>
@@ -1072,7 +1345,7 @@ function PaymentsSection({
   const rows = audit.payments || [];
   return (
     <Section
-      title="季繳紀錄"
+      {...fold}
       note={rows.length ? `未付 ${s.unpaidCount} / ${s.memberCount} 人` : "尚未建立"}
     >
       {rows.length ? (
@@ -1222,17 +1495,19 @@ function PaymentRow({
 // ---------- 期初設定 ----------
 
 function SettingSection({
+  fold,
   management,
   writing,
   onEdit,
 }: {
+  fold: StepFold;
   management: SeasonManagementData | null;
   writing: boolean;
   onEdit: () => void;
 }) {
   const st = management?.setting;
   return (
-    <Section title="期初設定" note={st ? `季費 ${money(st.seasonFee)}` : "尚未設定"}>
+    <Section {...fold} note={st ? `季費 ${money(st.seasonFee)}` : "尚未設定"}>
       {st ? (
         <dl className="ctl-kv">
           <dt>期間</dt>
@@ -1287,11 +1562,13 @@ function SettingSection({
 // ---------- 群組成員 ----------
 
 function MembersSection({
+  fold,
   group,
   writing,
   onEdit,
   onGroup,
 }: {
+  fold: StepFold;
   group: GroupSnapshot | null;
   writing: boolean;
   onEdit: () => void;
@@ -1301,7 +1578,10 @@ function MembersSection({
   const active = group.members.filter((m) => m.status === "active");
   const others = group.members.filter((m) => m.status !== "active");
   return (
-    <Section title="季打群組成員" note={`${active.length} 人`}>
+    <Section
+      {...fold}
+      note={group.bootstrapDraft ? "草稿・尚未建立" : `已建立 ${active.length} 人`}
+    >
       {group.bootstrapDraft ? (
         <div className="ctl-notice">本季尚未建立季打名單，以下是群組常駐成員（草稿）。</div>
       ) : null}
@@ -1340,15 +1620,26 @@ function creditLabel(status: string) {
   return status || "其他";
 }
 
-function CreditsSection({ audit }: { audit: RefundCreditAudit | null }) {
+function CreditsSection({
+  fold,
+  audit,
+  writing,
+  onGenerate,
+}: {
+  fold: StepFold;
+  audit: RefundCreditAudit | null;
+  writing: boolean;
+  onGenerate: () => void;
+}) {
   if (!audit) return null;
   const s = audit.summary;
   const rows = audit.credits || [];
   return (
     <Section
-      title="退費抵扣"
-      note={rows.length ? `${s.memberCount} 人 · ${money(s.totalRefundAmount)}` : "無"}
+      {...fold}
+      note={rows.length ? `${s.memberCount} 人 · ${money(s.totalRefundAmount)}` : "無（可跳過）"}
     >
+      <p className="ctl-sub">上一季有請假退費才需要；沒有請假退費可跳過，直接建立收費單。</p>
       {rows.length ? (
         <>
           <div className="ctl-metrics is-3">
@@ -1382,6 +1673,11 @@ function CreditsSection({ audit }: { audit: RefundCreditAudit | null }) {
       ) : (
         <p className="ctl-empty">這個賽季沒有退費抵扣紀錄。</p>
       )}
+      <div className="ctl-actions">
+        <button className="ctl-act" type="button" disabled={writing} onClick={onGenerate}>
+          從上一季產生退費抵扣
+        </button>
+      </div>
     </Section>
   );
 }
@@ -1416,12 +1712,14 @@ function LastSaved({ last }: { last: SeasonManagementData["lastProfitLoss"] }) {
 }
 
 function SettlementSection({
+  fold,
   management,
   deduct,
   onDeduct,
   writing,
   onSave,
 }: {
+  fold: StepFold;
   management: SeasonManagementData | null;
   deduct: boolean;
   onDeduct: (value: boolean) => void;
@@ -1435,7 +1733,7 @@ function SettlementSection({
   const totalIncome = lv ? lv.totalIncome : s.totalIncome;
   const netProfit = lv ? lv.netProfit : s.netProfit;
   return (
-    <Section title="季末結算" note={`損益 ${money(netProfit)}`}>
+    <Section {...fold} note={`損益 ${money(netProfit)}`}>
       {lv ? (
         <div className="ctl-deduct" role="group" aria-label="扣除請假退費">
           <span>扣除請假退費</span>
@@ -1571,7 +1869,11 @@ function intentStatusLabel(status?: string) {
   return "已送出";
 }
 
+// T-25 (P5-c): ③ 季打確認 writes. One confirm per season + group; several
+// groups of a site may be open at once (T-24). 名單來源 is this season's own
+// roster (T-22, the ② list) or an earlier season's.
 function ConfirmSection({
+  fold,
   password,
   siteId,
   loaded,
@@ -1579,7 +1881,16 @@ function ConfirmSection({
   onRetry,
   settings,
   seasons,
+  reloadKey,
+  writing,
+  onEdit,
+  onToggle,
+  onFinalize,
+  onProxy,
+  onReview,
+  onSuggest,
 }: {
+  fold: StepFold;
   password: string;
   siteId: string;
   loaded: boolean;
@@ -1587,12 +1898,20 @@ function ConfirmSection({
   onRetry: () => void;
   settings: SeasonConfirmData["settings"];
   seasons: AdminSeason[];
+  reloadKey: number;
+  writing: boolean;
+  onEdit: (setting: SeasonConfirmSetting | null) => void;
+  onToggle: (setting: SeasonConfirmSetting, enabled: boolean) => void;
+  onFinalize: (setting: SeasonConfirmSetting) => void;
+  onProxy: (setting: SeasonConfirmSetting, memberId: string, memberName: string) => void;
+  onReview: (setting: SeasonConfirmSetting, reply: SeasonIntentReply) => void;
+  onSuggest: (setting: SeasonConfirmSetting) => void;
 }) {
-  const [selected, setSelected] = useState("");
   const [intents, setIntents] = useState<SeasonIntentsData | null>(null);
   const [error, setError] = useState("");
-  const settingId = settings.some((s) => s.id === selected) ? selected : settings[0]?.id || "";
-  const setting = settings.find((s) => s.id === settingId);
+  // One setting per season + group (the Worker keys it that way).
+  const setting = settings[0];
+  const settingId = setting?.id || "";
   const seasonName = (id?: string | null) => seasons.find((s) => s.id === id)?.name || id || "";
 
   useEffect(() => {
@@ -1607,11 +1926,11 @@ function ConfirmSection({
     return () => {
       alive = false;
     };
-  }, [password, siteId, settingId]);
+  }, [password, siteId, settingId, reloadKey]);
 
   if (loadError)
     return (
-      <Section title="季打確認" note="讀取失敗">
+      <Section {...fold} note="讀取失敗">
         <div className="ctl-error">
           {loadError}{" "}
           <button className="ctl-btn-ghost" type="button" onClick={onRetry}>
@@ -1621,43 +1940,78 @@ function ConfirmSection({
       </Section>
     );
   if (!loaded) return null;
+  const enabled = Boolean(setting && Number(setting.enabled) === 1);
+  const finalized = setting?.status === "finalized";
+  const note = !setting
+    ? "未設定"
+    : finalized
+      ? "已定案"
+      : !enabled
+        ? "未開始"
+        : PHASE_LABEL[setting.phase] || setting.phase;
   return (
-    <Section
-      title="季打確認"
-      note={setting ? PHASE_LABEL[setting.phase] || setting.phase : "無設定"}
-    >
-      {!settings.length ? (
-        <p className="ctl-empty">這個賽季／群組沒有季打確認設定。</p>
+    <Section {...fold} note={note}>
+      {!setting ? (
+        <>
+          <p className="ctl-empty">還沒有季打確認。不需要讓球員回覆的話可以跳過。</p>
+          <div className="ctl-actions">
+            <button
+              className="ctl-act is-pay"
+              type="button"
+              disabled={writing}
+              onClick={() => onEdit(null)}
+            >
+              設定季打確認
+            </button>
+          </div>
+        </>
       ) : (
         <>
-          {settings.length > 1 ? (
-            <select
-              className="ctl-select"
-              value={settingId}
-              onChange={(e) => setSelected(e.target.value)}
-            >
-              {settings.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {seasonName(s.sourceSeasonId)} → {seasonName(s.targetSeasonId)}（
-                  {PHASE_LABEL[s.phase] || s.phase}）
-                </option>
-              ))}
-            </select>
-          ) : null}
-          {setting ? (
-            <dl className="ctl-kv">
-              <dt>來源 → 目標</dt>
-              <dd>
-                {seasonName(setting.sourceSeasonId)} → {seasonName(setting.targetSeasonId)}
-              </dd>
-              <dt>截止</dt>
-              <dd>
-                {setting.deadlineAt ? setting.deadlineAt.replace("T", " ").slice(0, 16) : "未設定"}
-              </dd>
-              <dt>名額上限</dt>
-              <dd>{setting.capacityLimit ? `${setting.capacityLimit} 人` : "不限"}</dd>
-            </dl>
-          ) : null}
+          <dl className="ctl-kv">
+            <dt>名單來源</dt>
+            <dd>
+              {setting.sourceSeasonId === setting.targetSeasonId
+                ? "本季名單（②）"
+                : `${seasonName(setting.sourceSeasonId)} 名單`}
+            </dd>
+            <dt>截止</dt>
+            <dd>{setting.deadlineAt ? taipeiMinute(setting.deadlineAt) : "未設定"}</dd>
+            <dt>球員端</dt>
+            <dd>{enabled ? "V9 顯示確認畫面" : "未顯示（一般報名頁）"}</dd>
+          </dl>
+          <div className="ctl-actions">
+            {!finalized ? (
+              <button
+                className="ctl-act"
+                type="button"
+                disabled={writing}
+                onClick={() => onEdit(setting)}
+              >
+                修改設定
+              </button>
+            ) : null}
+            {!finalized ? (
+              enabled ? (
+                <button
+                  className="ctl-act"
+                  type="button"
+                  disabled={writing}
+                  onClick={() => onToggle(setting, false)}
+                >
+                  結束確認
+                </button>
+              ) : (
+                <button
+                  className="ctl-act is-pay"
+                  type="button"
+                  disabled={writing}
+                  onClick={() => onToggle(setting, true)}
+                >
+                  開始確認
+                </button>
+              )
+            ) : null}
+          </div>
           {error ? <div className="ctl-error">{error}</div> : null}
           {!intents && !error ? <div className="ctl-loading">讀取回覆中…</div> : null}
           {intents ? (
@@ -1688,6 +2042,16 @@ function ConfirmSection({
                     >
                       {r.reply ? intentLabel(r.reply.intent) : "未回覆"}
                     </span>
+                    {!finalized ? (
+                      <button
+                        className="ctl-act"
+                        type="button"
+                        disabled={writing}
+                        onClick={() => onProxy(setting, r.memberId, r.memberName)}
+                      >
+                        代登
+                      </button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -1707,15 +2071,61 @@ function ConfirmSection({
                         >
                           {intentStatusLabel(r.status)}
                         </span>
+                        {!finalized && r.intent === "apply" && r.status === "submitted" ? (
+                          <button
+                            className="ctl-act is-pay"
+                            type="button"
+                            disabled={writing}
+                            onClick={() => onReview(setting, r)}
+                          >
+                            審核
+                          </button>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
                 </>
               ) : null}
+              <div className="ctl-actions">
+                <button
+                  className="ctl-act is-pay"
+                  type="button"
+                  disabled={writing}
+                  onClick={() => onSuggest(setting)}
+                >
+                  依回覆產生名單建議
+                </button>
+                {!finalized ? (
+                  <button
+                    className="ctl-act"
+                    type="button"
+                    disabled={writing}
+                    onClick={() => onFinalize(setting)}
+                  >
+                    定案
+                  </button>
+                ) : null}
+              </div>
+              <p className="ctl-sub">
+                名單建議會帶進「② 編輯成員」，按儲存才生效。定案前要先儲存名單、審核完所有申請加入。
+              </p>
             </>
           ) : null}
         </>
       )}
     </Section>
   );
+}
+
+function taipeiMinute(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
 }

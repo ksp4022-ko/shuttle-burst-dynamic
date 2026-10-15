@@ -77,14 +77,18 @@ export function Section({
   title,
   note,
   defaultOpen,
+  foldKey,
   children,
 }: {
   title: string;
   note?: ReactNode | undefined;
   defaultOpen?: boolean | undefined;
+  // Remembers open/closed under this key instead of the title (T-23: per
+  // season stage, so billing a season brings back the stage's defaults).
+  foldKey?: string | undefined;
   children: ReactNode;
 }) {
-  const fold = useFold(title, defaultOpen ?? false);
+  const fold = useFold(foldKey || title, defaultOpen ?? false);
   return (
     <details className="ctl-sec" open={fold.open} onToggle={fold.onToggle}>
       <summary>
