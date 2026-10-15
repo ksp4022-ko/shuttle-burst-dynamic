@@ -228,6 +228,23 @@ const V9_CSS = `
 .v9-rail-icon img { display: block; width: 36px; height: 36px; }
 .v9-rail-item dt { font-size: 11px; line-height: 1.2; color: var(--v9-muted); font-weight: 700; white-space: nowrap; }
 .v9-rail-item dd { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+/* V9-050: the 場地 cell opens 加場規則 (康軒). */
+.v9-rail-item.is-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.v9-rail-item.is-tap:active { background: #fff5e3; }
+.v9-rail-item.is-tap:focus-visible { outline: 3px solid var(--v9-blue); outline-offset: -3px; }
+.v9-rail-info {
+  display: inline-grid; place-items: center; width: 14px; height: 14px; margin-left: 4px; vertical-align: 1px;
+  border: 1.5px solid currentColor; border-radius: 50%; font-size: 9px; font-weight: 900; font-style: normal; line-height: 1;
+}
+.v9-court-rules ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.v9-court-rules li {
+  display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+  background: #fff; border: 2.5px solid var(--v9-ink); border-radius: 16px; font-weight: 800;
+}
+.v9-court-rules li.is-now { background: var(--v9-yellow); box-shadow: 0 3px 0 var(--v9-ink); }
+.v9-court-rules-range { flex: none; min-width: 72px; font-variant-numeric: tabular-nums; }
+.v9-court-rules-courts { flex: 1; min-width: 0; font-size: 17px; font-weight: 900; }
+.v9-court-rules-now { flex: none; padding: 1px 9px; border: 2px solid var(--v9-ink); border-radius: 999px; background: #fff; font-size: 12px; font-weight: 900; }
 
 .v9-hero-status {
   display: flex; align-items: center; gap: 10px; width: 100%; margin: 8px 0 0; padding: 9px 10px 9px 14px;

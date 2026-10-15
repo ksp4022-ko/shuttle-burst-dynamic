@@ -30,6 +30,7 @@ import { V9Celebrate } from "./V9Celebrate";
 import { V9PlayerCard } from "./V9PlayerCard";
 import { V9JoinContent, V9RepickContent } from "./V9IdentitySheet";
 import { useV9Test } from "./useV9Test";
+import { V9_COURT_RULES } from "@/lib/v9-court-rules";
 import { confirmV8LineProfile } from "@/lib/v8-line-auth";
 import {
   clearV8LineAuthStorage,
@@ -734,6 +735,7 @@ export function V9App() {
               hintPaused={sheet !== null}
               ctaShuttle={introStage === "done" ? "shown" : "hidden"}
               fit
+              courtRules={v9Test ? V9_COURT_RULES[siteId] : undefined}
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
