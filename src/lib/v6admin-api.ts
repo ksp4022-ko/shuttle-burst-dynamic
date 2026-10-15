@@ -217,6 +217,10 @@ export type NotificationStatus = {
   // T-28 (Worker V6-045): absent until that Worker is deployed.
   discordRosterReminderEnabled?: boolean;
   discordRosterReminderTime?: string;
+  // T-30 (Worker V6-047): absent until that Worker is deployed.
+  discordNotifyPromoted?: boolean;
+  discordNotifyDemoted?: boolean;
+  discordNotifyProxy?: boolean;
   lineConfigured: boolean;
   discordConfigured: boolean;
 };
@@ -1314,6 +1318,10 @@ export type DiscordNotificationInput = {
   // T-28: sent only when the Worker reports them (V6-045).
   discordRosterReminderEnabled?: boolean;
   discordRosterReminderTime?: string;
+  // T-30: sent only when the Worker reports them (V6-047).
+  discordNotifyPromoted?: boolean;
+  discordNotifyDemoted?: boolean;
+  discordNotifyProxy?: boolean;
 };
 
 // ---------- Display helpers ----------

@@ -358,6 +358,13 @@ export function SystemTab({
                   ["取消", n.discordNotifyCancel],
                   ["請假", n.discordNotifyLeave],
                   ["回歸", n.discordNotifyReturn],
+                  ...(typeof n.discordNotifyPromoted === "boolean"
+                    ? ([
+                        ["轉正取", n.discordNotifyPromoted],
+                        ["轉備取", Boolean(n.discordNotifyDemoted)],
+                        ["代報／代退", Boolean(n.discordNotifyProxy)],
+                      ] as [string, boolean][])
+                    : []),
                 ])}
               </dd>
               {typeof n.discordRosterReminderEnabled === "boolean" && (
@@ -1573,6 +1580,8 @@ function DiscordForm({
 }) {
   // T-28: the 名單提醒 fields only once the Worker reports them (V6-045).
   const hasReminder = typeof n.discordRosterReminderEnabled === "boolean";
+  // T-30: 轉正取 / 轉備取 / 代報代退 once the Worker reports them (V6-047).
+  const hasMoreKinds = typeof n.discordNotifyPromoted === "boolean";
   const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
   const [f, setF] = useState({
     discordEnabled: Boolean(n.discordEnabled),
@@ -1580,6 +1589,9 @@ function DiscordForm({
     discordNotifyCancel: Boolean(n.discordNotifyCancel),
     discordNotifyLeave: Boolean(n.discordNotifyLeave),
     discordNotifyReturn: Boolean(n.discordNotifyReturn),
+    discordNotifyPromoted: Boolean(n.discordNotifyPromoted),
+    discordNotifyDemoted: Boolean(n.discordNotifyDemoted),
+    discordNotifyProxy: Boolean(n.discordNotifyProxy),
     discordRosterReminderEnabled: Boolean(n.discordRosterReminderEnabled),
     discordRosterReminderTime: timeRe.test(String(n.discordRosterReminderTime || ""))
       ? String(n.discordRosterReminderTime)
@@ -1589,10 +1601,19 @@ function DiscordForm({
     setF((cur) => ({ ...cur, [k]: v }));
   const timeOk = timeRe.test(f.discordRosterReminderTime);
   const submit = () => {
-    const { discordRosterReminderEnabled, discordRosterReminderTime, ...base } = f;
-    const input: DiscordNotificationInput = hasReminder
-      ? { ...base, discordRosterReminderEnabled, discordRosterReminderTime }
-      : base;
+    const {
+      discordRosterReminderEnabled,
+      discordRosterReminderTime,
+      discordNotifyPromoted,
+      discordNotifyDemoted,
+      discordNotifyProxy,
+      ...base
+    } = f;
+    const input: DiscordNotificationInput = {
+      ...base,
+      ...(hasReminder ? { discordRosterReminderEnabled, discordRosterReminderTime } : {}),
+      ...(hasMoreKinds ? { discordNotifyPromoted, discordNotifyDemoted, discordNotifyProxy } : {}),
+    };
     onSubmit(input);
   };
   return (
@@ -1631,6 +1652,25 @@ function DiscordForm({
           checked={f.discordNotifyReturn}
           onChange={(v) => set("discordNotifyReturn", v)}
         />
+        {hasMoreKinds && (
+          <>
+            <Check
+              label="轉正取"
+              checked={f.discordNotifyPromoted}
+              onChange={(v) => set("discordNotifyPromoted", v)}
+            />
+            <Check
+              label="轉備取"
+              checked={f.discordNotifyDemoted}
+              onChange={(v) => set("discordNotifyDemoted", v)}
+            />
+            <Check
+              label="代報／代退"
+              checked={f.discordNotifyProxy}
+              onChange={(v) => set("discordNotifyProxy", v)}
+            />
+          </>
+        )}
         {hasReminder && (
           <>
             <p className="ctl-sub is-wide">聚會名單提醒</p>
