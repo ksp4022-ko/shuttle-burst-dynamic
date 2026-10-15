@@ -208,18 +208,22 @@ const V9_CSS = `
 
 .v9-rail {
   position: relative; z-index: 2;
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 0;
+  display: flex; flex-wrap: wrap; gap: 0; margin: 0;
   background: #fff; border: var(--v9-line); border-radius: 20px; overflow: hidden;
 }
 .v9-rail-item {
+  flex: 0 0 50%; transition: flex-basis .3s cubic-bezier(0.23, 1, 0.32, 1);
   display: grid; grid-template-columns: 36px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 8px;
   min-width: 0; padding: 7px 10px; background: none; border: 0; text-align: left;
   border-bottom: 2px dashed #eadfca;
 }
 .v9-rail-item:nth-child(odd) { border-right: 2px dashed #eadfca; }
 .v9-rail-item:nth-child(n+3) { border-bottom: 0; }
+/* V9-052: 費用｜場地 slide to 40/60 while 場地 shows "＋1面1Hr". */
+.v9-rail.is-court-wide > .v9-rail-item:nth-child(3) { flex-basis: 40%; }
+.v9-rail.is-court-wide > .v9-rail-item:nth-child(4) { flex-basis: 60%; }
 .v9-rail-note {
-  grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; padding: 5px 12px;
+  flex: 0 0 100%; display: flex; align-items: baseline; gap: 10px; padding: 5px 12px;
   border-top: 2px dashed #eadfca; background: #fffaf0;
 }
 .v9-rail-note dt { flex: none; padding: 0 7px; border-radius: 999px; background: var(--v9-ink); color: #fff; font-size: 11px; font-weight: 800; }
@@ -260,8 +264,25 @@ const V9_CSS = `
   25% { opacity: .9; }
   45%, 100% { opacity: 0; }
 }
+/* V9-052: combination-lock roller - the admin digit turns up and out, the
+   加場 digit (red) turns in from below (0.4s, 0.08s apart), every 4s.
+   Resting transform is the 加場 value, so reduced motion shows it still. */
+.v9-slot { display: inline-block; height: 1.25em; overflow: hidden; vertical-align: bottom; }
+.v9-slot-track { display: block; transform: translateY(-50%); animation: v9-slot-roll 4s linear infinite both; animation-delay: calc(var(--v9-slot-i, 0) * .08s); }
+.v9-slot-track > span { display: block; height: 1.25em; }
+.v9-slot.is-red .v9-slot-track > span:last-child { color: var(--v9-red); }
+/* the value now runs to the cell's right edge; the + start above it */
+.v9-court-boost ~ .v9-court-plus { bottom: 22px; }
+.v9-rail-item .v9-court-boost { text-overflow: clip; }
+.v9-court-boost.is-paused .v9-slot-track { animation-play-state: paused; }
+@keyframes v9-slot-roll {
+  0%, 10% { transform: translateY(0); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
+  20%, 100% { transform: translateY(-50%); }
+}
 @media (prefers-reduced-motion: reduce) {
   .v9-court-plus svg { animation: none !important; opacity: .85; }
+  .v9-slot-track { animation: none !important; transform: translateY(-50%); }
+  .v9-rail-item { transition: none; }
 }
 .v9-court-rules ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .v9-court-rules li {

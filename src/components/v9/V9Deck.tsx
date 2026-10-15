@@ -11,7 +11,7 @@ import { V9PreviewBadge } from "./V9PreviewBadge";
 import { V9DragonCameo } from "./V9DragonCameo";
 import { V9Roll } from "./V9Roll";
 import { v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
-import type { V9CourtRule } from "@/lib/v9-court-rules";
+import { v9CourtHours, v9CourtRuleFor, type V9CourtRule } from "@/lib/v9-court-rules";
 import type { V9RosterTab } from "./V9RosterSheet";
 
 // Home Control Deck: Hero (calendar + mascot, info rail, roster strip,
@@ -29,6 +29,31 @@ export type V9Cta =
 
 // Sticker icons in public/v9/icons/*.webp (96px, shown at 36px).
 type RailItem = { icon: "time" | "shuttle" | "fee" | "court"; label: string; value: string };
+
+// V9-052: the 場地 value after 加場 - plain text, or a roller that turns the
+// admin's digit into the 加場 one (red). Only the digits that change roll.
+type CourtPart = { text: string; from?: string; red?: boolean };
+
+function courtBoostParts(rule: V9CourtRule, courtCount: number, hours: number): CourtPart[] {
+  const digit = (to: number, from: number): CourtPart =>
+    to === from ? { text: String(to) } : { text: String(to), from: String(from), red: true };
+  const parts: CourtPart[] = [
+    digit(rule.main.courts, courtCount),
+    { text: "面" },
+    digit(rule.main.hours, hours),
+    { text: "Hr" },
+  ];
+  // The admin value has no extra part, so all of it turns in from blank.
+  if (rule.extra) {
+    parts.push(
+      { text: `＋${rule.extra.courts}`, from: "", red: true },
+      { text: "面", from: "" },
+      { text: String(rule.extra.hours), from: "", red: true },
+      { text: "Hr", from: "" },
+    );
+  }
+  return parts;
+}
 
 // 場地: "2面 / 2時" (hours only when the event has them).
 function courtLabel(event: AlphaEvent) {
@@ -123,6 +148,16 @@ export function V9Hero({
     },
     { icon: "court", label: "場地", value: courtLabel(event) },
   ];
+  // V9-052: 康軒 (/v9test) - when the 正取 count is in a 加場 band and the
+  // band has more court-hours than the admin set, show the band's value.
+  const boostRule =
+    courtHint && !tired && !switching && typeof event.courtCount === "number"
+      ? v9CourtRuleFor(courtRules, counts.confirmed)
+      : null;
+  const baseHours = typeof event.hours === "number" ? event.hours : (boostRule?.main.hours ?? 0);
+  const boost =
+    boostRule && (event.courtCount ?? 0) * baseHours < v9CourtHours(boostRule) ? boostRule : null;
+  const boostParts = boost ? courtBoostParts(boost, event.courtCount ?? 0, baseHours) : null;
   // eventNote may carry a literal "\\n" for V8's two-line sun; one line here.
   const note = (event.eventNote || "").replace(/\\n|\n/g, " ").trim();
   const statusHint =
@@ -208,7 +243,7 @@ export function V9Hero({
           />
         </div>
 
-        <dl className="v9-rail">
+        <dl className={`v9-rail${boost?.extra ? " is-court-wide" : ""}`}>
           {rail.map((item) => {
             const tap = item.icon === "court" && Boolean(courtRules?.length);
             const plus =
@@ -253,7 +288,37 @@ export function V9Hero({
                     </span>
                   )}
                 </dt>
-                <dd>{item.value}</dd>
+                {item.icon === "court" && boostParts ? (
+                  <dd
+                    className={`v9-court-boost${hintPaused || busy ? " is-paused" : ""}`}
+                    aria-label={boostParts.map((part) => part.text).join("")}
+                  >
+                    {(() => {
+                      let roll = 0;
+                      return boostParts.map((part, i) =>
+                        part.from === undefined ? (
+                          <span key={i} aria-hidden="true">
+                            {part.text}
+                          </span>
+                        ) : (
+                          <span
+                            key={i}
+                            className={`v9-slot${part.red ? " is-red" : ""}`}
+                            aria-hidden="true"
+                            style={{ "--v9-slot-i": roll++ } as React.CSSProperties}
+                          >
+                            <span className="v9-slot-track">
+                              <span>{part.from || "\u00a0"}</span>
+                              <span>{part.text}</span>
+                            </span>
+                          </span>
+                        ),
+                      );
+                    })()}
+                  </dd>
+                ) : (
+                  <dd>{item.value}</dd>
+                )}
                 {plus && (
                   <span
                     className={`v9-court-plus${hintPaused || busy ? " is-paused" : ""}`}
