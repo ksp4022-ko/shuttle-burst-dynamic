@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { V9Busy } from "./V9Busy";
-import { isV9TestRoute } from "@/lib/v9-route";
 
 // V9-040 / V9-041: the opening screen and the shot into the deck.
 //
@@ -24,7 +23,7 @@ const SWING_HIT = 0.45; // where in the swing the racket meets the shuttle
 // Hit-stop: everything freezes on contact while yellow impact marks pop
 // around the shuttle, then the shot takes off (2026-10-14 real-device ask).
 const HITSTOP_MS = 120;
-// V9-046 蓄力停頓 (/v9test): before the last shot the dragon leans back to
+// V9-046 蓄力停頓: before the last shot the dragon leans back to
 // CHARGE_ANGLE and everything holds (shuttle in mid-air in front of it), then
 // it snaps forward into the hit.
 const CHARGE_MS = 280;
@@ -282,14 +281,6 @@ export function V9Intro({
     [finish],
   );
 
-  // /v9test: start the loading card at the deck's minimum height (see
-  // .has-floor). Set after mount, before paint, so it never differs from the
-  // server-rendered markup.
-  useLayoutEffect(() => {
-    if (!isV9TestRoute()) return;
-    coverRef.current?.querySelector(".v9-intro-card")?.classList.add("has-floor");
-  }, []);
-
   // Once the deck has rendered (under the cover), give the loading card the
   // deck card's exact height (content can make it taller than the CSS
   // estimate), so on the hit the deck can take over in place.
@@ -362,7 +353,7 @@ export function V9Intro({
       const launchIn = rally ? (RALLY_MS - into) % RALLY_MS : 0;
       const windUp = SWING_MS * SWING_HIT;
       const swingAt = Math.max(0, launchIn - windUp);
-      const charge = dragon && isV9TestRoute() ? CHARGE_MS : 0;
+      const charge = dragon ? CHARGE_MS : 0;
       // Contact, pushed back by the charge hold.
       const hitAt = launchIn + charge;
 
