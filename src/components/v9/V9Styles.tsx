@@ -645,6 +645,16 @@ const V9_CSS = `
 .v9-skel.is-dark { height: 18px; background-color: rgba(31,26,23,.16); }
 .v9-bill-total.is-skel { background: #f7c98f; }
 .v9-bill-total strong { font-size: 24px; font-variant-numeric: tabular-nums; }
+/* V9-043 phase 4 (/v9test): 全部場地合計 on top (the orange total), each
+   場地's 小計 in a quieter cream so only one total shouts. */
+.v9-bill-total.is-grand { margin: 10px 0 4px; }
+.v9-bill-site { padding-top: 14px; }
+.v9-bill-site[hidden] { display: none; }
+.v9-bill-site + .v9-bill-site { margin-top: 10px; border-top: 2.5px solid var(--v9-ink); }
+.v9-bill-site-name { margin: 0; font-size: 17px; font-weight: 900; }
+.v9-bill-site .v9-bill-total { background: var(--v9-cream); }
+.v9-bill-site .v9-bill-total.is-refund { background: #dcebfb; }
+.v9-bill-site .v9-bill-total strong { font-size: 20px; }
 .v9-btn {
   display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px; margin-top: 10px; font-weight: 800;
   border: var(--v9-line); border-radius: 999px; background: #fff; box-shadow: 0 3px 0 var(--v9-ink); cursor: pointer;

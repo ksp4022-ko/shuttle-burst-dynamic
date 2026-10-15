@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useV8PersonalBillingTest } from "@/hooks/use-v8-personal-billing-test";
 import { V9PaymentMethods } from "./V9PaymentMethods";
 import type {
@@ -116,11 +116,29 @@ function RefundRow({ source }: { source: V8BillingRefundSource }) {
 
 // An earlier season still unpaid (V9-020): its fee, the leave credit it got
 // (with the leave dates) and what is owed, all as the backend gives them.
-function PastSeasonRow({ season }: { season: V8BillingSeasonPayment }) {
+// V9-043 phase 4 (/v9test until accepted): 季費 names its 時段 too, so
+// two 時段 on one 場地 (日安 週一 / 週四) read apart.
+function seasonFeeLabel(
+  season: V8BillingSeasonPayment | null,
+  fallback: string,
+  withGroup: boolean,
+) {
+  const name = season?.seasonName || fallback;
+  const group = withGroup && season && season.groupName !== season.groupId ? season.groupName : "";
+  return `${name}${group ? ` ${group}` : ""} 季費`;
+}
+
+function PastSeasonRow({
+  season,
+  withGroup = false,
+}: {
+  season: V8BillingSeasonPayment;
+  withGroup?: boolean;
+}) {
   return (
     <li className="v9-bill-season">
       <div className="v9-bill-season-head">
-        <span className="v9-bill-detail-name">{season.seasonName} 季費</span>
+        <span className="v9-bill-detail-name">{seasonFeeLabel(season, "", withGroup)}</span>
         <span className="v9-badge is-red">未繳</span>
         <span className="v9-bill-detail-money">{money(season.outstanding)}</span>
       </div>
@@ -182,12 +200,33 @@ function BillLine({
   );
 }
 
+type V9Billing = ReturnType<typeof useV8PersonalBillingTest>;
+type V9BillReady = Extract<V9Billing["state"], { kind: "ready" }>["billing"];
+
+// What a 場地's bill nets to (the backend's amount due minus cash refunds
+// due, V9-027) and whether it has anything to show.
+function billSummary(bill: V9BillReady) {
+  const refunds = refundItemsOf(bill);
+  const refundDue = refunds
+    .filter((item) => item.status === "due")
+    .reduce((sum, item) => sum + item.refundAmount, 0);
+  const net = bill.totals.totalAmountDue - refundDue;
+  const hasRecords =
+    net !== 0 ||
+    refunds.length > 0 ||
+    bill.seasonPaymentHistory.items.length > 0 ||
+    bill.currentGuestItems.length > 0 ||
+    bill.guestLedger.items.length > 0;
+  return { net, hasRecords };
+}
+
 export function V9BillingContent({
   token,
   siteId,
   eventId,
   seasonId,
   asIdentityId,
+  sites,
 }: {
   token: string | null;
   siteId: string;
@@ -195,6 +234,119 @@ export function V9BillingContent({
   // V9-027: the selected meetup's season = 本季 for the first row.
   seasonId?: string | undefined;
   asIdentityId?: string | undefined;
+  // V9-043 phase 4 (/v9test until accepted): every 場地 in one bill, this
+  // one first; omitted = this 場地 only, as before.
+  sites?: { id: string; name: string }[] | undefined;
+}) {
+  if (sites && sites.length > 1) {
+    return (
+      <V9AllSitesBill
+        token={token}
+        siteId={siteId}
+        eventId={eventId}
+        seasonId={seasonId}
+        asIdentityId={asIdentityId}
+        sites={sites}
+      />
+    );
+  }
+  return (
+    <div className="v9-bill">
+      <V9SiteBill
+        token={token}
+        siteId={siteId}
+        eventId={eventId}
+        seasonId={seasonId}
+        asIdentityId={asIdentityId}
+      />
+    </div>
+  );
+}
+
+// V9-043 phase 4: 全部場地合計 on top, then one section per 場地 (its own
+// 小計 and the same lines as before). A 場地 with nothing on it is hidden;
+// this 場地 always shows. Each section reads its own /me/billing?siteId.
+function V9AllSitesBill({
+  token,
+  siteId,
+  eventId,
+  seasonId,
+  asIdentityId,
+  sites,
+}: {
+  token: string | null;
+  siteId: string;
+  eventId: string;
+  seasonId?: string | undefined;
+  asIdentityId?: string | undefined;
+  sites: { id: string; name: string }[];
+}) {
+  const ordered = [...sites].sort((a, b) => Number(b.id === siteId) - Number(a.id === siteId));
+  const [summaries, setSummaries] = useState<
+    Record<string, { net: number; hasRecords: boolean } | null>
+  >({});
+  const report = useCallback(
+    (id: string, summary: { net: number; hasRecords: boolean } | null) =>
+      setSummaries((last) => (last[id] === summary ? last : { ...last, [id]: summary })),
+    [],
+  );
+  const ready = ordered.every((site) => summaries[site.id]);
+  const grand = ordered.reduce((sum, site) => sum + (summaries[site.id]?.net ?? 0), 0);
+  return (
+    <div className="v9-bill">
+      <div className={`v9-bill-total is-grand${ready && grand < 0 ? " is-refund" : ""}`}>
+        <span>{ready && grand < 0 ? "全部場地合計應退" : "全部場地合計待繳"}</span>
+        {ready ? (
+          <strong key={grand} className="v9-pop">
+            {money(Math.abs(grand))}
+          </strong>
+        ) : (
+          <span className="v9-skel is-dark is-short" />
+        )}
+      </div>
+      {ordered.map((site) => {
+        const summary = summaries[site.id];
+        const hidden = site.id !== siteId && !summary?.hasRecords;
+        return (
+          <section key={site.id} className="v9-bill-site" hidden={Boolean(hidden)}>
+            <h3 className="v9-bill-site-name">{site.name}</h3>
+            <V9SiteBill
+              token={token}
+              siteId={site.id}
+              eventId={site.id === siteId ? eventId : ""}
+              seasonId={site.id === siteId ? seasonId : undefined}
+              asIdentityId={asIdentityId}
+              totalPrefix={site.name}
+              withGroup
+              onSummary={report}
+            />
+          </section>
+        );
+      })}
+      {ready && <V9PaymentMethods />}
+    </div>
+  );
+}
+
+function V9SiteBill({
+  token,
+  siteId,
+  eventId,
+  seasonId,
+  asIdentityId,
+  totalPrefix,
+  withGroup = false,
+  onSummary,
+}: {
+  token: string | null;
+  siteId: string;
+  eventId: string;
+  seasonId?: string | undefined;
+  asIdentityId?: string | undefined;
+  // All-sites bill: "康軒 小計" instead of 本次應繳.
+  totalPrefix?: string | undefined;
+  withGroup?: boolean;
+  onSummary?: (siteId: string, summary: { net: number; hasRecords: boolean } | null) => void;
 }) {
   const billing = useV8PersonalBillingTest({
     enabled: true,
@@ -203,6 +355,17 @@ export function V9BillingContent({
     ...(eventId ? { eventId } : {}),
     ...(asIdentityId ? { asIdentityId } : {}),
   });
+  const readyBill = billing.state.kind === "ready" ? billing.state.billing : null;
+  const failed = billing.state.kind === "error" || billing.state.kind === "auth";
+  const summaryNet = readyBill ? billSummary(readyBill).net : null;
+  const summaryHas = readyBill ? billSummary(readyBill).hasRecords : null;
+  useEffect(() => {
+    if (!onSummary) return;
+    if (summaryNet !== null && summaryHas !== null)
+      onSummary(siteId, { net: summaryNet, hasRecords: summaryHas });
+    else if (failed) onSummary(siteId, { net: 0, hasRecords: true });
+    else onSummary(siteId, null);
+  }, [failed, onSummary, siteId, summaryHas, summaryNet]);
   const { state } = billing;
 
   let body: ReactNode;
@@ -275,7 +438,7 @@ export function V9BillingContent({
           {(season || formerFixed) && (
             <>
               <BillLine
-                label={`${seasonName} 季費`}
+                label={seasonFeeLabel(season, seasonName, withGroup)}
                 value={money(season ? season.baseSeasonFee : 0)}
               />
               <BillLine
@@ -295,22 +458,25 @@ export function V9BillingContent({
               </BillLine>
             </>
           )}
-          <BillLine label="臨打費" value={money(totals.currentGuestOutstandingTotal)}>
-            {currentGuestItems.length ? (
-              <ul className="v9-bill-detail-list">
-                {currentGuestItems.map((item) => (
-                  <GuestRow key={item.paymentId} item={item} />
-                ))}
-              </ul>
-            ) : (
-              <p className="v9-muted">本場沒有臨打帳務</p>
-            )}
-          </BillLine>
+          {/* All-sites bill: another 場地 has no 本場, its 臨打 sits in 歷史未收. */}
+          {!(totalPrefix && !eventId) && (
+            <BillLine label="臨打費" value={money(totals.currentGuestOutstandingTotal)}>
+              {currentGuestItems.length ? (
+                <ul className="v9-bill-detail-list">
+                  {currentGuestItems.map((item) => (
+                    <GuestRow key={item.paymentId} item={item} />
+                  ))}
+                </ul>
+              ) : (
+                <p className="v9-muted">本場沒有臨打帳務</p>
+              )}
+            </BillLine>
+          )}
           <BillLine label="歷史未收" value={money(historyTotal)}>
             {pastSeasons.length > 0 && (
               <ul className="v9-bill-detail-list">
                 {pastSeasons.map((item) => (
-                  <PastSeasonRow key={item.paymentId} season={item} />
+                  <PastSeasonRow key={item.paymentId} season={item} withGroup={withGroup} />
                 ))}
               </ul>
             )}
@@ -336,7 +502,13 @@ export function V9BillingContent({
           </BillLine>
         </div>
         <div className={`v9-bill-total${net < 0 ? " is-refund" : ""}`}>
-          <span>{net < 0 ? "本次應退" : "本次應繳"}</span>
+          <span>
+            {totalPrefix
+              ? `${totalPrefix} 小計${net < 0 ? "（應退）" : ""}`
+              : net < 0
+                ? "本次應退"
+                : "本次應繳"}
+          </span>
           <strong key={net} className="v9-pop">
             {money(Math.abs(net))}
           </strong>
@@ -349,10 +521,10 @@ export function V9BillingContent({
             </span>
           </div>
         )}
-        <V9PaymentMethods />
+        {!totalPrefix && <V9PaymentMethods />}
       </>
     );
   }
 
-  return <div className="v9-bill">{body}</div>;
+  return body;
 }

@@ -769,6 +769,11 @@ export function V9App() {
                 eventId={selectedEventId}
                 seasonId={flow.selectedEvent?.seasonId}
                 asIdentityId={viewing && viewAs ? viewAs.id : undefined}
+                sites={
+                  v9Test
+                    ? Object.entries(SITE_NAMES).map(([id, name]) => ({ id, name }))
+                    : undefined
+                }
               />
             ) : (
               <div className="v9-sheet-empty">

@@ -86,6 +86,18 @@ type Pending =
   | { kind: "dc-test"; member: DiscordMember }
   | { kind: "dc-unlink"; member: DiscordMember };
 
+// T-18: where this person plays -- each claim as "場地 時段 季打（成員名）",
+// then "場地 臨打（近 60 天有報名）" for sites with an own 臨打 signup.
+function dcPlacesText(m: DiscordMember) {
+  const site = (id: string) => (id === "rian" ? "日安" : id === "kangxuan" ? "康軒" : id);
+  const fixed = (m.claims ?? []).map(
+    (c) =>
+      `${site(c.siteId)}${c.groupName ? ` ${c.groupName}` : ""} 季打（${c.memberName || "—"}）`,
+  );
+  const temp = (m.tempSites ?? []).map((id) => `${site(id)} 臨打（近 60 天有報名）`);
+  return [...fixed, ...temp].join("・");
+}
+
 export function SystemTab({
   password,
   siteId,
@@ -588,6 +600,7 @@ export function SystemTab({
                   <li className="ctl-row ctl-dc-row" key={m.lineIdentityId}>
                     <span className="ctl-row-name is-wrap">
                       {m.displayName || m.lineDisplayName || "（未填稱呼）"}
+                      {dcPlacesText(m) && <small>{dcPlacesText(m)}</small>}
                       <small>
                         Discord：{m.discordUsername || "—"} · 連結 {twTime(m.linkedAt)}
                       </small>

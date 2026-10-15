@@ -297,6 +297,10 @@ export type DiscordMember = {
   lineDisplayName: string;
   memberName: string | null;
   memberSiteId: string | null;
+  // V9-043 / T-18: every claim (groupName from Worker V6-044) and the sites
+  // with an own 臨打 signup in the last 60 days (V6-044); absent before.
+  claims?: { siteId: string; memberName: string; groupName?: string }[];
+  tempSites?: string[];
   identityType: string | null;
   identityActive: boolean;
   discordUsername: string;
