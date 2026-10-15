@@ -291,6 +291,10 @@ const V9_CSS = `
   padding: 30px 18px 34px; transition: height .25s cubic-bezier(0.23, 1, 0.32, 1);
   background: var(--v9-cream); border: var(--v9-line); border-radius: 30px; box-shadow: 0 6px 0 var(--v9-ink);
 }
+/* /v9test: on a short screen (iPhone Chrome's toolbars) the deck card's
+   content needs about 550px, more than the estimate above, so the loading
+   card grew once when the deck rendered. Start at that floor instead. */
+.v9-intro-card.has-floor { min-height: 550px; }
 .v9-intro-title { display: block; width: min(80%, 300px); height: auto; }
 .v9-intro.is-shooting .v9-busy-x { visibility: hidden; }
 /* V9-041: on the launch the card's own frame hands over to .v9-intro-morph
