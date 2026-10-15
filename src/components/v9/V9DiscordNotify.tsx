@@ -95,10 +95,15 @@ export function V9DiscordNotify({
   token,
   moreKinds = false,
   fixed = false,
+  allKinds = false,
 }: {
   token: string;
   moreKinds?: boolean;
   fixed?: boolean;
+  // V9-049 (/v9test until accepted): every switch, whatever this meetup's
+  // identity -- since V9-043 phase 3 a 季打 can self-sign up as 臨打 on
+  // another 時段, so 報名成功 must be reachable from a 季打 meetup too.
+  allKinds?: boolean;
 }) {
   const [link, setLink] = useState<V9DiscordLink | null>(null);
   const [busy, setBusy] = useState(false);
@@ -121,7 +126,7 @@ export function V9DiscordNotify({
     ({ key, more, only }) =>
       typeof link[key] === "boolean" &&
       (!more || moreKinds) &&
-      (!moreKinds || !only || only === (fixed ? "fixed" : "temp")),
+      (!moreKinds || allKinds || !only || only === (fixed ? "fixed" : "temp")),
   );
   const onCount = switches.filter(({ key }) => link[key]).length;
   const summary = link.linked ? `已開 ${onCount} 項` : "未連結";

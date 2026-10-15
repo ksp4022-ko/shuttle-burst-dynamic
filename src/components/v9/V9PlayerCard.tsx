@@ -175,6 +175,7 @@ export function V9PlayerCard({
   due,
   discordToken,
   discordMoreKinds,
+  discordAllKinds = false,
 }: {
   identity: CurrentIdentity;
   rank: number | null;
@@ -197,6 +198,8 @@ export function V9PlayerCard({
   discordToken?: string | null | undefined;
   // V9-036: show the 報名／請假／取消／回歸 switches (/v9test first).
   discordMoreKinds?: boolean;
+  // V9-049: all Discord switches (/v9test first).
+  discordAllKinds?: boolean;
 }) {
   const fixed = identity.signupType === "fixed";
   const position =
@@ -285,7 +288,12 @@ export function V9PlayerCard({
       )}
 
       {!readOnly && discordToken && (
-        <V9DiscordNotify token={discordToken} moreKinds={Boolean(discordMoreKinds)} fixed={fixed} />
+        <V9DiscordNotify
+          token={discordToken}
+          moreKinds={Boolean(discordMoreKinds)}
+          fixed={fixed}
+          allKinds={discordAllKinds}
+        />
       )}
 
       {!readOnly && <V9Account onRepick={onRepick} onClaimHere={onClaimHere} onLogout={onLogout} />}
