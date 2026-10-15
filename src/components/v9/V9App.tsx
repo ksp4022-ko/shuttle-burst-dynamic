@@ -18,7 +18,7 @@ import { v9StorageKey } from "@/lib/v9-route";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
 import { V9ErrorBoundary } from "./V9ErrorBoundary";
 import { V9Styles } from "./V9Styles";
-import { V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
+import { V9CourtRules, V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
 import { v9IdentityName, v9ShortDate, v9Weekday } from "@/lib/v9-display";
 import { V9Sheet } from "./V9Sheet";
 import { V9RosterContent, type V9RosterTab } from "./V9RosterSheet";
@@ -51,7 +51,7 @@ import { chooseV9InitialEvent, loadV9Events } from "@/lib/v9-events";
 
 const SITE_NAMES: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 
-type SheetKind = "roster" | "bill" | "proxy" | "meetup" | "me" | "join" | "viewas";
+type SheetKind = "roster" | "bill" | "proxy" | "meetup" | "me" | "join" | "viewas" | "courtRules";
 
 function selectedEventKey(siteId: string) {
   return v9StorageKey(`${siteId}:selected-event`);
@@ -736,6 +736,7 @@ export function V9App() {
               ctaShuttle={introStage === "done" ? "shown" : "hidden"}
               fit
               courtRules={v9Test ? V9_COURT_RULES[siteId] : undefined}
+              onCourtRules={() => setSheet("courtRules")}
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
@@ -756,6 +757,20 @@ export function V9App() {
               displayName={displayName}
             />
           </V9Sheet>
+
+          {V9_COURT_RULES[siteId] && (
+            <V9Sheet
+              open={sheet === "courtRules"}
+              title="加場規則"
+              subtitle={siteName}
+              onClose={closeSheet}
+            >
+              <V9CourtRules
+                rules={V9_COURT_RULES[siteId]}
+                confirmed={roster.summary.confirmedCount}
+              />
+            </V9Sheet>
+          )}
 
           <V9Sheet
             open={sheet === "bill"}

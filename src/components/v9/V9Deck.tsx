@@ -12,7 +12,6 @@ import { V9DragonCameo } from "./V9DragonCameo";
 import { V9Roll } from "./V9Roll";
 import { v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
 import type { V9CourtRule } from "@/lib/v9-court-rules";
-import { V9Sheet } from "./V9Sheet";
 import type { V9RosterTab } from "./V9RosterSheet";
 
 // Home Control Deck: Hero (calendar + mascot, info rail, roster strip,
@@ -66,6 +65,7 @@ export function V9Hero({
   ctaShuttle,
   fit = false,
   courtRules,
+  onCourtRules,
 }: {
   siteName: string;
   event: AlphaEvent;
@@ -97,10 +97,11 @@ export function V9Hero({
   ctaShuttle?: "hidden" | "shown" | undefined;
   // V9-048: shrink to fit above the Dock.
   fit?: boolean;
-  // V9-050: this 場地's 加場規則 (康軒); the 場地 cell opens them.
+  // V9-050: this 場地's 加場規則 (康軒); the 場地 cell opens them in a
+  // sheet the app renders (outside the hero, like the other sheets).
   courtRules?: V9CourtRule[] | undefined;
+  onCourtRules?: () => void;
 }) {
-  const [rulesOpen, setRulesOpen] = useState(false);
   const display = parseV8MeetupDisplay(event.name);
   const meetupName = display.displayName || event.name;
   // "康軒" next to "康軒羽球" says nothing new; only special names show.
@@ -215,11 +216,11 @@ export function V9Hero({
                       role: "button",
                       tabIndex: 0,
                       "aria-label": "場地，查看加場規則",
-                      onClick: () => setRulesOpen(true),
+                      onClick: () => onCourtRules?.(),
                       onKeyDown: (e: React.KeyboardEvent) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setRulesOpen(true);
+                          onCourtRules?.();
                         }
                       },
                     }
@@ -330,16 +331,6 @@ export function V9Hero({
           aria-hidden="true"
         />
       )}
-      {courtRules?.length ? (
-        <V9Sheet
-          open={rulesOpen}
-          title="加場規則"
-          subtitle={siteName}
-          onClose={() => setRulesOpen(false)}
-        >
-          <V9CourtRules rules={courtRules} confirmed={counts.confirmed} />
-        </V9Sheet>
-      ) : null}
     </section>
   );
 }
@@ -538,7 +529,7 @@ export function V9Dock({
 }
 
 // V9-050: 加場規則, the band this meetup's 正取 count falls in marked 目前.
-function V9CourtRules({ rules, confirmed }: { rules: V9CourtRule[]; confirmed: number }) {
+export function V9CourtRules({ rules, confirmed }: { rules: V9CourtRule[]; confirmed: number }) {
   return (
     <div className="v9-court-rules">
       <p className="v9-muted">依正取人數加開場地（目前正取 {confirmed} 位）</p>
