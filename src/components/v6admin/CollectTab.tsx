@@ -39,13 +39,23 @@ type ItemResult = {
 };
 
 function itemLabel(it: Item) {
-  if (it.kind === "season") return `${it.season.seasonName} 季費`;
+  if (it.kind === "season") return seasonLabel(it.season);
   const g = it.guest;
   return `${shortDate(g.eventDate)} 臨打${g.signupKind === "proxy" ? `（代報 ${g.guestName}）` : ""}`;
 }
 
+// T-20: one person can hold a 季打 seat in two groups of a season (日安 週一 /
+// 週四), so each season row also names its group.
+function withGroup(text: string, groupName?: string) {
+  return groupName ? `${text} | ${groupName}` : text;
+}
+
+function seasonLabel(s: BillSeasonItem) {
+  return withGroup(`${s.seasonName} 季費`, s.groupName);
+}
+
 function refundLabel(r: BillRefundItem) {
-  return `${r.fromSeasonName} 請假退費`;
+  return withGroup(`${r.fromSeasonName} 請假退費`, r.groupName);
 }
 
 function dueRefunds(bill: PersonBill): BillRefundItem[] {
@@ -627,7 +637,7 @@ export function CollectTab({
                 {paidSeasons.map((s) => (
                   <li className="ctl-row" key={s.paymentId}>
                     <span className="ctl-row-name is-wrap">
-                      {s.seasonName} 季費
+                      {seasonLabel(s)}
                       <small>{s.paidAt ? s.paidAt.replace("T", " ").slice(0, 16) : ""}</small>
                     </span>
                     <span className="ctl-row-amt">{money(s.finalPayableAmount)}</span>
@@ -637,7 +647,7 @@ export function CollectTab({
                       type="button"
                       disabled={writing}
                       onClick={() =>
-                        openFix(`${s.seasonName} 季費`, s.finalPayableAmount, () =>
+                        openFix(seasonLabel(s), s.finalPayableAmount, () =>
                           adminWriteApi.seasonPaymentStatus(password, s.paymentId, "unpaid"),
                         )
                       }

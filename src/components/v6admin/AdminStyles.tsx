@@ -303,6 +303,18 @@ html.ctl-lock-x body {
 .ctl-claim-row.is-head { font-size: 13px; font-weight: 700; color: var(--muted); padding-top: 2px; }
 .ctl-claim-row .ctl-act { padding: 5px 8px; }
 .ctl-dc-row { align-items: flex-start; }
+/* T-19: 新增認領 tap lists */
+.ctl-pick-list { list-style: none; margin: 0; padding: 0; max-height: 46vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+.ctl-pick-list > li + li { border-top: 1px solid var(--line); }
+.ctl-pick-row {
+  display: block; width: 100%; text-align: left; padding: 9px 12px; border: 0; background: none;
+  color: var(--ink); font: inherit; cursor: pointer;
+}
+.ctl-pick-row strong, .ctl-pick-chosen strong { display: block; font-size: 16px; font-weight: 800; }
+.ctl-pick-row small, .ctl-pick-chosen small { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); line-height: 1.35; overflow-wrap: anywhere; }
+.ctl-pick-row:disabled { opacity: .45; cursor: default; }
+.ctl-pick-row.is-on { background: var(--blue-soft, rgba(10,132,255,.12)); box-shadow: inset 3px 0 0 var(--blue); }
+.ctl-pick-chosen { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 4px; }
 .ctl-dc-row small.is-red { color: var(--red); }
 .ctl-dc-acts { display: flex; flex-direction: column; gap: 6px; flex: none; }
 .ctl-dc-acts .ctl-act { padding: 5px 10px; }

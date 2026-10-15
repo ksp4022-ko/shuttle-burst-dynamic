@@ -867,6 +867,8 @@ export function SystemTab({
           password={password}
           siteId={siteId}
           accounts={claims.accounts}
+          claimed={claims.claims}
+          temps={claims.tempIdentities || []}
           busy={writing}
           error={sheetError}
           onClose={close}
@@ -1062,10 +1064,14 @@ function LinkMemberSheet({
 // V9-043: give an unclaimed 季打 member of this site to any LINE account --
 // e.g. someone already 季打 on another 場地, or a second 時段 here. The
 // account keeps its other claims; 臨打 accounts stay 臨打 (billing link).
+// T-19: two steps of tap lists (member, then account) instead of native
+// selects, every row laid out as name + one muted detail line.
 function AddClaimSheet({
   password,
   siteId,
   accounts,
+  claimed,
+  temps,
   busy,
   error,
   onClose,
@@ -1074,6 +1080,8 @@ function AddClaimSheet({
   password: string;
   siteId: string;
   accounts: LineAccount[];
+  claimed: LineClaim[];
+  temps: TempIdentity[];
   busy: boolean;
   error: string;
   onClose: () => void;
@@ -1083,7 +1091,6 @@ function AddClaimSheet({
   const [loadError, setLoadError] = useState("");
   const [memberId, setMemberId] = useState("");
   const [accountId, setAccountId] = useState("");
-  const [query, setQuery] = useState("");
   useEffect(() => {
     let alive = true;
     adminApi
@@ -1094,71 +1101,98 @@ function AddClaimSheet({
       alive = false;
     };
   }, [password, siteId]);
+  // Members already held (季打 claims and 臨打 billing links) can't be picked.
+  const owner = new Map<string, string>();
+  for (const c of claimed) {
+    if (c.memberId) owner.set(c.memberId, c.confirmedName || c.lineDisplayName || "");
+  }
+  for (const t of temps) {
+    for (const m of t.linkedMembers || []) {
+      owner.set(m.memberId, t.confirmedName || t.lineDisplayName || "");
+    }
+  }
   const member = members?.find((m) => m.memberId === memberId) || null;
   const account = accounts.find((a) => a.lineIdentityId === accountId) || null;
-  const q = query.trim().toLowerCase();
-  const shown = accounts.filter(
-    (a) => !q || `${a.confirmedName || ""} ${a.lineDisplayName}`.toLowerCase().includes(q),
-  );
   const siteName = (id: string) => (id === "rian" ? "日安" : id === "kangxuan" ? "康軒" : id);
+  const accountName = (a: LineAccount) => a.confirmedName || a.lineDisplayName;
+  function accountDetail(a: LineAccount) {
+    const parts: string[] = [];
+    if (a.confirmedName && a.lineDisplayName !== a.confirmedName) parts.push(`LINE ${a.lineDisplayName}`);
+    if (a.claims.length) {
+      parts.push(`已認領 ${a.claims.map((c) => `${siteName(c.siteId)} ${c.memberName}`).join("、")}`);
+    } else {
+      parts.push(a.identityType === "temp" ? "臨打・未認領" : "未認領");
+    }
+    return parts.join("・");
+  }
   return (
     <Sheet title="新增認領" onClose={onClose} busy={busy}>
       {loadError ? (
         <div className="ctl-error">{loadError}</div>
       ) : !members ? (
         <div className="ctl-loading">讀取季打成員中…</div>
+      ) : !member ? (
+        <div className="ctl-picker">
+          <label>① 選季打成員（本場地）</label>
+          <ul className="ctl-pick-list">
+            {members.map((m) => {
+              const taken = owner.get(m.memberId || "");
+              return (
+                <li key={m.memberId}>
+                  <button
+                    type="button"
+                    className="ctl-pick-row"
+                    disabled={busy || taken !== undefined}
+                    onClick={() => setMemberId(m.memberId || "")}
+                  >
+                    <strong>{m.memberName || m.displayName}</strong>
+                    <small>
+                      {m.groupName || "未分組"}
+                      {taken !== undefined ? `・已由 ${taken || "某帳號"} 認領` : ""}
+                    </small>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       ) : (
         <>
-          <div className="ctl-picker">
-            <label htmlFor="ctl-add-claim-member">季打成員（本場地、尚未認領）</label>
-            <select
-              id="ctl-add-claim-member"
-              className="ctl-select"
-              value={memberId}
+          <div className="ctl-pick-chosen">
+            <div>
+              <strong>{member.memberName || member.displayName}</strong>
+              <small>{member.groupName || "未分組"}</small>
+            </div>
+            <button
+              type="button"
+              className="ctl-act"
               disabled={busy}
-              onChange={(e) => setMemberId(e.target.value)}
+              onClick={() => {
+                setMemberId("");
+                setAccountId("");
+              }}
             >
-              <option value="">請選擇</option>
-              {members.map((m) => (
-                <option key={m.memberId} value={m.memberId || ""}>
-                  {m.memberName || m.displayName}
-                  {m.groupName ? `（${m.groupName}）` : ""}
-                </option>
-              ))}
-            </select>
+              換一位
+            </button>
           </div>
           <div className="ctl-picker">
-            <label htmlFor="ctl-add-claim-account">LINE 帳號</label>
-            <input
-              className="ctl-input"
-              type="search"
-              placeholder="搜尋名字"
-              value={query}
-              disabled={busy}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <select
-              id="ctl-add-claim-account"
-              className="ctl-select"
-              value={accountId}
-              disabled={busy}
-              onChange={(e) => setAccountId(e.target.value)}
-            >
-              <option value="">請選擇</option>
-              {shown.map((a) => (
-                <option key={a.lineIdentityId} value={a.lineIdentityId}>
-                  {a.confirmedName || a.lineDisplayName}
-                  {a.confirmedName && a.lineDisplayName !== a.confirmedName
-                    ? `（LINE ${a.lineDisplayName}）`
-                    : ""}
-                  {a.claims.length
-                    ? ` · 已認領 ${a.claims.map((c) => `${siteName(c.siteId)}${c.memberName}`).join("、")}`
-                    : a.identityType === "temp"
-                      ? " · 臨打"
-                      : ""}
-                </option>
+            <label>② 選 LINE 帳號</label>
+            <ul className="ctl-pick-list">
+              {accounts.map((a) => (
+                <li key={a.lineIdentityId}>
+                  <button
+                    type="button"
+                    className={`ctl-pick-row${a.lineIdentityId === accountId ? " is-on" : ""}`}
+                    aria-pressed={a.lineIdentityId === accountId}
+                    disabled={busy}
+                    onClick={() => setAccountId(a.lineIdentityId)}
+                  >
+                    <strong>{accountName(a)}</strong>
+                    <small>{accountDetail(a)}</small>
+                  </button>
+                </li>
               ))}
-            </select>
+            </ul>
           </div>
         </>
       )}
