@@ -66,6 +66,7 @@ export function V9Hero({
   fit = false,
   courtRules,
   onCourtRules,
+  courtHint = false,
 }: {
   siteName: string;
   event: AlphaEvent;
@@ -101,6 +102,9 @@ export function V9Hero({
   // sheet the app renders (outside the hero, like the other sheets).
   courtRules?: V9CourtRule[] | undefined;
   onCourtRules?: () => void;
+  // V9-051 (/v9test until accepted): rising red + on the 場地 cell while
+  // the 正取 count is in a 加場 band.
+  courtHint?: boolean;
 }) {
   const display = parseV8MeetupDisplay(event.name);
   const meetupName = display.displayName || event.name;
@@ -207,6 +211,12 @@ export function V9Hero({
         <dl className="v9-rail">
           {rail.map((item) => {
             const tap = item.icon === "court" && Boolean(courtRules?.length);
+            const plus =
+              tap &&
+              courtHint &&
+              !tired &&
+              !switching &&
+              counts.confirmed >= Math.min(...(courtRules ?? []).map((rule) => rule.from));
             return (
               <div
                 key={item.label}
@@ -244,6 +254,18 @@ export function V9Hero({
                   )}
                 </dt>
                 <dd>{item.value}</dd>
+                {plus && (
+                  <span
+                    className={`v9-court-plus${hintPaused || busy ? " is-paused" : ""}`}
+                    aria-hidden="true"
+                  >
+                    {[0, 1, 2].map((key) => (
+                      <svg key={key} viewBox="0 0 12 12">
+                        <path d="M4.4 1h3.2v3.4H11v3.2H7.6V11H4.4V7.6H1V4.4h3.4z" />
+                      </svg>
+                    ))}
+                  </span>
+                )}
               </div>
             );
           })}

@@ -236,6 +236,33 @@ const V9_CSS = `
   display: inline-grid; place-items: center; width: 14px; height: 14px; margin-left: 4px; vertical-align: 1px;
   border: 1.5px solid currentColor; border-radius: 50%; font-size: 9px; font-weight: 900; font-style: normal; line-height: 1;
 }
+/* V9-051: while the 正取 count is in a 加場 band, three red + rise from the
+   right of the 場地 cell and fade (1.8s rise, ~2.2s rest, 4s a round),
+   0.35s apart. transform / opacity only; reduced motion keeps them still. */
+.v9-rail-item.is-tap { position: relative; }
+.v9-court-plus { position: absolute; right: 8px; bottom: 6px; width: 42px; height: 48px; pointer-events: none; }
+.v9-court-plus svg {
+  position: absolute; bottom: 0; display: block; overflow: visible; opacity: 0;
+  animation: v9-plus-rise 4s cubic-bezier(0.23, 1, 0.32, 1) infinite, v9-plus-fade 4s linear infinite;
+}
+.v9-court-plus path { fill: var(--v9-red); stroke: var(--v9-ink); stroke-width: 1.3; stroke-linejoin: round; }
+.v9-court-plus svg:nth-child(1) { right: 2px; bottom: 0; width: 18px; height: 18px; animation-delay: 0s; }
+.v9-court-plus svg:nth-child(2) { right: 22px; bottom: 10px; width: 14px; height: 14px; animation-delay: .35s; }
+.v9-court-plus svg:nth-child(3) { right: 6px; bottom: 16px; width: 10px; height: 10px; animation-delay: .7s; }
+.v9-court-plus.is-paused svg { animation-play-state: paused; }
+@keyframes v9-plus-rise {
+  0% { transform: translateY(0) scale(1); }
+  45%, 100% { transform: translateY(-22px) scale(.82); }
+}
+@keyframes v9-plus-fade {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  25% { opacity: .9; }
+  45%, 100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v9-court-plus svg { animation: none !important; opacity: .85; }
+}
 .v9-court-rules ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .v9-court-rules li {
   display: flex; align-items: center; gap: 10px; padding: 11px 14px;
