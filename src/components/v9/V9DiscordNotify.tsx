@@ -8,7 +8,6 @@ import {
   type V9DiscordLink,
   type V9DiscordSwitch,
 } from "@/lib/v9-discord";
-import { useV9Test } from "./useV9Test";
 
 // V9-030: 球員卡「Discord 通知」. Link a Discord account once, then pick
 // which of your own status changes the bot DMs you about. Hidden when the
@@ -116,36 +115,6 @@ export function V9DiscordNotify({
     return () => controller.abort();
   }, [token]);
 
-  // V9-044 (/v9test): the link flow runs in a new tab, because on iPhone the
-  // Discord app takes over the authorize page and never returns to the site.
-  // Coming back to this tab re-reads the link, so no manual reload is needed.
-  const newTab = useV9Test();
-  const waiting = newTab && Boolean(link && link.configured && !link.linked);
-  useEffect(() => {
-    if (!waiting) return;
-    let controller: AbortController | null = null;
-    const recheck = () => {
-      if (document.visibilityState !== "visible") return;
-      controller?.abort();
-      controller = new AbortController();
-      fetchV9DiscordLink(token, controller.signal)
-        .then((next) => {
-          if (!next.linked) return;
-          setLink(next);
-          setOpen(true);
-          setMessage(V9_DISCORD_RESULT_TEXT["linked"] ?? "");
-        })
-        .catch(() => undefined);
-    };
-    document.addEventListener("visibilitychange", recheck);
-    window.addEventListener("focus", recheck);
-    return () => {
-      document.removeEventListener("visibilitychange", recheck);
-      window.removeEventListener("focus", recheck);
-      controller?.abort();
-    };
-  }, [waiting, token]);
-
   if (!link || !link.configured) return null;
 
   const switches = SWITCHES.filter(
@@ -180,24 +149,12 @@ export function V9DiscordNotify({
     }
   };
 
-  const connect = () => {
-    // Open the tab inside the tap itself, or the browser blocks it as a
-    // popup; the authorize URL is filled in once the Worker returns it.
-    const tab = newTab ? window.open("", "_blank") : null;
-    if (tab) tab.opener = null;
-    return run(async () => {
+  const connect = () =>
+    run(async () => {
       const url = new URL(window.location.href);
       url.searchParams.delete("discord");
-      try {
-        const target = await startV9DiscordLink(token, url.toString());
-        if (tab) tab.location.href = target;
-        else window.location.href = target;
-      } catch (error) {
-        tab?.close();
-        throw error;
-      }
+      window.location.href = await startV9DiscordLink(token, url.toString());
     });
-  };
 
   return (
     <section className="v9-pc-discord" aria-label="Discord 通知">
@@ -288,11 +245,6 @@ export function V9DiscordNotify({
             >
               {busy ? "前往 Discord…" : "連結 Discord"}
             </button>
-            {newTab && (
-              <p className="v9-pc-discord-text is-note">
-                會開新分頁到 Discord 授權；授權完成後回到這一頁，會自動更新。
-              </p>
-            )}
           </>
         ))}
 
