@@ -3,6 +3,7 @@ import { motion, useAnimate, useReducedMotion } from "motion/react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
+import { meetupTimeLabel, parseMeetupName } from "@/lib/meetup-name";
 import { V9Icon } from "./V9Icons";
 import { V9Lockup } from "./V9Logo";
 import { V9MascotArt } from "./V9Mascot";
@@ -94,6 +95,7 @@ export function V9Hero({
   courtRules,
   onCourtRules,
   courtHint = false,
+  nameTag = false,
 }: {
   siteName: string;
   event: AlphaEvent;
@@ -132,8 +134,15 @@ export function V9Hero({
   // V9-051 (/v9test until accepted): rising red + on the 場地 cell while
   // the 正取 count is in a 加場 band.
   courtHint?: boolean;
+  // V9-057 (/v9test until accepted): lenient name reading and the special
+  // name as a tag hanging off the calendar's bottom edge.
+  nameTag?: boolean;
 }) {
-  const display = parseV8MeetupDisplay(event.name);
+  const v8Display = parseV8MeetupDisplay(event.name);
+  const parsedName = parseMeetupName(event.name);
+  const display = nameTag
+    ? { displayName: parsedName.name, timeLabel: meetupTimeLabel(parsedName) }
+    : v8Display;
   const meetupName = display.displayName || event.name;
   // "康軒" next to "康軒羽球" says nothing new; only special names show.
   const showMeetupName = Boolean(meetupName) && meetupName !== siteName;
@@ -241,7 +250,12 @@ export function V9Hero({
               onList={onMeetup}
               hintPaused={hintPaused}
             />
-            {showMeetupName && <span className="v9-hero-name">{meetupName}</span>}
+            {showMeetupName &&
+              (nameTag ? (
+                <span className="v9-hero-name-tag">{meetupName}</span>
+              ) : (
+                <span className="v9-hero-name">{meetupName}</span>
+              ))}
           </div>
           <V9HeroMascot
             sprite={tired ? "tired" : identity && !switching ? v9MascotSprite(identity) : "guest"}

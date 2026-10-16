@@ -2,7 +2,7 @@ import { useV9Test } from "./useV9Test";
 
 // /v9test build label, bumped with each /v9test push, so a phone screenshot
 // shows which version it is running (a cached page shows the old label).
-export const V9_TEST_BUILD = "10/17-6";
+export const V9_TEST_BUILD = "10/18-1";
 
 // Dev-route marker (CLAUDE.md): only /v9test shows the PREVIEW tag on the
 // card's top edge; production /v9 has none.

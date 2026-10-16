@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { MEETUP_TIME_OPTIONS, composeMeetupName, parseMeetupName } from "@/lib/meetup-name";
 import {
   adminApi,
   adminWriteApi,
@@ -375,6 +376,19 @@ function findDefault(dashboard: DashboardData, seasonId: string, groupId: string
   );
 }
 
+// T-39: the site's own short name, used when a meetup has no 特別名稱.
+const SITE_SHORT_NAMES: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
+function siteShortName(dashboard: DashboardData) {
+  return SITE_SHORT_NAMES[dashboard.site.id] || dashboard.site.name.replace(/羽球$/, "");
+}
+
+// Picker choices, keeping an off-grid saved time selectable.
+function timeChoices(current: string) {
+  return current && !MEETUP_TIME_OPTIONS.includes(current)
+    ? [...MEETUP_TIME_OPTIONS, current].sort()
+    : MEETUP_TIME_OPTIONS;
+}
+
 function createDefaults(dashboard: DashboardData, siteId: string): EventFormInput {
   const first = (dashboard.eventDefaults || [])[0];
   return {
@@ -552,10 +566,44 @@ function EventForm({
   onClose: () => void;
   onSubmit: (input: EventFormInput, syncFixed: boolean) => void;
 }) {
-  const [form, setForm] = useState<EventFormInput>(initial);
+  // T-39: 特別名稱 / 開始 / 結束 -> the stored name. A name equal to the site's
+  // own short name is the plain case (no 特別名稱). A saved name in an old
+  // spelling ("日安| 1000-1200") is rewritten in the standard form on save.
+  const prefix = siteShortName(dashboard);
+  const [nameParts, setNameParts] = useState(() => {
+    const parsed = parseMeetupName(initial.name);
+    return {
+      special: parsed.name === prefix ? "" : parsed.name,
+      start: parsed.start,
+      end: parsed.end,
+    };
+  });
+  const [form, setForm] = useState<EventFormInput>(() => ({
+    ...initial,
+    name: composeMeetupName(nameParts.special || prefix, nameParts.start, nameParts.end),
+  }));
   const [syncFixed, setSyncFixed] = useState(true);
   const set = (key: keyof EventFormInput, value: string) =>
     setForm((cur) => ({ ...cur, [key]: value }));
+  const setName = (patch: Partial<typeof nameParts>) => {
+    const next = { ...nameParts, ...patch };
+    setNameParts(next);
+    const both = next.start && next.end;
+    set(
+      "name",
+      composeMeetupName(
+        next.special.trim() || prefix,
+        both ? next.start : "",
+        both ? next.end : "",
+      ),
+    );
+  };
+  const timeError =
+    Boolean(nameParts.start) !== Boolean(nameParts.end)
+      ? "開始與結束時間要一起選"
+      : nameParts.start && nameParts.end && nameParts.end <= nameParts.start
+        ? "結束時間要晚於開始時間"
+        : "";
 
   // New event: picking a season / group reloads that pair's defaults (/admin).
   function setScope(key: "seasonId" | "groupId", value: string) {
@@ -569,7 +617,7 @@ function EventForm({
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    if (busy || !form.eventDate) return;
+    if (busy || !form.eventDate || timeError) return;
     onSubmit(form, syncFixed);
   }
 
@@ -585,10 +633,43 @@ function EventForm({
             onChange={(e) => set("eventDate", e.target.value)}
           />
         </label>
+        {/* T-39: the name is built from these fields, never typed whole:
+            "<特別名稱 or 場地>｜HHMM-HHMM". */}
         <label className="ctl-field is-wide">
-          聚會名稱
-          <input type="text" value={form.name} onChange={(e) => set("name", e.target.value)} />
+          特別名稱（選填）
+          <input
+            type="text"
+            placeholder={`空白＝${prefix}`}
+            value={nameParts.special}
+            onChange={(e) => setName({ special: e.target.value })}
+          />
         </label>
+        <label className="ctl-field">
+          開始時間
+          <select value={nameParts.start} onChange={(e) => setName({ start: e.target.value })}>
+            <option value="">不指定</option>
+            {timeChoices(nameParts.start).map((t) => (
+              <option key={t} value={t}>
+                {t.slice(0, 2)}:{t.slice(2)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="ctl-field">
+          結束時間
+          <select value={nameParts.end} onChange={(e) => setName({ end: e.target.value })}>
+            <option value="">不指定</option>
+            {timeChoices(nameParts.end).map((t) => (
+              <option key={t} value={t}>
+                {t.slice(0, 2)}:{t.slice(2)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="ctl-sub is-wide">
+          聚會名稱：<strong>{form.name || "（未填）"}</strong>
+          {timeError ? <span className="ctl-name-error">{timeError}</span> : null}
+        </p>
         <label className="ctl-field">
           賽季
           <select value={form.seasonId} onChange={(e) => setScope("seasonId", e.target.value)}>
@@ -669,7 +750,11 @@ function EventForm({
         <button className="ctl-btn is-plain" type="button" onClick={onClose} disabled={busy}>
           返回
         </button>
-        <button className="ctl-btn" type="submit" disabled={busy || !form.eventDate}>
+        <button
+          className="ctl-btn"
+          type="submit"
+          disabled={busy || !form.eventDate || Boolean(timeError)}
+        >
           {busy ? "處理中…" : mode === "create" ? "建立聚會" : "儲存修改"}
         </button>
       </div>

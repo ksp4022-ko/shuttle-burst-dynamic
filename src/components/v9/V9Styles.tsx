@@ -134,6 +134,15 @@ const V9_CSS = `
 .v9-hero-date { font-size: 46px; line-height: .95; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .v9-hero-date small { font-size: 16px; font-weight: 900; margin-left: 6px; letter-spacing: 0; }
 .v9-hero-name { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 17px; font-weight: 900; }
+/* V9-057 (/v9test): a special meetup name hangs off the calendar's bottom
+   edge like the PREVIEW tab upside down -- dark, never wider than the
+   calendar, shrinking then truncating instead of wrapping. */
+.v9-hero-name-tag {
+  justify-self: center; max-width: calc(100% - 20px); margin-top: -8px; padding: 4px 12px 3px; overflow: hidden;
+  border: 2px solid var(--v9-ink); border-top: 0; border-radius: 0 0 10px 10px; background: var(--v9-ink); color: #fff;
+  font-size: clamp(11px, 3.4vw, 14px); font-weight: 900; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis;
+  position: relative; z-index: 0;
+}
 
 /* ---------- Meetup switcher: tear-off calendar ---------- */
 .v9-main.is-switching .v9-roster-strip { opacity: .5; transition: opacity .2s; }

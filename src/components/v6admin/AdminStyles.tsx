@@ -429,6 +429,8 @@ html.ctl-lock-x body {
 }
 .ctl-id-tag.is-empty { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
 .ctl-row-amt.is-clear { color: var(--muted); font-weight: 600; }
+/* T-39: the built name under the name fields; a time mismatch in red. */
+.ctl-name-error { display: block; color: var(--red); font-weight: 700; }
 .ctl-menu { display: grid; gap: 10px; }
 .ctl-btn.is-danger-text { color: var(--red); border-color: var(--red); box-shadow: 0 3px 0 var(--red); }
 .ctl-field select {
