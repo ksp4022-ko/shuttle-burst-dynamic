@@ -737,7 +737,7 @@ export function V9App() {
               fit
               courtRules={V9_COURT_RULES[siteId]}
               onCourtRules={() => setSheet("courtRules")}
-              courtHint={v9Test}
+              courtHint
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
