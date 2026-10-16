@@ -341,15 +341,20 @@ export function CollectTab({
                       className="ctl-row ctl-person"
                       onClick={() => openPerson(p.personId)}
                     >
-                      <span className="ctl-row-name is-wrap">
-                        {p.displayName || p.memberName || "（未命名）"}
-                        {p.lineDisplayName && p.lineDisplayName !== p.displayName ? (
-                          <small>LINE {p.lineDisplayName}</small>
-                        ) : null}
-                        {p.memberName && p.memberName !== p.displayName ? (
-                          <small>季打 {p.memberName}</small>
-                        ) : null}
-                        {p.kind === "member" ? <small>未認領 LINE</small> : null}
+                      {/* T-36: every row the same two lines -- name, then the LINE
+                          and 季打 names as tags (grey when missing). */}
+                      <span className="ctl-row-name ctl-person-main">
+                        <span className="ctl-person-name">
+                          {p.displayName || p.memberName || "（未命名）"}
+                        </span>
+                        <span className="ctl-id-tags">
+                          <span className={`ctl-id-tag${p.lineDisplayName ? "" : " is-empty"}`}>
+                            LINE {p.lineDisplayName || "未認領"}
+                          </span>
+                          <span className={`ctl-id-tag${p.memberName ? "" : " is-empty"}`}>
+                            季打 {p.memberName || "—"}
+                          </span>
+                        </span>
                       </span>
                       <PersonAmount p={p} />
                       <span className="ctl-chev" aria-hidden>
@@ -911,7 +916,7 @@ function PersonAmount({ p }: { p: BillingPerson }) {
     );
   }
   return (
-    <span className={`ctl-row-amt${owe ? " is-owe" : refund ? " is-refund" : ""}`}>
+    <span className={`ctl-row-amt${owe ? " is-owe" : refund ? " is-refund" : " is-clear"}`}>
       {owe ? money(owe) : refund ? `待退 ${money(refund)}` : "已結清"}
     </span>
   );

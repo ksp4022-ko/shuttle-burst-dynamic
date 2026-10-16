@@ -178,11 +178,14 @@ export function ManageTab({
                               {e.unpaidPaymentCount ? ` · 未付 ${e.unpaidPaymentCount}` : ""}
                             </small>
                           </span>
-                          {e.eventKind === "test" ? (
-                            <span className="ctl-pill blue">測試</span>
-                          ) : null}
-                          <span className={`ctl-pill ${statusTone(e.status)}`}>
-                            {eventStatusLabel(e.status)}
+                          {/* T-37: 測試 above, the status always at the bottom. */}
+                          <span className="ctl-event-row-tags">
+                            {e.eventKind === "test" ? (
+                              <span className="ctl-pill blue">測試</span>
+                            ) : null}
+                            <span className={`ctl-pill ${statusTone(e.status)}`}>
+                              {eventStatusLabel(e.status)}
+                            </span>
                           </span>
                         </button>
                       </li>

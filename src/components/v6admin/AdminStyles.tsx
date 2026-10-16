@@ -417,6 +417,18 @@ html.ctl-lock-x body {
 .ctl-event-row-main strong { font-size: 16px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ctl-event-row-main small { font-size: 13px; color: var(--muted); }
 .ctl-event-row::after { content: "›"; color: var(--muted); font-size: 20px; margin-left: 2px; }
+/* T-37: tags stacked, the status pill pinned to the row's bottom line. */
+.ctl-event-row-tags { flex: none; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; gap: 4px; }
+/* T-36: 收款 rows -- name, then LINE / 季打 tags; all rows two lines. */
+.ctl-person-main { display: grid; gap: 4px; }
+.ctl-person-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ctl-id-tags { display: flex; gap: 6px; min-width: 0; }
+.ctl-id-tag {
+  min-width: 0; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 1px 7px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: 12px; font-weight: 600;
+}
+.ctl-id-tag.is-empty { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
+.ctl-row-amt.is-clear { color: var(--muted); font-weight: 600; }
 .ctl-menu { display: grid; gap: 10px; }
 .ctl-btn.is-danger-text { color: var(--red); border-color: var(--red); box-shadow: 0 3px 0 var(--red); }
 .ctl-field select {
