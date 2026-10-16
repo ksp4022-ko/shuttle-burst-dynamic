@@ -16,6 +16,7 @@ import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
+import { V9PullRefresh } from "./V9PullRefresh";
 import { V9ErrorBoundary } from "./V9ErrorBoundary";
 import { V9Styles } from "./V9Styles";
 import { V9CourtRules, V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
@@ -439,6 +440,27 @@ export function V9App() {
 
   const closeSheet = useCallback(() => setSheet(null), []);
 
+  // V9-055 (/v9test, home-screen app): pull-to-refresh, and a fresh read
+  // whenever the app comes back to the foreground (iOS stops the roster poll
+  // while it's in the background).
+  const { refresh: refreshRoster } = flow;
+  const refreshNow = useCallback(async () => {
+    await refreshRoster();
+    await refreshCancellableRef.current();
+  }, [refreshRoster]);
+  useEffect(() => {
+    if (!v9Test) return;
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    if (!standalone) return;
+    const onShow = () => {
+      if (document.visibilityState === "visible") void refreshNow();
+    };
+    document.addEventListener("visibilitychange", onShow);
+    return () => document.removeEventListener("visibilitychange", onShow);
+  }, [v9Test, refreshNow]);
+
   // 切換聚會 shows 尚缺 / 備取 per meetup. The list the flow loaded at start
   // can be stale, so opening the sheet re-reads it (same request as the
   // flow); the meetup on screen uses its live roster instead.
@@ -639,6 +661,12 @@ export function V9App() {
       className={`v9-app${intro && introStage === "cover" ? " is-intro" : ""}${introEntering || (intro && introStage === "entering") ? " is-entering" : ""} is-fit`}
     >
       <V9Styles />
+
+      <V9PullRefresh
+        enabled={v9Test}
+        blocked={intro || sheet !== null || Boolean(pendingAction)}
+        onRefresh={refreshNow}
+      />
 
       {intro && (
         // The intro is decoration: if it ever throws, skip straight to the app.

@@ -394,6 +394,29 @@ const V9_CSS = `
   background: var(--v9-cream); border: var(--v9-line); border-radius: 30px; box-shadow: 0 6px 0 var(--v9-ink);
 }
 .v9-intro-card { position: relative; z-index: 1; }
+/* V9-055 (/v9test, home-screen app only): no sideways dragging of the
+   page; vertical scrolling and the pull-to-refresh stay. */
+@media (display-mode: standalone) {
+  html.v9-pwa, html.v9-pwa body { overflow-x: hidden; overscroll-behavior: none; touch-action: pan-y; }
+}
+.v9-pull {
+  position: fixed; left: 50%; top: max(6px, env(safe-area-inset-top)); z-index: 60; display: grid; justify-items: center; gap: 4px;
+  opacity: 0; transform: translate(-50%, -52px); pointer-events: none;
+}
+.v9-pull-ball {
+  display: grid; place-items: center; width: 40px; height: 40px; border: 2.5px solid var(--v9-ink); border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 0 var(--v9-ink);
+}
+/* cork up while pulling, turns cork-down once a release would refresh */
+.v9-pull-ball img { display: block; width: 28px; height: auto; transform: rotate(-90deg); transition: transform .18s cubic-bezier(0.23, 1, 0.32, 1); }
+.v9-pull.is-armed .v9-pull-ball img, .v9-pull.is-busy .v9-pull-ball img { transform: rotate(90deg); }
+.v9-pull.is-busy .v9-pull-ball { animation: v9-pull-spin .8s linear infinite; }
+@keyframes v9-pull-spin { to { transform: rotate(360deg); } }
+.v9-pull-label { padding: 1px 8px; border-radius: 999px; background: var(--v9-ink); color: #fff; font-size: 11px; font-weight: 800; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .v9-pull-ball img { transition: none; }
+  .v9-pull.is-busy .v9-pull-ball { animation: none; }
+}
 /* V9-054 (/v9test): 場名 tag hanging off the loading card's top edge - the
    PREVIEW tab's shape in red, the calendar 場名's lettering (no pin). Fixed
    and clipped at the border's inner edge; it tucks up behind the border as
