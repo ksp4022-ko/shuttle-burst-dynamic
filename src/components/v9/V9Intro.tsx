@@ -37,7 +37,7 @@ const FLIGHT_MS = 1750; // launch → landing; lands just after the CTA settles
 const MORPH_MS = 200;
 const FADE_MS = 350; // the opening screen fades from the launch
 const CATCH_MS = 280;
-// V9-054 (/v9test): the 場名 tag on the loading card tucks up into the
+// V9-054: the 場名 tag on the loading card tucks up into the
 // card's top border as the dragon winds up (the 蓄力 hold), so the shot and
 // the deck's entrance start on a clean top; the calendar brings its own 場名.
 const TAG_MS = 200;
@@ -245,6 +245,11 @@ export function V9Intro({
   const impactRef = useRef<HTMLSpanElement>(null);
   const morphRef = useRef<HTMLSpanElement>(null);
   const [minPassed, setMinPassed] = useState(false);
+  // The prerendered page doesn't know the site (康軒 / 日安): the tag only
+  // renders on the client, after hydration.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  const tagLabel = hydrated ? siteLabel : undefined;
   const [leaving, setLeaving] = useState(false);
   const animations = useRef<Animation[]>([]);
   const timers = useRef<number[]>([]);
@@ -276,7 +281,7 @@ export function V9Intro({
       observer.disconnect();
       window.removeEventListener("resize", place);
     };
-  }, [siteLabel]);
+  }, [tagLabel]);
 
   useEffect(
     () => () => {
@@ -617,11 +622,11 @@ export function V9Intro({
         </div>
         <span ref={morphRef} className="v9-intro-morph" aria-hidden="true" />
       </div>
-      {siteLabel && (
+      {tagLabel && (
         <span ref={tagRef} className="v9-intro-site" aria-hidden="true">
           <span className="v9-intro-site-inner">
             <span className="v9-intro-site-frame" />
-            <span className="v9-intro-site-text">{siteLabel}</span>
+            <span className="v9-intro-site-text">{tagLabel}</span>
           </span>
         </span>
       )}

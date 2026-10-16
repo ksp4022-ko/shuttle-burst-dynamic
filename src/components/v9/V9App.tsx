@@ -17,7 +17,6 @@ import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
 import { V9PullRefresh } from "./V9PullRefresh";
-import { V9Diag } from "./V9Diag";
 import { useV9PageLock } from "./useV9PageLock";
 import { V9ErrorBoundary } from "./V9ErrorBoundary";
 import { V9Styles } from "./V9Styles";
@@ -442,17 +441,16 @@ export function V9App() {
 
   const closeSheet = useCallback(() => setSheet(null), []);
 
-  // V9-056 (/v9test): the page behind the app is the site's dark theme, so
-  // an iPhone rubber-band pull showed a black band; paint it paper instead.
+  // V9-056: the page behind the app is the site's dark theme, so an iPhone
+  // rubber-band pull showed a black band; paint it paper instead.
   useEffect(() => {
-    if (!v9Test) return;
     document.documentElement.classList.add("v9-page-bg");
     return () => document.documentElement.classList.remove("v9-page-bg");
-  }, [v9Test]);
+  }, []);
 
-  useV9PageLock(v9Test);
+  useV9PageLock(true);
 
-  // V9-055 (/v9test): pull-to-refresh (home-screen app and, V9-056, web), and a fresh read
+  // V9-055: pull-to-refresh (home-screen app and, V9-056, web), and a fresh read
   // whenever the app comes back to the foreground (iOS stops the roster poll
   // while it's in the background).
   const { refresh: refreshRoster } = flow;
@@ -461,7 +459,6 @@ export function V9App() {
     await refreshCancellableRef.current();
   }, [refreshRoster]);
   useEffect(() => {
-    if (!v9Test) return;
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -471,7 +468,7 @@ export function V9App() {
     };
     document.addEventListener("visibilitychange", onShow);
     return () => document.removeEventListener("visibilitychange", onShow);
-  }, [v9Test, refreshNow]);
+  }, [refreshNow]);
 
   // 切換聚會 shows 尚缺 / 備取 per meetup. The list the flow loaded at start
   // can be stale, so opening the sheet re-reads it (same request as the
@@ -674,9 +671,8 @@ export function V9App() {
     >
       <V9Styles />
 
-      <V9Diag enabled={v9Test} />
       <V9PullRefresh
-        enabled={v9Test}
+        enabled
         blocked={intro || sheet !== null || Boolean(pendingAction)}
         onRefresh={refreshNow}
       />
@@ -688,7 +684,7 @@ export function V9App() {
             ready={dataSettled}
             onStage={setIntroStage}
             onDone={introDone}
-            siteLabel={v9Test ? siteName : undefined}
+            siteLabel={siteName}
           />
         </V9ErrorBoundary>
       )}

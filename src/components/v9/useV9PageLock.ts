@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-// V9-056 (/v9test web pages): the deck is one screen, but an iPhone browser
+// V9-056 (web pages): the deck is one screen, but an iPhone browser
 // still rubber-bands the whole page (Dock included) on any drag. A touchmove
 // is let through only if something under the finger -- a list, a sheet, or
 // the page itself when it is taller than the screen -- can still move that

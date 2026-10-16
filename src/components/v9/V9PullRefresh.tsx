@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-// V9-055 (/v9test, home-screen app only): pull down at the top of the page to
+// V9-055 (home-screen app; V9-056 web pages too): pull down at the top of the page to
 // re-read the meetup and roster, and no sideways dragging of the page.
 //
 // iOS gives a home-screen app no pull-to-refresh of its own, and after a sheet
@@ -107,7 +107,7 @@ export function V9PullRefresh({
       }
     };
 
-    // Last pull decision, shown by the ?diag=1 panel (V9-056).
+    // Last pull decision, kept on window.__v9pull for on-device debugging (V9-056).
     const note = (text: string) => {
       (window as Window & { __v9pull?: string }).__v9pull = text;
     };

@@ -396,7 +396,7 @@ const V9_CSS = `
 .v9-intro-card { position: relative; z-index: 1; }
 html.v9-page-bg, html.v9-page-bg body { background: #fbf6ec; }
 html.v9-page-lock, html.v9-page-lock body { overscroll-behavior: none; }
-/* V9-055 (/v9test, home-screen app only): no sideways dragging of the
+/* V9-055 (home-screen app only): no sideways dragging of the
    page; vertical scrolling and the pull-to-refresh stay. */
 @media (display-mode: standalone) {
   html.v9-pwa, html.v9-pwa body { overflow-x: hidden; overscroll-behavior: none; touch-action: pan-y; }
@@ -419,7 +419,7 @@ html.v9-page-lock, html.v9-page-lock body { overscroll-behavior: none; }
   .v9-pull-ball img { transition: none; }
   .v9-pull.is-busy .v9-pull-ball { animation: none; }
 }
-/* V9-054 (/v9test): 場名 tag hanging off the loading card's top edge - the
+/* V9-054: 場名 tag hanging off the loading card's top edge - the
    PREVIEW tab's shape in red, the calendar 場名's lettering (no pin). Fixed
    and clipped at the border's inner edge; it tucks up behind the border as
    the dragon winds up for the shot. */
