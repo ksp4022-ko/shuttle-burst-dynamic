@@ -441,6 +441,14 @@ export function V9App() {
 
   const closeSheet = useCallback(() => setSheet(null), []);
 
+  // V9-056 (/v9test): the page behind the app is the site's dark theme, so
+  // an iPhone rubber-band pull showed a black band; paint it paper instead.
+  useEffect(() => {
+    if (!v9Test) return;
+    document.documentElement.classList.add("v9-page-bg");
+    return () => document.documentElement.classList.remove("v9-page-bg");
+  }, [v9Test]);
+
   // V9-055 (/v9test, home-screen app): pull-to-refresh, and a fresh read
   // whenever the app comes back to the foreground (iOS stops the roster poll
   // while it's in the background).
