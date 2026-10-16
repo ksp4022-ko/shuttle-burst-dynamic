@@ -325,6 +325,9 @@ export function SystemTab({
                   ["取消", n.notifyCancel],
                   ["請假", n.notifyLeave],
                   ["消假", n.notifyReturn],
+                  ...(typeof n.notifyPayment === "boolean"
+                    ? ([["收款確認", n.notifyPayment]] as [string, boolean][])
+                    : []),
                 ])}
               </dd>
               <dt>前一天名單提醒</dt>
@@ -364,6 +367,9 @@ export function SystemTab({
                         ["轉備取", Boolean(n.discordNotifyDemoted)],
                         ["代報／代退", Boolean(n.discordNotifyProxy)],
                       ] as [string, boolean][])
+                    : []),
+                  ...(typeof n.discordNotifyPayment === "boolean"
+                    ? ([["收款確認", n.discordNotifyPayment]] as [string, boolean][])
                     : []),
                 ])}
               </dd>
@@ -1507,6 +1513,8 @@ function LineForm({
     notifyReturn: Boolean(n.notifyReturn),
     rosterReminderEnabled: Boolean(n.rosterReminderEnabled),
     rosterReminderTime: initialTime,
+    // T-38: only sent when the Worker reports it.
+    ...(typeof n.notifyPayment === "boolean" ? { notifyPayment: n.notifyPayment } : {}),
   });
   const set = <K extends keyof LineNotificationInput>(k: K, v: LineNotificationInput[K]) =>
     setF((cur) => ({ ...cur, [k]: v }));
@@ -1541,6 +1549,14 @@ function LineForm({
         <Check label="取消" checked={f.notifyCancel} onChange={(v) => set("notifyCancel", v)} />
         <Check label="請假" checked={f.notifyLeave} onChange={(v) => set("notifyLeave", v)} />
         <Check label="消假" checked={f.notifyReturn} onChange={(v) => set("notifyReturn", v)} />
+        {typeof f.notifyPayment === "boolean" && (
+          <Check
+            wide
+            label="收款確認（管理員群組＋球員本人）"
+            checked={f.notifyPayment}
+            onChange={(v) => set("notifyPayment", v)}
+          />
+        )}
         <p className="ctl-sub is-wide">聚會名單提醒</p>
         <Check
           wide
@@ -1582,6 +1598,7 @@ function DiscordForm({
   const hasReminder = typeof n.discordRosterReminderEnabled === "boolean";
   // T-30: 轉正取 / 轉備取 / 代報代退 once the Worker reports them (V6-047).
   const hasMoreKinds = typeof n.discordNotifyPromoted === "boolean";
+  const hasPayment = typeof n.discordNotifyPayment === "boolean";
   const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
   const [f, setF] = useState({
     discordEnabled: Boolean(n.discordEnabled),
@@ -1592,6 +1609,7 @@ function DiscordForm({
     discordNotifyPromoted: Boolean(n.discordNotifyPromoted),
     discordNotifyDemoted: Boolean(n.discordNotifyDemoted),
     discordNotifyProxy: Boolean(n.discordNotifyProxy),
+    discordNotifyPayment: Boolean(n.discordNotifyPayment),
     discordRosterReminderEnabled: Boolean(n.discordRosterReminderEnabled),
     discordRosterReminderTime: timeRe.test(String(n.discordRosterReminderTime || ""))
       ? String(n.discordRosterReminderTime)
@@ -1607,12 +1625,14 @@ function DiscordForm({
       discordNotifyPromoted,
       discordNotifyDemoted,
       discordNotifyProxy,
+      discordNotifyPayment,
       ...base
     } = f;
     const input: DiscordNotificationInput = {
       ...base,
       ...(hasReminder ? { discordRosterReminderEnabled, discordRosterReminderTime } : {}),
       ...(hasMoreKinds ? { discordNotifyPromoted, discordNotifyDemoted, discordNotifyProxy } : {}),
+      ...(hasPayment ? { discordNotifyPayment } : {}),
     };
     onSubmit(input);
   };
@@ -1670,6 +1690,14 @@ function DiscordForm({
               onChange={(v) => set("discordNotifyProxy", v)}
             />
           </>
+        )}
+        {hasPayment && (
+          <Check
+            wide
+            label="收款確認（管理員頻道＋球員私訊）"
+            checked={f.discordNotifyPayment}
+            onChange={(v) => set("discordNotifyPayment", v)}
+          />
         )}
         {hasReminder && (
           <>

@@ -221,6 +221,9 @@ export type NotificationStatus = {
   discordNotifyPromoted?: boolean;
   discordNotifyDemoted?: boolean;
   discordNotifyProxy?: boolean;
+  // T-38 (Worker V6-048): 收款確認, absent until that Worker is deployed.
+  notifyPayment?: boolean;
+  discordNotifyPayment?: boolean;
   lineConfigured: boolean;
   discordConfigured: boolean;
 };
@@ -1071,6 +1074,13 @@ export const adminWriteApi = {
       `/admin/sites/${enc(siteId)}/discord-test`,
       pw,
     ),
+  // T-38 (V6-048): one 收款確認 notice (LINE / Discord, admin + player) for
+  // the payments just marked paid. Notification only; nothing is written.
+  notifyPaymentReceipts: (
+    pw: string,
+    siteId: string,
+    input: { personId?: string; tempPaymentIds?: string[]; seasonPaymentIds?: string[] },
+  ) => adminPost(`/admin/sites/${enc(siteId)}/payment-receipts/notify`, pw, input),
   // ③ 賽季管理 (P5-a): same requests as the Worker's /admin page.
   seasonPaymentStatus: (pw: string, paymentId: string, status: "paid" | "unpaid") =>
     adminPost(`/admin/season-payments/${enc(paymentId)}/status`, pw, { status }),
@@ -1307,6 +1317,8 @@ export type LineNotificationInput = {
   notifyReturn: boolean;
   rosterReminderEnabled: boolean;
   rosterReminderTime: string;
+  // T-38: sent only when the Worker reports it (V6-048).
+  notifyPayment?: boolean;
 };
 
 export type DiscordNotificationInput = {
@@ -1322,6 +1334,8 @@ export type DiscordNotificationInput = {
   discordNotifyPromoted?: boolean;
   discordNotifyDemoted?: boolean;
   discordNotifyProxy?: boolean;
+  // T-38: sent only when the Worker reports it (V6-048).
+  discordNotifyPayment?: boolean;
 };
 
 // ---------- Display helpers ----------

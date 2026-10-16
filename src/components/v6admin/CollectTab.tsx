@@ -254,6 +254,20 @@ export function CollectTab({
       setConfirming(false);
       setResult({ title: resultTitle, rows: results });
       onDataChanged();
+      // T-38: one 收款確認 notice for the fees just marked paid (season +
+      // 臨打 together). Fire-and-forget: a notice failing never touches the
+      // recorded payments, and an older Worker without it just 404s.
+      const paidIds = new Set(results.filter((x) => x.state === "ok").map((x) => x.id));
+      const paidNow = picked.filter((it) => paidIds.has(it.id));
+      if (paidNow.length) {
+        adminWriteApi
+          .notifyPaymentReceipts(password, siteId, {
+            personId,
+            seasonPaymentIds: paidNow.filter((it) => it.kind === "season").map((it) => it.id),
+            tempPaymentIds: paidNow.filter((it) => it.kind !== "season").map((it) => it.id),
+          })
+          .catch(() => {});
+      }
       const reads = await Promise.allSettled([loadBill(personId), loadPeople()]);
       const readFailed = reads.some((x) => x.status === "rejected");
       const ok = results.filter((x) => x.state === "ok");
