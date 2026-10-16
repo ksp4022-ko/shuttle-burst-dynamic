@@ -452,7 +452,7 @@ export function V9App() {
 
   useV9PageLock(v9Test);
 
-  // V9-055 (/v9test, home-screen app): pull-to-refresh, and a fresh read
+  // V9-055 (/v9test): pull-to-refresh (home-screen app and, V9-056, web), and a fresh read
   // whenever the app comes back to the foreground (iOS stops the roster poll
   // while it's in the background).
   const { refresh: refreshRoster } = flow;

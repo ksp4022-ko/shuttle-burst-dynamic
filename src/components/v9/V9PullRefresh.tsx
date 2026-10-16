@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 // While pulling, the deck follows the finger with rubber-band resistance and a
 // shuttle drops in from the top; past THRESHOLD the shuttle turns cork-down
 // ("放開重新整理"). Releasing there holds the shuttle (spinning) until the
-// data is back, then everything springs back. Web pages are untouched.
+// data is back, then everything springs back. Web pages (V9-056) get the same pull.
 
 const MAX = 120; // the pull never goes past this
 const THRESHOLD = 68;
@@ -62,14 +62,17 @@ export function V9PullRefresh({
   refreshRef.current = onRefresh;
 
   useEffect(() => setStandalone(isStandalone()), []);
-  const on = enabled && standalone;
+  // V9-056: web pages get the pull too -- their page lock (useV9PageLock)
+  // also stops the browser's own pull-to-refresh.
+  const on = enabled;
+  const pwa = enabled && standalone;
 
   // Sideways lock (CSS keyed off this class, home-screen app only).
   useEffect(() => {
-    if (!on) return;
+    if (!pwa) return;
     document.documentElement.classList.add("v9-pwa");
     return () => document.documentElement.classList.remove("v9-pwa");
-  }, [on]);
+  }, [pwa]);
 
   useEffect(() => {
     if (!on) return;
