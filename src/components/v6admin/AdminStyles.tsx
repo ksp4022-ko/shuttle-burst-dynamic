@@ -92,6 +92,20 @@ html.ctl-lock-x body {
 .ctl-notice { background: var(--orange-bg); color: #8a4b0b; border-radius: 12px; padding: 8px 12px; font-size: 14px; }
 .ctl-notice.is-ok { background: var(--green-bg); color: #1d6b46; }
 .ctl-loading { color: var(--muted); font-size: 15px; padding: 18px 0; text-align: center; }
+/* T-35 D: skeleton stand-ins while data loads (soft shimmer, still under
+   reduced motion). */
+.ctl-skel { position: relative; display: block; height: 14px; overflow: hidden; border-radius: 8px; background: var(--soft); }
+/* the shimmer band moves by transform (GPU), so the stand-ins don't repaint */
+.ctl-skel::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
+  animation: ctl-skel 1.2s ease-in-out infinite;
+}
+@keyframes ctl-skel { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .ctl-skel::after { animation: none; display: none; } }
+.ctl-skel-card { display: grid; gap: 10px; }
+.ctl-skel-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ctl-skel-title { font-size: 17px; font-weight: 800; }
 
 /* Picker row (event / season / group) */
 .ctl-picker { display: grid; gap: 6px; }

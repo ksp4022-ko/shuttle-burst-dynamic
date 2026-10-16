@@ -13,6 +13,7 @@ import {
 } from "@/lib/v6admin-api";
 import { Card, Metric, SegButton, Sheet, Toast } from "./AdminParts";
 import { errText, runWrite, useToast, type WriteLock } from "@/lib/v6admin-write";
+import { cachedOverview, loadOverview, overviewIsFresh } from "@/lib/v6admin-cache";
 
 // ① 當次聚會: event picker, head-count summary, full roster, temp-fee
 // collection, actual expense and the day's profit (GET overview), plus the
@@ -52,6 +53,8 @@ export function EventTab({
   const [overview, setOverview] = useState<EventOverview | null>(null);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  // A cached copy is on screen while the fresh one loads: writes wait for it.
+  const [stale, setStale] = useState(false);
   const current = useRef(eventId);
   current.current = eventId;
   // Every overview request takes a number; only the newest one may update
@@ -62,14 +65,24 @@ export function EventTab({
     if (!eventId) return;
     const counter = seqRef;
     const seq = ++seqRef.current;
-    setOverview(null);
+    // T-35 B: a meetup seen before shows at once (fresh copy follows); a new
+    // one shows what the dashboard already knows plus a skeleton (A).
+    const cached = cachedOverview(eventId);
+    setOverview(cached);
     setError("");
-    adminApi
-      .eventOverview(password, eventId)
+    if (cached && reloadKey === 0 && overviewIsFresh(eventId)) {
+      setStale(false);
+      return;
+    }
+    setStale(Boolean(cached));
+    loadOverview(password, eventId, reloadKey > 0)
       .then((data) => {
-        if (seq === seqRef.current) setOverview(data);
+        if (seq !== seqRef.current) return;
+        setOverview(data);
+        setStale(false);
       })
       .catch((err) => {
+        // The cached copy (if any) stays visible but read-only, under the error.
         if (seq === seqRef.current) setError(errText(err));
       });
     return () => {
@@ -81,8 +94,12 @@ export function EventTab({
   const refresh = useCallback(async () => {
     const id = current.current;
     const seq = ++seqRef.current;
-    const data = await adminApi.eventOverview(password, id);
-    if (seq === seqRef.current && current.current === id) setOverview(data);
+    const data = await loadOverview(password, id, true);
+    if (seq === seqRef.current && current.current === id) {
+      setOverview(data);
+      setStale(false);
+      setError("");
+    }
   }, [password]);
 
   // A write elsewhere (e.g. ② editing or syncing this event) may have changed
@@ -143,8 +160,9 @@ export function EventTab({
         </Sheet>
       ) : null}
 
-      {!eventId ? null : error ? (
+      {eventId && error ? (
         <div className="ctl-error">
+          {overview ? "更新失敗，下面是先前的資料：" : ""}
           {error}{" "}
           <button
             className="ctl-btn-ghost"
@@ -154,20 +172,26 @@ export function EventTab({
             重試
           </button>
         </div>
-      ) : !overview ? (
-        <div className="ctl-loading">讀取聚會資料中…</div>
+      ) : null}
+      {!eventId || (error && !overview) ? null : !overview ? (
+        <EventSkeleton event={chosen} />
       ) : (
-        <EventBody
-          key={overview.event.id}
-          password={password}
-          overview={overview}
-          onReload={() => setReloadKey((k) => k + 1)}
-          onRefresh={refresh}
-          onDashboardRefresh={onDashboardRefresh}
-          onDataChanged={onDataChanged}
-          writeLock={writeLock}
-          writing={writing}
-        />
+        <>
+          {stale && !error ? <div className="ctl-notice">更新資料中…</div> : null}
+          <EventBody
+            key={overview.event.id}
+            password={password}
+            overview={overview}
+            onReload={() => setReloadKey((k) => k + 1)}
+            onRefresh={refresh}
+            onDashboardRefresh={onDashboardRefresh}
+            onDataChanged={onDataChanged}
+            writeLock={writeLock}
+            writing={writing}
+            // A cached copy (refreshing, or its refresh failed) is read-only.
+            readOnly={stale || Boolean(error)}
+          />
+        </>
       )}
     </>
   );
@@ -192,6 +216,93 @@ function EventLine({ event }: { event: DashboardData["events"][number] }) {
   );
 }
 
+const eventStatusClass = (status: string) =>
+  status === "closed" ? "orange" : status === "cancelled" ? "red" : "green";
+
+// Title, tags, meta line and the four counts of a meetup -- shared by the
+// loaded view and the T-35 skeleton (which takes the dashboard row's counts).
+function EventHead({
+  event,
+  confirmed,
+  waiting,
+  leave,
+  unpaid,
+}: {
+  event: Pick<
+    EventOverview["event"],
+    | "eventDate"
+    | "name"
+    | "eventKind"
+    | "status"
+    | "maxPeople"
+    | "tempFee"
+    | "courtCount"
+    | "hours"
+    | "ballType"
+  >;
+  confirmed: number;
+  waiting: number;
+  leave: number;
+  unpaid: number;
+}) {
+  const statusClass = eventStatusClass(event.status);
+  return (
+    <>
+      <div className="ctl-event-head">
+        <h2>
+          {shortDate(event.eventDate)} {event.name}
+        </h2>
+        {event.eventKind === "test" ? <span className="ctl-pill blue">測試聚會</span> : null}
+        <span className={`ctl-pill ${statusClass}`}>{eventStatusLabel(event.status)}</span>
+      </div>
+      <p className="ctl-event-meta">
+        上限 {event.maxPeople} 人 · 臨打 {money(event.tempFee)} · {event.courtCount} 面 ×{" "}
+        {event.hours} 小時
+        {event.ballType ? ` · ${event.ballType}` : ""}
+      </p>
+      <div className="ctl-metrics">
+        <Metric label="正式" value={`${confirmed}/${event.maxPeople}`} tone="green" />
+        <Metric label="候補" value={waiting} tone={waiting ? "orange" : undefined} />
+        <Metric label="請假" value={leave} />
+        <Metric label="臨打未付" value={unpaid} tone={unpaid ? "red" : undefined} />
+      </div>
+    </>
+  );
+}
+
+// T-35 A/D: while a meetup's overview loads, its head and counts come from
+// the dashboard row already in hand; the rest is a grey skeleton.
+function EventSkeleton({ event }: { event: DashboardData["events"][number] | undefined }) {
+  return (
+    <div className="ctl-tab" aria-busy="true" aria-label="讀取聚會資料中">
+      <section className="ctl-card">
+        {event ? (
+          <EventHead
+            event={event}
+            confirmed={event.confirmedCount}
+            waiting={event.waitingCount}
+            leave={event.leaveCount}
+            unpaid={event.unpaidPaymentCount}
+          />
+        ) : (
+          <span className="ctl-skel" style={{ width: "70%", height: 20 }} />
+        )}
+        <div className="ctl-actions ctl-push-row">
+          <span className="ctl-skel" style={{ height: 38, borderRadius: 10 }} />
+          <span className="ctl-skel" style={{ height: 38, borderRadius: 10 }} />
+          <span className="ctl-skel" style={{ height: 38, borderRadius: 10 }} />
+        </div>
+      </section>
+      {["名單", "臨打收費", "本場支出", "當天損益"].map((title) => (
+        <section key={title} className="ctl-card ctl-skel-row">
+          <h2 className="ctl-skel-title">{title}</h2>
+          <span className="ctl-skel" style={{ width: "34%", height: 14 }} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function EventBody({
   password,
   overview,
@@ -200,7 +311,8 @@ function EventBody({
   onDashboardRefresh,
   onDataChanged,
   writeLock,
-  writing,
+  writing: writingNow,
+  readOnly,
 }: {
   password: string;
   overview: EventOverview;
@@ -210,7 +322,9 @@ function EventBody({
   onDataChanged: () => void;
   writeLock: WriteLock;
   writing: boolean;
+  readOnly: boolean;
 }) {
+  const writing = writingNow || readOnly;
   const { event, roster, payments, finance } = overview;
   const [view, setView] = useState<RosterView>("confirmed");
   const [pending, setPending] = useState<Pending | null>(null);
@@ -251,41 +365,21 @@ function EventBody({
   const unpaid = active.filter((p) => p.status === "unpaid");
   const paid = active.filter((p) => p.status === "paid");
   const list = view === "confirmed" ? confirmed : view === "waiting" ? waiting : leave;
-  const statusClass =
-    event.status === "closed" ? "orange" : event.status === "cancelled" ? "red" : "green";
+  const statusClass = eventStatusClass(event.status);
   const breakdown = finance.expenseBreakdown;
   const siteId = event.siteId;
 
   return (
     <>
-      {writing && !pending ? <div className="ctl-notice">處理中，請稍候…</div> : null}
+      {writingNow && !pending ? <div className="ctl-notice">處理中，請稍候…</div> : null}
       <section className="ctl-card">
-        <div className="ctl-event-head">
-          <h2>
-            {shortDate(event.eventDate)} {event.name}
-          </h2>
-          {event.eventKind === "test" ? <span className="ctl-pill blue">測試聚會</span> : null}
-          <span className={`ctl-pill ${statusClass}`}>{eventStatusLabel(event.status)}</span>
-        </div>
-        <p className="ctl-event-meta">
-          上限 {event.maxPeople} 人 · 臨打 {money(event.tempFee)} · {event.courtCount} 面 ×{" "}
-          {event.hours} 小時
-          {event.ballType ? ` · ${event.ballType}` : ""}
-        </p>
-        <div className="ctl-metrics">
-          <Metric
-            label="正式"
-            value={`${roster.summary.confirmedCount}/${event.maxPeople}`}
-            tone="green"
-          />
-          <Metric
-            label="候補"
-            value={roster.summary.waitingCount}
-            tone={roster.summary.waitingCount ? "orange" : undefined}
-          />
-          <Metric label="請假" value={roster.summary.leaveCount} />
-          <Metric label="臨打未付" value={unpaid.length} tone={unpaid.length ? "red" : undefined} />
-        </div>
+        <EventHead
+          event={event}
+          confirmed={roster.summary.confirmedCount}
+          waiting={roster.summary.waitingCount}
+          leave={roster.summary.leaveCount}
+          unpaid={unpaid.length}
+        />
         <div className="ctl-actions ctl-push-row">
           <button
             className="ctl-act"

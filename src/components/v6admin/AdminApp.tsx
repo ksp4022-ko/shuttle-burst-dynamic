@@ -15,6 +15,14 @@ import { SeasonTab } from "./SeasonTab";
 import { SystemTab } from "./SystemTab";
 import type { WriteLock } from "@/lib/v6admin-write";
 import {
+  cachedDashboard,
+  clearAdminCache,
+  loadOverview,
+  readLastEvent,
+  rememberDashboard,
+  writeLastEvent,
+} from "@/lib/v6admin-cache";
+import {
   adminApi,
   AdminApiError,
   pickDefaultEvent,
@@ -28,6 +36,11 @@ import {
 type TabKey = "event" | "collect" | "manage" | "season" | "system";
 
 const SITE_KEY = "v10CtlPanel:site";
+
+// Keep the current meetup if it's still listed, else the default pick.
+function keepOrDefault(events: DashboardData["events"], auto = pickDefaultEvent(events)?.id || "") {
+  return (cur: string) => (cur && events.some((e) => e.id === cur) ? cur : auto);
+}
 
 function readSitePref(): string {
   try {
@@ -49,6 +62,7 @@ export function AdminApp() {
   const [sites, setSites] = useState<AdminSite[]>([]);
 
   const logout = useCallback(() => {
+    clearAdminCache();
     setPassword("");
     setSites([]);
   }, []);
@@ -206,22 +220,35 @@ function Panel({
     if (!siteId) return;
     const counter = dashSeq;
     const seq = ++dashSeq.current;
-    setDashboard(null);
+    // T-35 B: a site seen before shows at once; the fresh copy replaces it.
+    const cached = cachedDashboard(siteId);
+    setDashboard(cached);
+    if (cached) {
+      setEventId(keepOrDefault(cached.events));
+    } else {
+      // T-35 C: start the overview of the meetup shown last time alongside
+      // the dashboard (usually the one the dashboard picks again).
+      const last = readLastEvent(siteId);
+      if (last) loadOverview(passwordRef.current, last).catch(() => {});
+    }
     setError("");
     adminApi
       .dashboard(passwordRef.current, siteId)
       .then((data) => {
         if (seq !== dashSeq.current) return;
+        rememberDashboard(siteId, data);
         setDashboard(data);
-        setEventId((cur) =>
-          cur && data.events.some((e) => e.id === cur)
-            ? cur
-            : pickDefaultEvent(data.events)?.id || "",
-        );
+        const auto = pickDefaultEvent(data.events)?.id || "";
+        setEventId(keepOrDefault(data.events, auto));
+        // T-35 C: next login starts this meetup's overview early -- the one
+        // the dashboard picks by default, not merely the last one browsed.
+        if (auto) writeLastEvent(siteId, auto);
       })
       .catch((err) => {
         if (seq !== dashSeq.current) return;
-        setError(err instanceof AdminApiError ? err.message : "讀取失敗。");
+        const message = err instanceof AdminApiError ? err.message : "讀取失敗。";
+        // With a cached copy on screen it stays, under the error.
+        setError(cached ? `更新失敗，顯示的是先前的資料：${message}` : message);
       });
     return () => {
       counter.current++; // invalidate this request
@@ -234,11 +261,10 @@ function Panel({
     const seq = ++dashSeq.current;
     const data = await adminApi.dashboard(passwordRef.current, siteId);
     if (seq !== dashSeq.current) return;
+    rememberDashboard(siteId, data);
     setDashboard(data);
     // The current event may have been deleted: fall back to the default one.
-    setEventId((cur) =>
-      cur && data.events.some((e) => e.id === cur) ? cur : pickDefaultEvent(data.events)?.id || "",
-    );
+    setEventId((cur) => keepOrDefault(data.events)(cur));
   }, [siteId]);
 
   // Switch the in-memory password right away so the re-read that follows the
@@ -293,7 +319,8 @@ function Panel({
         </button>
       </div>
     );
-  else if (!dashboard) body = <div className="ctl-loading">讀取中…</div>;
+  // T-35 D: a skeleton of ① instead of a bare 讀取中….
+  else if (!dashboard) body = <PanelSkeleton />;
   else
     // Tabs stay mounted (hidden) so an in-flight write finishes and refreshes
     // in the same component it started in.
@@ -301,6 +328,7 @@ function Panel({
       <>
         <div className="ctl-tab" hidden={tab !== "event"}>
           <EventTab
+            key={siteId}
             password={password}
             dashboard={dashboard}
             eventId={eventId}
@@ -523,5 +551,31 @@ function Dock({ tab, onChange }: { tab: TabKey; onChange: (t: TabKey) => void })
         ))}
       </div>
     </nav>
+  );
+}
+
+// T-35 D: grey stand-ins shaped like ① 當次聚會 while the dashboard loads.
+function PanelSkeleton() {
+  return (
+    <div className="ctl-tab" aria-busy="true" aria-label="讀取中">
+      <div className="ctl-card ctl-skel-card">
+        <span className="ctl-skel" style={{ width: "28%", height: 12 }} />
+        <span className="ctl-skel" style={{ width: "100%", height: 42, borderRadius: 12 }} />
+      </div>
+      <div className="ctl-card ctl-skel-card">
+        <span className="ctl-skel" style={{ width: "70%", height: 20 }} />
+        <span className="ctl-skel" style={{ width: "55%", height: 12 }} />
+        <div className="ctl-metrics">
+          {[0, 1, 2, 3].map((i) => (
+            <span key={i} className="ctl-skel" style={{ height: 52, borderRadius: 12 }} />
+          ))}
+        </div>
+      </div>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="ctl-card ctl-skel-card">
+          <span className="ctl-skel" style={{ width: "40%", height: 16 }} />
+        </div>
+      ))}
+    </div>
   );
 }
