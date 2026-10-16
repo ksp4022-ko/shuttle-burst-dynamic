@@ -37,12 +37,10 @@ const FLIGHT_MS = 1750; // launch → landing; lands just after the CTA settles
 const MORPH_MS = 200;
 const FADE_MS = 350; // the opening screen fades from the launch
 const CATCH_MS = 280;
-// V9-054 (/v9test): the 場名 tag on the loading card stays put through the
-// shot, then once the deck's calendar has settled (its slam + knock, ~0.85s
-// after the deck takes over) glides onto the calendar's 場名 and shrinks to
-// it while its red frame fades - while the shuttle hangs / drops on the right.
-const TAG_DELAY_MS = 850;
-const TAG_MS = 400;
+// V9-054 (/v9test): the 場名 tag on the loading card tucks up into the
+// card's top border as the dragon winds up (the 蓄力 hold), so the shot and
+// the deck's entrance start on a clean top; the calendar brings its own 場名.
+const TAG_MS = 200;
 // Flight phases as fractions of FLIGHT_MS.
 const RISE_END = 0.3286; // rise 575ms
 const HANG_END = 0.5857; // hang 450ms, then a 725ms drop
@@ -242,8 +240,7 @@ export function V9Intro({
 }) {
   const coverRef = useRef<HTMLDivElement>(null);
   const tagRef = useRef<HTMLSpanElement>(null);
-  // The calendar's 場名 hidden while the tag flies onto it.
-  const hiddenHead = useRef<HTMLElement | null>(null);
+
   const flyerRef = useRef<HTMLSpanElement>(null);
   const impactRef = useRef<HTMLSpanElement>(null);
   const morphRef = useRef<HTMLSpanElement>(null);
@@ -258,15 +255,6 @@ export function V9Intro({
     return () => window.clearTimeout(id);
   }, []);
 
-  const showHead = useCallback(() => {
-    const head = hiddenHead.current;
-    if (head) {
-      head.style.color = "";
-      head.style.textShadow = "";
-      hiddenHead.current = null;
-    }
-  }, []);
-
   // The tag hangs off the loading card's top edge (like the PREVIEW tab);
   // it lives outside the cover so it outlasts the cover on the handover.
   useLayoutEffect(() => {
@@ -277,7 +265,8 @@ export function V9Intro({
       if (tag.getAnimations().length) return;
       const r = card.getBoundingClientRect();
       tag.style.left = `${r.left + 28}px`;
-      tag.style.top = `${r.top}px`;
+      // Clipped at the border's inner edge, so it tucks in behind the border.
+      tag.style.top = `${r.top + (parseFloat(getComputedStyle(card).borderTopWidth) || 0)}px`;
     };
     place();
     const observer = new ResizeObserver(place);
@@ -293,9 +282,8 @@ export function V9Intro({
     () => () => {
       for (const id of timers.current) window.clearTimeout(id);
       for (const animation of animations.current) animation.cancel();
-      showHead();
     },
-    [showHead],
+    [],
   );
 
   const finish = useCallback(() => {
@@ -304,10 +292,9 @@ export function V9Intro({
     for (const id of timers.current) window.clearTimeout(id);
     for (const animation of animations.current) animation.cancel();
     if (tagRef.current) tagRef.current.style.visibility = "hidden";
-    showHead();
     onStage("entering");
     onDone();
-  }, [onDone, onStage, showHead]);
+  }, [onDone, onStage]);
 
   // Timer callbacks run outside React, so a throw there would leave the
   // cover up for good: any failure skips to the app instead.
@@ -451,60 +438,20 @@ export function V9Intro({
           animations.current.push(swing);
         });
       }
-      // V9-054: glide the tag's 場名 onto the calendar's, scaling to its size;
-      // the calendar's own 場名 shows again the moment the tag lands.
-      function flyTag() {
-        const tag = tagRef.current;
-        const text = tag?.querySelector<HTMLElement>(".v9-intro-site-text");
-        const frame = tag?.querySelector<HTMLElement>(".v9-intro-site-frame");
-        const head = document.querySelector<HTMLElement>(
-          ".v9-main > .v9-hero .v9-cal-page:not(.is-back) .v9-cal-head.is-site",
-        );
-        const label = head?.lastChild;
-        if (!tag || !text || !frame || !head || !label || label.nodeType !== Node.TEXT_NODE) {
-          if (tag) {
-            animations.current.push(
-              tag.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }),
-            );
-          }
-          return;
-        }
-        const range = document.createRange();
-        range.selectNodeContents(label);
-        const to = range.getBoundingClientRect();
-        const from = text.getBoundingClientRect();
-        const tagBox = tag.getBoundingClientRect();
-        if (to.width === 0 || from.width === 0) return;
-        const scale =
-          parseFloat(getComputedStyle(head).fontSize) / parseFloat(getComputedStyle(text).fontSize);
-        const ox = from.left + from.width / 2 - tagBox.left;
-        const oy = from.top + from.height / 2 - tagBox.top;
-        const dx = to.left + to.width / 2 - (from.left + from.width / 2);
-        const dy = to.top + to.height / 2 - (from.top + from.height / 2);
-        hiddenHead.current = head;
-        head.style.color = "transparent";
-        head.style.textShadow = "none";
-        tag.style.transformOrigin = `${ox}px ${oy}px`;
-        const ease = "cubic-bezier(0.23, 1, 0.32, 1)";
+      // V9-054: the tag slides up out of sight behind the card's top border
+      // (eases in: it gets pulled in).
+      const tuckTag = () => {
+        const inner = tagRef.current?.firstElementChild;
+        if (!inner) return;
         animations.current.push(
-          tag.animate(
-            [
-              { transform: "translate(0, 0) scale(1)" },
-              { transform: `translate(${dx}px, ${dy}px) scale(${scale})` },
-            ],
-            { duration: TAG_MS, easing: ease, fill: "forwards" },
-          ),
-          frame.animate([{ opacity: 1 }, { opacity: 0 }], {
-            duration: TAG_MS * 0.7,
-            easing: ease,
+          inner.animate([{ transform: "translateY(0)" }, { transform: "translateY(-100%)" }], {
+            duration: TAG_MS,
+            easing: "cubic-bezier(0.55, 0, 1, 0.45)",
             fill: "forwards",
           }),
         );
-        later(TAG_MS, () => {
-          showHead();
-          tag.style.visibility = "hidden";
-        });
-      }
+      };
+      later(dragon && charge ? swingAt : Math.max(0, hitAt - TAG_MS), tuckTag);
 
       const { flight, trail, spin } = flightFrames(
         start,
@@ -578,7 +525,6 @@ export function V9Intro({
             cover.classList.add("is-handover");
             morph.style.visibility = "hidden";
             onStage("entering");
-            later(TAG_DELAY_MS, flyTag);
           };
           if (same) {
             handover();
@@ -598,7 +544,6 @@ export function V9Intro({
             cover.style.visibility = "hidden";
           });
         } else {
-          later(TAG_DELAY_MS, flyTag);
           animations.current.push(
             cover.animate([{ opacity: 1 }, { opacity: 0 }], {
               duration: FADE_MS,
@@ -647,7 +592,7 @@ export function V9Intro({
         onDone();
       });
     }
-  }, [ready, minPassed, leaving, finish, later, onDone, onStage, showHead]);
+  }, [ready, minPassed, leaving, finish, later, onDone, onStage]);
 
   const base = import.meta.env.BASE_URL;
   return (
@@ -674,8 +619,10 @@ export function V9Intro({
       </div>
       {siteLabel && (
         <span ref={tagRef} className="v9-intro-site" aria-hidden="true">
-          <span className="v9-intro-site-frame" />
-          <span className="v9-intro-site-text">{siteLabel}</span>
+          <span className="v9-intro-site-inner">
+            <span className="v9-intro-site-frame" />
+            <span className="v9-intro-site-text">{siteLabel}</span>
+          </span>
         </span>
       )}
       <span ref={impactRef} className="v9-intro-impact" aria-hidden="true">

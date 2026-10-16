@@ -395,9 +395,11 @@ const V9_CSS = `
 }
 .v9-intro-card { position: relative; z-index: 1; }
 /* V9-054 (/v9test): 場名 tag hanging off the loading card's top edge - the
-   PREVIEW tab's shape in red, the calendar 場名's lettering (no pin). Fixed,
-   over the cover, so it outlasts the cover and glides onto the calendar. */
-.v9-intro-site { position: fixed; left: 0; top: 0; z-index: 903; display: block; padding: 12px 20px 11px; pointer-events: none; }
+   PREVIEW tab's shape in red, the calendar 場名's lettering (no pin). Fixed
+   and clipped at the border's inner edge; it tucks up behind the border as
+   the dragon winds up for the shot. */
+.v9-intro-site { position: fixed; left: 0; top: 0; z-index: 903; display: block; overflow: hidden; pointer-events: none; }
+.v9-intro-site-inner { position: relative; display: block; padding: 10px 20px 11px; }
 .v9-intro-site-frame {
   position: absolute; inset: 0; border: 2.5px solid var(--v9-ink); border-top: 0; border-radius: 0 0 14px 14px; background: var(--v9-red);
 }
