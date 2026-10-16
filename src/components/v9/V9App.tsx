@@ -32,7 +32,6 @@ import { V9Toast } from "./V9Toast";
 import { V9Celebrate } from "./V9Celebrate";
 import { V9PlayerCard } from "./V9PlayerCard";
 import { V9JoinContent, V9RepickContent } from "./V9IdentitySheet";
-import { useV9Test } from "./useV9Test";
 import { V9_COURT_RULES } from "@/lib/v9-court-rules";
 import { confirmV8LineProfile } from "@/lib/v8-line-auth";
 import {
@@ -159,7 +158,6 @@ export function V9App() {
   const lineToken = auth.token;
   const lineIdentity = auth.identity;
   // New V9 features stay on /v9test until accepted (V9-043: 我也是這裡的季打).
-  const v9Test = useV9Test();
   const { identity, cancellableTempSignups, cancellableLoading, refreshCancellableTempSignups } =
     useCurrentIdentity({
       roster,
@@ -1037,9 +1035,8 @@ export function V9App() {
                 onRepick={() => setRepicking(true)}
                 // V9-043: 季打 elsewhere, 臨打 here -- bind this site's 季打 name.
                 // Only with a claims-aware Worker (V6-041) and no claim on this
-                // site yet; /v9test until accepted.
+                // site yet.
                 onClaimHere={
-                  v9Test &&
                   lineIdentity?.identityType === "fixed" &&
                   identity.signupType === "temp" &&
                   lineIdentity.claims &&
