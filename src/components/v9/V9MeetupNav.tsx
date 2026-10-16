@@ -45,7 +45,7 @@ function CalendarPage({
   siteLabel: string;
   // V9-016: the site name as a bold sign with a location pin.
   siteBadge?: boolean;
-  // V9-057 (/v9test): a special meetup shows "場地 特別名稱" in the head
+  // V9-057: a special meetup shows "場地 特別名稱" in the head
   // instead of the pin + site name.
   specialNames?: boolean;
   event: AlphaEvent | undefined;

@@ -134,8 +134,8 @@ export function V9Hero({
   // V9-051 (/v9test until accepted): rising red + on the 場地 cell while
   // the 正取 count is in a 加場 band.
   courtHint?: boolean;
-  // V9-057 (/v9test until accepted): lenient name reading and the special
-  // name as a tag hanging off the calendar's bottom edge.
+  // V9-057 (on /v9 and /v9test): lenient name reading and the special
+  // name in the calendar head.
   nameTag?: boolean;
 }) {
   const v8Display = parseV8MeetupDisplay(event.name);

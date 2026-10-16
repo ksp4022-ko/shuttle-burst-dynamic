@@ -13,7 +13,6 @@ import {
 } from "@/hooks/use-current-identity";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
-import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { meetupTimeLabel, parseMeetupName } from "@/lib/meetup-name";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
@@ -792,7 +791,7 @@ export function V9App() {
               courtRules={V9_COURT_RULES[siteId]}
               onCourtRules={() => setSheet("courtRules")}
               courtHint
-              nameTag={v9Test}
+              nameTag
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />
@@ -885,12 +884,12 @@ export function V9App() {
           >
             <ul className="v9-meetup-list">
               {events.map((item) => {
-                const itemDisplay = v9Test
-                  ? (() => {
-                      const parsed = parseMeetupName(item.name);
-                      return { displayName: parsed.name, timeLabel: meetupTimeLabel(parsed) };
-                    })()
-                  : parseV8MeetupDisplay(item.name);
+                // V9-057 (on /v9 since 10/18-4 was accepted): lenient name parse.
+                const parsedItem = parseMeetupName(item.name);
+                const itemDisplay = {
+                  displayName: parsedItem.name,
+                  timeLabel: meetupTimeLabel(parsedItem),
+                };
                 const current = item.id === selectedEventId;
                 // V9-029: a meetup past its end time or closed in the admin
                 // shows 已結束 instead of its seat count.
