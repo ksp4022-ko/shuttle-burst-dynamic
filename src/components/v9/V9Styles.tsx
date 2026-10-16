@@ -395,6 +395,7 @@ const V9_CSS = `
 }
 .v9-intro-card { position: relative; z-index: 1; }
 html.v9-page-bg, html.v9-page-bg body { background: #fbf6ec; }
+html.v9-page-lock, html.v9-page-lock body { overscroll-behavior: none; }
 /* V9-055 (/v9test, home-screen app only): no sideways dragging of the
    page; vertical scrolling and the pull-to-refresh stay. */
 @media (display-mode: standalone) {
