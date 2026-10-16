@@ -107,13 +107,30 @@ export function V9PullRefresh({
       }
     };
 
+    // Last pull decision, shown by the ?diag=1 panel (V9-056).
+    const note = (text: string) => {
+      (window as Window & { __v9pull?: string }).__v9pull = text;
+    };
+    // A page a pixel or two off the top (or mid rubber-band) still counts as
+    // at the top.
+    const atTop = () => window.scrollY <= 2;
     const onStart = (event: TouchEvent) => {
       const touch = event.touches[0];
-      if (busy || blockedRef.current || event.touches.length > 1 || !touch) return;
-      if (window.scrollY > 0) return;
+      if (busy || blockedRef.current || event.touches.length > 1 || !touch) {
+        note(`start skip: busy ${busy} blocked ${blockedRef.current}`);
+        return;
+      }
+      if (!atTop()) {
+        note(`start skip: scrollY ${window.scrollY.toFixed(1)}`);
+        return;
+      }
       // Things that drag on their own (calendar flip, sheets) keep their touch.
       const target = event.target as HTMLElement | null;
-      if (target?.closest(".v9-cal-nav, .v9-sheet, .v9-intro")) return;
+      if (target?.closest(".v9-cal-nav, .v9-sheet, .v9-intro")) {
+        note("start skip: calendar / sheet");
+        return;
+      }
+      note("start ok");
       startX = touch.clientX;
       startY = touch.clientY;
       tracking = true;
@@ -128,10 +145,14 @@ export function V9PullRefresh({
       if (!pulling) {
         if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
         // Only a downward, mostly vertical drag from the very top pulls.
-        if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || window.scrollY > 0) {
+        if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || !atTop()) {
+          note(
+            `move skip: dx ${Math.round(dx)} dy ${Math.round(dy)} y ${window.scrollY.toFixed(1)}`,
+          );
           tracking = false;
           return;
         }
+        note(`pulling (cancelable ${event.cancelable})`);
         pulling = true;
       }
       event.preventDefault();

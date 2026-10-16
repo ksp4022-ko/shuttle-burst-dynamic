@@ -33,11 +33,12 @@ export function V9Diag({ enabled }: { enabled: boolean }) {
         `scrollH ${de.scrollHeight} bodyH ${Math.round(document.body.getBoundingClientRect().height)} scrollY ${Math.round(window.scrollY)}`,
         `inner ${window.innerWidth}×${window.innerHeight} client ${de.clientHeight} vv ${vv ? `${Math.round(vv.width)}×${Math.round(vv.height)} s${vv.scale.toFixed(2)}` : "-"}`,
         `dvh ${Math.round(dvh)} lvh ${Math.round(lvh)} vh ${Math.round(vh)}`,
+        `pull: ${(window as Window & { __v9pull?: string }).__v9pull ?? "-"} · ${document.documentElement.className}`,
         ...deep,
       ]);
     };
     read();
-    const id = window.setInterval(read, 1000);
+    const id = window.setInterval(read, 400);
     return () => window.clearInterval(id);
   }, [enabled]);
   // Nothing at all unless /v9test?diag=1 has produced a reading.
