@@ -18,6 +18,7 @@ import { meetupTimeLabel, parseMeetupName } from "@/lib/meetup-name";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
 import { V9PullRefresh } from "./V9PullRefresh";
+import { v9NewVersionOnline } from "@/lib/v9-version";
 import { useV9PageLock } from "./useV9PageLock";
 import { V9ErrorBoundary } from "./V9ErrorBoundary";
 import { V9Styles } from "./V9Styles";
@@ -459,6 +460,16 @@ export function V9App() {
     await refreshRoster();
     await refreshCancellableRef.current();
   }, [refreshRoster]);
+  // V9-058 (/v9test): the pull also loads a newer version when one is out;
+  // otherwise it is the same data refresh.
+  const pullRefresh = useCallback(async () => {
+    if (v9Test && (await v9NewVersionOnline())) {
+      window.location.reload();
+      // Keep the shuttle spinning until the page goes.
+      await new Promise(() => undefined);
+    }
+    await refreshNow();
+  }, [v9Test, refreshNow]);
   useEffect(() => {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -675,7 +686,7 @@ export function V9App() {
       <V9PullRefresh
         enabled
         blocked={intro || sheet !== null || Boolean(pendingAction)}
-        onRefresh={refreshNow}
+        onRefresh={pullRefresh}
       />
 
       {intro && (
