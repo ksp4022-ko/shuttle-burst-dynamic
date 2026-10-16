@@ -54,3 +54,10 @@ export const MEETUP_TIME_OPTIONS: string[] = Array.from({ length: 37 }, (_, i) =
   const minutes = 6 * 60 + i * 30;
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}${String(minutes % 60).padStart(2, "0")}`;
 });
+
+// V9-057: the special part of a meetup's name ("測試臨打"), "" when the name
+// is just the site's own ("康軒｜2200-2400").
+export function specialMeetupName(raw: string, siteLabel: string) {
+  const { name } = parseMeetupName(raw);
+  return name && name !== siteLabel ? name : "";
+}

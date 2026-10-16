@@ -11,6 +11,7 @@ import {
 } from "motion/react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import { v9Relative, v9ShortDate, v9Weekday } from "@/lib/v9-display";
+import { specialMeetupName } from "@/lib/meetup-name";
 
 // Meetup switcher: a tear-off desk calendar (site name on its red header,
 // date, then weekday · 本週). Drag the page up and it lifts with the finger
@@ -34,6 +35,7 @@ const TEAR = { duration: 1, ease: [0.45, 0, 0.25, 1] } as const;
 function CalendarPage({
   siteLabel,
   siteBadge = false,
+  specialNames = false,
   event,
   rotate,
   shade,
@@ -43,6 +45,9 @@ function CalendarPage({
   siteLabel: string;
   // V9-016: the site name as a bold sign with a location pin.
   siteBadge?: boolean;
+  // V9-057 (/v9test): a special meetup shows "場地 特別名稱" in the head
+  // instead of the pin + site name.
+  specialNames?: boolean;
   event: AlphaEvent | undefined;
   rotate?: MotionValue<number>;
   shade?: MotionValue<number>;
@@ -52,15 +57,22 @@ function CalendarPage({
 }) {
   if (!event) return null;
   const relative = v9Relative(event.eventDate);
+  const special = specialNames && siteBadge ? specialMeetupName(event.name, siteLabel) : "";
   return (
     <motion.span
       className={`v9-cal-page ${className}`}
       style={rotate ? { rotateX: rotate, transformPerspective: 360 } : {}}
     >
       <span
-        className={`v9-cal-head${relative === "已結束" ? " is-past" : ""}${siteBadge ? " is-site" : ""}`}
+        className={`v9-cal-head${relative === "已結束" ? " is-past" : ""}${siteBadge ? " is-site" : ""}${special ? " is-special" : ""}`}
       >
-        {siteBadge && (
+        {special ? (
+          <>
+            <span className="v9-cal-site">{siteLabel}</span>
+            <span className="v9-cal-special">{special}</span>
+          </>
+        ) : null}
+        {siteBadge && !special && (
           <svg className="v9-cal-pin" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
             <path
               d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"
@@ -72,7 +84,7 @@ function CalendarPage({
             <circle cx="12" cy="10" r="2.3" fill="currentColor" />
           </svg>
         )}
-        {siteLabel}
+        {special ? null : siteLabel}
       </span>
       <span className="v9-cal-date">{v9ShortDate(event.eventDate)}</span>
       <span className="v9-cal-foot">
@@ -87,6 +99,7 @@ function CalendarPage({
 export function V9MeetupNav({
   siteLabel,
   siteBadge = false,
+  specialNames = false,
   events,
   index,
   onGo,
@@ -95,6 +108,7 @@ export function V9MeetupNav({
 }: {
   siteLabel: string;
   siteBadge?: boolean;
+  specialNames?: boolean;
   events: AlphaEvent[];
   index: number;
   onGo: (index: number) => void;
@@ -255,12 +269,14 @@ export function V9MeetupNav({
           <CalendarPage
             siteLabel={siteLabel}
             siteBadge={siteBadge}
+            specialNames={specialNames}
             event={events[index + 1] ?? event}
             className="is-under"
           />
           <CalendarPage
             siteLabel={siteLabel}
             siteBadge={siteBadge}
+            specialNames={specialNames}
             event={event}
             rotate={liftRotate}
             shade={liftShade}
@@ -272,6 +288,7 @@ export function V9MeetupNav({
             <CalendarPage
               siteLabel={siteLabel}
               siteBadge={siteBadge}
+              specialNames={specialNames}
               event={events[index - 1]}
               rotate={dropRotate}
               className="is-back"

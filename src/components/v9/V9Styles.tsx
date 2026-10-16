@@ -134,19 +134,6 @@ const V9_CSS = `
 .v9-hero-date { font-size: 46px; line-height: .95; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .v9-hero-date small { font-size: 16px; font-weight: 900; margin-left: 6px; letter-spacing: 0; }
 .v9-hero-name { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 17px; font-weight: 900; }
-/* V9-057 (/v9test): a special meetup name sits as a tab on the info rail's
-   top edge, under the calendar (2026-10-18 real-device placement) -- dark,
-   never wider than the calendar, shrinking then truncating instead of
-   wrapping. Absolute, so the deck's height doesn't change. */
-.v9-hero-meetup { position: relative; }
-.v9-hero-name-tag {
-  position: absolute; left: 14px; bottom: -8px; z-index: 3; max-width: calc(100% - 20px); padding: 3px 12px 2px; overflow: hidden;
-  border: 2px solid var(--v9-ink); border-bottom: 0; border-radius: 10px 10px 0 0; background: var(--v9-ink); color: #fff;
-  font-size: clamp(11px, 3.4vw, 14px); font-weight: 900; line-height: 1.25; white-space: nowrap; text-overflow: ellipsis;
-}
-.v9-hero[data-fit] .v9-hero-name-tag { bottom: -6px; }
-.v9-hero-name-tag { transition: opacity .2s ease; }
-.v9-hero-meetup:has(.v9-cal-hint) .v9-hero-name-tag { opacity: 0; }
 
 /* ---------- Meetup switcher: tear-off calendar ---------- */
 .v9-main.is-switching .v9-roster-strip { opacity: .5; transition: opacity .2s; }
@@ -198,6 +185,11 @@ const V9_CSS = `
   text-shadow: -1.2px -1.2px 0 var(--v9-ink), 1.2px -1.2px 0 var(--v9-ink), -1.2px 1.2px 0 var(--v9-ink), 1.2px 1.2px 0 var(--v9-ink), 0 2px 0 var(--v9-ink);
 }
 .v9-cal-pin { flex: none; margin-right: -2px; filter: drop-shadow(0 1.5px 0 var(--v9-ink)); }
+/* V9-057 (/v9test): a special meetup: "康軒 測試臨打" in the head, no pin;
+   smaller and tighter so about 4-6 characters of the name fit, then "…". */
+.v9-cal-head.is-site.is-special { gap: 5px; padding: 6px 6px 4px; font-size: 14px; letter-spacing: .04em; text-indent: 0; }
+.v9-cal-site { flex: none; }
+.v9-cal-special { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v9-cal-date { padding: 2px 0 0; font-size: 36px; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .v9-cal-foot { padding: 0 0 6px; color: var(--v9-muted); font-size: 12px; font-weight: 900; white-space: nowrap; }
 .v9-cal-shade { position: absolute; inset: 0; background: var(--v9-ink); pointer-events: none; }

@@ -244,18 +244,15 @@ export function V9Hero({
             <V9MeetupNav
               siteLabel={siteName}
               siteBadge
+              specialNames={nameTag}
               events={events}
               index={index}
               onGo={go}
               onList={onMeetup}
               hintPaused={hintPaused}
             />
-            {showMeetupName &&
-              (nameTag ? (
-                <span className="v9-hero-name-tag">{meetupName}</span>
-              ) : (
-                <span className="v9-hero-name">{meetupName}</span>
-              ))}
+            {/* V9-057: on /v9test the special name lives in the calendar head. */}
+            {showMeetupName && !nameTag && <span className="v9-hero-name">{meetupName}</span>}
           </div>
           <V9HeroMascot
             sprite={tired ? "tired" : identity && !switching ? v9MascotSprite(identity) : "guest"}
