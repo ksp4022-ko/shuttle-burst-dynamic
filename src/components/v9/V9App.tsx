@@ -643,7 +643,12 @@ export function V9App() {
       {intro && (
         // The intro is decoration: if it ever throws, skip straight to the app.
         <V9ErrorBoundary onError={introDone}>
-          <V9Intro ready={dataSettled} onStage={setIntroStage} onDone={introDone} />
+          <V9Intro
+            ready={dataSettled}
+            onStage={setIntroStage}
+            onDone={introDone}
+            siteLabel={v9Test ? siteName : undefined}
+          />
         </V9ErrorBoundary>
       )}
 

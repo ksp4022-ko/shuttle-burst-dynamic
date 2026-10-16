@@ -394,6 +394,18 @@ const V9_CSS = `
   background: var(--v9-cream); border: var(--v9-line); border-radius: 30px; box-shadow: 0 6px 0 var(--v9-ink);
 }
 .v9-intro-card { position: relative; z-index: 1; }
+/* V9-054 (/v9test): 場名 tag hanging off the loading card's top edge - the
+   PREVIEW tab's shape in red, the calendar 場名's lettering (no pin). Fixed,
+   over the cover, so it outlasts the cover and glides onto the calendar. */
+.v9-intro-site { position: fixed; left: 0; top: 0; z-index: 903; display: block; padding: 12px 20px 11px; pointer-events: none; }
+.v9-intro-site-frame {
+  position: absolute; inset: 0; border: 2.5px solid var(--v9-ink); border-top: 0; border-radius: 0 0 14px 14px; background: var(--v9-red);
+}
+.v9-intro-site-text {
+  position: relative; display: block; color: #fff; font-size: 26px; font-weight: 900; line-height: 1.15; white-space: nowrap;
+  letter-spacing: .28em; margin-right: -.28em;
+  text-shadow: -1.2px -1.2px 0 var(--v9-ink), 1.2px -1.2px 0 var(--v9-ink), -1.2px 1.2px 0 var(--v9-ink), 1.2px 1.2px 0 var(--v9-ink), 0 2px 0 var(--v9-ink);
+}
 /* Where the intro's shuttle lands: on the CTA's right side, cork to the
    lower right; it settles in once the flying one hands over. */
 .v9-hero > .v9-cta-shuttle {
