@@ -635,16 +635,21 @@ function EventBody({
             const id = event.id;
             switch (pending.kind) {
               case "pay":
-                return run(
-                  () =>
-                    adminWriteApi.tempPaymentStatus(
-                      password,
-                      pending.payment.id,
-                      "paid",
-                      extra.amount ?? pending.payment.amount,
-                    ),
-                  `${pending.payment.name} 已收費`,
-                );
+                return run(async () => {
+                  const paid = await adminWriteApi.tempPaymentStatus(
+                    password,
+                    pending.payment.id,
+                    "paid",
+                    extra.amount ?? pending.payment.amount,
+                  );
+                  // T-38: 收款確認 notice; fire-and-forget (never fails the write).
+                  adminWriteApi
+                    .notifyPaymentReceipts(password, siteId, {
+                      tempPaymentIds: [pending.payment.id],
+                    })
+                    .catch(() => {});
+                  return paid;
+                }, `${pending.payment.name} 已收費`);
               case "unpay":
                 return run(
                   () =>
