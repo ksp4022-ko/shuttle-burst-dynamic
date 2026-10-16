@@ -274,8 +274,8 @@ const V9_CSS = `
 .v9-slot-track > span { display: block; height: 1.25em; }
 /* red 加場 glyphs ~1.15x, drawn bigger without taking more room */
 .v9-slot.is-red .v9-slot-track > span:nth-child(2) { color: var(--v9-red); transform: scale(1.15); transform-origin: 50% 88%; }
-/* the value now runs to the cell's right edge; the + start above it */
-.v9-court-boost ~ .v9-court-plus { bottom: 22px; }
+/* the value now runs to the cell's right edge; the + start above it; V9-053: 17px lower, may overlap the value */
+.v9-court-boost ~ .v9-court-plus { bottom: 5px; }
 .v9-rail-item .v9-court-boost { text-overflow: clip; }
 .v9-court-boost.is-paused .v9-slot-track { animation-play-state: paused; }
 @keyframes v9-slot-roll {
