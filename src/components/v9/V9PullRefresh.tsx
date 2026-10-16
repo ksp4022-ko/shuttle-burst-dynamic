@@ -16,6 +16,21 @@ const HOLD = 56; // where the deck waits while refreshing
 const MIN_SPIN_MS = 600; // so a fast refresh still reads as one
 const SNAP = "transform .32s cubic-bezier(0.32, 0.72, 0, 1)"; // iOS-like drawer curve
 
+// Can some element under the finger still scroll sideways that way?
+function canScrollX(target: EventTarget | null, dx: number) {
+  let node = target instanceof Element ? target : null;
+  if (node?.closest("input, textarea, select")) return true;
+  while (node && node !== document.body) {
+    const style = window.getComputedStyle(node);
+    if (/(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 1) {
+      if (dx < 0 && node.scrollLeft + node.clientWidth < node.scrollWidth - 1) return true;
+      if (dx > 0 && node.scrollLeft > 0) return true;
+    }
+    node = node.parentElement;
+  }
+  return false;
+}
+
 function isStandalone() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -151,11 +166,46 @@ export function V9PullRefresh({
         });
     };
 
+    // Sideways guard (CSS alone didn't hold on a real iPhone after a sheet
+    // closed, 2026-10-17): a mostly-sideways drag is cancelled unless
+    // something under the finger scrolls sideways; the page is also pinned
+    // to x = 0 if anything nudges it.
+    let guardX = 0;
+    let guardY = 0;
+    let axis: "" | "x" | "y" = "";
+    const onGuardStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      guardX = touch.clientX;
+      guardY = touch.clientY;
+      axis = "";
+    };
+    const onGuardMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch || event.touches.length > 1) return;
+      const dx = touch.clientX - guardX;
+      const dy = touch.clientY - guardY;
+      if (!axis) {
+        if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+        axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      }
+      if (axis === "x" && event.cancelable && !canScrollX(event.target, dx)) event.preventDefault();
+    };
+    const onScroll = () => {
+      if (window.scrollX !== 0) window.scrollTo(0, window.scrollY);
+    };
+
+    document.addEventListener("touchstart", onGuardStart, { passive: true });
+    document.addEventListener("touchmove", onGuardMove, { passive: false });
+    window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("touchstart", onStart, { passive: true });
     document.addEventListener("touchmove", onMove, { passive: false });
     document.addEventListener("touchend", onEnd);
     document.addEventListener("touchcancel", onEnd);
     return () => {
+      document.removeEventListener("touchstart", onGuardStart);
+      document.removeEventListener("touchmove", onGuardMove);
+      window.removeEventListener("scroll", onScroll);
       document.removeEventListener("touchstart", onStart);
       document.removeEventListener("touchmove", onMove);
       document.removeEventListener("touchend", onEnd);
