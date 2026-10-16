@@ -459,16 +459,16 @@ export function V9App() {
     await refreshRoster();
     await refreshCancellableRef.current();
   }, [refreshRoster]);
-  // V9-058 (/v9test): the pull also loads a newer version when one is out;
-  // otherwise it is the same data refresh.
+  // V9-058: the pull also loads a newer version when one is out; otherwise
+  // it is the same data refresh.
   const pullRefresh = useCallback(async () => {
-    if (v9Test && (await v9NewVersionOnline())) {
+    if (await v9NewVersionOnline()) {
       window.location.reload();
       // Keep the shuttle spinning until the page goes.
       await new Promise(() => undefined);
     }
     await refreshNow();
-  }, [v9Test, refreshNow]);
+  }, [refreshNow]);
   useEffect(() => {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
