@@ -394,6 +394,7 @@ const V9_CSS = `
   background: var(--v9-cream); border: var(--v9-line); border-radius: 30px; box-shadow: 0 6px 0 var(--v9-ink);
 }
 .v9-intro-card { position: relative; z-index: 1; }
+.v9-diag { position: fixed; left: 4px; right: 4px; top: 40%; z-index: 2000; margin: 0; padding: 6px 8px; background: rgba(0,0,0,.78); color: #7dffb0; font: 11px/1.35 ui-monospace, Menlo, monospace; white-space: pre-wrap; pointer-events: none; border-radius: 8px; }
 /* V9-055 (/v9test, home-screen app only): no sideways dragging of the
    page; vertical scrolling and the pull-to-refresh stay. */
 @media (display-mode: standalone) {

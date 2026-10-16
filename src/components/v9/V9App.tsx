@@ -17,6 +17,7 @@ import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { v9StorageKey } from "@/lib/v9-route";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
 import { V9PullRefresh } from "./V9PullRefresh";
+import { V9Diag } from "./V9Diag";
 import { V9ErrorBoundary } from "./V9ErrorBoundary";
 import { V9Styles } from "./V9Styles";
 import { V9CourtRules, V9Dock, V9Hero, type V9Cta, type V9DockKey } from "./V9Deck";
@@ -662,6 +663,7 @@ export function V9App() {
     >
       <V9Styles />
 
+      <V9Diag enabled={v9Test} />
       <V9PullRefresh
         enabled={v9Test}
         blocked={intro || sheet !== null || Boolean(pendingAction)}
