@@ -143,6 +143,9 @@ const V9_CSS = `
   font-size: clamp(11px, 3.4vw, 14px); font-weight: 900; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis;
   position: relative; z-index: 0;
 }
+/* The 往上滑 flip hint sits on the same spot: the tag steps aside while it shows. */
+.v9-hero-name-tag { transition: opacity .2s ease; }
+.v9-hero-meetup:has(.v9-cal-hint) .v9-hero-name-tag { opacity: 0; }
 
 /* ---------- Meetup switcher: tear-off calendar ---------- */
 .v9-main.is-switching .v9-roster-strip { opacity: .5; transition: opacity .2s; }
