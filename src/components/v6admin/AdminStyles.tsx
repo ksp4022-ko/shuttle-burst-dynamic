@@ -105,6 +105,34 @@ html.ctl-lock-x body {
   background-size: 6px 6px; background-repeat: no-repeat;
 }
 .ctl-picker-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* T-31: 目前聚會 picker - a button opening a bottom sheet; one meetup per
+   line, the text shrinks instead of wrapping, 測試 / status as tags. */
+.ctl-event-pick { display: block; text-align: left; color: var(--ink); cursor: pointer; }
+.ctl-event-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ctl-event-line-name { flex: 1; min-width: 0; font-size: clamp(13px, 4.1vw, 17px); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctl-event-line .ctl-pill { flex: none; }
+.ctl-event-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ctl-event-opt {
+  display: block; width: 100%; padding: 12px; border: 1.5px solid var(--line); border-radius: 12px;
+  background: var(--card); color: var(--ink); text-align: left; cursor: pointer;
+}
+.ctl-event-opt.is-on { border: 2px solid var(--ink); background: #ffd45c; box-shadow: 0 2px 0 var(--ink); }
+/* T-34: the two push buttons and the 重新整理 icon on one row, same height. */
+.ctl-actions.ctl-push-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 38px; flex-wrap: nowrap; }
+.ctl-push-row > .ctl-act { height: 38px; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: clamp(12px, 3.5vw, 14px); padding: 0 6px; }
+.ctl-push-row > .ctl-reload { display: grid; place-items: center; width: 38px; padding: 0; }
+/* T-33: 聚會管理 grouped by season. */
+.ctl-season-head {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 2px 0; border: 0; background: none;
+  color: var(--ink); text-align: left; cursor: pointer;
+}
+.ctl-season-head strong { flex: 1; min-width: 0; font-size: 17px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctl-season-pills { display: flex; gap: 4px; flex: none; }
+.ctl-season-pills .ctl-pill:not(.green):not(.blue) { background: var(--grey-bg); color: var(--ink); }
+.ctl-season-chev { flex: none; font-size: 20px; line-height: 1; color: var(--muted); transition: transform .2s cubic-bezier(0.23, 1, 0.32, 1); }
+.ctl-season-chev.is-open { transform: rotate(90deg); }
+.ctl-season-group .ctl-rows { margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .ctl-season-chev { transition: none; } }
 
 /* Metrics */
 .ctl-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
@@ -250,7 +278,11 @@ html.ctl-lock-x body {
 /* minmax(0, 1fr): a wide child (iOS Safari sizes inputs ~20 chars) must not widen the sheet. */
 .ctl-sheet-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .ctl-sheet-body p { font-size: 16px; }
-.ctl-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ctl-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+/* T-32: iOS sizes a date input by its own content and lets it run past the
+   card; take the field's width and keep the text left like the others. */
+.ctl-field input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; min-height: 44px; text-align: left; }
+.ctl-field input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .ctl-field { display: grid; gap: 4px; font-size: 13px; font-weight: 700; color: var(--muted); }
 .ctl-field.is-wide { grid-column: 1 / -1; }
 .ctl-field input { border: 1.5px solid var(--ink); border-radius: 10px; padding: 9px 10px; font-size: 17px; font-weight: 700; color: var(--ink); background: #fff; width: 100%; }

@@ -57,10 +57,20 @@ export function ManageTab({
   const [toast, showToast] = useToast();
 
   const events = [...dashboard.events].sort((a, b) => b.eventDate.localeCompare(a.eventDate));
-  const shown = events.filter((e) =>
-    filter === "all" ? true : (e.eventKind || "official") === filter,
-  );
   const testCount = events.filter((e) => e.eventKind === "test").length;
+  // T-33: events grouped by season, newest season first (by its latest event).
+  const seasonName = new Map(dashboard.seasons.map((x) => [x.id, x.name]));
+  const seasonGroups: { key: string; name: string; events: typeof events }[] = [];
+  for (const e of events) {
+    const key = e.seasonId || "none";
+    let group = seasonGroups.find((g) => g.key === key);
+    if (!group) {
+      group = { key, name: (e.seasonId && seasonName.get(e.seasonId)) || "未分季", events: [] };
+      seasonGroups.push(group);
+    }
+    group.events.push(e);
+  }
+  const [openSeasons, setOpenSeasons] = useState<Record<string, boolean>>({});
 
   function open(p: Pending) {
     if (writing) return;
@@ -116,39 +126,80 @@ export function ManageTab({
             測試 {testCount}
           </SegButton>
         </div>
-        {shown.length ? (
-          <ul className="ctl-rows">
-            {shown.map((e) => (
-              <li key={e.id}>
-                <button
-                  type="button"
-                  className="ctl-event-row"
-                  disabled={writing}
-                  onClick={() => open({ kind: "actions", event: e })}
-                >
-                  <span className="ctl-event-row-main">
-                    <strong>
-                      {shortDate(e.eventDate)} {e.name}
-                    </strong>
-                    <small>
-                      正式 {e.confirmedCount}/{e.maxPeople}
-                      {e.waitingCount ? ` · 候補 ${e.waitingCount}` : ""}
-                      {e.leaveCount ? ` · 請假 ${e.leaveCount}` : ""}
-                      {e.unpaidPaymentCount ? ` · 未付 ${e.unpaidPaymentCount}` : ""}
-                    </small>
-                  </span>
-                  {e.eventKind === "test" ? <span className="ctl-pill blue">測試</span> : null}
-                  <span className={`ctl-pill ${statusTone(e.status)}`}>
-                    {eventStatusLabel(e.status)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="ctl-empty">沒有聚會。</p>
-        )}
       </section>
+
+      {/* T-33: one card per season (newest first), collapsible; the header
+          counts are the season's 總聚會／正式／測試, the rows follow the
+          filter above. */}
+      {seasonGroups.length ? (
+        seasonGroups.map((group) => {
+          const rows = group.events.filter((e) =>
+            filter === "all" ? true : (e.eventKind || "official") === filter,
+          );
+          const tests = group.events.filter((e) => e.eventKind === "test").length;
+          const isOpen = openSeasons[group.key] ?? group.key === seasonGroups[0]?.key;
+          return (
+            <section key={group.key} className="ctl-card ctl-season-group">
+              <button
+                type="button"
+                className="ctl-season-head"
+                aria-expanded={isOpen}
+                onClick={() => setOpenSeasons((prev) => ({ ...prev, [group.key]: !isOpen }))}
+              >
+                <strong>{group.name}</strong>
+                <span className="ctl-season-pills">
+                  <span className="ctl-pill">總 {group.events.length}</span>
+                  <span className="ctl-pill green">正式 {group.events.length - tests}</span>
+                  <span className="ctl-pill blue">測試 {tests}</span>
+                </span>
+                <span className={`ctl-season-chev${isOpen ? " is-open" : ""}`} aria-hidden="true">
+                  ›
+                </span>
+              </button>
+              {isOpen ? (
+                rows.length ? (
+                  <ul className="ctl-rows">
+                    {rows.map((e) => (
+                      <li key={e.id}>
+                        <button
+                          type="button"
+                          className="ctl-event-row"
+                          disabled={writing}
+                          onClick={() => open({ kind: "actions", event: e })}
+                        >
+                          <span className="ctl-event-row-main">
+                            <strong>
+                              {shortDate(e.eventDate)} {e.name}
+                            </strong>
+                            <small>
+                              正式 {e.confirmedCount}/{e.maxPeople}
+                              {e.waitingCount ? ` · 候補 ${e.waitingCount}` : ""}
+                              {e.leaveCount ? ` · 請假 ${e.leaveCount}` : ""}
+                              {e.unpaidPaymentCount ? ` · 未付 ${e.unpaidPaymentCount}` : ""}
+                            </small>
+                          </span>
+                          {e.eventKind === "test" ? (
+                            <span className="ctl-pill blue">測試</span>
+                          ) : null}
+                          <span className={`ctl-pill ${statusTone(e.status)}`}>
+                            {eventStatusLabel(e.status)}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="ctl-empty">這季沒有符合的聚會。</p>
+                )
+              ) : null}
+            </section>
+          );
+        })
+      ) : (
+        <section className="ctl-card">
+          <p className="ctl-empty">沒有聚會。</p>
+        </section>
+      )}
 
       {pending?.kind === "actions" ? (
         <Sheet

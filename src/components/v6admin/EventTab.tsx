@@ -96,32 +96,52 @@ export function EventTab({
   }, [dataVersion, refresh]);
 
   const events = [...dashboard.events].sort((a, b) => b.eventDate.localeCompare(a.eventDate));
+  const [picking, setPicking] = useState(false);
+  const chosen = events.find((e) => e.id === eventId);
 
   return (
     <>
+      {/* T-31: a sheet from the bottom instead of the native select (which
+          can't be styled): full width, one meetup per line, 測試 as a tag. */}
       <div className="ctl-card ctl-picker">
         <label htmlFor="ctl-event">目前聚會</label>
-        <select
+        <button
           id="ctl-event"
-          className="ctl-select"
-          value={eventId}
-          disabled={writing}
-          onChange={(e) => onEventChange(e.target.value)}
+          type="button"
+          className="ctl-select ctl-event-pick"
+          disabled={writing || !events.length}
+          onClick={() => setPicking(true)}
         >
-          {!events.length ? (
-            <option value="">（沒有聚會）</option>
-          ) : !eventId ? (
-            <option value="">請選擇聚會</option>
-          ) : null}
-          {events.map((e) => (
-            <option key={e.id} value={e.id}>
-              {shortDate(e.eventDate)} {e.name}
-              {e.eventKind === "test" ? "［測試］" : ""}
-              {e.status !== "open" ? `（${eventStatusLabel(e.status)}）` : ""}
-            </option>
-          ))}
-        </select>
+          {chosen ? (
+            <EventLine event={chosen} />
+          ) : (
+            <span className="ctl-event-line-name">
+              {events.length ? "請選擇聚會" : "（沒有聚會）"}
+            </span>
+          )}
+        </button>
       </div>
+      {picking ? (
+        <Sheet title="選擇聚會" onClose={() => setPicking(false)}>
+          <ul className="ctl-event-list">
+            {events.map((e) => (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  className={`ctl-event-opt${e.id === eventId ? " is-on" : ""}`}
+                  aria-pressed={e.id === eventId}
+                  onClick={() => {
+                    setPicking(false);
+                    if (e.id !== eventId) onEventChange(e.id);
+                  }}
+                >
+                  <EventLine event={e} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+      ) : null}
 
       {!eventId ? null : error ? (
         <div className="ctl-error">
@@ -150,6 +170,25 @@ export function EventTab({
         />
       )}
     </>
+  );
+}
+
+// "12/30（三） 康軒｜2200-2400" on one line (shrinks, never wraps), then the
+// 測試 / status tags. A literal [測試] in the name becomes the tag too.
+const TEST_IN_NAME = /\s*[[［]測試[\]］]\s*/g;
+function EventLine({ event }: { event: DashboardData["events"][number] }) {
+  const isTest = event.eventKind === "test" || /[[［]測試[\]］]/.test(event.name);
+  const name = event.name.replace(TEST_IN_NAME, " ").trim();
+  return (
+    <span className="ctl-event-line">
+      <span className="ctl-event-line-name">
+        {shortDate(event.eventDate)} {name}
+      </span>
+      {isTest ? <span className="ctl-pill blue">測試</span> : null}
+      {event.status !== "open" ? (
+        <span className="ctl-pill orange">{eventStatusLabel(event.status)}</span>
+      ) : null}
+    </span>
   );
 }
 
@@ -247,7 +286,7 @@ function EventBody({
           <Metric label="請假" value={roster.summary.leaveCount} />
           <Metric label="臨打未付" value={unpaid.length} tone={unpaid.length ? "red" : undefined} />
         </div>
-        <div className="ctl-actions">
+        <div className="ctl-actions ctl-push-row">
           <button
             className="ctl-act"
             type="button"
@@ -264,8 +303,32 @@ function EventBody({
           >
             推送名單到 Discord
           </button>
-          <button className="ctl-btn-ghost" type="button" onClick={onReload} disabled={writing}>
-            重新整理
+          {/* T-34: 重新整理 as an icon, as tall as the push buttons. */}
+          <button
+            className="ctl-act ctl-reload"
+            type="button"
+            onClick={onReload}
+            disabled={writing}
+            aria-label="重新整理"
+            title="重新整理"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                d="M20 11a8 8 0 0 0-14.3-4.9M4 13a8 8 0 0 0 14.3 4.9"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+              />
+              <path
+                d="M5 2.5v4.2h4.2M19 21.5v-4.2h-4.2"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         </div>
       </section>
