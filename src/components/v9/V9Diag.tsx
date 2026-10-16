@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 // V9-056 (/v9test?diag=1 only): on-device numbers for the web-page height bug.
 // Shows the page / viewport heights and the elements reaching furthest down.
@@ -38,6 +39,39 @@ export function V9Diag({ enabled }: { enabled: boolean }) {
     read();
     const id = window.setInterval(read, 1000);
     return () => window.clearInterval(id);
-  }, []);
-  return <pre className="v9-diag">{lines.join("\n")}</pre>;
+  }, [enabled]);
+  // Nothing at all unless /v9test?diag=1 has produced a reading.
+  if (!lines.length) return null;
+  // Portal + inline styles: nothing in the app's CSS can hide it.
+  return createPortal(
+    <div
+      className="v9-diag"
+      style={{
+        position: "fixed",
+        left: 4,
+        right: 4,
+        top: "30%",
+        zIndex: 2147483647,
+        padding: "6px 8px",
+        background: "rgba(0,0,0,.82)",
+        borderRadius: 8,
+        pointerEvents: "none",
+      }}
+    >
+      {lines.map((line, i) => (
+        <div
+          key={i}
+          style={{
+            color: "#7dffb0",
+            font: "12px/1.4 Menlo, monospace",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+          }}
+        >
+          {line}
+        </div>
+      ))}
+    </div>,
+    document.body,
+  );
 }
