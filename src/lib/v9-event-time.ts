@@ -1,16 +1,13 @@
 // V9-023: where a meetup is in time, in Taipei time (UTC+8, no DST).
-// The start / end come from the event name's time suffix (same formats as
-// parseV8MeetupDisplay: "名稱｜2200-2400" or legacy "名稱 2200～2400");
+// The start / end come from the event name's time suffix, read by
+// parseMeetupName ("名稱｜2200-2400", "名稱|2200～2400", "名稱 2200-2400"…);
 // 2400 means the next day's 00:00. A name without a time has no "started"
 // stage and ends at 23:59 Taipei on the event date.
 
 import { parseMeetupName } from "@/lib/meetup-name";
-import { isV9TestRoute } from "@/lib/v9-route";
 
 export type V9EventPhase = "before" | "started" | "ended";
 
-const CANONICAL_TIME_SUFFIX = /｜(\d{4})-(\d{4})$/;
-const LEGACY_TIME_SUFFIX = /\s(\d{4})[～-](\d{4})$/;
 const TAIPEI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 function taipeiMs(eventDate: string, hhmm: string): number | null {
@@ -30,14 +27,10 @@ export function v9EventWindow(event: { eventDate: string; name: string }): {
   endMs: number | null;
 } {
   const name = String(event.name || "").trim();
-  // V9-059 (/v9test): read the time the same lenient way the hero shows it
+  // V9-059: read the time the same lenient way the hero shows it
   // (parseMeetupName), so "康軒|2200-2400" also locks leave once started.
-  const lenient = isV9TestRoute() ? parseMeetupName(name) : null;
-  const match = lenient
-    ? lenient.start
-      ? [name, lenient.start, lenient.end]
-      : null
-    : (name.match(CANONICAL_TIME_SUFFIX) ?? name.match(LEGACY_TIME_SUFFIX));
+  const parsed = parseMeetupName(name);
+  const match = parsed.start ? [name, parsed.start, parsed.end] : null;
   if (match) {
     const startMs = taipeiMs(event.eventDate, match[1] ?? "");
     let endMs = taipeiMs(event.eventDate, match[2] ?? "");

@@ -14,7 +14,7 @@ import {
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { meetupTimeLabel, parseMeetupName } from "@/lib/meetup-name";
-import { isV9TestRoute, v9StorageKey } from "@/lib/v9-route";
+import { v9StorageKey } from "@/lib/v9-route";
 import { isV9Standalone } from "@/lib/v9-touch";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
 import { V9PullRefresh } from "./V9PullRefresh";
@@ -461,16 +461,15 @@ export function V9App() {
   // V9-058: the pull also loads a newer version when one is out; otherwise
   // it is the same data refresh.
   const pullRefresh = useCallback(async () => {
-    // V9-063 (/v9test): the version check and the data refresh run side by
-    // side, so a slow check no longer delays the roster.
-    const parallel = isV9TestRoute();
-    const data = parallel ? refreshNow() : null;
+    // V9-063: the version check and the data refresh run side by side, so
+    // a slow check no longer delays the roster.
+    const data = refreshNow();
     if (await v9NewVersionOnline()) {
       window.location.reload();
       // Keep the shuttle spinning until the page goes.
       await new Promise(() => undefined);
     }
-    await (data ?? refreshNow());
+    await data;
   }, [refreshNow]);
   useEffect(() => {
     if (!isV9Standalone()) return;

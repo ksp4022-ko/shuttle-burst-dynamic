@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useV8PersonalBillingTest } from "@/hooks/use-v8-personal-billing-test";
-import { isV9TestRoute } from "@/lib/v9-route";
 import { V9PaymentMethods } from "./V9PaymentMethods";
 import type {
   V8BillingGuestItem,
@@ -293,9 +292,9 @@ function V9AllSitesBill({
   );
   const ready = ordered.every((site) => summaries[site.id]);
   const grand = ordered.reduce((sum, site) => sum + (summaries[site.id]?.net ?? 0), 0);
-  // V9-060 (/v9test): a site whose bill failed to load counts as 0, so the
+  // V9-060: a site whose bill failed to load counts as 0, so the
   // grand total would look complete while it is not -- say so instead.
-  const partial = ready && isV9TestRoute() && ordered.some((site) => summaries[site.id]?.failed);
+  const partial = ready && ordered.some((site) => summaries[site.id]?.failed);
   return (
     <div className="v9-bill">
       <div

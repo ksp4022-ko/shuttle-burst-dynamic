@@ -12,7 +12,6 @@ import { V9DragonCameo } from "./V9DragonCameo";
 import { V9Roll } from "./V9Roll";
 import { v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
 import { v9CourtHours, v9CourtRuleFor, type V9CourtRule } from "@/lib/v9-court-rules";
-import { isV9TestRoute } from "@/lib/v9-route";
 import type { V9RosterTab } from "./V9RosterSheet";
 
 // Home Control Deck: Hero (calendar + mascot, info rail, roster strip,
@@ -618,11 +617,9 @@ export function V9CourtRules({ rules, confirmed }: { rules: V9CourtRule[]; confi
       <p className="v9-muted">依正取人數加開場地（目前正取 {confirmed} 位）</p>
       <ul>
         {rules.map((rule) => {
-          // V9-061 (/v9test): the same band the hero uses (past the last
-          // band's end it stays on the last one), so both agree above 29.
-          const now = isV9TestRoute()
-            ? rule === current
-            : confirmed >= rule.from && confirmed <= rule.to;
+          // V9-061: the same band the hero uses (past the last band's end
+          // it stays on the last one), so both agree above 29.
+          const now = rule === current;
           return (
             <li key={rule.from} className={now ? "is-now" : undefined}>
               <span className="v9-court-rules-range">
