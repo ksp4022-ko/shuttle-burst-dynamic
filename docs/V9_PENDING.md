@@ -80,3 +80,33 @@
 | V9-062 | 2026-10-18 第1階段程式檢查（code-review high）發現：季打確認頁「時間」欄依場地寫死（日安＝每週一 10:00～12:00），日安同時開週一、週四兩個時段確認時，週四那段也會顯示週一時間 | 建議：時間改依該段的時段顯示；或併入 T-27（季打確認頁文字可在 V10 編輯） | 併入 T-27（2026-10-18 使用者決定） | |
 | V9-063 | 2026-10-18 第1階段程式檢查（code-review high）發現：下拉重新整理先等版本檢查（最多 4 秒）才開始更新名單，網路慢時每次下拉多等一段 | 建議：版本檢查和名單更新同時進行，有新版才重新載入；併入第 2 階段讀取加速 | CLOSED（10/18-6 /v9test iPhone 驗收通過；2026-10-18 使用者「上/v9」，已上 /v9） | |
 | V9-064 | 2026-10-18 第1階段程式檢查（code-review high）發現（程式整理，不影響畫面）：① PWA 判斷寫了三份、橫向捲動判斷兩份；② V9Hero 的 fit／courtHint／nameTag 永遠為 true，舊分支與 parseV8MeetupDisplay 成為死碼，註解仍寫「只 /v9test」；③ 帳單小計公式算兩次（billSummary 與 V9SiteBill 各一份）；④ 下拉診斷 window.__v9pull 仍留在正式頁，每次觸控都寫入 | 建議：合併成共用函式、刪死碼與過時註解、帳單只算一次、移除 __v9pull；只改前端、畫面不變 | 已上線（10/18-6；純程式整理、畫面不變，/v9 與 /v9test 同步：共用 src/lib/v9-touch.ts、移除 V9Hero 永遠為 true 的旗標與舊解析、帳單小計只算一次、移除 window.__v9pull） | |
+| V9-065 | 第2階段讀取量測（2026-10-18）：入口 JS 帶了整包 V8 首頁。現況：每個頁面（含 /v9）都先下載 index-*.js 247KB gzip（解壓 895KB），其中約 950KB 原始碼是 V8／V7 首頁（routes/index.tsx、v8-active、v8-hero、v8-preview、homepage），V9 用不到；慢速 4G 下光這支就要 3.1 秒。原因：8 個 V8 路由檔（v8、v8test、kangxuan、rian 等）`import { Index } from "./index"`，Index 被 export，TanStack 自動拆包沒辦法把它移出入口 | 建議：把 Index 搬到獨立元件檔（如 src/components/v8-home/V8Index.tsx），routes/index.tsx 和 8 個 V8 路由都改從那裡 import，程式內容不改。範圍：只改前端，但會動到 V8 路由檔（/v8 鎖定，需要「確認」＋ /v8、/v8test 回歸測試）。預估（已用暫存副本實測，沒改 repo）：入口 247→112KB gzip（−55%）；慢速 4G 讀取畫面提早約 0.65 秒出現、名單提早約 0.9 秒；V8 頁也一樣受惠 | 待討論 | |
+| V9-066 | 讀取量測：每支 API 都多一次 CORS 預檢（OPTIONS）。現況：events×2、season-confirm、roster 每支 GET 前都先送 OPTIONS，實測每次 110～460ms（慢速 4G 一個來回約 0.56 秒）；開頁要串兩段（events → roster），等於多等兩次預檢。原因：共用 alphaFetch（database-alpha.ts）連 GET 都帶 `content-type: application/json`，瀏覽器就不能當成簡單請求；Worker 預檢回應沒有 Access-Control-Max-Age，所以不會被快取 | 建議：①前端：alphaFetch 沒有 body（GET）時不帶 content-type，未登入的 GET 就不再預檢；POST 不變（影響共用檔 database-alpha.ts，要跑 /v8 回歸）。②Worker（交 Codex）：預檢回應加 `Access-Control-Max-Age: 86400`，登入後帶 Authorization 的請求（/auth/me、帳單、可取消名單、季打進度）也能少掉重複預檢（瀏覽器各自有上限，Chrome 2 小時，Safari 較短）。預估：開頁名單提早約 0.5～1.1 秒（慢速 4G），之後每次下拉／輪詢／切換聚會也各省一個來回 | 待討論 | |
+| V9-067 | 讀取量測：名單要等聚會清單回來才開始抓（events → roster 排隊）。現況：慢速 4G 冷開，events 約 6.5 秒回來後 roster 才送出，又要約 1.1 秒（名單 7.7～8.1 秒才出現）。原因：共用 useHomepageFlow.loadInitial 先 await 聚會清單、選出這場（V9-024 規則在前端），再抓名單 | 建議（只改前端）：記住上次開的聚會 id；開頁時用這個 id 同時抓名單，清單回來選出的是同一場就直接用、不同場才重抓（V9-024 選場規則不變）。需要在共用 hook useHomepageFlow 加一個可選的「預抓名單」參數（不傳時行為不變，影響共用檔，要跑 /v8 回歸）。替代方案（需改 Worker）：getRoster 裡 getEvent 和名單查詢同時跑（見 V9-071）。預估：命中時名單提早約 1 秒（慢速 4G），沒命中跟現在一樣 | 待討論 | |
+| V9-068 | 讀取量測：讀取畫面有最短時間，資料早就好了還要等。現況：讀取畫面出現後，資料在約 2.0 秒（不限速）／2.4 秒（慢速 4G）就到齊，但讀取畫面要到約 5.5～5.7 秒才離開；網路越快，等最久的反而是動畫。原因：V9Intro MIN_MS = 3000，到時間後還要等羽球回到龍面前（最多 1.6 秒）＋ V9-046 蓄力停頓 0.28 秒＋轉場約 1.2 秒 | 建議（只改前端 V9Intro，屬設計決定，要使用者選）：A 最短時間 3 秒 → 約 1.5 秒；B 同一天第二次以後開（sessionStorage／localStorage）改短版（跳過來回打球，直接揮拍轉場）；C 維持現狀。預估：A 每次少等約 1.5 秒；B 重複開啟少等約 3 秒；不影響資料讀取 | 待討論 | |
+| V9-069 | 讀取量測：讀取畫面出現前是空白頁，V9 程式還要第二輪才下載。現況：慢速 4G 冷開，前 5.5 秒畫面全空（不限速 2.1 秒），LCP 6.4 秒（讀取畫面標題）；V9 主程式 V9SeasonGate-*.js（84KB gzip，含 framer-motion 約 315KB 原始碼）要等入口 JS 跑完才開始抓，多排隊約 1.2 秒。原因：發佈的 HTML 是空殼（只有 script），而且沒有預先載入 V9 的程式 | 建議（只改前端）：①/v9、/v9test 的 HTML 先放靜態深色底＋OnCourt 標題（__root.tsx 內嵌樣式或部署流程依路徑注入），不再白屏；②部署流程替 /v9 路徑的 HTML 加 modulepreload V9 主程式（從 Vite manifest 取檔名），和入口 JS 一起下載；③framer-motion 只用在小龍、球員卡、切換聚會、數字滾動，可評估改 lazy 載入。①②動到共用檔（__root.tsx 或 deploy workflow），要跑 /v8 回歸。預估：①首次看到畫面提早 2～3 秒（慢速 4G）；②讀取畫面再提早約 1 秒；③入口後再省約 30～40KB gzip | 待討論 | |
+| V9-070 | 讀取量測：圖片和字型在開頁時搶頻寬。現況：慢速 4G 冷開共下載 1.9MB（JS 364KB、圖片 777KB、字型約 0.8MB）。6 張龍虎動圖約 580KB 在開頁 1.5 秒後全部預載；celebrate.webp（報名成功才用）43KB 一開頁就載；Google Fonts CSS 160KB 一次載 4 種字型（Ma Shan Zheng、Zhi Mang Xing、Chakra Petch 只有 V8 用），Noto Sans TC 約 12 個切片、每個約 70KB。原因：V9-011 為了切換不空白而全部預載；字型連結寫在共用 __root.tsx | 建議（只改前端）：①開頁只載目前這場要用的龍虎圖，其他等讀取畫面結束或閒置時再載（V9-011 切換不空白的行為保留）；②celebrate 用到才載；③V9 頁的字型連結只留 Noto Sans TC（影響共用檔 __root.tsx，要跑 /v8 回歸）；④（要使用者決定，會改外觀）iPhone 改用內建蘋方，不載 Noto Sans TC。預估：開頁少抓 0.6～1.3MB；慢速 4G（約 180KB/秒）等於空出 3～7 秒的頻寬，畫面圖文更快到位、行動數據也省 | 待討論 | |
+| V9-071 | 讀取量測（Worker 端，交 Codex，這次只讀不改）：roster 比 events 慢。現況（從美國雲端測，台灣實際值待量）：roster 等待第一個 byte 約 0.68 秒、events 約 0.43 秒、season-confirm 約 0.43 秒；預檢沒有 Max-Age；API 回應沒有快取標頭。原因：getRoster 先 await getEvent，再跑名單查詢（兩次 D1 依序來回）；名單查詢每列有 claimedName 子查詢（有用到 member_id 主鍵索引，不算慢） | 建議（需改 Worker，badminton-signup，交 Codex）：①getRoster 的 getEvent 與名單查詢同時跑（Promise.all 或 DB.batch，查不到聚會仍回 404）；②OPTIONS 回應加 Access-Control-Max-Age（併 V9-066②）；③先在 Cloudflare 後台看 Worker 的 wall time／D1 查詢時間，以台灣實測決定要不要開 Smart Placement 或 D1 讀取副本；④events 清單可評估加很短的快取（例如 5 秒），但報名後要馬上看到變化，預設不做。不改報名、順位、請假、回歸、寬限邏輯。預估：①每次抓名單少一次 D1 來回（約 0.1～0.3 秒）；②見 V9-066 | 待討論 | |
+| V9-072 | 讀取量測：執行期（React 重複渲染、記憶體）。現況：INP 24～104ms（CPU 降速 4 倍），CLS 0，沒有超過 50ms 的長任務；開關面板 30 輪後強制回收記憶體，事件監聽 236、DOM 237，回到初始值，heap 5.0→6.9MB，沒看到明顯洩漏。待機 20 秒主執行緒忙 0.75 秒（約 4%），每秒約 60 次樣式重算。原因：常駐 CSS 動畫，其中龍虎動圖用 background-position 逐格播放（不在合成層）；名單每 25 秒輪詢，分頁在背景時也照跑（共用 hook） | 建議（只改前端，優先度低）：①龍虎動圖改用 transform 位移播放（放進合成層）；②面板蓋住或頁面隱藏時暫停常駐動畫；③分頁隱藏時暫停 25 秒輪詢、回來時立即更新一次（共用 hook useHomepageFlow，要跑 /v8 回歸）。預估：省電、降溫；讀取速度不會變 | 待討論 | |
+
+### 第2階段讀取量測紀錄（2026-10-18，V9-065～072）
+
+- 條件：Playwright Chromium，390×844、DPR 3、iPhone UA；慢速 4G＝DevTools「Slow 4G」（延遲 562.5ms、下行 1.44Mbps、上行 675kbps）＋ CPU 降速 4 倍；冷開（新瀏覽器環境）。對象 GitHub Pages /v9test/kangxuan/、/v9test/rian/（commit fcd2033）。這是瀏覽器模擬，不是 iPhone 實機；伺服器延遲是從雲端（美國）量的。
+- 外掛：Perf Profiler、Cloudflare、E2E Test Generator、A11y Enforcer 都沒有啟用（ListPlugins 為空），改用 Playwright＋CDP 自己量，Worker 端靠讀 badminton-signup 原始碼（只讀）。
+
+| 指標（康軒，慢速 4G 冷開） | 數值 |
+|---|---|
+| HTML 回來 | 0.67 秒 |
+| 入口 JS index-*.js（247KB gzip） | 0.68 → 3.8 秒 |
+| 第二輪 V9 程式 V9SeasonGate-*.js（84KB gzip） | 4.1 → 5.3 秒 |
+| 讀取畫面出現（之前全白） | 5.5 秒（日安 5.4） |
+| LCP（讀取畫面標題） | 6.4 秒 |
+| events open／closed、season-confirm（同時送，各含預檢） | 5.5 → 6.6 秒 |
+| roster（等 events 回來才送） | 6.6 → 7.7 秒 |
+| 名單出現（資料到齊） | 8.1 秒（日安 7.6） |
+| 讀取畫面離開 | 11.0 秒（日安 10.9） |
+| INP（點名單條）／CLS | 56～96ms／0 |
+| 冷開總下載 | 1.9MB，57 個請求 |
+| 不限速冷開：讀取畫面出現／名單／離開 | 2.1／4.1／7.8 秒 |
+| 慢速 4G 第二次開（有快取）：讀取畫面出現／名單／離開 | 0.9／2.6／6.3 秒 |
+| V9-065 暫存副本實測（本機，慢速 4G）：讀取畫面出現／名單／離開 | 現在 5.1～5.3／7.7～7.9／10.6～10.8 秒 → 拆包後 4.6／6.9～7.0／10.0 秒 |
