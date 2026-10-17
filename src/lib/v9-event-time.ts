@@ -4,6 +4,9 @@
 // 2400 means the next day's 00:00. A name without a time has no "started"
 // stage and ends at 23:59 Taipei on the event date.
 
+import { parseMeetupName } from "@/lib/meetup-name";
+import { isV9TestRoute } from "@/lib/v9-route";
+
 export type V9EventPhase = "before" | "started" | "ended";
 
 const CANONICAL_TIME_SUFFIX = /｜(\d{4})-(\d{4})$/;
@@ -27,7 +30,14 @@ export function v9EventWindow(event: { eventDate: string; name: string }): {
   endMs: number | null;
 } {
   const name = String(event.name || "").trim();
-  const match = name.match(CANONICAL_TIME_SUFFIX) ?? name.match(LEGACY_TIME_SUFFIX);
+  // V9-059 (/v9test): read the time the same lenient way the hero shows it
+  // (parseMeetupName), so "康軒|2200-2400" also locks leave once started.
+  const lenient = isV9TestRoute() ? parseMeetupName(name) : null;
+  const match = lenient
+    ? lenient.start
+      ? [name, lenient.start, lenient.end]
+      : null
+    : (name.match(CANONICAL_TIME_SUFFIX) ?? name.match(LEGACY_TIME_SUFFIX));
   if (match) {
     const startMs = taipeiMs(event.eventDate, match[1] ?? "");
     let endMs = taipeiMs(event.eventDate, match[2] ?? "");

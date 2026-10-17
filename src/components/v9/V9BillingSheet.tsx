@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useV8PersonalBillingTest } from "@/hooks/use-v8-personal-billing-test";
+import { isV9TestRoute } from "@/lib/v9-route";
 import { V9PaymentMethods } from "./V9PaymentMethods";
 import type {
   V8BillingGuestItem,
@@ -205,6 +206,8 @@ type V9BillReady = Extract<V9Billing["state"], { kind: "ready" }>["billing"];
 
 // What a 場地's bill nets to (the backend's amount due minus cash refunds
 // due, V9-027) and whether it has anything to show.
+type SiteSummary = { net: number; hasRecords: boolean; failed?: boolean };
+
 function billSummary(bill: V9BillReady) {
   const refunds = refundItemsOf(bill);
   const refundDue = refunds
@@ -217,7 +220,7 @@ function billSummary(bill: V9BillReady) {
     bill.seasonPaymentHistory.items.length > 0 ||
     bill.currentGuestItems.length > 0 ||
     bill.guestLedger.items.length > 0;
-  return { net, hasRecords };
+  return { net, hasRecords, refunds, refundDue };
 }
 
 export function V9BillingContent({
@@ -282,21 +285,26 @@ function V9AllSitesBill({
   sites: { id: string; name: string }[];
 }) {
   const ordered = [...sites].sort((a, b) => Number(b.id === siteId) - Number(a.id === siteId));
-  const [summaries, setSummaries] = useState<
-    Record<string, { net: number; hasRecords: boolean } | null>
-  >({});
+  const [summaries, setSummaries] = useState<Record<string, SiteSummary | null>>({});
   const report = useCallback(
-    (id: string, summary: { net: number; hasRecords: boolean } | null) =>
+    (id: string, summary: SiteSummary | null) =>
       setSummaries((last) => (last[id] === summary ? last : { ...last, [id]: summary })),
     [],
   );
   const ready = ordered.every((site) => summaries[site.id]);
   const grand = ordered.reduce((sum, site) => sum + (summaries[site.id]?.net ?? 0), 0);
+  // V9-060 (/v9test): a site whose bill failed to load counts as 0, so the
+  // grand total would look complete while it is not -- say so instead.
+  const partial = ready && isV9TestRoute() && ordered.some((site) => summaries[site.id]?.failed);
   return (
     <div className="v9-bill">
-      <div className={`v9-bill-total is-grand${ready && grand < 0 ? " is-refund" : ""}`}>
-        <span>{ready && grand < 0 ? "全部場地合計應退" : "全部場地合計待繳"}</span>
-        {ready ? (
+      <div
+        className={`v9-bill-total is-grand${ready && !partial && grand < 0 ? " is-refund" : ""}`}
+      >
+        <span>{ready && !partial && grand < 0 ? "全部場地合計應退" : "全部場地合計待繳"}</span>
+        {partial ? (
+          <span className="v9-bill-partial">部分場地讀取失敗，請重新讀取</span>
+        ) : ready ? (
           <strong key={grand} className="v9-pop">
             {money(Math.abs(grand))}
           </strong>
@@ -346,7 +354,7 @@ function V9SiteBill({
   // All-sites bill: "康軒 小計" instead of 本次應繳.
   totalPrefix?: string | undefined;
   withGroup?: boolean;
-  onSummary?: (siteId: string, summary: { net: number; hasRecords: boolean } | null) => void;
+  onSummary?: (siteId: string, summary: SiteSummary | null) => void;
 }) {
   const billing = useV8PersonalBillingTest({
     enabled: true,
@@ -357,13 +365,14 @@ function V9SiteBill({
   });
   const readyBill = billing.state.kind === "ready" ? billing.state.billing : null;
   const failed = billing.state.kind === "error" || billing.state.kind === "auth";
-  const summaryNet = readyBill ? billSummary(readyBill).net : null;
-  const summaryHas = readyBill ? billSummary(readyBill).hasRecords : null;
+  const summary = readyBill ? billSummary(readyBill) : null;
+  const summaryNet = summary ? summary.net : null;
+  const summaryHas = summary ? summary.hasRecords : null;
   useEffect(() => {
     if (!onSummary) return;
     if (summaryNet !== null && summaryHas !== null)
       onSummary(siteId, { net: summaryNet, hasRecords: summaryHas });
-    else if (failed) onSummary(siteId, { net: 0, hasRecords: true });
+    else if (failed) onSummary(siteId, { net: 0, hasRecords: true, failed: true });
     else onSummary(siteId, null);
   }, [failed, onSummary, siteId, summaryHas, summaryNet]);
   const { state } = billing;
@@ -416,10 +425,8 @@ function V9SiteBill({
     const pastSeasons = payments.filter(
       (item) => item !== season && item.status === "unpaid" && item.outstanding > 0,
     );
-    const refunds = refundItemsOf(state.billing);
-    const refundDue = refunds
-      .filter((item) => item.status === "due")
-      .reduce((sum, item) => sum + item.refundAmount, 0);
+    // V9-064: one netting formula (billSummary) for the 小計 and the grand total.
+    const { refunds, refundDue, net } = summary ?? billSummary(state.billing);
     // Anyone who ever had a 季費 or a leave credit gets the 季費 rows; a
     // former 季打 without this season's fee shows 本季 季費 $0.
     const formerFixed = payments.length > 0 || refunds.length > 0;
@@ -431,7 +438,6 @@ function V9SiteBill({
     const historyTotal =
       totals.otherGuestOutstandingTotal +
       pastSeasons.reduce((sum, item) => sum + item.outstanding, 0);
-    const net = totals.totalAmountDue - refundDue;
     body = (
       <>
         <div className="v9-bill-lines">

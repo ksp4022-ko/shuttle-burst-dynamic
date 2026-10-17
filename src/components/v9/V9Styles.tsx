@@ -757,6 +757,7 @@ html.v9-page-lock, html.v9-page-lock body { overscroll-behavior: none; }
 /* V9-043 phase 4: 全部場地合計 on top (the orange total), each
    場地's 小計 in a quieter cream so only one total shouts. */
 .v9-bill-total.is-grand { margin: 10px 0 4px; }
+.v9-bill-partial { font-size: 13px; font-weight: 800; text-align: right; }
 .v9-bill-site { padding-top: 14px; }
 .v9-bill-site[hidden] { display: none; }
 .v9-bill-site + .v9-bill-site { margin-top: 10px; border-top: 2.5px solid var(--v9-ink); }

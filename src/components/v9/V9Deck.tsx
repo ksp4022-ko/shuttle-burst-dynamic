@@ -2,7 +2,6 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { motion, useAnimate, useReducedMotion } from "motion/react";
 import type { AlphaEvent } from "@/lib/database-alpha";
 import type { CurrentIdentity } from "@/hooks/use-current-identity";
-import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
 import { meetupTimeLabel, parseMeetupName } from "@/lib/meetup-name";
 import { V9Icon } from "./V9Icons";
 import { V9Lockup } from "./V9Logo";
@@ -13,6 +12,7 @@ import { V9DragonCameo } from "./V9DragonCameo";
 import { V9Roll } from "./V9Roll";
 import { v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
 import { v9CourtHours, v9CourtRuleFor, type V9CourtRule } from "@/lib/v9-court-rules";
+import { isV9TestRoute } from "@/lib/v9-route";
 import type { V9RosterTab } from "./V9RosterSheet";
 
 // Home Control Deck: Hero (calendar + mascot, info rail, roster strip,
@@ -57,8 +57,8 @@ function courtBoostParts(rule: V9CourtRule, courtCount: number, hours: number): 
   return parts;
 }
 
-// 場地: "2面 / 2時" (hours only when the event has them). V9-052: "hr" on
-// /v9test 康軒.
+// 場地: "2面 / 2時" (hours only when the event has them). V9-052: "hr" for
+// 康軒 (the site with 加場 rules).
 function courtLabel(event: AlphaEvent, unit = "時") {
   if (typeof event.courtCount !== "number") return "—";
   return typeof event.hours === "number"
@@ -91,11 +91,8 @@ export function V9Hero({
   onLogoParty,
   hintPaused,
   ctaShuttle,
-  fit = false,
   courtRules,
   onCourtRules,
-  courtHint = false,
-  nameTag = false,
 }: {
   siteName: string;
   event: AlphaEvent;
@@ -125,32 +122,19 @@ export function V9Hero({
   // V9-041: the intro's shuttle lands on the CTA and stays there,
   // cork to the lower right. "hidden" until it lands.
   ctaShuttle?: "hidden" | "shown" | undefined;
-  // V9-048: shrink to fit above the Dock.
-  fit?: boolean;
   // V9-050: this 場地's 加場規則 (康軒); the 場地 cell opens them in a
   // sheet the app renders (outside the hero, like the other sheets).
   courtRules?: V9CourtRule[] | undefined;
   onCourtRules?: () => void;
-  // V9-051 (/v9test until accepted): rising red + on the 場地 cell while
-  // the 正取 count is in a 加場 band.
-  courtHint?: boolean;
-  // V9-057 (on /v9 and /v9test): lenient name reading and the special
-  // name in the calendar head.
-  nameTag?: boolean;
 }) {
-  const v8Display = parseV8MeetupDisplay(event.name);
+  // V9-057: names read leniently; a special name shows in the calendar head.
   const parsedName = parseMeetupName(event.name);
-  const display = nameTag
-    ? { displayName: parsedName.name, timeLabel: meetupTimeLabel(parsedName) }
-    : v8Display;
-  const meetupName = display.displayName || event.name;
-  // "康軒" next to "康軒羽球" says nothing new; only special names show.
-  const showMeetupName = Boolean(meetupName) && meetupName !== siteName;
+  const timeLabel = meetupTimeLabel(parsedName);
   const go = (next: number) => {
     if (next >= 0 && next < events.length && next !== index) onGo(next);
   };
   const rail: RailItem[] = [
-    { icon: "time", label: "時間", value: display.timeLabel || "—" },
+    { icon: "time", label: "時間", value: timeLabel || "—" },
     { icon: "shuttle", label: "球種", value: event.ballType || "—" },
     {
       icon: "fee",
@@ -160,13 +144,13 @@ export function V9Hero({
     {
       icon: "court",
       label: "場地",
-      value: courtLabel(event, courtHint && courtRules?.length ? "hr" : "時"),
+      value: courtLabel(event, courtRules?.length ? "hr" : "時"),
     },
   ];
-  // V9-052: 康軒 (/v9test) - when the 正取 count is in a 加場 band and the
+  // V9-052: 康軒 - when the 正取 count is in a 加場 band and the
   // band has more court-hours than the admin set, show the band's value.
   const boostRule =
-    courtHint && !tired && !switching && typeof event.courtCount === "number"
+    !tired && !switching && typeof event.courtCount === "number"
       ? v9CourtRuleFor(courtRules, counts.confirmed)
       : null;
   const baseHours = typeof event.hours === "number" ? event.hours : (boostRule?.main.hours ?? 0);
@@ -189,10 +173,6 @@ export function V9Hero({
   useLayoutEffect(() => {
     const hero = heroRef.current;
     if (!hero) return;
-    if (!fit) {
-      delete hero.dataset["fit"];
-      return;
-    }
     const refit = () => {
       const room = parseFloat(getComputedStyle(hero).minHeight) + 0.5;
       if (!room) return;
@@ -210,7 +190,7 @@ export function V9Hero({
       window.removeEventListener("resize", refit);
       viewport?.removeEventListener("resize", refit);
     };
-  }, [fit, event.id, note, statusKey, statusHint, cta.kind, switching]);
+  }, [event.id, note, statusKey, statusHint, cta.kind, switching]);
 
   return (
     <section ref={heroRef} className="v9-hero" aria-label="聚會控制台">
@@ -244,15 +224,13 @@ export function V9Hero({
             <V9MeetupNav
               siteLabel={siteName}
               siteBadge
-              specialNames={nameTag}
+              specialNames
               events={events}
               index={index}
               onGo={go}
               onList={onMeetup}
               hintPaused={hintPaused}
             />
-            {/* V9-057: on /v9test the special name lives in the calendar head. */}
-            {showMeetupName && !nameTag && <span className="v9-hero-name">{meetupName}</span>}
           </div>
           <V9HeroMascot
             sprite={tired ? "tired" : identity && !switching ? v9MascotSprite(identity) : "guest"}
@@ -265,7 +243,6 @@ export function V9Hero({
             const tap = item.icon === "court" && Boolean(courtRules?.length);
             const plus =
               tap &&
-              courtHint &&
               !tired &&
               !switching &&
               counts.confirmed >= Math.min(...(courtRules ?? []).map((rule) => rule.from));
@@ -635,12 +612,17 @@ export function V9Dock({
 
 // V9-050: 加場規則, the band this meetup's 正取 count falls in marked 目前.
 export function V9CourtRules({ rules, confirmed }: { rules: V9CourtRule[]; confirmed: number }) {
+  const current = v9CourtRuleFor(rules, confirmed);
   return (
     <div className="v9-court-rules">
       <p className="v9-muted">依正取人數加開場地（目前正取 {confirmed} 位）</p>
       <ul>
         {rules.map((rule) => {
-          const now = confirmed >= rule.from && confirmed <= rule.to;
+          // V9-061 (/v9test): the same band the hero uses (past the last
+          // band's end it stays on the last one), so both agree above 29.
+          const now = isV9TestRoute()
+            ? rule === current
+            : confirmed >= rule.from && confirmed <= rule.to;
           return (
             <li key={rule.from} className={now ? "is-now" : undefined}>
               <span className="v9-court-rules-range">

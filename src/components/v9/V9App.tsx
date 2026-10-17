@@ -14,7 +14,8 @@ import {
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { meetupTimeLabel, parseMeetupName } from "@/lib/meetup-name";
-import { v9StorageKey } from "@/lib/v9-route";
+import { isV9TestRoute, v9StorageKey } from "@/lib/v9-route";
+import { isV9Standalone } from "@/lib/v9-touch";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
 import { V9PullRefresh } from "./V9PullRefresh";
 import { v9NewVersionOnline } from "@/lib/v9-version";
@@ -460,18 +461,19 @@ export function V9App() {
   // V9-058: the pull also loads a newer version when one is out; otherwise
   // it is the same data refresh.
   const pullRefresh = useCallback(async () => {
+    // V9-063 (/v9test): the version check and the data refresh run side by
+    // side, so a slow check no longer delays the roster.
+    const parallel = isV9TestRoute();
+    const data = parallel ? refreshNow() : null;
     if (await v9NewVersionOnline()) {
       window.location.reload();
       // Keep the shuttle spinning until the page goes.
       await new Promise(() => undefined);
     }
-    await refreshNow();
+    await (data ?? refreshNow());
   }, [refreshNow]);
   useEffect(() => {
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (navigator as Navigator & { standalone?: boolean }).standalone === true;
-    if (!standalone) return;
+    if (!isV9Standalone()) return;
     const onShow = () => {
       if (document.visibilityState === "visible") void refreshNow();
     };
@@ -785,11 +787,8 @@ export function V9App() {
               onLogoParty={logoParty}
               hintPaused={sheet !== null}
               ctaShuttle={introStage === "done" ? "shown" : "hidden"}
-              fit
               courtRules={V9_COURT_RULES[siteId]}
               onCourtRules={() => setSheet("courtRules")}
-              courtHint
-              nameTag
             />
           </main>
           <V9Dock active={dockActive} onSelect={onDock} />

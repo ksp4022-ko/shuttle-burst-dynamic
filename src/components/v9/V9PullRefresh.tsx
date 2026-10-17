@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { canScrollUnder, isV9Standalone } from "@/lib/v9-touch";
 
 // V9-055 (home-screen app; V9-056 web pages too): pull down at the top of the page to
 // re-read the meetup and roster, and no sideways dragging of the page.
@@ -15,28 +16,6 @@ const THRESHOLD = 68;
 const HOLD = 56; // where the deck waits while refreshing
 const MIN_SPIN_MS = 600; // so a fast refresh still reads as one
 const SNAP = "transform .32s cubic-bezier(0.32, 0.72, 0, 1)"; // iOS-like drawer curve
-
-// Can some element under the finger still scroll sideways that way?
-function canScrollX(target: EventTarget | null, dx: number) {
-  let node = target instanceof Element ? target : null;
-  if (node?.closest("input, textarea, select")) return true;
-  while (node && node !== document.body) {
-    const style = window.getComputedStyle(node);
-    if (/(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 1) {
-      if (dx < 0 && node.scrollLeft + node.clientWidth < node.scrollWidth - 1) return true;
-      if (dx > 0 && node.scrollLeft > 0) return true;
-    }
-    node = node.parentElement;
-  }
-  return false;
-}
-
-function isStandalone() {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
-}
 
 // Rubber band: 1:1 at first, then ever stiffer toward MAX.
 function rubber(dy: number) {
@@ -61,7 +40,7 @@ export function V9PullRefresh({
   blockedRef.current = blocked;
   refreshRef.current = onRefresh;
 
-  useEffect(() => setStandalone(isStandalone()), []);
+  useEffect(() => setStandalone(isV9Standalone()), []);
   // V9-056: web pages get the pull too -- their page lock (useV9PageLock)
   // also stops the browser's own pull-to-refresh.
   const on = enabled;
@@ -107,30 +86,22 @@ export function V9PullRefresh({
       }
     };
 
-    // Last pull decision, kept on window.__v9pull for on-device debugging (V9-056).
-    const note = (text: string) => {
-      (window as Window & { __v9pull?: string }).__v9pull = text;
-    };
     // A page a pixel or two off the top (or mid rubber-band) still counts as
     // at the top.
     const atTop = () => window.scrollY <= 2;
     const onStart = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (busy || blockedRef.current || event.touches.length > 1 || !touch) {
-        note(`start skip: busy ${busy} blocked ${blockedRef.current}`);
         return;
       }
       if (!atTop()) {
-        note(`start skip: scrollY ${window.scrollY.toFixed(1)}`);
         return;
       }
       // Things that drag on their own (calendar flip, sheets) keep their touch.
       const target = event.target as HTMLElement | null;
       if (target?.closest(".v9-cal-nav, .v9-sheet, .v9-intro")) {
-        note("start skip: calendar / sheet");
         return;
       }
-      note("start ok");
       startX = touch.clientX;
       startY = touch.clientY;
       tracking = true;
@@ -146,13 +117,9 @@ export function V9PullRefresh({
         if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
         // Only a downward, mostly vertical drag from the very top pulls.
         if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || !atTop()) {
-          note(
-            `move skip: dx ${Math.round(dx)} dy ${Math.round(dy)} y ${window.scrollY.toFixed(1)}`,
-          );
           tracking = false;
           return;
         }
-        note(`pulling (cancelable ${event.cancelable})`);
         pulling = true;
       }
       event.preventDefault();
@@ -213,7 +180,8 @@ export function V9PullRefresh({
         if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
         axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
       }
-      if (axis === "x" && event.cancelable && !canScrollX(event.target, dx)) event.preventDefault();
+      if (axis === "x" && event.cancelable && !canScrollUnder(event.target, dx, 0))
+        event.preventDefault();
     };
     const onScroll = () => {
       if (window.scrollX !== 0) window.scrollTo(0, window.scrollY);
