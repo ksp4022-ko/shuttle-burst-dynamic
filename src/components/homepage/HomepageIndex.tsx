@@ -1,0 +1,6242 @@
+import { useRouterState } from "@tanstack/react-router";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+  type ReactNode,
+} from "react";
+import { flushSync } from "react-dom";
+import { buildV8ActiveAssets } from "@/components/v8-active/v8ActiveConfig";
+import { V8Toast } from "@/components/v8-active/V8Toast";
+import { useV8PageLock } from "@/components/v8-active/useV8PageLock";
+import { V8ImageDebug } from "@/components/v8-active/V8ImageDebug";
+import { MeetupSheet, MeetupTicketStack, MemberSheet } from "@/components/homepage/HomepageSheets";
+import { HomepageRoster } from "@/components/homepage/HomepageRoster";
+import { DEFAULT_PARTICLE_TUNING, ParticleRacket, type ParticleTuning } from "@/components/homepage/ParticleRacket";
+import { V8HeroComposition } from "@/components/v8-hero/V8HeroComposition";
+import {
+  V8OpeningSunContent,
+  V8OpeningSunStyles,
+  v8OpeningSunDefaults,
+  type V8OpeningSunControls,
+} from "@/components/v8-hero/V8OpeningSunContent";
+import { V8ActivePage } from "@/components/v8-active/V8ActivePage";
+import { LazyV8TuningPanel } from "@/components/v8-preview/LazyV8TuningPanel";
+import {
+  buildV8OpeningHeroOverrides,
+  buildV8OpeningSunControls,
+  buildV8SunDotsControls,
+  loadSavedControls,
+  motionPreviewLabDefaults,
+  previewDefaults,
+  saveScopedControls,
+  type MotionPreviewLabState,
+  type PreviewControls,
+  type PreviewTargetId,
+} from "@/components/v8-preview/dragonPreviewConfig";
+import { V8IntroVideo, V8IntroVideoStyles } from "@/components/v8-active/V8IntroVideo";
+import { V8OpenIntro, V8OpenIntroBoundary } from "@/components/v8-hero/V8OpenIntro";
+import { V8LoadingCover } from "@/components/v8-active/V8LoadingCover";
+import { V8TestBadge } from "@/components/v8-active/V8TestBadge";
+import { v8RouteFamilyOfBrowserPath, v8RouteFamilyOfRouterPath, v8SessionKeyPrefix } from "@/lib/v8-route-family";
+import { v8IntroConfig } from "@/components/v8-active/v8IntroConfig";
+import {
+  HomepageToast,
+  clearToastOrigin,
+  rememberToastOriginFromElement,
+  type ToastOrigin,
+} from "@/components/homepage/HomepageToast";
+import { useHomepageFlow, type MotionMode } from "@/hooks/use-homepage-flow";
+import { useV8DomImagesReady } from "@/hooks/use-v8-dom-images-ready";
+import { findFixedIdentity, type CurrentIdentity } from "@/hooks/use-current-identity";
+import { buildV8ActivePrewarmTiers, buildV8IntroPrewarmTiers, startV8ActivePrewarm, startV8PrewarmQueue } from "@/lib/v8-active-prewarm";
+import { loadV8LineIdentity } from "@/lib/v8-line-auth-storage";
+import { parseV8MeetupDisplay } from "@/components/v8-active/v8MeetupDisplay";
+import { buildV8HeroAssets, v8HeroDefaults } from "@/components/v8-hero/v8HeroConfig";
+import type { AlphaEvent } from "@/lib/database-alpha";
+
+
+const RACKET_FILE = "shuttle-racket-pearl.png";
+const HANDOFF_OFFSET = { x: -8, y: -6 } as const;
+const HANDOFF_TIMING_STORAGE_KEY = "shuttle-handoff-timing-lab";
+const TUTORIAL_SEEN_KEY = "shuttle_home_tutorial_v1_seen";
+const V8_LINE_LOGIN_RETURN_STORAGE_KEY = "shuttle-v8-line-login-return-v1";
+const V8_SELECTED_EVENT_STORAGE_VERSION = "v1";
+const V8_ORIENTATION_RESTORE_STORAGE_VERSION = "v2";
+const OPEN_SUN_TUNING_TARGETS: PreviewTargetId[] = ["OPEN SUN INFO", "OPEN SUN MOTION", "OPEN SUN DATE", "OPEN SUN NAME", "OPEN SUN TIME", "OPEN SUN NOTE", "OPEN SWITCH ICON PREV V2", "OPEN SWITCH ICON NEXT V2", "OPEN TIGER 1", "OPEN TIGER 2", "OPEN TIGER 3", "OPEN TIGER RACKET", "OPEN CTA", "OPEN COUNTDOWN", "OPEN SUN DOTS", "OPEN MEETUP PICKER"];
+type V8OrientationRestoreView = "active" | "open";
+type V8OrientationRestoreSnapshot = { eventId: string; view: V8OrientationRestoreView };
+
+// Either V8 route family (/v8/* or /v8test/*) -- see v8-route-family.
+function isV8BrowserPath(pathname: string) {
+  return v8RouteFamilyOfBrowserPath(pathname) !== null;
+}
+
+function hasV8LineAuthCallback() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.has("auth") || params.has("auth_error");
+}
+
+// Production keeps its exact "v8:" keys; /v8test uses "v8test:" ones.
+function v8SelectedEventStorageKey(siteId: string) {
+  return `${v8SessionKeyPrefix()}:${siteId}:selected-event:${V8_SELECTED_EVENT_STORAGE_VERSION}`;
+}
+
+function v8OrientationRestoreStorageKey(siteId: string) {
+  return `${v8SessionKeyPrefix()}:${siteId}:orientation-restore:${V8_ORIENTATION_RESTORE_STORAGE_VERSION}`;
+}
+
+function readV8SelectedEventId(siteId: string) {
+  if (typeof window === "undefined" || !siteId) return null;
+  try {
+    return window.sessionStorage.getItem(v8SelectedEventStorageKey(siteId));
+  } catch {
+    return null;
+  }
+}
+
+function saveV8SelectedEventId(siteId: string, eventId: string) {
+  if (typeof window === "undefined" || !siteId || !eventId) return;
+  try {
+    window.sessionStorage.setItem(v8SelectedEventStorageKey(siteId), eventId);
+  } catch {
+    // Session storage can be unavailable in private/locked contexts.
+  }
+}
+
+function readV8OrientationRestoreSnapshot(siteId: string): V8OrientationRestoreSnapshot | null {
+  if (typeof window === "undefined" || !siteId) return null;
+  const key = v8OrientationRestoreStorageKey(siteId);
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    window.sessionStorage.removeItem(key);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as Partial<V8OrientationRestoreSnapshot> | null;
+    if (!saved || typeof saved.eventId !== "string" || !saved.eventId) return null;
+    if (saved.view !== "active" && saved.view !== "open") return null;
+    return { eventId: saved.eventId, view: saved.view };
+  } catch {
+    try {
+      window.sessionStorage.removeItem(key);
+    } catch {
+      // Ignore unavailable storage.
+    }
+    return null;
+  }
+}
+
+function saveV8OrientationRestoreSnapshot(siteId: string, snapshot: V8OrientationRestoreSnapshot) {
+  if (typeof window === "undefined" || !siteId || !snapshot.eventId) return;
+  try {
+    window.sessionStorage.setItem(v8OrientationRestoreStorageKey(siteId), JSON.stringify(snapshot));
+  } catch {
+    // Session storage can be unavailable in private/locked contexts.
+  }
+}
+
+function isV8TouchDevice() {
+  if (typeof window === "undefined") return false;
+  return navigator.maxTouchPoints > 0 || (window.matchMedia?.("(pointer: coarse)").matches ?? false);
+}
+
+function isV8LandscapeOrientation() {
+  if (typeof window === "undefined") return false;
+  const type = window.screen.orientation?.type;
+  if (type) return type.startsWith("landscape");
+  return window.matchMedia?.("(orientation: landscape)").matches ?? false;
+}
+
+function isV8TouchLandscape() {
+  return isV8TouchDevice() && isV8LandscapeOrientation();
+}
+
+function useV8MobileLandscapeGuard({
+  enabled,
+  siteId,
+  selectedEventId,
+  view,
+}: {
+  enabled: boolean;
+  siteId: string;
+  selectedEventId: string;
+  view: V8OrientationRestoreView;
+}) {
+  const [blocked, setBlocked] = useState(false);
+  const wasBlockedRef = useRef(false);
+  const reloadStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!enabled || !siteId || typeof window === "undefined") {
+      setBlocked(false);
+      wasBlockedRef.current = false;
+      reloadStartedRef.current = false;
+      return;
+    }
+
+    let frame = 0;
+
+    const update = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const nextBlocked = isV8TouchLandscape();
+        setBlocked(nextBlocked);
+        if (!nextBlocked) {
+          if (wasBlockedRef.current && !reloadStartedRef.current) {
+            reloadStartedRef.current = true;
+            try {
+              if (selectedEventId) saveV8SelectedEventId(siteId, selectedEventId);
+              if (selectedEventId) saveV8OrientationRestoreSnapshot(siteId, { eventId: selectedEventId, view });
+              window.location.reload();
+            } catch {
+              window.location.reload();
+            }
+          }
+        }
+        wasBlockedRef.current = nextBlocked;
+      });
+    };
+
+    update();
+    const orientationMedia = window.matchMedia?.("(orientation: landscape)");
+    window.screen.orientation?.addEventListener?.("change", update);
+    window.addEventListener("orientationchange", update);
+    orientationMedia?.addEventListener?.("change", update);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.screen.orientation?.removeEventListener?.("change", update);
+      window.removeEventListener("orientationchange", update);
+      orientationMedia?.removeEventListener?.("change", update);
+    };
+  }, [enabled, selectedEventId, siteId, view]);
+
+  useEffect(() => {
+    if (!blocked || typeof document === "undefined") return;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [blocked]);
+
+  return blocked;
+}
+
+function V8MobileLandscapeOverlay({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <>
+      <div
+        className="v8-mobile-landscape-guard"
+        role="dialog"
+        aria-modal="true"
+        aria-label="請將手機轉為直向使用"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onTouchMove={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+      >
+        <div className="v8-mobile-landscape-card">
+          <span className="v8-mobile-landscape-icon" aria-hidden="true">
+            <span />
+          </span>
+          <p>請將手機轉為直向使用</p>
+        </div>
+      </div>
+      <style>{`
+        .v8-mobile-landscape-guard {
+          position: fixed;
+          inset: 0;
+          z-index: 2147483000;
+          display: grid;
+          place-items: center;
+          padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+          background:
+            radial-gradient(circle at 50% 42%, rgba(246, 228, 184, 0.16), transparent 42%),
+            linear-gradient(135deg, #16120d 0%, #1f2a2d 48%, #132237 100%);
+          color: #f7efe0;
+          pointer-events: auto;
+          touch-action: none;
+          overscroll-behavior: contain;
+        }
+        .v8-mobile-landscape-card {
+          display: grid;
+          justify-items: center;
+          gap: 16px;
+          max-width: min(82vw, 360px);
+          padding: 28px 30px;
+          border: 1px solid rgba(247, 239, 224, 0.28);
+          border-radius: 18px;
+          background: rgba(20, 15, 10, 0.74);
+          box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+          text-align: center;
+        }
+        .v8-mobile-landscape-card p {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 900;
+          line-height: 1.35;
+          letter-spacing: 0.04em;
+        }
+        .v8-mobile-landscape-icon {
+          position: relative;
+          width: 58px;
+          height: 82px;
+          border: 4px solid rgba(247, 239, 224, 0.9);
+          border-radius: 14px;
+          transform: rotate(-90deg);
+          box-shadow: inset 0 0 0 2px rgba(18, 15, 12, 0.35);
+        }
+        .v8-mobile-landscape-icon::before,
+        .v8-mobile-landscape-icon::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          border-radius: 999px;
+          background: rgba(247, 239, 224, 0.88);
+        }
+        .v8-mobile-landscape-icon::before {
+          top: 6px;
+          width: 16px;
+          height: 3px;
+        }
+        .v8-mobile-landscape-icon::after {
+          bottom: 7px;
+          width: 7px;
+          height: 7px;
+        }
+        .v8-mobile-landscape-icon span {
+          position: absolute;
+          right: -20px;
+          top: 50%;
+          width: 16px;
+          height: 16px;
+          border-top: 3px solid rgba(247, 202, 112, 0.92);
+          border-right: 3px solid rgba(247, 202, 112, 0.92);
+          transform: translateY(-50%) rotate(45deg);
+        }
+      `}</style>
+    </>
+  );
+}
+
+function V7UpgradeNotice({ href }: { href: string }) {
+  return (
+    <main
+      className="sd-page sd-v7-upgrade-page"
+      style={
+        {
+          "--sd-viewport-h": "100svh",
+        } as CSSProperties
+      }
+    >
+      <HomepageStyles />
+      <section className="sd-v7-upgrade-card" aria-labelledby="v7-upgrade-title">
+        <p className="sd-v7-upgrade-kicker">SHUTTLE DYNAMICS</p>
+        <h1 id="v7-upgrade-title">系統升級</h1>
+        <p className="sd-v7-upgrade-message">請到 V8 報名</p>
+        <a className="sd-v7-upgrade-button" href={href}>
+          前往 V8 報名
+        </a>
+      </section>
+      <style>{`
+        .sd-v7-upgrade-page {
+          min-height: 100svh;
+          display: grid;
+          place-items: center;
+          padding: max(24px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom));
+          background:
+            radial-gradient(circle at 50% 28%, rgba(184, 242, 46, 0.12), transparent 38%),
+            linear-gradient(145deg, #080a09 0%, #101613 48%, #050604 100%);
+          color: #f7f3e7;
+        }
+        .sd-v7-upgrade-card {
+          width: min(100%, 380px);
+          padding: 32px 26px 28px;
+          border: 1px solid rgba(216, 180, 92, 0.34);
+          border-radius: 22px;
+          background:
+            linear-gradient(180deg, rgba(20, 22, 20, 0.88), rgba(8, 10, 8, 0.94));
+          box-shadow:
+            0 22px 60px rgba(0, 0, 0, 0.48),
+            0 0 42px rgba(184, 242, 46, 0.08);
+          text-align: center;
+        }
+        .sd-v7-upgrade-kicker {
+          margin: 0 0 18px;
+          color: rgba(216, 180, 92, 0.86);
+          font-family: "Chakra Petch", "Noto Sans TC", sans-serif;
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: 0.22em;
+        }
+        .sd-v7-upgrade-card h1 {
+          margin: 0;
+          color: #f5f4ee;
+          font-size: 36px;
+          line-height: 1.1;
+          letter-spacing: 0.08em;
+        }
+        .sd-v7-upgrade-message {
+          margin: 14px 0 26px;
+          color: rgba(245, 244, 238, 0.78);
+          font-size: 18px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+        }
+        .sd-v7-upgrade-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 48px;
+          width: 100%;
+          border-radius: 999px;
+          background: linear-gradient(180deg, #c8ff2b, #7fdc00);
+          color: #11180b;
+          font-size: 17px;
+          font-weight: 900;
+          text-decoration: none;
+          box-shadow: 0 0 24px rgba(184, 242, 46, 0.24);
+        }
+      `}</style>
+    </main>
+  );
+}
+
+function rememberV8LineLoginReturn() {
+  if (typeof window === "undefined") return;
+  try {
+    const url = new URL(window.location.href);
+    if (!isV8BrowserPath(url.pathname)) return;
+    url.searchParams.delete("auth");
+    url.searchParams.delete("auth_error");
+    url.searchParams.delete("requestId");
+    window.localStorage.setItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY, url.toString());
+  } catch {
+    // Local storage can be unavailable in private/locked browser contexts.
+  }
+}
+
+function readV8LineLoginReturn() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY);
+    if (!raw) return null;
+    const url = new URL(raw, window.location.origin);
+    if (url.origin !== window.location.origin || !isV8BrowserPath(url.pathname)) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function clearV8LineLoginReturn() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(V8_LINE_LOGIN_RETURN_STORAGE_KEY);
+  } catch {
+    // Ignore unavailable storage; the URL auth code is still the source of truth.
+  }
+}
+
+function copyV8LineAuthCallbackParams(target: URL) {
+  const currentParams = new URLSearchParams(window.location.search);
+  for (const key of ["auth", "auth_error", "requestId"]) {
+    const value = currentParams.get(key);
+    if (value === null) {
+      target.searchParams.delete(key);
+    } else {
+      target.searchParams.set(key, value);
+    }
+  }
+}
+
+type HandoffTiming = {
+  preHold: number;
+  realFade: number;
+  particleHold: number;
+  particleFade: number;
+  fadeBlur: number;
+  revealDelay: number;
+  revealDuration: number;
+  revealFeather: number;
+  tailBias: number;
+  scanEnabled: boolean;
+  scanWidth: number;
+  scanIntensity: number;
+  scanSoftness: number;
+};
+
+type HandoffNumericKey = Exclude<keyof HandoffTiming, "scanEnabled">;
+type HandoffReplayPhase = "idle" | "prehold" | "materializing" | "fading";
+
+const DEFAULT_HANDOFF_TIMING: HandoffTiming = {
+  preHold: 300,
+  realFade: 1200,
+  particleHold: 1000,
+  particleFade: 1100,
+  fadeBlur: 0,
+  revealDelay: 150,
+  revealDuration: 1750,
+  revealFeather: 18,
+  tailBias: 65,
+  scanEnabled: true,
+  scanWidth: 10,
+  scanIntensity: 48,
+  scanSoftness: 5,
+};
+type TutorialStep = "step1" | "transition" | "step2";
+type TuningSectionId =
+  | "opening"
+  | "tutorial-step1"
+  | "tutorial-transition"
+  | "tutorial-step2"
+  | "countdown"
+  | "visual"
+  | "master";
+
+type ClosePosition = "top-left" | "top-right";
+type TutorialArrowPhase = "up" | "down" | null;
+
+type TutorialTuning = {
+  enabled: boolean;
+  bubbleWidth: number;
+  bubbleRadius: number;
+  bubblePadding: number;
+  bubbleOffsetX: number;
+  bubbleOffsetY: number;
+  headingSize: number;
+  textSize: number;
+  step1PointerX: number;
+  step2PointerX: number;
+  step1StartDelay: number;
+  demoCount: number;
+  demoTravelDistance: number;
+  singleDemoDuration: number;
+  gapBetweenDemos: number;
+  step1EndingHold: number;
+  afterimageStrength: number;
+  motionTrailStrength: number;
+  upArrowXPercent: number;
+  upArrowYPercent: number;
+  downArrowXPercent: number;
+  downArrowYPercent: number;
+  upArrowLengthPercent: number;
+  downArrowLengthPercent: number;
+  arrowWidth: number;
+  arrowHeadSize: number;
+  arrowGlow: number;
+  arrowTrail: number;
+  upDuration: number;
+  upEndHold: number;
+  downDuration: number;
+  targetGlowEnabled: boolean;
+  targetGlowStrength: number;
+  step1FadeDuration: number;
+  transitionWait: number;
+  autoScrollDuration: number;
+  targetViewportYPercent: number;
+  postScrollHold: number;
+  step2FadeInDuration: number;
+  step2TextTiming: number;
+  step2BubbleWidth: number;
+  step2BubbleOffsetX: number;
+  step2BubbleOffsetY: number;
+  borderFlowLoopDuration: number;
+  borderFlowLoopCount: number;
+  borderBrightness: number;
+  borderWidth: number;
+  goldRatio: number;
+  greenAccentRatio: number;
+  glowStrength: number;
+  closeButtonDelay: number;
+  closePosition: ClosePosition;
+  closeOffsetX: number;
+  closeOffsetY: number;
+  startButtonWidth: number;
+  startButtonHeight: number;
+  startButtonOffsetX: number;
+  startButtonOffsetY: number;
+};
+
+type CountdownTuning = {
+  seconds: number;
+  showCountdown: boolean;
+  autoEnterAtZero: boolean;
+  resetOnMeetupChange: boolean;
+  showSelectedInfo: boolean;
+};
+
+type VisualTuning = {
+  interactionBlockerEnabled: boolean;
+  overlayOpacity: number;
+  spotlightStrength: number;
+  spotlightSoftness: number;
+  skipVisible: boolean;
+};
+
+type TutorialNumericKey = Exclude<
+  keyof TutorialTuning,
+  "enabled" | "targetGlowEnabled" | "closePosition"
+>;
+type TutorialToggleKey = "enabled" | "targetGlowEnabled";
+type CountdownNumericKey = "seconds";
+type VisualNumericKey = Exclude<keyof VisualTuning, "interactionBlockerEnabled" | "skipVisible">;
+type VisualToggleKey = "interactionBlockerEnabled" | "skipVisible";
+type OpeningSunMessageId = keyof V8OpeningSunControls["messages"];
+type OpeningSunMessageNumericKey = Exclude<keyof V8OpeningSunControls["messages"]["date"], "show">;
+type OpeningSunSafeBoxNumericKey = Exclude<keyof V8OpeningSunControls["safeBox"], "showHelperBox">;
+type OpeningSunSwitchArrowId = "prev" | "next";
+type OpeningSunSwitchArrowNumericKey = keyof V8OpeningSunControls["switchArrows"]["prev"];
+const DEFAULT_TUTORIAL_TUNING: TutorialTuning = {
+  enabled: true,
+  bubbleWidth: 220,
+  bubbleRadius: 18,
+  bubblePadding: 15,
+  bubbleOffsetX: 0,
+  bubbleOffsetY: 2,
+  headingSize: 19,
+  textSize: 13,
+  step1PointerX: 15,
+  step2PointerX: 54,
+  step1StartDelay: 520,
+  demoCount: 3,
+  demoTravelDistance: 54,
+  singleDemoDuration: 860,
+  gapBetweenDemos: 280,
+  step1EndingHold: 560,
+  afterimageStrength: 34,
+  motionTrailStrength: 28,
+  upArrowXPercent: 58,
+  upArrowYPercent: -38,
+  downArrowXPercent: 68,
+  downArrowYPercent: -15,
+  upArrowLengthPercent: 70,
+  downArrowLengthPercent: 62,
+  arrowWidth: 4,
+  arrowHeadSize: 18,
+  arrowGlow: 80,
+  arrowTrail: 76,
+  upDuration: 820,
+  upEndHold: 260,
+  downDuration: 820,
+  targetGlowEnabled: true,
+  targetGlowStrength: 68,
+  step1FadeDuration: 360,
+  transitionWait: 180,
+  autoScrollDuration: 640,
+  targetViewportYPercent: 60,
+  postScrollHold: 260,
+  step2FadeInDuration: 300,
+  step2TextTiming: 520,
+  step2BubbleWidth: 220,
+  step2BubbleOffsetX: -85,
+  step2BubbleOffsetY: -50,
+  borderFlowLoopDuration: 1200,
+  borderFlowLoopCount: 2,
+  borderBrightness: 70,
+  borderWidth: 2,
+  goldRatio: 78,
+  greenAccentRatio: 22,
+  glowStrength: 70,
+  closeButtonDelay: 260,
+  closePosition: "top-left",
+  closeOffsetX: 16,
+  closeOffsetY: 12,
+  startButtonWidth: 132,
+  startButtonHeight: 42,
+  startButtonOffsetX: 0,
+  startButtonOffsetY: -88,
+};
+const DEFAULT_COUNTDOWN_TUNING: CountdownTuning = {
+  seconds: 9,
+  showCountdown: true,
+  autoEnterAtZero: true,
+  resetOnMeetupChange: true,
+  showSelectedInfo: true,
+};
+
+const DEFAULT_VISUAL_TUNING: VisualTuning = {
+  interactionBlockerEnabled: true,
+  overlayOpacity: 0,
+  spotlightStrength: 0,
+  spotlightSoftness: 8,
+  skipVisible: true,
+};
+
+export function Index() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const v8RouteFamily = v8RouteFamilyOfRouterPath(pathname);
+  const isV8Route = v8RouteFamily !== null;
+  const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  const v7UpgradeOnly = !isV8Route;
+  const v7UpgradeSiteId = normalizedPathname === "/rian" ? "rian" : "kangxuan";
+  const v7UpgradeHref = `${import.meta.env.BASE_URL}v8/${v7UpgradeSiteId}/`;
+  const v8IntroSiteId = v8RouteFamily
+    ? normalizedPathname === `/${v8RouteFamily}/kangxuan`
+      ? "kangxuan"
+      : normalizedPathname === `/${v8RouteFamily}/rian`
+        ? "rian"
+        : ""
+    : "";
+  const [v8OrientationRestore] = useState(() =>
+    v8IntroSiteId ? readV8OrientationRestoreSnapshot(v8IntroSiteId) : null,
+  );
+  const [name, setName] = useState("");
+  const toastOriginRef = useRef<ToastOrigin | null>(null);
+  const eventTitleRef = useRef<HTMLElement | null>(null);
+  const racketWrapRef = useRef<HTMLDivElement | null>(null);
+  const racketFaceAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const signupButtonRef = useRef<HTMLButtonElement | null>(null);
+  const confirmMeetupButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [particleMatchTop, setParticleMatchTop] = useState(46);
+  const [handoffTiming, setHandoffTiming] = useState<HandoffTiming>(DEFAULT_HANDOFF_TIMING);
+  const [particleTuning, setParticleTuning] = useState<ParticleTuning>(DEFAULT_PARTICLE_TUNING);
+  const [tutorialTuning, setTutorialTuning] = useState<TutorialTuning>(DEFAULT_TUTORIAL_TUNING);
+  const [countdownTuning, setCountdownTuning] = useState<CountdownTuning>(DEFAULT_COUNTDOWN_TUNING);
+  const [visualTuning, setVisualTuning] = useState<VisualTuning>(DEFAULT_VISUAL_TUNING);
+  const [openingSunTuning, setOpeningSunTuning] = useState<V8OpeningSunControls>(v8OpeningSunDefaults);
+  const [openTuningOpen, setOpenTuningOpen] = useState(false);
+  const [openTuningControls, setOpenTuningControls] = useState<PreviewControls>(() =>
+    typeof window === "undefined" ? previewDefaults : loadSavedControls(),
+  );
+  const [openTuningTarget, setOpenTuningTarget] = useState<PreviewTargetId>("OPEN SUN INFO");
+  // Red Sun Motion Lab preview (single-effect isolate / play-pause / preview
+  // reset) -- transient session-only UI state, deliberately never persisted
+  // to PreviewControls/localStorage (see MotionPreviewLabState). Lifted up
+  // to this page component (rather than left inside V8TuningPanel) so it
+  // can also reach the actual rendered sun via openHeroOverrides below.
+  const [openMotionPreviewLab, setOpenMotionPreviewLab] = useState<MotionPreviewLabState>(motionPreviewLabDefaults);
+  const [freezeParticles, setFreezeParticles] = useState(true);
+  const [handoffReplayPhase, setHandoffReplayPhase] = useState<HandoffReplayPhase>("idle");
+  const [timingLabExpanded, setTimingLabExpanded] = useState(false);
+  const [activeTuningSection, setActiveTuningSection] = useState<TuningSectionId>("opening");
+  const [previewActivityKey, setPreviewActivityKey] = useState(0);
+  const [particleReplayKey, setParticleReplayKey] = useState(0);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState<TutorialStep>("step1");
+  const [tutorialCloseVisible, setTutorialCloseVisible] = useState(false);
+  const [tutorialReplayKey, setTutorialReplayKey] = useState(0);
+  const [tutorialDemoPulse, setTutorialDemoPulse] = useState(0);
+  const [tutorialArrowPhase, setTutorialArrowPhase] = useState<TutorialArrowPhase>(null);
+  const [tutorialStartCountdown, setTutorialStartCountdown] = useState<number | null>(null);
+  const [spotlightRect, setSpotlightRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const [frontCardRect, setFrontCardRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  const [countdownRemainingMs, setCountdownRemainingMs] = useState<number | null>(null);
+  // A finger dragging the OPEN sun pauses the auto-enter countdown.
+  const [openSunDragging, setOpenSunDragging] = useState(false);
+  const [countdownKey, setCountdownKey] = useState(0);
+  const countdownRemainingMsRef = useRef<number | null>(null);
+  const [openMeetupPickerOpen, setOpenMeetupPickerOpen] = useState(false);
+  const [rosterVisible, setRosterVisible] = useState(false);
+  const [v8MeetupConfirmed, setV8MeetupConfirmed] = useState(false);
+  // ENTER-MORPH: true only while the staged Active entrance plays after a
+  // 進入戰局 tap (never on reload / direct link / LINE return).
+  const [v8Entering, setV8Entering] = useState(false);
+  const v8MorphBusyRef = useRef(false);
+  const openDialAtRef = useRef(0);
+  // ?v8debug=1: on-page image timing panel (iPhone has no Web Inspector here).
+  const [v8ImageDebug] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("v8debug") === "1");
+  // SUN-DIAL end-of-list feedback on the Opening sun (own toast state, so
+  // no other flow notice starts showing on Opening).
+  const [openDialBump, setOpenDialBump] = useState<{ n: number; dir: 1 | -1 } | undefined>(undefined);
+  const [openDialHint, setOpenDialHint] = useState("");
+  const v8ViewTransitionRef = useRef<{ skipTransition?: () => void } | null>(null);
+  const [v8IntroBlocking, setV8IntroBlocking] = useState(Boolean(v8IntroSiteId));
+  const [v8IntroReplaySignal, setV8IntroReplaySignal] = useState(0);
+  const replayTimersRef = useRef<number[]>([]);
+  const tutorialTimersRef = useRef<number[]>([]);
+  const tutorialStartIntervalRef = useRef<number | null>(null);
+  const tutorialAutoShownRef = useRef(false);
+  const tutorialOriginalEventIdRef = useRef("");
+  const materializeWindowMs = Math.max(
+    handoffTiming.realFade,
+    handoffTiming.revealDelay + handoffTiming.revealDuration,
+  );
+  const flow = useHomepageFlow({
+    preHoldMs: handoffTiming.preHold,
+    realFadeMs: materializeWindowMs,
+    disabled: v7UpgradeOnly,
+    skipIntro: isV8Route,
+    ...(v8IntroSiteId
+      ? { preferredEventId: () => v8OrientationRestore?.eventId || readV8SelectedEventId(v8IntroSiteId) }
+      : {}),
+  });
+  const v8MobileLandscapeBlocked = useV8MobileLandscapeGuard({
+    enabled: Boolean(v8IntroSiteId),
+    siteId: v8IntroSiteId,
+    selectedEventId: flow.pendingSwitchEventId || flow.selectedEventId,
+    view: v8MeetupConfirmed ? "active" : "open",
+  });
+  const racketSrc = `${import.meta.env.BASE_URL}${RACKET_FILE}`;
+  const active = flow.phase === "active";
+  const rotating = flow.phase === "rotating-to-active";
+  const preview = flow.phase === "meetup-preview";
+  const materialized = ["materializing", "meetup-preview", "rotating-to-active", "active"].includes(
+    flow.phase,
+  );
+  const v8HeroStage = isV8Route && (preview || v8MeetupConfirmed);
+  // load-error counts as settled so a failed API never leaves the loading
+  // screen up forever -- the page underneath shows its own error state.
+  const v8OpenReady = (["meetup-preview", "rotating-to-active", "active", "load-error"] as string[]).includes(flow.phase);
+  // Once confirmed, V8ActivePage renders its own V8HeroComposition (same
+  // canvas, active-state content) internally -- so the standalone mount
+  // here (and the section's reserved 100svh height for it) is picker-only,
+  // or the canvas would render twice and this section would leave a blank
+  // full-viewport gap above the Active page's content.
+  const v8HeroPickerStage = v8HeroStage && !v8MeetupConfirmed;
+  // OPEN-only background effects (countdown / auto-enter, pendingSwitch
+  // auto-fill). On V8, ACTIVE owns the screen once v8MeetupConfirmed is
+  // true while flow.phase deliberately stays "meetup-preview", so gating on
+  // `preview` alone kept them running inside ACTIVE (the countdown restarted
+  // and re-fired its enter every N seconds). Verified on /v8test, promoted
+  // to /v8 on Cfm. (Non-V8 routes never set v8MeetupConfirmed.)
+  const openOnlyEffectsActive = preview && !v8MeetupConfirmed;
+  const resetCountdownRemaining = useCallback(() => {
+    countdownRemainingMsRef.current = null;
+    setCountdownRemainingMs(null);
+  }, []);
+
+  const handleV8IntroBlockingChange = useCallback(
+    (blocking: boolean) => {
+      setV8IntroBlocking(blocking);
+      resetCountdownRemaining();
+      setCountdownKey((current) => current + 1);
+      if (blocking) setOpenMeetupPickerOpen(false);
+    },
+    [resetCountdownRemaining],
+  );
+  // Opening is one screen too (Active locks via V8ListBuoys).
+  useV8PageLock(isV8Route && !v8MeetupConfirmed);
+
+  // Browser Back can hand iPhone Safari's back/forward cache a page
+  // frozen mid-state -- a morph (html.v8-morph-launch / v8-morphing, a live
+  // view transition), a root scroll or shifted visual viewport -- and a
+  // restore fires no scroll/touch event, so the page lock's snap-to-top and
+  // the viewport listeners never run. On a bfcache restore, finish any
+  // transition, drop the morph classes, snap to the top and let the
+  // viewport-dependent layout re-measure. (A normal load needs none of it.)
+  useEffect(() => {
+    if (!isV8Route) return;
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      v8ViewTransitionRef.current?.skipTransition?.();
+      v8ViewTransitionRef.current = null;
+      document.documentElement.classList.remove("v8-morph-launch", "v8-morphing");
+      window.scrollTo(0, 0);
+      window.dispatchEvent(new Event("resize"));
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [isV8Route]);
+
+  // Image retry for flaky mobile networks: on iPhone 4G a dropped connection
+  // fails every image in flight at once (broken "?" icons) and nothing ever
+  // retried them. Retries up to 3 times with growing delays; the query
+  // string also bypasses a cached copy that may be truncated.
+  useEffect(() => {
+    if (!isV8Route) return;
+    const onImageError = (event: Event) => {
+      const image = event.target;
+      if (!(image instanceof HTMLImageElement)) return;
+      const tries = Number(image.dataset["v8Retry"] || 0);
+      const src = image.getAttribute("src");
+      if (tries >= 3 || !src || src.startsWith("data:")) return;
+      image.dataset["v8Retry"] = String(tries + 1);
+      const base = src.replace(/[?&]v8r=\d+$/, "");
+      window.setTimeout(() => {
+        image.src = `${base}${base.includes("?") ? "&" : "?"}v8r=${tries + 1}`;
+      }, 700 * (tries + 1));
+    };
+    document.addEventListener("error", onImageError, true);
+    return () => document.removeEventListener("error", onImageError, true);
+  }, [isV8Route]);
+
+  // (The old ENTER-MORPH fetch() warm-up was replaced on all V8 routes by
+  // the Step 2A / 2B <img> prewarm below -- Cfm 2026-10-01.)
+  const legacyActiveStage = !isV8Route && (active || rotating) && !v8HeroStage;
+  const openHeroOverrides = buildV8OpeningHeroOverrides(openTuningControls, openMotionPreviewLab);
+  // P-021 v2 (V8TEST): the OPEN auto-enter countdown starts only once OPEN's
+  // critical art is really on screen -- the dragon, the tiger variant shown
+  // and the 進入戰局 plaque. Decor (waves/clouds/claws/bag/arrows) may keep
+  // loading progressively. No timeout; a failed image never counts; manual
+  // CTA / Quick Pick stay available throughout.
+  const openCriticalHero = { ...v8HeroDefaults, ...openHeroOverrides };
+  const openCriticalAssetsAll = useMemo(() => buildV8HeroAssets(import.meta.env.BASE_URL), []);
+  const openCriticalList = [
+    openCriticalHero.dragonShow ? openCriticalAssetsAll.body : null,
+    openCriticalHero.tigerShow
+      ? openCriticalHero.tigerVariant === 3
+        ? openCriticalAssetsAll.tigerAlt3
+        : openCriticalHero.tigerVariant === 2
+          ? openCriticalAssetsAll.tigerAlt2
+          : openCriticalAssetsAll.tigerBody
+      : null,
+    openCriticalHero.ctaShow ? openCriticalAssetsAll.enterBattleCta : null,
+  ].filter((src): src is string => Boolean(src));
+  const openCriticalUrls = isV8Route && v8HeroPickerStage ? openCriticalList : null;
+  const openCountdownAssetsReady = useV8DomImagesReady(openCriticalUrls);
+
+  // P-021 v2 Step 2A (V8TEST): ACTIVE prewarm. Starts as soon as OPEN's
+  // critical art (Step 1) is in -- not after every OPEN decor image -- so it
+  // never competes with that art (an earlier timed fallback start delayed
+  // the Step 1 countdown by ~20s at 600kbps). Optimization only: it never
+  // makes anything "ready". First-visible ACTIVE art goes first at high
+  // priority; identity art is added once the cached LINE identity + roster
+  // say which stamp/text ACTIVE will show.
+  const v8TestPrewarmEventName = flow.selectedEvent?.name || "";
+
+  // P-021 v2 Step 2B (V8TEST): use the Intro's ~10s. Once the Intro video is
+  // fully buffered (so it keeps the bandwidth it needs to play smoothly),
+  // warm in order: OPEN critical -> OPEN/ACTIVE shared backgrounds ->
+  // ACTIVE first-visible (Step 2A tier 1) -> decor. Same warm()/dedup as
+  // Step 2A, so the later Step 1/2A work reuses whatever is already in.
+  // One-shot per page; optimization only -- gates nothing.
+  const [v8IntroMediaBuffered, setV8IntroMediaBuffered] = useState(false);
+  const handleV8IntroMediaBuffered = useCallback(() => setV8IntroMediaBuffered(true), []);
+  // While the Intro plays and its video is not fully buffered yet, the
+  // hidden OPEN art (under the opaque Intro) and the Step 2A prewarm wait,
+  // so the video keeps the bandwidth -- measured at 1500kbps they caused 21
+  // stalls (~10.5s) in the 10s Intro. This queue then loads OPEN critical
+  // first, so OPEN is ready when the Intro ends.
+  // 程式 Intro (code-driven Intro on the OPEN stage, no video): off by
+  // default -- /v8test plays the video Intro again (user, 2026-10-01). Kept
+  // for comparison on /v8test with ?intro=code; no media to wait for there,
+  // so the hold never applies to it.
+  const v8TestIntroParam = useMemo(() => {
+    if (v8RouteFamily !== "v8test" || typeof window === "undefined") return null;
+    try {
+      return new URLSearchParams(window.location.search).get("intro");
+    } catch {
+      return null;
+    }
+  }, [v8RouteFamily]);
+  const v8CodeIntro = v8TestIntroParam === "code";
+  // V8TEST ?intro=fresh: the video Intro plays on every load (cold-open test).
+  const v8IntroIgnorePlayed = v8TestIntroParam === "fresh";
+  const v8IntroHoldsImageLoads = isV8Route && !v8CodeIntro && v8IntroBlocking && !v8IntroMediaBuffered;
+  const v8IntroPrewarmStartedRef = useRef(false);
+  useEffect(() => {
+    // Also after the startup data (events + roster) is in: started earlier,
+    // the queue's images competed with those API calls for bandwidth and
+    // could push them past their 8s timeout (real iPhone: load-error screen).
+    if (!isV8Route || !(v8IntroMediaBuffered || v8CodeIntro) || v8IntroPrewarmStartedRef.current) return;
+    if (!v8OpenReady || flow.phase === "load-error") return;
+    v8IntroPrewarmStartedRef.current = true;
+    const hero = openCriticalAssetsAll;
+    const activeAssets = buildV8ActiveAssets(import.meta.env.BASE_URL);
+    // Dragon in visual order (body is in openCritical): claws, then bag.
+    const openDragonClaws = [
+      openCriticalHero.rearClawShow ? hero.rearClaw : null,
+      openCriticalHero.clawShow ? hero.claw : null,
+    ].filter((src): src is string => Boolean(src));
+    const openDragonBag = [
+      openCriticalHero.bagBaseShow ? hero.bagBase : null,
+      openCriticalHero.bagStrapShow ? hero.bagStrap : null,
+    ].filter((src): src is string => Boolean(src));
+    const openDecor = [
+      openCriticalHero.tigerShow && openCriticalHero.tigerVariant === 1 && openCriticalHero.tigerRacketShow ? hero.tigerRacket : null,
+      activeAssets.sunSwitchArrowPrev,
+      activeAssets.sunSwitchArrowNext,
+    ].filter((src): src is string => Boolean(src));
+    startV8PrewarmQueue(
+      buildV8IntroPrewarmTiers(import.meta.env.BASE_URL, {
+        openCritical: openCriticalList,
+        openDragonClaws,
+        openDragonBag,
+        openDecor,
+        // Identity/event aren't known yet during the Intro; Step 2A adds
+        // the identity art and sun title once they are.
+        active: buildV8ActivePrewarmTiers(import.meta.env.BASE_URL, { showSunTitleKangxuan: false, identity: null }),
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flow.phase, v8CodeIntro, v8IntroMediaBuffered, v8OpenReady, v8RouteFamily]);
+  useEffect(() => {
+    if (!isV8Route || !v8HeroPickerStage || !v8OpenReady) return;
+    if (!openCountdownAssetsReady || v8IntroHoldsImageLoads) return;
+    // Mirrors useCurrentIdentity: a claimed 季打 found in this roster is
+    // exact; otherwise ACTIVE falls back to the temp flow, whose most common
+    // state (unregistered) is warmed first -- the other states are in the
+    // low-priority tier.
+    const lineIdentity = loadV8LineIdentity();
+    const identity: CurrentIdentity | null =
+      lineIdentity?.profileComplete && lineIdentity.identityType
+        ? findFixedIdentity(flow.roster, lineIdentity) ?? { signupId: "", name: "", signupType: "temp", status: "unregistered" }
+        : null;
+    return startV8ActivePrewarm(
+      buildV8ActivePrewarmTiers(import.meta.env.BASE_URL, {
+        showSunTitleKangxuan: parseV8MeetupDisplay(v8TestPrewarmEventName).displayName === "康軒",
+        identity,
+      }),
+    );
+  }, [
+    flow.roster,
+    openCountdownAssetsReady,
+    v8HeroPickerStage,
+    v8IntroHoldsImageLoads,
+    v8OpenReady,
+    v8RouteFamily,
+    v8TestPrewarmEventName,
+  ]);
+  const openSunControls = buildV8OpeningSunControls(openTuningControls);
+
+  useEffect(() => {
+    if (!isV8Route || !v8OrientationRestore) return;
+    if (!flow.events.some((event) => event.id === v8OrientationRestore.eventId)) return;
+    if (v8OrientationRestore.view === "active") setV8MeetupConfirmed(true);
+    else setV8MeetupConfirmed(false);
+  }, [flow.events, isV8Route, v8OrientationRestore]);
+
+  useEffect(() => {
+    if (!v8IntroSiteId) return;
+    const eventId = flow.pendingSwitchEventId || flow.selectedEventId;
+    if (!eventId) return;
+    saveV8SelectedEventId(v8IntroSiteId, eventId);
+  }, [flow.pendingSwitchEventId, flow.selectedEventId, v8IntroSiteId]);
+
+  useEffect(() => {
+    if (!hasV8LineAuthCallback()) return;
+
+    if (isV8Route) {
+      // The Worker only accepts /v8/* return URLs, so a login started on
+      // /v8test comes back to /v8; forward it to where it started. Only a
+      // stored /v8test URL does this -- production-only logins never store
+      // one, so their path is unchanged.
+      const testReturnUrl = v8RouteFamily === "v8" ? readV8LineLoginReturn() : null;
+      if (testReturnUrl && v8RouteFamilyOfBrowserPath(testReturnUrl.pathname) === "v8test") {
+        copyV8LineAuthCallbackParams(testReturnUrl);
+        window.location.replace(testReturnUrl.toString());
+        return;
+      }
+      setV8MeetupConfirmed(true);
+      clearV8LineLoginReturn();
+      return;
+    }
+
+    const returnUrl = readV8LineLoginReturn();
+    if (!returnUrl) return;
+    copyV8LineAuthCallbackParams(returnUrl);
+    window.location.replace(returnUrl.toString());
+  }, [isV8Route, v8RouteFamily]);
+
+  // Only ever CLEARS the flag (a route with no intro). On an intro route the
+  // initial state is already true and V8IntroVideo alone owns it from then
+  // on: a child's layout effect runs before this parent one, so setting it
+  // true here again overwrote the intro's own "already played -> false" on
+  // every same-session revisit and paused the countdown auto-enter forever.
+  useLayoutEffect(() => {
+    if (!v8IntroSiteId) setV8IntroBlocking(false);
+  }, [v8IntroSiteId]);
+
+  useLayoutEffect(() => {
+    const alignMaterializedRacket = () => {
+      const hero = document.getElementById("sd-hero");
+      const wrap = racketWrapRef.current;
+      if (!hero || !wrap) return;
+
+      const heroTop = hero.getBoundingClientRect().top;
+      const particleRect = document
+        .querySelector<HTMLCanvasElement>(".sd-particles")
+        ?.getBoundingClientRect();
+      const canvasTop = particleRect?.top ?? 0;
+      const canvasHeight = particleRect?.height ?? window.innerHeight;
+      const targetCenterY =
+        canvasTop + canvasHeight * (window.innerWidth < 640 ? 0.35 : 0.365);
+      const nextTop = targetCenterY - heroTop - wrap.offsetHeight / 2;
+      setParticleMatchTop(nextTop);
+    };
+
+    alignMaterializedRacket();
+    window.addEventListener("resize", alignMaterializedRacket);
+    return () => window.removeEventListener("resize", alignMaterializedRacket);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(HANDOFF_TIMING_STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as {
+        handoff?: Partial<HandoffTiming>;
+        particle?: Partial<ParticleTuning>;
+        tutorial?: Partial<TutorialTuning>;
+        countdown?: Partial<CountdownTuning>;
+        visual?: Partial<VisualTuning>;
+        openingSun?: Partial<V8OpeningSunControls>;
+      } & Partial<HandoffTiming>;
+      setHandoffTiming(normalizeHandoffTiming(parsed.handoff || parsed));
+      if (parsed.particle) setParticleTuning(normalizeParticleTuning(parsed.particle));
+      if (parsed.tutorial) setTutorialTuning(normalizeTutorialTuning(parsed.tutorial));
+      if (parsed.countdown) setCountdownTuning(normalizeCountdownTuning(parsed.countdown));
+      if (parsed.visual) setVisualTuning(normalizeVisualTuning(parsed.visual));
+      if (parsed.openingSun) setOpeningSunTuning(normalizeOpeningSunTuning(parsed.openingSun));
+    } catch {
+      setHandoffTiming(DEFAULT_HANDOFF_TIMING);
+      setParticleTuning(DEFAULT_PARTICLE_TUNING);
+      setTutorialTuning(DEFAULT_TUTORIAL_TUNING);
+      setCountdownTuning(DEFAULT_COUNTDOWN_TUNING);
+      setVisualTuning(DEFAULT_VISUAL_TUNING);
+      setOpeningSunTuning(v8OpeningSunDefaults);
+    }
+  }, []);
+
+  useEffect(() => {
+    saveScopedControls(openTuningControls, "open");
+  }, [openTuningControls]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        HANDOFF_TIMING_STORAGE_KEY,
+        JSON.stringify({
+          handoff: handoffTiming,
+          particle: particleTuning,
+          tutorial: tutorialTuning,
+          countdown: countdownTuning,
+          visual: visualTuning,
+          openingSun: openingSunTuning,
+        }),
+      );
+    } catch {
+      // The lab still works if storage is unavailable.
+    }
+  }, [handoffTiming, particleTuning, tutorialTuning, countdownTuning, visualTuning, openingSunTuning]);
+
+  useEffect(() => {
+    if (!active && !rotating) {
+      setRosterVisible(false);
+      return;
+    }
+
+    const roster = document.querySelector<HTMLElement>(".sd-roster");
+    if (!roster || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setRosterVisible(Boolean(entry?.isIntersecting)),
+      { threshold: 0.08 },
+    );
+    observer.observe(roster);
+    return () => observer.disconnect();
+  }, [active, rotating]);
+
+  const previewPickedEvent = useMemo(() => {
+    const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+    return flow.events.find((event) => event.id === targetId) || flow.selectedEvent;
+  }, [flow.events, flow.pendingSwitchEventId, flow.selectedEvent, flow.selectedEventId]);
+
+  const selectedMeetupLabel = formatPreviewEventLabel(previewPickedEvent);
+  const previewPickedEventIndex = useMemo(() => {
+    const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+    return flow.events.findIndex((event) => event.id === targetId);
+  }, [flow.events, flow.pendingSwitchEventId, flow.selectedEventId]);
+  const selectedMeetupPosition =
+    flow.events.length > 1 && previewPickedEventIndex >= 0
+      ? `${previewPickedEventIndex + 1} / ${flow.events.length}`
+      : "";
+  const canSwitchMeetup = flow.events.length > 1;
+
+  const markPreviewInteraction = useCallback(() => {
+    setPreviewActivityKey((value) => value + 1);
+    if (countdownTuning.resetOnMeetupChange) {
+      setCountdownKey((value) => value + 1);
+    }
+  }, [countdownTuning.resetOnMeetupChange]);
+
+  const enterPreviewSelection = useCallback(() => {
+    if (flow.pendingAction) return;
+    const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+    if (!targetId) return;
+    resetCountdownRemaining();
+    // The auto-countdown effect below fires this regardless of route (it
+    // only checks `preview`, i.e. flow.phase === "meetup-preview"), so on
+    // /v8 this must take the same branch confirmV8MeetupSelection does
+    // (mark v8MeetupConfirmed instead of flow.enterActive) -- otherwise
+    // flow.phase flips to "active" while v8MeetupConfirmed stays false,
+    // V8ActivePage's `isV8Route && v8MeetupConfirmed` guard never passes,
+    // and the legacy .sd-roster view shows through instead once the
+    // countdown reaches zero before the user manually taps 進入戰局.
+    if (isV8Route) {
+      setV8MeetupConfirmed(true);
+      if (targetId === flow.selectedEventId) {
+        flow.setPendingSwitchEventId("");
+        return;
+      }
+      void flow.switchMeetup();
+      return;
+    }
+    if (targetId === flow.selectedEventId) {
+      flow.setPendingSwitchEventId("");
+      flow.enterActive();
+      return;
+    }
+    void flow.switchMeetup();
+  }, [
+    flow.enterActive,
+    flow.pendingAction,
+    flow.selectedEventId,
+    flow.setPendingSwitchEventId,
+    flow.switchMeetup,
+    isV8Route,
+  ]);
+
+
+  const selectAdjacentV8Meetup = useCallback(
+    (direction: -1 | 1) => {
+      if (flow.events.length <= 1 || flow.pendingAction) return;
+      // SUN-DIAL: ignore new switches while the sun is still turning.
+      if (Date.now() - openDialAtRef.current < 760) return;
+      const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+      const currentIndex = Math.max(
+        0,
+        flow.events.findIndex((event) => event.id === targetId),
+      );
+      // No wrap-around: the first / last meetup disables that arrow.
+      const nextEvent = flow.events[currentIndex + direction];
+      if (!nextEvent) {
+        setOpenDialBump((current) => ({ n: (current?.n ?? 0) + 1, dir: direction }));
+        setOpenDialHint(direction > 0 ? "已是最後一場" : "已是第一場");
+        return;
+      }
+      openDialAtRef.current = Date.now();
+      flow.setPendingSwitchEventId(nextEvent.id);
+      markPreviewInteraction();
+    },
+    [
+      flow.events,
+      flow.pendingAction,
+      flow.pendingSwitchEventId,
+      flow.selectedEventId,
+      flow.setPendingSwitchEventId,
+      markPreviewInteraction,
+    ],
+  );
+
+  const selectV8MeetupById = useCallback(
+    (eventId: string) => {
+      if (flow.events.length <= 1 || flow.pendingAction) return;
+      if (!flow.events.some((event) => event.id === eventId)) return;
+      const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+      if (eventId === targetId) return;
+      openDialAtRef.current = Date.now();
+      flow.setPendingSwitchEventId(eventId);
+      markPreviewInteraction();
+    },
+    [
+      flow.events,
+      flow.pendingAction,
+      flow.pendingSwitchEventId,
+      flow.selectedEventId,
+      flow.setPendingSwitchEventId,
+      markPreviewInteraction,
+    ],
+  );
+
+  // Opening -> Active stays one state switch on one route. Where the View
+  // Transitions API exists (iOS 18+), the switch runs inside
+  // document.startViewTransition: step 1 (plaque press) starts on tap, the
+  // morph 120ms later (sun moves, ink circle reveals Active from the button
+  // centre). Without it -- or with reduced motion -- the switch is direct;
+  // the staged entrance still plays unless motion is reduced.
+  const enterV8Active = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        const confirm = () => {
+          setV8MeetupConfirmed(true);
+          if (!reducedMotion) setV8Entering(true);
+        };
+        const doc = document as Document & {
+          startViewTransition?: (update: () => void) => { finished: Promise<void>; ready?: Promise<void>; skipTransition?: () => void };
+        };
+        if (reducedMotion || typeof doc.startViewTransition !== "function") {
+          confirm();
+          resolve();
+          return;
+        }
+        const html = document.documentElement;
+        const rect = confirmMeetupButtonRef.current?.getBoundingClientRect();
+        if (rect) {
+          html.style.setProperty("--v8-morph-x", `${Math.round(rect.left + rect.width / 2)}px`);
+          html.style.setProperty("--v8-morph-y", `${Math.round(rect.top + rect.height / 2)}px`);
+        }
+        html.classList.add("v8-morph-launch");
+        window.setTimeout(() => {
+          html.classList.add("v8-morphing");
+          const transition = doc.startViewTransition!(() => flushSync(confirm));
+          v8ViewTransitionRef.current = transition;
+          // When the page is hidden at this moment (app/tab switched during
+          // auto-enter), Safari skips the transition and rejects `ready`;
+          // ACTIVE still mounts via the update callback, so the rejection is
+          // expected -- observe it instead of leaving it unhandled.
+          // (/v8test first, all routes since Cfm 2026-10-03.)
+          transition.ready?.catch(() => {});
+          void transition.finished.finally(() => {
+            html.classList.remove("v8-morphing", "v8-morph-launch");
+            v8ViewTransitionRef.current = null;
+          });
+          resolve();
+        }, 120);
+      }),
+    [],
+  );
+
+  const quickPickV8MeetupById = useCallback(
+    async (eventId: string) => {
+      if (flow.events.length <= 1 || flow.pendingAction || v8MorphBusyRef.current) return;
+      if (!flow.events.some((event) => event.id === eventId)) return;
+      setOpenMeetupPickerOpen(false);
+      resetCountdownRemaining();
+      v8MorphBusyRef.current = true;
+      try {
+        if (eventId === flow.selectedEventId) {
+          flow.setPendingSwitchEventId("");
+        } else {
+          const switched = await flow.switchMeetup(eventId, { enterActiveOnSuccess: false });
+          if (!switched) return;
+          // Let selectedEventId + roster commit before V8ActivePage mounts,
+          // so quick-pick never flashes the previous meetup as Active.
+          await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+        }
+        await enterV8Active();
+      } finally {
+        v8MorphBusyRef.current = false;
+      }
+    },
+    [
+      enterV8Active,
+      flow.events,
+      flow.pendingAction,
+      flow.selectedEventId,
+      flow.setPendingSwitchEventId,
+      flow.switchMeetup,
+      resetCountdownRemaining,
+    ],
+  );
+  const confirmV8MeetupSelection = useCallback(async () => {
+    if (flow.pendingAction || v8MorphBusyRef.current) return;
+    const targetId = flow.pendingSwitchEventId || flow.selectedEventId;
+    if (!targetId) return;
+    v8MorphBusyRef.current = true;
+    markPreviewInteraction();
+    resetCountdownRemaining();
+    try {
+      await enterV8Active();
+    } finally {
+      v8MorphBusyRef.current = false;
+    }
+    if (targetId === flow.selectedEventId) {
+      flow.setPendingSwitchEventId("");
+      return;
+    }
+    await flow.switchMeetup();
+  }, [
+    enterV8Active,
+    flow.pendingAction,
+    flow.pendingSwitchEventId,
+    flow.selectedEventId,
+    flow.setPendingSwitchEventId,
+    flow.switchMeetup,
+    markPreviewInteraction,
+  ]);
+
+  // V8TEST: the countdown's auto-enter runs this exact manual 進入戰局 path
+  // (plaque launch -> morph -> staged entrance, via enterV8Active) instead of
+  // switching straight to ACTIVE. v8MorphBusyRef inside it already blocks a
+  // tap during the animation from entering twice. Read through a ref so the
+  // countdown effect doesn't restart whenever this callback's deps change.
+  const confirmV8MeetupSelectionRef = useRef(confirmV8MeetupSelection);
+  confirmV8MeetupSelectionRef.current = confirmV8MeetupSelection;
+
+  // The staged entrance lasts ~1.7s; any tap during it jumps to the end.
+  useEffect(() => {
+    if (!v8Entering) return;
+    const finish = () => {
+      v8ViewTransitionRef.current?.skipTransition?.();
+      setV8Entering(false);
+    };
+    const timer = window.setTimeout(() => setV8Entering(false), 1700);
+    const arm = window.setTimeout(() => window.addEventListener("pointerdown", finish, { capture: true, once: true }), 50);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(arm);
+      window.removeEventListener("pointerdown", finish, { capture: true });
+    };
+  }, [v8Entering]);
+
+  useEffect(() => {
+    if (!openOnlyEffectsActive || flow.pendingSwitchEventId || !flow.selectedEventId) return;
+    flow.setPendingSwitchEventId(flow.selectedEventId);
+  }, [flow.pendingSwitchEventId, flow.selectedEventId, flow.setPendingSwitchEventId, openOnlyEffectsActive]);
+
+  const clearTutorialTimers = useCallback(() => {
+    tutorialTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    tutorialTimersRef.current = [];
+    if (tutorialStartIntervalRef.current !== null) {
+      window.clearInterval(tutorialStartIntervalRef.current);
+      tutorialStartIntervalRef.current = null;
+    }
+  }, []);
+
+  const completeTutorial = useCallback(
+    (startCountdown: boolean) => {
+      clearTutorialTimers();
+      try {
+        window.localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
+      } catch {
+        // Tutorial can still close without storage.
+      }
+      setTutorialOpen(false);
+      setTutorialCloseVisible(false);
+      setTutorialDemoPulse(0);
+      setTutorialArrowPhase(null);
+      setTutorialStartCountdown(null);
+      if (startCountdown) {
+        setCountdownKey((value) => value + 1);
+      } else {
+        resetCountdownRemaining();
+      }
+    },
+    [clearTutorialTimers],
+  );
+
+  const closeTutorial = useCallback(() => {
+    completeTutorial(true);
+  }, [completeTutorial]);
+
+  const startTutorial = useCallback(() => {
+    clearTutorialTimers();
+    tutorialOriginalEventIdRef.current = flow.pendingSwitchEventId || flow.selectedEventId || "";
+    setTutorialStep("step1");
+    setTutorialCloseVisible(false);
+    setTutorialDemoPulse(0);
+    setTutorialArrowPhase(null);
+    setTutorialStartCountdown(null);
+    setTutorialReplayKey((value) => value + 1);
+    setTutorialOpen(true);
+  }, [clearTutorialTimers, flow.pendingSwitchEventId, flow.selectedEventId]);
+
+  const confirmFromTutorial = useCallback(() => {
+    completeTutorial(false);
+    enterPreviewSelection();
+  }, [completeTutorial, enterPreviewSelection]);
+
+  useEffect(() => {
+    // The tutorial spotlights .sd-hero-meetup-picker / the ticket-stack UI,
+    // which only exists on the legacy (non-V8) flow.
+    if (isV8Route) return;
+    if (!preview || !flow.events.length || flow.pendingAction || !tutorialTuning.enabled) return;
+    if (tutorialAutoShownRef.current) return;
+    try {
+      if (window.localStorage.getItem(TUTORIAL_SEEN_KEY) === "1") return;
+    } catch {
+      // If storage is blocked, show the tutorial for this session.
+    }
+    tutorialAutoShownRef.current = true;
+    startTutorial();
+  }, [flow.events.length, flow.pendingAction, isV8Route, preview, startTutorial, tutorialTuning.enabled]);
+
+  const updateTutorialSpotlight = useCallback(() => {
+    if (!tutorialOpen) return;
+    const target =
+      tutorialStep === "step2"
+        ? confirmMeetupButtonRef.current
+        : document.querySelector<HTMLElement>(".sd-hero-meetup-picker");
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    setSpotlightRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+    const frontCard = document.querySelector<HTMLElement>(
+      ".sd-ticket-stack-hero .sd-ticket-slot-0",
+    );
+    if (frontCard) {
+      const cardRect = frontCard.getBoundingClientRect();
+      setFrontCardRect({
+        top: cardRect.top,
+        left: cardRect.left,
+        width: cardRect.width,
+        height: cardRect.height,
+      });
+    }
+  }, [tutorialOpen, tutorialStep]);
+
+  useLayoutEffect(() => {
+    updateTutorialSpotlight();
+    if (!tutorialOpen) return;
+    window.addEventListener("resize", updateTutorialSpotlight);
+    window.addEventListener("scroll", updateTutorialSpotlight, true);
+    return () => {
+      window.removeEventListener("resize", updateTutorialSpotlight);
+      window.removeEventListener("scroll", updateTutorialSpotlight, true);
+    };
+  }, [tutorialOpen, updateTutorialSpotlight]);
+
+  useLayoutEffect(() => {
+    if (!tutorialOpen) return;
+    const frame = window.requestAnimationFrame(updateTutorialSpotlight);
+    return () => window.cancelAnimationFrame(frame);
+  }, [flow.pendingSwitchEventId, tutorialDemoPulse, tutorialOpen, updateTutorialSpotlight]);
+
+  useEffect(() => {
+    if (!tutorialOpen || tutorialStep !== "step1") return;
+    clearTutorialTimers();
+    const originalId = tutorialOriginalEventIdRef.current || flow.pendingSwitchEventId || flow.selectedEventId;
+    const selectedIndex = Math.max(
+      0,
+      flow.events.findIndex((event) => event.id === originalId),
+    );
+    const demos = flow.events.length > 1 ? Math.max(0, Math.round(tutorialTuning.demoCount)) : 0;
+    setTutorialArrowPhase(null);
+
+    for (let index = 0; index < demos; index += 1) {
+      const cycleStart =
+        tutorialTuning.step1StartDelay +
+        index *
+          (tutorialTuning.upDuration +
+            tutorialTuning.upEndHold +
+            tutorialTuning.downDuration +
+            tutorialTuning.gapBetweenDemos);
+      const upTimer = window.setTimeout(() => {
+        const next = flow.events[(selectedIndex + index + 1) % flow.events.length];
+        if (!next) return;
+        setTutorialArrowPhase("up");
+        flow.setPendingSwitchEventId(next.id);
+        setTutorialDemoPulse((value) => value + 1);
+        updateTutorialSpotlight();
+      }, cycleStart);
+      const downTimer = window.setTimeout(() => {
+        setTutorialArrowPhase("down");
+        if (originalId) flow.setPendingSwitchEventId(originalId);
+        setTutorialDemoPulse((value) => value + 1);
+        updateTutorialSpotlight();
+      }, cycleStart + tutorialTuning.upDuration + tutorialTuning.upEndHold);
+      const clearArrowTimer = window.setTimeout(() => {
+        setTutorialArrowPhase(null);
+      }, cycleStart + tutorialTuning.upDuration + tutorialTuning.upEndHold + tutorialTuning.downDuration);
+      tutorialTimersRef.current.push(upTimer, downTimer, clearArrowTimer);
+    }
+
+    const finishAt =
+      tutorialTuning.step1StartDelay +
+      demos * (tutorialTuning.upDuration + tutorialTuning.upEndHold + tutorialTuning.downDuration) +
+      Math.max(0, demos - 1) * tutorialTuning.gapBetweenDemos +
+      tutorialTuning.step1EndingHold;
+    const finishTimer = window.setTimeout(() => {
+      setTutorialArrowPhase(null);
+      if (originalId) flow.setPendingSwitchEventId(originalId);
+      setTutorialDemoPulse((value) => value + 1);
+      window.setTimeout(() => setTutorialStep("transition"), 60);
+    }, finishAt);
+    tutorialTimersRef.current.push(finishTimer);
+    return clearTutorialTimers;
+  }, [
+    clearTutorialTimers,
+    flow.events,
+    flow.selectedEventId,
+    flow.setPendingSwitchEventId,
+    tutorialOpen,
+    tutorialReplayKey,
+    tutorialStep,
+    tutorialTuning.demoCount,
+    tutorialTuning.gapBetweenDemos,
+    tutorialTuning.step1EndingHold,
+    tutorialTuning.step1StartDelay,
+    tutorialTuning.downDuration,
+    tutorialTuning.upDuration,
+    tutorialTuning.upEndHold,
+    updateTutorialSpotlight,
+  ]);
+
+  useEffect(() => {
+    if (!tutorialOpen || tutorialStep !== "transition") return;
+    clearTutorialTimers();
+    let cancelled = false;
+    const scrollTimer = window.setTimeout(() => {
+      const target = confirmMeetupButtonRef.current;
+      const run = target
+        ? animateScrollToElement(
+            target,
+            tutorialTuning.autoScrollDuration,
+            tutorialTuning.targetViewportYPercent,
+            flow.motionMode,
+          )
+        : Promise.resolve();
+      void run.then(() => {
+        if (cancelled) return;
+        updateTutorialSpotlight();
+        const holdTimer = window.setTimeout(() => {
+          if (!cancelled) setTutorialStep("step2");
+        }, tutorialTuning.postScrollHold);
+        tutorialTimersRef.current.push(holdTimer);
+      });
+    }, tutorialTuning.step1FadeDuration + tutorialTuning.transitionWait);
+    tutorialTimersRef.current.push(scrollTimer);
+    return () => {
+      cancelled = true;
+      clearTutorialTimers();
+    };
+  }, [
+    clearTutorialTimers,
+    flow.motionMode,
+    tutorialOpen,
+    tutorialStep,
+    tutorialTuning.autoScrollDuration,
+    tutorialTuning.postScrollHold,
+    tutorialTuning.step1FadeDuration,
+    tutorialTuning.targetViewportYPercent,
+    tutorialTuning.transitionWait,
+    updateTutorialSpotlight,
+  ]);
+
+  useEffect(() => {
+    if (!tutorialOpen || tutorialStep !== "step2") return;
+    setTutorialCloseVisible(false);
+    setTutorialStartCountdown(null);
+    const closeTimer = window.setTimeout(
+      () => {
+        setTutorialCloseVisible(true);
+        setTutorialStartCountdown(3);
+        if (tutorialStartIntervalRef.current !== null) {
+          window.clearInterval(tutorialStartIntervalRef.current);
+        }
+        tutorialStartIntervalRef.current = window.setInterval(() => {
+          setTutorialStartCountdown((current) => {
+            const next = Math.max(0, (current ?? 3) - 1);
+            if (next <= 0) {
+              if (tutorialStartIntervalRef.current !== null) {
+                window.clearInterval(tutorialStartIntervalRef.current);
+                tutorialStartIntervalRef.current = null;
+              }
+              confirmFromTutorial();
+            }
+            return next;
+          });
+        }, 1000);
+      },
+      tutorialTuning.step2TextTiming +
+        tutorialTuning.borderFlowLoopDuration * Math.max(1, tutorialTuning.borderFlowLoopCount) +
+        tutorialTuning.closeButtonDelay,
+    );
+    tutorialTimersRef.current.push(closeTimer);
+    return () => {
+      window.clearTimeout(closeTimer);
+      if (tutorialStartIntervalRef.current !== null) {
+        window.clearInterval(tutorialStartIntervalRef.current);
+        tutorialStartIntervalRef.current = null;
+      }
+    };
+  }, [
+    confirmFromTutorial,
+    tutorialOpen,
+    tutorialStep,
+    tutorialTuning.borderFlowLoopCount,
+    tutorialTuning.borderFlowLoopDuration,
+    tutorialTuning.closeButtonDelay,
+    tutorialTuning.step2TextTiming,
+  ]);
+  // V8 has no HandoffTimingLab UI reachable during its own picker stage
+  // (see PR #48 -- showing that whole V7-oriented panel there collided
+  // with V8's own openTuningOpen trigger in the same screen corner), so
+  // the countdown value it uses comes from openTuningControls instead --
+  // the SAME "OPEN COUNTDOWN" target already reachable from the existing
+  // V8-specific tuning panel, not a second/separate control surface.
+  const effectiveCountdownSeconds = isV8Route ? openTuningControls.countdownSeconds : countdownTuning.seconds;
+  const effectiveAutoEnterAtZero = isV8Route ? openTuningControls.countdownAutoEnter : countdownTuning.autoEnterAtZero;
+  useEffect(() => {
+    countdownRemainingMsRef.current = null;
+  }, [countdownKey]);
+
+  useEffect(() => {
+    if (!openOnlyEffectsActive || !flow.events.length || tutorialOpen || flow.pendingAction || !openCountdownAssetsReady) {
+      resetCountdownRemaining();
+      return;
+    }
+    if (v8IntroBlocking) {
+      resetCountdownRemaining();
+      setOpenMeetupPickerOpen(false);
+      return;
+    }
+    if (!countdownTuning.showCountdown && !effectiveAutoEnterAtZero) {
+      resetCountdownRemaining();
+      return;
+    }
+    if (openMeetupPickerOpen || openSunDragging) {
+      return;
+    }
+    const seconds = Math.max(0, Math.round(effectiveCountdownSeconds));
+    const totalMs = seconds * 1000;
+    const startRemainingMs =
+      countdownRemainingMsRef.current != null && countdownRemainingMsRef.current > 0 && countdownRemainingMsRef.current <= totalMs
+        ? countdownRemainingMsRef.current
+        : totalMs;
+    const startedAt = window.performance.now();
+    countdownRemainingMsRef.current = startRemainingMs;
+    setCountdownRemainingMs(isV8Route || countdownTuning.showCountdown ? startRemainingMs : null);
+    const timer = window.setInterval(() => {
+      const elapsedMs = window.performance.now() - startedAt;
+      const remainingMs = Math.max(0, startRemainingMs - elapsedMs);
+      countdownRemainingMsRef.current = remainingMs;
+      if (isV8Route || countdownTuning.showCountdown) setCountdownRemainingMs(remainingMs);
+      if (remainingMs <= 0) {
+        window.clearInterval(timer);
+        if (effectiveAutoEnterAtZero) {
+          if (isV8Route) void confirmV8MeetupSelectionRef.current();
+          else enterPreviewSelection();
+        }
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [
+    countdownKey,
+    effectiveAutoEnterAtZero,
+    effectiveCountdownSeconds,
+    countdownTuning.showCountdown,
+    enterPreviewSelection,
+    flow.events.length,
+    flow.pendingAction,
+    isV8Route,
+    openCountdownAssetsReady,
+    openMeetupPickerOpen,
+    openOnlyEffectsActive,
+    openSunDragging,
+    resetCountdownRemaining,
+    tutorialOpen,
+    v8IntroBlocking,
+    v8RouteFamily,
+  ]);
+
+  const effectiveCountdownTotalMs = Math.max(0, Math.round(effectiveCountdownSeconds)) * 1000;
+  const countdownDisplaySeconds = Math.max(
+    0,
+    Math.ceil((countdownRemainingMs ?? effectiveCountdownTotalMs) / 1000),
+  );
+  const countdownProgress = effectiveCountdownTotalMs > 0
+    ? Math.max(0, Math.min(1, (countdownRemainingMs ?? effectiveCountdownTotalMs) / effectiveCountdownTotalMs))
+    : 0;
+
+  const clearReplayTimers = useCallback(() => {
+    replayTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    replayTimersRef.current = [];
+  }, []);
+
+  const replayHandoff = useCallback(() => {
+    clearReplayTimers();
+    setHandoffReplayPhase("prehold");
+
+    const materializeTimer = window.setTimeout(
+      () => setHandoffReplayPhase("materializing"),
+      handoffTiming.preHold,
+    );
+    const fadeTimer = window.setTimeout(
+      () => setHandoffReplayPhase("fading"),
+      handoffTiming.preHold + handoffTiming.revealDelay + handoffTiming.particleHold,
+    );
+    const finishTimer = window.setTimeout(
+      () => setHandoffReplayPhase("idle"),
+      handoffTiming.preHold +
+        Math.max(
+          handoffTiming.realFade,
+          handoffTiming.revealDelay + handoffTiming.revealDuration,
+          handoffTiming.revealDelay + handoffTiming.particleHold + handoffTiming.particleFade,
+        ) +
+        120,
+    );
+    replayTimersRef.current = [materializeTimer, fadeTimer, finishTimer];
+  }, [clearReplayTimers, handoffTiming]);
+
+  useEffect(() => () => clearReplayTimers(), [clearReplayTimers]);
+
+  const metrics = useMemo(() => {
+    const summary = flow.roster?.summary;
+    const event = flow.selectedEvent;
+    const reported = Number(summary?.confirmedCount || event?.confirmedCount || 0);
+    return {
+      reported,
+      missing: Math.max(0, Number(event?.maxPeople || 0) - reported),
+      waiting: Number(summary?.waitingCount || event?.waitingCount || 0),
+    };
+  }, [flow.roster, flow.selectedEvent]);
+
+  const submit = async (originElement: HTMLElement | null = signupButtonRef.current) => {
+    rememberToastOriginFromElement(originElement, toastOriginRef, "toast");
+    const result = await flow.submitSignup(name);
+    if (result.ok) setName("");
+  };
+
+  const openMemberPickerFrom = (
+    element: HTMLElement | null,
+    mode: "season-leave" | "season-restore" | "casual-cancel",
+  ) => {
+    rememberToastOriginFromElement(element, toastOriginRef, "toast");
+    flow.openMemberPicker(mode);
+  };
+
+  const confirmMeetupSwitch = () => {
+    if (
+      flow.pendingSwitchEventId &&
+      flow.pendingSwitchEventId !== flow.selectedEventId
+    ) {
+      rememberToastOriginFromElement(racketFaceAnchorRef.current, toastOriginRef, "event-title");
+    } else {
+      clearToastOrigin(toastOriginRef);
+    }
+    void flow.switchMeetup();
+  };
+
+  const scrollToRoster = () => {
+    document.querySelector<HTMLElement>(".sd-roster")?.scrollIntoView({
+      behavior: flow.motionMode === "reduced" ? "auto" : "smooth",
+      block: "start",
+    });
+  };
+
+  if (v7UpgradeOnly) {
+    return <V7UpgradeNotice href={v7UpgradeHref} />;
+  }
+
+  return (
+    <main
+      className={`sd-page is-${flow.phase} motion-${flow.motionMode} ${
+        rosterVisible ? "is-roster-visible" : ""
+      } ${
+        handoffReplayPhase !== "idle"
+          ? `is-handoff-replaying is-handoff-replay-${handoffReplayPhase}`
+          : ""
+      }`}
+      data-locked={flow.pendingAction ? "true" : "false"}
+      style={
+        {
+          "--sd-handoff-x": `${HANDOFF_OFFSET.x}px`,
+          "--sd-handoff-y": `${HANDOFF_OFFSET.y}px`,
+          "--sd-real-fade": `${handoffTiming.realFade}ms`,
+          "--sd-particle-fade": `${handoffTiming.particleFade}ms`,
+          "--sd-fade-blur": `${handoffTiming.fadeBlur}px`,
+          "--sd-reveal-delay": `${handoffTiming.revealDelay}ms`,
+          "--sd-reveal-duration": `${handoffTiming.revealDuration}ms`,
+          "--sd-reveal-feather": `${handoffTiming.revealFeather}px`,
+          "--sd-tail-bias": `${handoffTiming.tailBias}%`,
+          "--sd-scan-width": `${handoffTiming.scanWidth}px`,
+          "--sd-scan-intensity": `${handoffTiming.scanIntensity / 100}`,
+          "--sd-scan-softness": `${handoffTiming.scanSoftness}px`,
+          "--sd-scan-enabled": `${handoffTiming.scanEnabled ? 1 : 0}`,
+          "--sd-tutorial-overlay": `${visualTuning.overlayOpacity / 100}`,
+          "--sd-tutorial-spotlight": `${visualTuning.spotlightStrength / 100}`,
+          "--sd-tutorial-softness": `${visualTuning.spotlightSoftness}px`,
+          "--sd-tutorial-heading": `${tutorialTuning.headingSize}px`,
+          "--sd-tutorial-text": `${tutorialTuning.textSize}px`,
+          "--sd-step1-fade": `${tutorialTuning.step1FadeDuration}ms`,
+          "--sd-step2-fade": `${tutorialTuning.step2FadeInDuration}ms`,
+          "--sd-border-loop": `${tutorialTuning.borderFlowLoopDuration}ms`,
+          "--sd-border-loops": `${tutorialTuning.borderFlowLoopCount}`,
+          "--sd-border-brightness": `${tutorialTuning.borderBrightness / 100}`,
+          "--sd-border-width": `${tutorialTuning.borderWidth}px`,
+          "--sd-border-glow": `${tutorialTuning.glowStrength / 100}`,
+          "--sd-border-gold": `${tutorialTuning.goldRatio / 100}`,
+          "--sd-border-green": `${tutorialTuning.greenAccentRatio / 100}`,
+        } as CSSProperties
+      }
+    >
+      <HomepageStyles />
+      {/* Opaque V8 loading screen until data/OPEN is ready on all real V8
+          routes and same-session revisits -- the Intro overlay (z 80)
+          plays on top of it when enabled for the current site. */}
+      {isV8Route ? <V8LoadingCover ready={v8OpenReady} /> : null}
+      {v8RouteFamily === "v8test" ? <V8TestBadge /> : null}
+      {!isV8Route && (
+        <>
+          <ParticleRacket
+            phase={flow.phase}
+            motionMode={flow.motionMode}
+            tuning={particleTuning}
+            replayKey={particleReplayKey}
+          />
+          <ParticleHandoffOverlay
+            phase={flow.phase}
+            motionMode={flow.motionMode}
+            timing={handoffTiming}
+            freezeParticles={freezeParticles}
+            replayPhase={handoffReplayPhase}
+          />
+        </>
+      )}
+
+      {!isV8Route ? (
+        <header className="sd-header">
+          <p>BADMINTON ASSEMBLY</p>
+        </header>
+      ) : null}
+
+      {/* 2026-09-19: briefly extended this to also show during
+          v8HeroPickerStage so the COUNTDOWN section would be reachable on
+          V8 -- reverted (see PR #48) because this panel's hidden expand
+          toggle sits in the same bottom-left corner as V8's own
+          openTuningOpen trigger (the "紅日資訊"/OPEN SUN INFO panel), and
+          showing this ENTIRE V7-oriented panel (particle/tutorial/handoff
+          sections that don't apply to V8 at all) covered/blocked that
+          trigger -- a real regression, not just visual noise. V8's
+          countdown-tuning needs its own narrower solution, not reusing
+          this panel wholesale. */}
+      {!isV8Route && (preview || rotating || active) && !v8HeroStage && (
+        <HandoffTimingLab
+          timing={handoffTiming}
+          particle={particleTuning}
+          tutorial={tutorialTuning}
+          countdown={countdownTuning}
+          visual={visualTuning}
+          openingSun={openingSunTuning}
+          freezeParticles={freezeParticles}
+          expanded={timingLabExpanded}
+          activeSection={activeTuningSection}
+          onToggleExpanded={() => setTimingLabExpanded((value) => !value)}
+          onSetSection={setActiveTuningSection}
+          onToggleFreeze={() => setFreezeParticles((value) => !value)}
+          onHandoffChange={(key, value) =>
+            setHandoffTiming((current) => ({ ...current, [key]: value }))
+          }
+          onToggleScan={() =>
+            setHandoffTiming((current) => ({ ...current, scanEnabled: !current.scanEnabled }))
+          }
+          onParticleChange={(key, value) =>
+            setParticleTuning((current) => ({ ...current, [key]: value }))
+          }
+          onTutorialChange={(key, value) =>
+            setTutorialTuning((current) => ({ ...current, [key]: value }))
+          }
+          onToggleTutorial={() =>
+            setTutorialTuning((current) => ({ ...current, enabled: !current.enabled }))
+          }
+          onTutorialToggle={(key) =>
+            setTutorialTuning((current) => ({ ...current, [key]: !current[key] }))
+          }
+          onTutorialClosePositionChange={(value) =>
+            setTutorialTuning((current) => ({ ...current, closePosition: value }))
+          }
+          onCountdownChange={(key, value) =>
+            setCountdownTuning((current) => ({ ...current, [key]: value }))
+          }
+          onCountdownToggle={(key) =>
+            setCountdownTuning((current) => ({ ...current, [key]: !current[key] }))
+          }
+          onVisualChange={(key, value) =>
+            setVisualTuning((current) => ({ ...current, [key]: value }))
+          }
+          onToggleSkip={() =>
+            setVisualTuning((current) => ({ ...current, skipVisible: !current.skipVisible }))
+          }
+          onVisualToggle={(key) =>
+            setVisualTuning((current) => ({ ...current, [key]: !current[key] }))
+          }
+  onOpeningSunMessageChange={(message, key, value) =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              messages: {
+                ...current.messages,
+                [message]: { ...current.messages[message], [key]: value },
+              },
+            }))
+          }
+          onOpeningSunMessageToggle={(message, key) =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              messages: {
+                ...current.messages,
+                [message]: { ...current.messages[message], [key]: !current.messages[message][key] },
+              },
+            }))
+          }
+          onOpeningSunSafeBoxChange={(key, value) =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              safeBox: { ...current.safeBox, [key]: value },
+            }))
+          }
+          onToggleOpeningSunSafeBoxHelper={() =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              safeBox: { ...current.safeBox, showHelperBox: !current.safeBox.showHelperBox },
+            }))
+          }
+          onOpeningSunSwitchArrowChange={(arrow, key, value) =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              switchArrows: {
+                ...current.switchArrows,
+                [arrow]: { ...current.switchArrows[arrow], [key]: value },
+              },
+            }))
+          }
+          onToggleOpeningSunSwitchArrows={() =>
+            setOpeningSunTuning((current) => ({
+              ...current,
+              switchArrows: { ...current.switchArrows, show: !current.switchArrows.show },
+            }))
+          }
+          onReplayHandoff={replayHandoff}
+          onReplayParticles={() => setParticleReplayKey((value) => value + 1)}
+          onReplayTutorial={startTutorial}
+          onJumpStep1={() => {
+            startTutorial();
+            setTutorialStep("step1");
+          }}
+          onJumpStep2={() => {
+            startTutorial();
+            setTutorialStep("step2");
+          }}
+          onCloseTutorial={() => {
+            clearTutorialTimers();
+            setTutorialOpen(false);
+          }}
+          onClearSeen={() => {
+            window.localStorage.removeItem(TUTORIAL_SEEN_KEY);
+            tutorialAutoShownRef.current = false;
+          }}
+          onTestCountdown={() => setCountdownKey((value) => value + 1)}
+          onReset={() => {
+            setHandoffTiming(DEFAULT_HANDOFF_TIMING);
+            setParticleTuning(DEFAULT_PARTICLE_TUNING);
+            setTutorialTuning(DEFAULT_TUTORIAL_TUNING);
+            setCountdownTuning(DEFAULT_COUNTDOWN_TUNING);
+            setVisualTuning(DEFAULT_VISUAL_TUNING);
+            setOpeningSunTuning(v8OpeningSunDefaults);
+          }}
+        />
+      )}
+
+      {tutorialOpen ? (
+        <TutorialOverlay
+          step={tutorialStep}
+          tuning={tutorialTuning}
+          visual={visualTuning}
+          spotlightRect={spotlightRect}
+          frontCardRect={frontCardRect}
+          arrowPhase={tutorialArrowPhase}
+          closeVisible={tutorialCloseVisible}
+          startCountdown={tutorialStartCountdown}
+          motionMode={flow.motionMode}
+          onSkip={closeTutorial}
+          onStart={confirmFromTutorial}
+        />
+      ) : null}
+
+      <section
+        className="sd-hero"
+        id="sd-hero"
+        style={
+          v8HeroPickerStage
+            ? ({ minHeight: "100svh", width: "100%" } as CSSProperties)
+            : isV8Route
+              ? // Once confirmed, this section renders nothing (V8ActivePage
+                // mounts its own V8HeroComposition instead) -- but the base
+                // .sd-hero CSS class still carries a near-full-viewport
+                // min-height for the legacy racket intro, which isn't
+                // scoped to !isV8Route. Left alone, that leaves a tall empty
+                // section here showing the page's own dark background
+                // through it. Only override for V8 routes so the legacy
+                // flow's sizing is untouched.
+                ({ minHeight: 0, width: "100%" } as CSSProperties)
+              : undefined
+        }
+      >
+        {!isV8Route && (preview || rotating) && !v8HeroStage && (
+          <div className={`sd-preview-system-title ${rotating ? "is-leaving" : ""}`}>
+            <strong>羽球報名系統</strong>
+            <span>
+              <i />
+              BADMINTON SIGNUP SYSTEM
+              <i />
+            </span>
+          </div>
+        )}
+
+        {!isV8Route ? (
+          <div
+            ref={racketWrapRef}
+            className={`sd-racket-wrap ${materialized ? "is-materialized" : ""}`}
+            style={{ "--sd-particle-match-top": `${particleMatchTop}px` } as CSSProperties}
+          >
+            <span className="sd-racket-reveal" aria-hidden="true">
+              <span className="sd-racket-reveal-clip">
+                <RacketImage className="sd-racket-main" src={racketSrc} />
+              </span>
+              <span className="sd-racket-scan-line" />
+            </span>
+            <span ref={racketFaceAnchorRef} className="sd-racket-face-anchor" aria-hidden="true" />
+            {active && flow.events.length > 1 ? (
+              <button
+                type="button"
+                className="sd-racket-main-switch"
+                onClick={() => flow.openMeetupPicker()}
+                aria-label={`切換聚會，目前為 ${flow.selectedEvent?.name || "目前聚會"}`}
+              />
+            ) : null}
+            {flow.shadowEvents.map((event, index) => (
+              <button
+                key={event.id}
+                className={`sd-racket-shadow sd-shadow-${index + 1}`}
+                aria-label={`切換到 ${event.name}`}
+                onClick={() => flow.openMeetupPicker(event.id)}
+                style={{ "--shadow-index": index } as CSSProperties}
+              >
+                <RacketImage src={racketSrc} />
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {legacyActiveStage && flow.events.length > 1 ? (
+          <>
+            <button
+              type="button"
+              className="sd-racket-switch-bubble"
+              onClick={() => flow.openMeetupPicker()}
+              aria-label="切換聚會"
+            >
+              切換聚會
+            </button>
+            <button
+              type="button"
+              className="sd-racket-tap-bubble"
+              onClick={() => flow.openMeetupPicker()}
+              aria-label="點拍面切換聚會"
+            >
+              點這
+            </button>
+          </>
+        ) : null}
+
+        {flow.phase === "load-error" && (
+          <section className="sd-load-error">
+            <h1>database-alpha 讀取失敗</h1>
+            <p>{flow.error}</p>
+            <button onClick={() => window.location.reload()}>重新整理</button>
+          </section>
+        )}
+
+        {v8HeroPickerStage && !v8IntroHoldsImageLoads ? (
+          <>
+            <V8OpeningSunStyles />
+            <V8HeroComposition
+              eventLabel={selectedMeetupLabel}
+              eventPositionLabel={selectedMeetupPosition}
+              hasMultipleEvents={flow.events.length > 1}
+              confirmed={v8MeetupConfirmed}
+              confirmButtonRef={confirmMeetupButtonRef}
+              confirmDisabled={Boolean(flow.pendingAction) || !previewPickedEvent || v8Entering}
+              onPreviousEvent={canSwitchMeetup ? () => selectAdjacentV8Meetup(-1) : undefined}
+              onNextEvent={canSwitchMeetup ? () => selectAdjacentV8Meetup(1) : undefined}
+              onConfirm={() => void confirmV8MeetupSelection()}
+              // Open 頁面自己的紅日內容(複製自 Active 的 V8ActiveSunContent，
+              // 獨立程式碼、不共用) -- 資料來源接目前預覽/游標選中的那場聚會
+              // (previewPickedEvent，輪播切換時即時更新)，非固定單一場次。
+              controlOverrides={openHeroOverrides}
+              maxStageWidth={430}
+              revealImmediately
+              sequenceDragonRig={isV8Route}
+              sunContent={
+                <V8OpeningSunContent
+                  event={previewPickedEvent}
+                  controls={openSunControls}
+                  canSwitchMeetup={canSwitchMeetup}
+                  onPreviousEvent={() => selectAdjacentV8Meetup(-1)}
+                  onNextEvent={() => selectAdjacentV8Meetup(1)}
+                  eventIndex={Math.max(0, flow.events.findIndex((item) => item.id === previewPickedEvent?.id))}
+                  eventCount={flow.events.length}
+                  events={flow.events}
+                  currentEventId={flow.selectedEventId}
+                  pendingEventId={flow.pendingSwitchEventId}
+                  onSelectEvent={quickPickV8MeetupById}
+                  forcePickerOpen={openTuningOpen && openTuningTarget === "OPEN MEETUP PICKER"}
+                  onPickerOpenChange={setOpenMeetupPickerOpen}
+                  dotsControls={buildV8SunDotsControls(openTuningControls, "open")}
+                  bump={openDialBump}
+                  onSwipeDragChange={setOpenSunDragging}
+                />
+              }
+            />
+            {openTuningControls.countdownBarShow && countdownRemainingMs != null ? (
+              <div
+                className="v8-open-countdown-bar"
+                aria-hidden="true"
+                style={{
+                  position: "fixed",
+                  left: `${openTuningControls.countdownBarX}%`,
+                  top: `${openTuningControls.countdownBarY}%`,
+                  width: `${openTuningControls.countdownBarWidth}%`,
+                  height: `${openTuningControls.countdownBarHeight}px`,
+                  opacity: openTuningControls.countdownBarOpacity / 100,
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 38,
+                  pointerEvents: "none",
+                  borderRadius: 999,
+                  overflow: "hidden",
+                  background: "rgba(82, 45, 10, 0.24)",
+                  boxShadow: "inset 0 0 0 1px rgba(122, 74, 0, 0.24)",
+                } as CSSProperties}
+              >
+                <span
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: "100%",
+                    transform: `scaleX(${countdownProgress})`,
+                    transformOrigin: "left center",
+                    borderRadius: 999,
+                    background: "linear-gradient(90deg, #9b5a16, #f4d06f, #a1621d)",
+                    boxShadow: "0 0 8px rgba(244, 208, 111, 0.55)",
+                  } as CSSProperties}
+                />
+              </div>
+            ) : null}
+            {openTuningOpen ? null : (
+              <button
+                type="button"
+                onClick={() => setOpenTuningOpen(true)}
+                aria-label="Open tuning panel"
+                style={{
+                  position: "fixed",
+                  left: 6,
+                  bottom: 6,
+                  width: 30,
+                  height: 30,
+                  border: "none",
+                  borderRadius: "50%",
+                  background: "transparent",
+                  opacity: 0.001,
+                  zIndex: 40,
+                } as CSSProperties}
+              />
+            )}
+            {openTuningOpen ? (
+              <LazyV8TuningPanel
+                controls={openTuningControls}
+                setControls={setOpenTuningControls}
+                targetOrder={OPEN_SUN_TUNING_TARGETS}
+                selectedTarget={openTuningTarget}
+                onSelectTarget={setOpenTuningTarget}
+                motionPreviewLab={openMotionPreviewLab}
+                onMotionPreviewLabChange={setOpenMotionPreviewLab}
+                controlsScope="open"
+              />
+            ) : null}
+            {openTuningOpen ? (
+              <button
+                type="button"
+                onClick={() => setOpenTuningOpen(false)}
+                aria-label="Close tuning panel"
+                style={{
+                  position: "fixed",
+                  left: 6,
+                  bottom: 6,
+                  width: 30,
+                  height: 30,
+                  border: "1px solid rgba(247, 239, 224, 0.3)",
+                  borderRadius: "50%",
+                  background: "rgba(24, 17, 13, 0.5)",
+                  color: "#f7efe0",
+                  fontSize: 10,
+                  zIndex: 40,
+                } as CSSProperties}
+              >
+                ×
+              </button>
+            ) : null}
+          </>
+        ) : null}
+
+        {preview && !isV8Route ? (
+          <section className="sd-hero-meetup-picker" aria-label="選擇聚會">
+            <div
+              className={`sd-hero-ticket-stack-wrap ${tutorialOpen && tutorialStep === "step1" ? "is-tutorial-target" : ""} ${tutorialDemoPulse ? "is-tutorial-demoing" : ""}`}
+              style={{
+                "--sd-demo-afterimage": `${tutorialTuning.afterimageStrength / 100}`,
+                "--sd-demo-trail": `${tutorialTuning.motionTrailStrength / 100}`,
+                "--sd-demo-travel": `${tutorialTuning.demoTravelDistance}px`,
+              } as CSSProperties}
+            >
+              {flow.events.length ? (
+                <MeetupTicketStack
+                  events={flow.events}
+                  selectedEventId={flow.selectedEventId}
+                  pendingEventId={flow.pendingSwitchEventId || flow.selectedEventId}
+                  onSelect={(eventId) => {
+                    flow.setPendingSwitchEventId(eventId);
+                    markPreviewInteraction();
+                  }}
+                  disabled={Boolean(flow.pendingAction)}
+                  variant="hero"
+                  onInteract={markPreviewInteraction}
+                />
+              ) : (
+                <div className="sd-hero-no-events" role="status">
+                  目前沒有開放聚會
+                </div>
+              )}
+            </div>
+            {flow.events.length ? (
+              <footer className="sd-hero-picker-footer">
+                <span className="sd-selected-meetup">
+                  {countdownTuning.showSelectedInfo ? (
+                    <span>
+                      已選：<strong>{selectedMeetupLabel}</strong>
+                    </span>
+                  ) : null}
+                  {countdownTuning.showCountdown ? (
+                    <small>自動進入 {countdownDisplaySeconds}</small>
+                  ) : null}
+                </span>
+                <button
+                  ref={confirmMeetupButtonRef}
+                  type="button"
+                  className={tutorialOpen && tutorialStep === "step2" ? "is-tutorial-focus" : ""}
+                  disabled={Boolean(flow.pendingAction) || !previewPickedEvent}
+                  onClick={() => {
+                    markPreviewInteraction();
+                    if (tutorialOpen && tutorialStep === "step2") {
+                      confirmFromTutorial();
+                      return;
+                    }
+                    enterPreviewSelection();
+                  }}
+                >
+                  確認聚會
+                </button>
+              </footer>
+            ) : null}
+          </section>
+        ) : null}
+
+        {legacyActiveStage && (
+          <>
+            <FloatingAnnotations
+              event={flow.selectedEvent}
+              titleRef={eventTitleRef}
+              onOpenMeetupPicker={() => flow.openMeetupPicker()}
+            />
+            <div className="sd-metrics" aria-label="報名狀態">
+              <Metric label="已報" value={metrics.reported} tone="green" />
+              <Metric label="尚缺" value={metrics.missing} tone="gold" center />
+              <Metric label="後補" value={metrics.waiting} tone="neutral" />
+            </div>
+            <section className="sd-actions" aria-label="報名操作">
+              <div className="sd-action-zone sd-season">
+                <h2>季打</h2>
+                <button
+                  disabled={Boolean(flow.pendingAction)}
+                  onClick={(event) => openMemberPickerFrom(event.currentTarget, "season-leave")}
+                >
+                  請假
+                </button>
+                <button
+                  disabled={Boolean(flow.pendingAction)}
+                  onClick={(event) => openMemberPickerFrom(event.currentTarget, "season-restore")}
+                >
+                  消假
+                </button>
+              </div>
+              <div className="sd-action-zone sd-casual">
+                <h2>臨打</h2>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void submit(signupButtonRef.current);
+                  }}
+                  placeholder="Name"
+                  disabled={Boolean(flow.pendingAction)}
+                />
+                <button
+                  ref={signupButtonRef}
+                  className="sd-submit"
+                  disabled={!name.trim() || Boolean(flow.pendingAction)}
+                  onClick={(event) => void submit(event.currentTarget)}
+                >
+                  報名
+                </button>
+                <button
+                  className="sd-cancel"
+                  disabled={Boolean(flow.pendingAction)}
+                  onClick={(event) => openMemberPickerFrom(event.currentTarget, "casual-cancel")}
+                >
+                  取消
+                </button>
+              </div>
+            </section>
+          </>
+        )}
+
+        {!isV8Route && flow.pendingAction && !v8HeroStage && (
+          <div className="sd-pending" aria-live="polite">
+            <span />
+            <span />
+            <span />
+            {flow.pendingAction.label}
+          </div>
+        )}
+
+        {legacyActiveStage && (
+          <button className="sd-scroll-cue" type="button" onClick={scrollToRoster} aria-label="往下查看報名名單">
+            <span />
+            <span />
+            <span />
+          </button>
+        )}
+      </section>
+
+      {legacyActiveStage && (
+        <HomepageRoster
+          roster={flow.roster}
+          confirmed={flow.confirmed}
+          waiting={flow.waiting}
+          lastChangedId={flow.lastChangedId}
+          refreshing={Boolean(flow.pendingAction)}
+          onRefresh={() => flow.refresh()}
+        />
+      )}
+
+      {isV8Route && v8ImageDebug ? <V8ImageDebug /> : null}
+
+      {isV8Route && !v8MeetupConfirmed ? (
+        <V8Toast notice={openDialHint} motionMode={flow.motionMode} setNotice={setOpenDialHint} />
+      ) : null}
+
+      {isV8Route && v8MeetupConfirmed ? (
+        <V8ActivePage flow={flow} onBeforeLineLogin={rememberV8LineLoginReturn} entering={v8Entering} />
+      ) : null}
+
+      {!isV8Route && (
+        <HomepageToast
+          notice={flow.notice}
+          motionMode={flow.motionMode}
+          originRef={toastOriginRef}
+          eventTitleRef={eventTitleRef}
+          setNotice={flow.setNotice}
+        />
+      )}
+
+      <MeetupSheet
+        open={flow.meetupPickerOpen}
+        events={flow.events}
+        selectedEventId={flow.selectedEventId}
+        pendingEventId={flow.pendingSwitchEventId}
+        onSelect={flow.setPendingSwitchEventId}
+        onClose={() => {
+          clearToastOrigin(toastOriginRef);
+          flow.closeMeetupPicker();
+        }}
+        onConfirm={confirmMeetupSwitch}
+        disabled={Boolean(flow.pendingAction)}
+      />
+
+      <MemberSheet
+        mode={flow.memberPickerMode}
+        candidates={flow.memberCandidates}
+        selectedMemberId={flow.selectedMemberId}
+        onSelect={flow.setSelectedMemberId}
+        onClose={() => {
+          clearToastOrigin(toastOriginRef);
+          flow.closeMemberPicker();
+        }}
+        onConfirm={() => void flow.confirmMemberAction()}
+        disabled={Boolean(flow.pendingAction)}
+      />
+
+      {v8IntroSiteId ? (
+        <>
+          <V8IntroVideoStyles />
+          {v8CodeIntro ? (
+            <V8OpenIntroBoundary key={v8IntroSiteId} onError={() => handleV8IntroBlockingChange(false)}>
+              <V8OpenIntro
+                siteId={v8IntroSiteId}
+                heroMounted={v8HeroPickerStage}
+                artReady={openCountdownAssetsReady}
+                dataSettled={v8OpenReady}
+                replaySignal={v8IntroReplaySignal}
+                onBlockingChange={handleV8IntroBlockingChange}
+              />
+            </V8OpenIntroBoundary>
+          ) : (
+            <V8IntroVideo
+              key={v8IntroSiteId}
+              config={v8IntroConfig}
+              siteId={v8IntroSiteId}
+              onBlockingChange={handleV8IntroBlockingChange}
+              replaySignal={v8IntroReplaySignal}
+              fit="contain"
+              onMediaBuffered={handleV8IntroMediaBuffered}
+              ignorePlayed={v8IntroIgnorePlayed}
+            />
+          )}
+          {/* Countdown auto-enter is already paused via v8IntroBlocking
+              (set true the instant V8IntroVideo starts playing, including
+              a forced replay -- see replaySignal) and only resumes once
+              the video's onEnded/onError/skip fires -- reuses the exact
+              same blocking mechanism as the very first play, nothing
+              countdown-specific needed here beyond bumping the signal. */}
+          <button
+            type="button"
+            className="v8-intro-replay-button"
+            onClick={() => {
+              setOpenMeetupPickerOpen(false);
+              resetCountdownRemaining();
+              setCountdownKey((current) => current + 1);
+              setV8IntroReplaySignal((current) => current + 1);
+            }}
+          >
+            Intro
+          </button>
+          <style>{`
+            .v8-intro-replay-button {
+              position: fixed;
+              top: max(12px, env(safe-area-inset-top));
+              left: max(12px, env(safe-area-inset-left));
+              z-index: 79;
+              min-height: 30px;
+              padding: 5px 11px;
+              border: 1px solid rgba(255, 255, 255, 0.4);
+              border-radius: 999px;
+              background: rgba(14, 11, 8, 0.4);
+              color: rgba(255, 255, 255, 0.82);
+              font-size: 11px;
+              font-weight: 800;
+              letter-spacing: 0.3px;
+              backdrop-filter: blur(6px);
+              -webkit-backdrop-filter: blur(6px);
+            }
+            body.v8-billing-open .v8-intro-replay-button {
+              display: none;
+            }
+          `}</style>
+        </>
+      ) : null}
+      <V8MobileLandscapeOverlay show={v8MobileLandscapeBlocked} />
+    </main>
+  );
+}
+
+function ParticleHandoffOverlay({
+  phase,
+  motionMode,
+  timing,
+  freezeParticles,
+  replayPhase,
+}: {
+  phase: ReturnType<typeof useHomepageFlow>["phase"];
+  motionMode: ReturnType<typeof useHomepageFlow>["motionMode"];
+  timing: HandoffTiming;
+  freezeParticles: boolean;
+  replayPhase: HandoffReplayPhase;
+}) {
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
+  const hasSnapshotRef = useRef(false);
+  const initialTimersRef = useRef<number[]>([]);
+
+  const captureSnapshot = useCallback(() => {
+    const overlay = overlayRef.current;
+    const source = document.querySelector<HTMLCanvasElement>(".sd-particles");
+    if (!overlay || !source || !source.width || !source.height) return false;
+    const context = overlay.getContext("2d");
+    if (!context) return false;
+
+    overlay.width = source.width;
+    overlay.height = source.height;
+    context.clearRect(0, 0, overlay.width, overlay.height);
+    context.drawImage(source, 0, 0);
+    hasSnapshotRef.current = true;
+    return true;
+  }, []);
+
+  const clearInitialTimers = useCallback(() => {
+    initialTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    initialTimersRef.current = [];
+  }, []);
+
+  useLayoutEffect(() => {
+    if (phase !== "particle-ready" || motionMode === "reduced") return;
+    const overlay = overlayRef.current;
+    const source = document.querySelector<HTMLCanvasElement>(".sd-particles");
+    if (!overlay || !source || !captureSnapshot()) return;
+
+    // Freeze the exact completed particle silhouette before ParticleRacket's
+    // finish pulse/drift can become visible. The handoff now reads as:
+    // complete particles -> steady hold -> handle-to-head reveal.
+    clearInitialTimers();
+    source.classList.add("is-handoff-source-hidden");
+    overlay.classList.remove(
+      "is-fading",
+      "is-drifting",
+      "is-replay-visible",
+      "is-replay-fading",
+      "is-replay-drifting",
+    );
+    overlay.classList.add("is-visible");
+  }, [captureSnapshot, clearInitialTimers, motionMode, phase]);
+
+  useLayoutEffect(() => {
+    if (phase !== "materializing" || motionMode === "reduced") return;
+    const overlay = overlayRef.current;
+    const source = document.querySelector<HTMLCanvasElement>(".sd-particles");
+    if (!overlay || !source) return;
+    if (!hasSnapshotRef.current && !captureSnapshot()) return;
+
+    clearInitialTimers();
+    source.classList.add("is-handoff-source-hidden");
+    overlay.classList.remove("is-fading", "is-replay-visible", "is-replay-fading");
+    overlay.classList.add("is-visible");
+    overlay.classList.remove("is-drifting");
+
+    const fadeTimer = window.setTimeout(() => {
+      overlay.classList.add("is-fading");
+    }, timing.revealDelay + timing.particleHold);
+
+    const finishTimer = window.setTimeout(() => {
+      overlay.classList.remove("is-visible", "is-fading", "is-drifting");
+      source.classList.remove("is-handoff-source-hidden");
+    }, timing.revealDelay + timing.particleHold + timing.particleFade + 80);
+
+    initialTimersRef.current = [fadeTimer, finishTimer];
+  }, [
+    captureSnapshot,
+    clearInitialTimers,
+    freezeParticles,
+    motionMode,
+    phase,
+    timing.particleFade,
+    timing.particleHold,
+    timing.revealDelay,
+  ]);
+
+  useLayoutEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+
+    if (replayPhase === "idle") {
+      overlay.classList.remove("is-replay-visible", "is-replay-fading", "is-replay-drifting");
+      return;
+    }
+
+    if (!hasSnapshotRef.current && !captureSnapshot()) return;
+    overlay.classList.add("is-replay-visible");
+    overlay.classList.toggle("is-replay-fading", replayPhase === "fading");
+    overlay.classList.toggle("is-replay-drifting", !freezeParticles);
+  }, [captureSnapshot, freezeParticles, replayPhase]);
+
+  useEffect(
+    () => () => {
+      clearInitialTimers();
+      document
+        .querySelector<HTMLCanvasElement>(".sd-particles")
+        ?.classList.remove("is-handoff-source-hidden");
+    },
+    [clearInitialTimers],
+  );
+
+  return <canvas ref={overlayRef} className="sd-particle-handoff" aria-hidden="true" />;
+}
+
+function HandoffTimingLab({
+  timing,
+  particle,
+  tutorial,
+  countdown,
+  visual,
+  openingSun,
+  freezeParticles,
+  expanded,
+  activeSection,
+  onToggleExpanded,
+  onSetSection,
+  onToggleFreeze,
+  onHandoffChange,
+  onToggleScan,
+  onParticleChange,
+  onTutorialChange,
+  onToggleTutorial,
+  onTutorialToggle,
+  onTutorialClosePositionChange,
+  onCountdownChange,
+  onCountdownToggle,
+  onVisualChange,
+  onToggleSkip,
+  onVisualToggle,
+  onOpeningSunMessageChange,
+  onOpeningSunMessageToggle,
+  onOpeningSunSafeBoxChange,
+  onToggleOpeningSunSafeBoxHelper,
+  onOpeningSunSwitchArrowChange,
+  onToggleOpeningSunSwitchArrows,
+  onReplayHandoff,
+  onReplayParticles,
+  onReplayTutorial,
+  onJumpStep1,
+  onJumpStep2,
+  onCloseTutorial,
+  onClearSeen,
+  onTestCountdown,
+  onReset,
+}: {
+  timing: HandoffTiming;
+  particle: ParticleTuning;
+  tutorial: TutorialTuning;
+  countdown: CountdownTuning;
+  visual: VisualTuning;
+  openingSun: V8OpeningSunControls;
+  freezeParticles: boolean;
+  expanded: boolean;
+  activeSection: TuningSectionId;
+  onToggleExpanded: () => void;
+  onSetSection: (section: TuningSectionId) => void;
+  onToggleFreeze: () => void;
+  onHandoffChange: (key: HandoffNumericKey, value: number) => void;
+  onToggleScan: () => void;
+  onParticleChange: (key: keyof ParticleTuning, value: number) => void;
+  onTutorialChange: (key: TutorialNumericKey, value: number) => void;
+  onToggleTutorial: () => void;
+  onTutorialToggle: (key: TutorialToggleKey) => void;
+  onTutorialClosePositionChange: (value: ClosePosition) => void;
+  onCountdownChange: (key: CountdownNumericKey, value: number) => void;
+  onCountdownToggle: (key: Exclude<keyof CountdownTuning, "seconds">) => void;
+  onVisualChange: (key: VisualNumericKey, value: number) => void;
+  onToggleSkip: () => void;
+  onVisualToggle: (key: VisualToggleKey) => void;
+  onOpeningSunMessageChange: (message: OpeningSunMessageId, key: OpeningSunMessageNumericKey, value: number) => void;
+  onOpeningSunMessageToggle: (message: OpeningSunMessageId, key: "show") => void;
+  onOpeningSunSafeBoxChange: (key: OpeningSunSafeBoxNumericKey, value: number) => void;
+  onToggleOpeningSunSafeBoxHelper: () => void;
+  onOpeningSunSwitchArrowChange: (arrow: OpeningSunSwitchArrowId, key: OpeningSunSwitchArrowNumericKey, value: number) => void;
+  onToggleOpeningSunSwitchArrows: () => void;
+  onReplayHandoff: () => void;
+  onReplayParticles: () => void;
+  onReplayTutorial: () => void;
+  onJumpStep1: () => void;
+  onJumpStep2: () => void;
+  onCloseTutorial: () => void;
+  onClearSeen: () => void;
+  onTestCountdown: () => void;
+  onReset: () => void;
+}) {
+  const copyCurrentSettings = () => {
+    const payload = JSON.stringify({ handoff: timing, particle, tutorial, countdown, visual, openingSun });
+    void navigator.clipboard?.writeText(payload);
+  };
+
+  return (
+    <aside className={`sd-timing-lab ${expanded ? "is-expanded" : ""}`} aria-label="開場動畫與教學調校">
+      <div className="sd-timing-lab-head">
+        <span>
+          <strong>OPENING LAB</strong>
+          <small>Unified x2g tuning</small>
+        </span>
+        <button
+          type="button"
+          className="sd-timing-lab-toggle"
+          onClick={onToggleExpanded}
+          aria-expanded={expanded}
+          aria-label={expanded ? "隱藏開場調校面板" : "開啟開場調校面板"}
+          title={expanded ? "隱藏開場調校面板" : "開場調校"}
+        >
+          <span aria-hidden="true">{expanded ? "收合" : "◇"}</span>
+        </button>
+      </div>
+
+      {expanded ? (
+        <div className="sd-timing-lab-body">
+          <TuningSection id="opening" title="① 開場動畫" active={activeSection} onSelect={onSetSection}>
+            <div className="sd-timing-subgroup">A. 粒子進場 / 位置 / 曲線</div>
+            <TimingControl label="SOURCE X" description="來源 X；% 可為負" value={particle.sourceX} min={-45} max={20} step={1} unit="%" onChange={(value) => onParticleChange("sourceX", value)} />
+            <TimingControl label="SOURCE Y" description="來源 Y；偏上方" value={particle.sourceY} min={0} max={60} step={1} unit="%" onChange={(value) => onParticleChange("sourceY", value)} />
+            <TimingControl label="ENTRY ANGLE" description="進場角度" value={particle.entryAngle} min={-16} max={26} step={1} unit="deg" onChange={(value) => onParticleChange("entryAngle", value)} />
+            <TimingControl label="STREAMS" description="曲線流數量" value={particle.streamCount} min={2} max={3} step={1} unit="" onChange={(value) => onParticleChange("streamCount", value)} />
+            <TimingControl label="STREAM GAP" description="流線高低差" value={particle.streamVerticalSpacing} min={8} max={54} step={1} unit="px" onChange={(value) => onParticleChange("streamVerticalSpacing", value)} />
+            <TimingControl label="CURVE AMP" description="曲線振幅" value={particle.curveAmplitude} min={0} max={44} step={1} unit="px" onChange={(value) => onParticleChange("curveAmplitude", value)} />
+            <TimingControl label="INTERWEAVE" description="交織量" value={particle.interweaveAmount} min={0} max={44} step={1} unit="px" onChange={(value) => onParticleChange("interweaveAmount", value)} />
+            <TimingControl label="CONVERGE X" description="吸附前匯流位置" value={particle.convergencePosition} min={18} max={58} step={1} unit="%" onChange={(value) => onParticleChange("convergencePosition", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onReplayParticles}>Replay particle inflow</button></div>
+
+            <div className="sd-timing-subgroup">OPEN SUN SAFE BOX</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onToggleOpeningSunSafeBoxHelper}>{openingSun.safeBox.showHelperBox ? "Hide helper box" : "Show helper box"}</button></div>
+            <TimingControl label="SAFE WIDTH" description="開場紅日文字安全框寬度" value={openingSun.safeBox.width} min={20} max={120} step={1} unit="%" onChange={(value) => onOpeningSunSafeBoxChange("width", value)} />
+            <TimingControl label="SAFE HEIGHT" description="開場紅日文字安全框高度" value={openingSun.safeBox.height} min={20} max={120} step={1} unit="%" onChange={(value) => onOpeningSunSafeBoxChange("height", value)} />
+
+            <div className="sd-timing-subgroup">OPEN SUN DATE</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("date", "show")}>{openingSun.messages.date.show ? "Hide date" : "Show date"}</button></div>
+            <TimingControl label="DATE X" description="開場紅日日期 X" value={openingSun.messages.date.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("date", "x", value)} />
+            <TimingControl label="DATE Y" description="開場紅日日期 Y" value={openingSun.messages.date.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("date", "y", value)} />
+            <TimingControl label="DATE FONT" description="開場紅日日期字級" value={openingSun.messages.date.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("date", "fontSize", value)} />
+            <TimingControl label="DATE OPACITY" description="開場紅日日期透明度" value={openingSun.messages.date.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("date", "opacity", value)} />
+
+            <div className="sd-timing-subgroup">OPEN SUN NAME</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("name", "show")}>{openingSun.messages.name.show ? "Hide name" : "Show name"}</button></div>
+            <TimingControl label="NAME X" description="開場紅日聚會名 X" value={openingSun.messages.name.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "x", value)} />
+            <TimingControl label="NAME Y" description="開場紅日聚會名 Y" value={openingSun.messages.name.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "y", value)} />
+            <TimingControl label="NAME WIDTH" description="開場紅日聚會名寬度" value={openingSun.messages.name.width} min={10} max={140} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "width", value)} />
+            <TimingControl label="NAME OPACITY" description="開場紅日聚會名透明度" value={openingSun.messages.name.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("name", "opacity", value)} />
+
+            <div className="sd-timing-subgroup">OPEN SUN TIME</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("time", "show")}>{openingSun.messages.time.show ? "Hide time" : "Show time"}</button></div>
+            <TimingControl label="TIME X" description="開場紅日時間 X" value={openingSun.messages.time.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("time", "x", value)} />
+            <TimingControl label="TIME Y" description="開場紅日時間 Y" value={openingSun.messages.time.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("time", "y", value)} />
+            <TimingControl label="TIME FONT" description="開場紅日時間字級" value={openingSun.messages.time.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("time", "fontSize", value)} />
+            <TimingControl label="TIME OPACITY" description="開場紅日時間透明度" value={openingSun.messages.time.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("time", "opacity", value)} />
+
+            <div className="sd-timing-subgroup">OPEN SUN NOTE</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={() => onOpeningSunMessageToggle("note", "show")}>{openingSun.messages.note.show ? "Hide note" : "Show note"}</button></div>
+            <TimingControl label="NOTE X" description="開場紅日備註 X" value={openingSun.messages.note.x} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("note", "x", value)} />
+            <TimingControl label="NOTE Y" description="開場紅日備註 Y" value={openingSun.messages.note.y} min={-50} max={150} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("note", "y", value)} />
+            <TimingControl label="NOTE FONT" description="開場紅日備註字級" value={openingSun.messages.note.fontSize} min={4} max={48} step={1} unit="px" onChange={(value) => onOpeningSunMessageChange("note", "fontSize", value)} />
+            <TimingControl label="NOTE OPACITY" description="開場紅日備註透明度" value={openingSun.messages.note.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunMessageChange("note", "opacity", value)} />
+
+            <div className="sd-timing-subgroup">OPEN SWITCH ARROW</div>
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onToggleOpeningSunSwitchArrows}>{openingSun.switchArrows.show ? "Hide arrows" : "Show arrows"}</button></div>
+            <TimingControl label="PREV X" description="開場上一場箭頭 X" value={openingSun.switchArrows.prev.x} min={-30} max={130} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "x", value)} />
+            <TimingControl label="PREV Y" description="開場上一場箭頭 Y" value={openingSun.switchArrows.prev.y} min={-30} max={130} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "y", value)} />
+            <TimingControl label="PREV SCALE" description="開場上一場箭頭縮放" value={openingSun.switchArrows.prev.scale} min={0.3} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "scale", value)} />
+            <TimingControl label="PREV ROT" description="開場上一場箭頭旋轉" value={openingSun.switchArrows.prev.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "rotation", value)} />
+            <TimingControl label="PREV OPACITY" description="開場上一場箭頭透明度" value={openingSun.switchArrows.prev.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "opacity", value)} />
+            <TimingControl label="PREV Z" description="開場上一場箭頭層級" value={openingSun.switchArrows.prev.zIndex} min={0} max={40} step={1} unit="" onChange={(value) => onOpeningSunSwitchArrowChange("prev", "zIndex", value)} />
+            <TimingControl label="NEXT X" description="開場下一場箭頭 X" value={openingSun.switchArrows.next.x} min={-30} max={130} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("next", "x", value)} />
+            <TimingControl label="NEXT Y" description="開場下一場箭頭 Y" value={openingSun.switchArrows.next.y} min={-30} max={130} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("next", "y", value)} />
+            <TimingControl label="NEXT SCALE" description="開場下一場箭頭縮放" value={openingSun.switchArrows.next.scale} min={0.3} max={3} step={0.01} unit="" onChange={(value) => onOpeningSunSwitchArrowChange("next", "scale", value)} />
+            <TimingControl label="NEXT ROT" description="開場下一場箭頭旋轉" value={openingSun.switchArrows.next.rotation} min={-180} max={180} step={1} unit="deg" onChange={(value) => onOpeningSunSwitchArrowChange("next", "rotation", value)} />
+            <TimingControl label="NEXT OPACITY" description="開場下一場箭頭透明度" value={openingSun.switchArrows.next.opacity} min={0} max={100} step={1} unit="%" onChange={(value) => onOpeningSunSwitchArrowChange("next", "opacity", value)} />
+            <TimingControl label="NEXT Z" description="開場下一場箭頭層級" value={openingSun.switchArrows.next.zIndex} min={0} max={40} step={1} unit="" onChange={(value) => onOpeningSunSwitchArrowChange("next", "zIndex", value)} />
+
+            <div className="sd-timing-subgroup">B. 粒子流動 / 吸附</div>
+            <TimingControl label="INITIAL SPEED" description="初段流入速度" value={particle.initialInflowSpeed} min={45} max={180} step={5} unit="%" onChange={(value) => onParticleChange("initialInflowSpeed", value)} />
+            <TimingControl label="DRIFT SPEED" description="曲線漂移速度" value={particle.curvedDriftSpeed} min={40} max={180} step={5} unit="%" onChange={(value) => onParticleChange("curvedDriftSpeed", value)} />
+            <TimingControl label="DECEL" description="接近目標減速" value={particle.approachDeceleration} min={20} max={160} step={5} unit="%" onChange={(value) => onParticleChange("approachDeceleration", value)} />
+            <TimingControl label="ATTACH SPEED" description="吸附速度" value={particle.attachmentSpeed} min={40} max={180} step={5} unit="%" onChange={(value) => onParticleChange("attachmentSpeed", value)} />
+            <TimingControl label="ATTRACT" description="吸附強度" value={particle.attractionStrength} min={20} max={160} step={5} unit="%" onChange={(value) => onParticleChange("attractionStrength", value)} />
+            <TimingControl label="SUPPLY UNTIL" description="供粒持續到成形%" value={particle.supplyUntilFormation} min={55} max={100} step={1} unit="%" onChange={(value) => onParticleChange("supplyUntilFormation", value)} />
+            <TimingControl label="TRAIL LEN" description="尾流長度" value={particle.trailLength} min={15} max={160} step={5} unit="%" onChange={(value) => onParticleChange("trailLength", value)} />
+            <TimingControl label="TRAIL BRIGHT" description="尾流亮度" value={particle.trailBrightness} min={0} max={150} step={5} unit="%" onChange={(value) => onParticleChange("trailBrightness", value)} />
+
+            <div className="sd-timing-subgroup">C. 球拍成形 / Timing</div>
+            <TimingControl label="TOTAL" description="總成形時間" value={particle.totalFormationDuration} min={1800} max={7200} step={100} unit="ms" onChange={(value) => onParticleChange("totalFormationDuration", value)} />
+            <TimingControl label="X SPEED" description="左到右推進" value={particle.leftToRightSpeed} min={45} max={180} step={5} unit="%" onChange={(value) => onParticleChange("leftToRightSpeed", value)} />
+            <TimingControl label="X WEIGHT" description="X 位置權重" value={particle.xTimingWeight} min={20} max={95} step={1} unit="%" onChange={(value) => onParticleChange("xTimingWeight", value)} />
+            <TimingControl label="STRUCT WEIGHT" description="結構分組權重" value={particle.structureTimingWeight} min={0} max={60} step={1} unit="%" onChange={(value) => onParticleChange("structureTimingWeight", value)} />
+            <TimingControl label="JITTER" description="時間錯落" value={particle.timingJitter} min={0} max={50} step={1} unit="%" onChange={(value) => onParticleChange("timingJitter", value)} />
+            <TimingControl label="FRAME DELAY" description="最後封框延遲" value={particle.finalFrameDelay} min={0} max={25} step={1} unit="%" onChange={(value) => onParticleChange("finalFrameDelay", value)} />
+            <div className="sd-timing-subgroup">段落節奏｜Start 越小越早，Span 越大越拖長，Attach 越大越慢貼上</div>
+            <TimingControl label="HANDLE START" description="拍柄開始；變小更早出現" value={particle.handleStart} min={0} max={45} step={1} unit="%" onChange={(value) => onParticleChange("handleStart", value)} />
+            <TimingControl label="HANDLE SPAN" description="拍柄形成長度；變大較順但較慢" value={particle.handleSpan} min={5} max={55} step={1} unit="%" onChange={(value) => onParticleChange("handleSpan", value)} />
+            <TimingControl label="HANDLE ATTACH" description="拍柄吸附時間；變小更俐落" value={particle.handleDuration} min={5} max={45} step={1} unit="%" onChange={(value) => onParticleChange("handleDuration", value)} />
+            <TimingControl label="SHAFT START" description="中桿開始；變小可接近拍柄" value={particle.shaftStart} min={0} max={65} step={1} unit="%" onChange={(value) => onParticleChange("shaftStart", value)} />
+            <TimingControl label="SHAFT SPAN" description="中桿延伸時間；變大較連續" value={particle.shaftSpan} min={5} max={65} step={1} unit="%" onChange={(value) => onParticleChange("shaftSpan", value)} />
+            <TimingControl label="SHAFT ATTACH" description="中桿吸附時間；變大較柔" value={particle.shaftDuration} min={5} max={45} step={1} unit="%" onChange={(value) => onParticleChange("shaftDuration", value)} />
+            <TimingControl label="FRAME START" description="拍框開始；變小可減少中桿後空拍" value={particle.frameStart} min={10} max={80} step={1} unit="%" onChange={(value) => onParticleChange("frameStart", value)} />
+            <TimingControl label="FRAME SPAN" description="拍框繞一圈時間；變大較慢較順" value={particle.frameSpan} min={8} max={65} step={1} unit="%" onChange={(value) => onParticleChange("frameSpan", value)} />
+            <TimingControl label="FRAME ATTACH" description="拍框每顆貼上速度；變小線更銳利" value={particle.frameDuration} min={3} max={30} step={1} unit="%" onChange={(value) => onParticleChange("frameDuration", value)} />
+            <TimingControl label="STRING START" description="網面開始；必須大於拍框結束才不偷跑" value={particle.stringStart} min={55} max={96} step={1} unit="%" onChange={(value) => onParticleChange("stringStart", value)} />
+            <TimingControl label="STRING SPAN" description="網面編織時間；變大不會一坨進來" value={particle.stringSpan} min={4} max={32} step={1} unit="%" onChange={(value) => onParticleChange("stringSpan", value)} />
+            <TimingControl label="STRING ATTACH" description="網面貼上速度；變小一條條更明顯" value={particle.stringDuration} min={3} max={24} step={1} unit="%" onChange={(value) => onParticleChange("stringDuration", value)} />
+            <div className="sd-timing-subgroup">提前流線｜只讓粒子先在路上，不提前長到球拍上</div>
+            <TimingControl label="HANDLE LEAD" description="拍柄前導流線；變大較不突然" value={particle.handleLead} min={0} max={18} step={1} unit="%" onChange={(value) => onParticleChange("handleLead", value)} />
+            <TimingControl label="SHAFT LEAD" description="中桿前導流線；變大銜接較順" value={particle.shaftLead} min={0} max={18} step={1} unit="%" onChange={(value) => onParticleChange("shaftLead", value)} />
+            <TimingControl label="FRAME LEAD" description="拍框前導流線；變大拍框前會先有粒子流" value={particle.frameLead} min={0} max={18} step={1} unit="%" onChange={(value) => onParticleChange("frameLead", value)} />
+            <TimingControl label="STRING LEAD" description="網面前導流線；變大網面不會突然冒出" value={particle.stringLead} min={0} max={18} step={1} unit="%" onChange={(value) => onParticleChange("stringLead", value)} />
+            <TimingControl label="PRE FLOW ALPHA" description="前導流線亮度；太亮會像偷跑" value={particle.preFlowAlpha} min={0} max={100} step={2} unit="%" onChange={(value) => onParticleChange("preFlowAlpha", value)} />
+            <TimingControl label="PULSE" description="完成脈衝" value={particle.completionPulseDuration} min={100} max={1000} step={20} unit="ms" onChange={(value) => onParticleChange("completionPulseDuration", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onReplayParticles}>Replay complete formation</button></div>
+
+            <div className="sd-timing-subgroup">D. 粒子畫質</div>
+            <TimingControl label="NORMAL COUNT" description="一般粒子數" value={particle.normalParticleCount} min={700} max={1600} step={20} unit="" onChange={(value) => onParticleChange("normalParticleCount", value)} />
+            <TimingControl label="DEGRADED COUNT" description="降級粒子數" value={particle.degradedParticleCount} min={320} max={760} step={20} unit="" onChange={(value) => onParticleChange("degradedParticleCount", value)} />
+            <TimingControl label="CORE" description="核心大小" value={particle.particleCoreSize} min={45} max={140} step={5} unit="%" onChange={(value) => onParticleChange("particleCoreSize", value)} />
+            <TimingControl label="GLOW SIZE" description="外光大小" value={particle.glowSize} min={35} max={160} step={5} unit="%" onChange={(value) => onParticleChange("glowSize", value)} />
+            <TimingControl label="GLOW" description="外光強度" value={particle.glowStrength} min={0} max={150} step={5} unit="%" onChange={(value) => onParticleChange("glowStrength", value)} />
+            <TimingControl label="DRIFT" description="完成微漂移" value={particle.localDriftAmount} min={0} max={150} step={5} unit="%" onChange={(value) => onParticleChange("localDriftAmount", value)} />
+            <TimingControl label="IDLE SCAN" description="等待掃描速度" value={particle.idleScanSpeed} min={35} max={180} step={5} unit="%" onChange={(value) => onParticleChange("idleScanSpeed", value)} />
+          </TuningSection>
+
+          <TuningSection id="tutorial-step1" title="② 系統教學｜Step 1 選擇聚會" active={activeSection} onSelect={onSetSection}>
+            <div className="sd-timing-subgroup">教學氣泡</div>
+            <TimingControl label="BUBBLE WIDTH" description="氣泡寬度" value={tutorial.bubbleWidth} min={220} max={360} step={4} unit="px" onChange={(value) => onTutorialChange("bubbleWidth", value)} />
+            <TimingControl label="RADIUS" description="氣泡圓角" value={tutorial.bubbleRadius} min={10} max={28} step={1} unit="px" onChange={(value) => onTutorialChange("bubbleRadius", value)} />
+            <TimingControl label="PADDING" description="氣泡內距" value={tutorial.bubblePadding} min={10} max={24} step={1} unit="px" onChange={(value) => onTutorialChange("bubblePadding", value)} />
+            <TimingControl label="OFFSET X" description="氣泡水平偏移" value={tutorial.bubbleOffsetX} min={-240} max={240} step={5} unit="px" onChange={(value) => onTutorialChange("bubbleOffsetX", value)} />
+            <TimingControl label="OFFSET Y" description="氣泡垂直偏移" value={tutorial.bubbleOffsetY} min={-300} max={300} step={5} unit="px" onChange={(value) => onTutorialChange("bubbleOffsetY", value)} />
+            <TimingControl label="POINTER X" description="上緣小箭頭位置" value={tutorial.step1PointerX} min={0} max={100} step={1} unit="%" onChange={(value) => onTutorialChange("step1PointerX", value)} />
+            <TimingControl label="HEADING" description="標題字級" value={tutorial.headingSize} min={15} max={28} step={1} unit="px" onChange={(value) => onTutorialChange("headingSize", value)} />
+            <TimingControl label="TEXT" description="內文字級" value={tutorial.textSize} min={11} max={18} step={1} unit="px" onChange={(value) => onTutorialChange("textSize", value)} />
+
+            <div className="sd-timing-subgroup">Front Card Anchored Arrows｜位置</div>
+            <TimingControl label="UP ARROW X" description="上箭頭 X；前景卡寬度%" value={tutorial.upArrowXPercent} min={0} max={120} step={1} unit="%" onChange={(value) => onTutorialChange("upArrowXPercent", value)} />
+            <TimingControl label="UP ARROW Y" description="上箭頭 Y；前景卡高度%" value={tutorial.upArrowYPercent} min={-80} max={100} step={1} unit="%" onChange={(value) => onTutorialChange("upArrowYPercent", value)} />
+            <TimingControl label="DOWN ARROW X" description="下箭頭 X；前景卡寬度%" value={tutorial.downArrowXPercent} min={0} max={120} step={1} unit="%" onChange={(value) => onTutorialChange("downArrowXPercent", value)} />
+            <TimingControl label="DOWN ARROW Y" description="下箭頭 Y；前景卡高度%" value={tutorial.downArrowYPercent} min={-80} max={100} step={1} unit="%" onChange={(value) => onTutorialChange("downArrowYPercent", value)} />
+
+            <div className="sd-timing-subgroup">Front Card Anchored Arrows｜大小</div>
+            <TimingControl label="UP LENGTH" description="上箭頭長度；前景卡高度%" value={tutorial.upArrowLengthPercent} min={20} max={130} step={1} unit="%" onChange={(value) => onTutorialChange("upArrowLengthPercent", value)} />
+            <TimingControl label="DOWN LENGTH" description="下箭頭長度；前景卡高度%" value={tutorial.downArrowLengthPercent} min={20} max={130} step={1} unit="%" onChange={(value) => onTutorialChange("downArrowLengthPercent", value)} />
+            <TimingControl label="ARROW WIDTH" description="箭身寬度" value={tutorial.arrowWidth} min={2} max={10} step={1} unit="px" onChange={(value) => onTutorialChange("arrowWidth", value)} />
+            <TimingControl label="HEAD SIZE" description="箭頭大小" value={tutorial.arrowHeadSize} min={10} max={34} step={1} unit="px" onChange={(value) => onTutorialChange("arrowHeadSize", value)} />
+            <TimingControl label="ARROW GLOW" description="箭頭外光" value={tutorial.arrowGlow} min={0} max={140} step={5} unit="%" onChange={(value) => onTutorialChange("arrowGlow", value)} />
+            <TimingControl label="ARROW TRAIL" description="方向性尾光" value={tutorial.arrowTrail} min={0} max={140} step={5} unit="%" onChange={(value) => onTutorialChange("arrowTrail", value)} />
+
+            <div className="sd-timing-subgroup">箭頭 / 卡片同步示範</div>
+            <TimingControl label="START DELAY" description="Step 1 開始延遲" value={tutorial.step1StartDelay} min={0} max={2500} step={50} unit="ms" onChange={(value) => onTutorialChange("step1StartDelay", value)} />
+            <TimingControl label="DEMO COUNT" description="完整上→下 cycle 數" value={tutorial.demoCount} min={1} max={6} step={1} unit="" onChange={(value) => onTutorialChange("demoCount", value)} />
+            <TimingControl label="TRAVEL" description="卡片示範位移" value={tutorial.demoTravelDistance} min={20} max={120} step={2} unit="px" onChange={(value) => onTutorialChange("demoTravelDistance", value)} />
+            <TimingControl label="UP DURATION" description="上箭頭與上切換" value={tutorial.upDuration} min={250} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("upDuration", value)} />
+            <TimingControl label="UP HOLD" description="上行完成停留" value={tutorial.upEndHold} min={0} max={900} step={50} unit="ms" onChange={(value) => onTutorialChange("upEndHold", value)} />
+            <TimingControl label="DOWN DURATION" description="下箭頭與反向切換" value={tutorial.downDuration} min={250} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("downDuration", value)} />
+            <TimingControl label="DURATION" description="舊欄位相容；目前不主導箭頭" value={tutorial.singleDemoDuration} min={300} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("singleDemoDuration", value)} />
+            <TimingControl label="GAP" description="示範間隔" value={tutorial.gapBetweenDemos} min={0} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("gapBetweenDemos", value)} />
+            <TimingControl label="ENDING HOLD" description="Step 1 結束停留" value={tutorial.step1EndingHold} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("step1EndingHold", value)} />
+            <TimingControl label="AFTERIMAGE" description="切換殘影" value={tutorial.afterimageStrength} min={0} max={100} step={5} unit="%" onChange={(value) => onTutorialChange("afterimageStrength", value)} />
+            <TimingControl label="TRAIL" description="卡片動態尾跡" value={tutorial.motionTrailStrength} min={0} max={100} step={5} unit="%" onChange={(value) => onTutorialChange("motionTrailStrength", value)} />
+
+            <div className="sd-timing-subgroup">目標</div>
+            <ToggleControl label="TARGET GLOW" enabled={tutorial.targetGlowEnabled} onToggle={() => onTutorialToggle("targetGlowEnabled")} />
+            <TimingControl label="GLOW" description="目標高亮強度" value={tutorial.targetGlowStrength} min={0} max={120} step={5} unit="%" onChange={(value) => onTutorialChange("targetGlowStrength", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onJumpStep1}>Replay Step 1</button></div>
+          </TuningSection>
+
+          <TuningSection id="tutorial-transition" title="③ 系統教學｜Step 1 → Step 2 過場" active={activeSection} onSelect={onSetSection}>
+            <TimingControl label="STEP1 FADE" description="Step 1 淡出" value={tutorial.step1FadeDuration} min={100} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("step1FadeDuration", value)} />
+            <TimingControl label="WAIT" description="過場等待" value={tutorial.transitionWait} min={0} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("transitionWait", value)} />
+            <TimingControl label="SCROLL" description="自訂捲動時間" value={tutorial.autoScrollDuration} min={0} max={1800} step={50} unit="ms" onChange={(value) => onTutorialChange("autoScrollDuration", value)} />
+            <TimingControl label="TARGET Y" description="按鈕中心落點" value={tutorial.targetViewportYPercent} min={35} max={72} step={1} unit="%" onChange={(value) => onTutorialChange("targetViewportYPercent", value)} />
+            <TimingControl label="POST HOLD" description="捲動完成後停留" value={tutorial.postScrollHold} min={0} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("postScrollHold", value)} />
+            <TimingControl label="STEP2 FADE" description="Step 2 淡入" value={tutorial.step2FadeInDuration} min={100} max={1200} step={50} unit="ms" onChange={(value) => onTutorialChange("step2FadeInDuration", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onJumpStep2}>測試 Step1 → Step2 過場</button></div>
+          </TuningSection>
+
+          <TuningSection id="tutorial-step2" title="④ 系統教學｜Step 2 確認聚會" active={activeSection} onSelect={onSetSection}>
+            <div className="sd-timing-subgroup">氣泡</div>
+            <TimingControl label="BUBBLE WIDTH" description="Step 2 氣泡寬度" value={tutorial.step2BubbleWidth} min={220} max={360} step={4} unit="px" onChange={(value) => onTutorialChange("step2BubbleWidth", value)} />
+            <TimingControl label="OFFSET X" description="Step 2 水平偏移" value={tutorial.step2BubbleOffsetX} min={-240} max={240} step={5} unit="px" onChange={(value) => onTutorialChange("step2BubbleOffsetX", value)} />
+            <TimingControl label="OFFSET Y" description="Step 2 垂直偏移" value={tutorial.step2BubbleOffsetY} min={-300} max={300} step={5} unit="px" onChange={(value) => onTutorialChange("step2BubbleOffsetY", value)} />
+            <TimingControl label="POINTER X" description="上緣小箭頭位置" value={tutorial.step2PointerX} min={0} max={100} step={1} unit="%" onChange={(value) => onTutorialChange("step2PointerX", value)} />
+
+            <div className="sd-timing-subgroup">確認按鈕</div>
+            <TimingControl label="TEXT TIMING" description="文字停留" value={tutorial.step2TextTiming} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("step2TextTiming", value)} />
+            <TimingControl label="BORDER LOOP" description="外框流光週期" value={tutorial.borderFlowLoopDuration} min={500} max={2400} step={50} unit="ms" onChange={(value) => onTutorialChange("borderFlowLoopDuration", value)} />
+            <TimingControl label="LOOP COUNT" description="外框流光次數" value={tutorial.borderFlowLoopCount} min={1} max={5} step={1} unit="" onChange={(value) => onTutorialChange("borderFlowLoopCount", value)} />
+            <TimingControl label="BRIGHTNESS" description="流光亮度" value={tutorial.borderBrightness} min={20} max={120} step={5} unit="%" onChange={(value) => onTutorialChange("borderBrightness", value)} />
+            <TimingControl label="WIDTH" description="流光寬度" value={tutorial.borderWidth} min={1} max={5} step={1} unit="px" onChange={(value) => onTutorialChange("borderWidth", value)} />
+            <TimingControl label="GOLD" description="金色比例" value={tutorial.goldRatio} min={50} max={95} step={5} unit="%" onChange={(value) => onTutorialChange("goldRatio", value)} />
+            <TimingControl label="GREEN" description="綠色點綴比例" value={tutorial.greenAccentRatio} min={5} max={50} step={5} unit="%" onChange={(value) => onTutorialChange("greenAccentRatio", value)} />
+            <TimingControl label="GLOW" description="外光強度" value={tutorial.glowStrength} min={0} max={140} step={5} unit="%" onChange={(value) => onTutorialChange("glowStrength", value)} />
+
+            <div className="sd-timing-subgroup">開始使用</div>
+            <TimingControl label="START DELAY" description="開始使用出現延遲" value={tutorial.closeButtonDelay} min={0} max={1600} step={50} unit="ms" onChange={(value) => onTutorialChange("closeButtonDelay", value)} />
+            <TimingControl label="START WIDTH" description="開始使用寬度" value={tutorial.startButtonWidth} min={90} max={220} step={5} unit="px" onChange={(value) => onTutorialChange("startButtonWidth", value)} />
+            <TimingControl label="START HEIGHT" description="開始使用高度" value={tutorial.startButtonHeight} min={34} max={64} step={2} unit="px" onChange={(value) => onTutorialChange("startButtonHeight", value)} />
+            <TimingControl label="START OFFSET X" description="開始使用水平偏移" value={tutorial.startButtonOffsetX} min={-240} max={240} step={5} unit="px" onChange={(value) => onTutorialChange("startButtonOffsetX", value)} />
+            <TimingControl label="START OFFSET Y" description="開始使用垂直偏移" value={tutorial.startButtonOffsetY} min={-300} max={300} step={5} unit="px" onChange={(value) => onTutorialChange("startButtonOffsetY", value)} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onJumpStep2}>Replay Step 2</button></div>
+          </TuningSection>
+          <TuningSection id="countdown" title="⑤ 聚會選擇 / 倒數 / 自動進入" active={activeSection} onSelect={onSetSection}>
+            <TimingControl label="COUNTDOWN" description="倒數秒數（自動進入 Active 頁面）" value={countdown.seconds} min={5} max={15} step={1} unit="s" onChange={(value) => onCountdownChange("seconds", value)} />
+            <ToggleControl label="SHOW COUNTDOWN" enabled={countdown.showCountdown} onToggle={() => onCountdownToggle("showCountdown")} />
+            <ToggleControl label="AUTO ENTER" enabled={countdown.autoEnterAtZero} onToggle={() => onCountdownToggle("autoEnterAtZero")} />
+            <ToggleControl label="RESET ON CHANGE" enabled={countdown.resetOnMeetupChange} onToggle={() => onCountdownToggle("resetOnMeetupChange")} />
+            <ToggleControl label="SHOW SELECTED" enabled={countdown.showSelectedInfo} onToggle={() => onCountdownToggle("showSelectedInfo")} />
+            <div className="sd-timing-actions is-grid"><button type="button" onClick={onTestCountdown}>Test countdown</button></div>
+          </TuningSection>
+
+          <TuningSection id="visual" title="⑥ 教學遮罩 / 視覺" active={activeSection} onSelect={onSetSection}>
+            <ToggleControl label="INTERACTION BLOCKER" enabled={visual.interactionBlockerEnabled} onToggle={() => onVisualToggle("interactionBlockerEnabled")} />
+            <TimingControl label="OVERLAY" description="背景壓黑；預設 0" value={visual.overlayOpacity} min={0} max={40} step={2} unit="%" onChange={(value) => onVisualChange("overlayOpacity", value)} />
+            <TimingControl label="SPOTLIGHT" description="目標聚焦強度" value={visual.spotlightStrength} min={0} max={100} step={2} unit="%" onChange={(value) => onVisualChange("spotlightStrength", value)} />
+            <TimingControl label="SOFTNESS" description="聚焦柔邊" value={visual.spotlightSoftness} min={8} max={80} step={2} unit="px" onChange={(value) => onVisualChange("spotlightSoftness", value)} />
+            <ToggleControl label="SKIP VISIBLE" enabled={visual.skipVisible} onToggle={onToggleSkip} />
+          </TuningSection>
+          <TuningSection id="master" title="⑦ 測試 / 總控" active={activeSection} onSelect={onSetSection}>
+            <ToggleControl label="教學啟用" enabled={tutorial.enabled} onToggle={onToggleTutorial} />
+            <button type="button" className={`sd-timing-freeze ${freezeParticles ? "is-on" : ""}`} onClick={onToggleFreeze}>{freezeParticles ? "✓ 凍結完成粒子" : "凍結完成粒子"}</button>
+            <div className="sd-timing-summary"><span>OVERLAP</span><strong>{timing.particleHold + timing.particleFade} ms</strong></div>
+            <div className="sd-timing-actions is-grid">
+              <button type="button" className="is-primary" onClick={() => { onReplayParticles(); onReplayTutorial(); }}>完整重播：開場＋教學</button>
+              <button type="button" onClick={onReplayTutorial}>只重播教學</button>
+              <button type="button" onClick={onJumpStep1}>跳 Step 1</button>
+              <button type="button" onClick={onJumpStep2}>跳 Step 2</button>
+              <button type="button" onClick={onCloseTutorial}>關閉教學遮罩</button>
+              <button type="button" onClick={onClearSeen}>清除已看過教學</button>
+              <button type="button" onClick={onReplayHandoff}>只重播 Handoff</button>
+              <button type="button" onClick={onReset}>恢復預設值</button>
+              <button type="button" onClick={copyCurrentSettings}>複製目前設定</button>
+            </div>
+          </TuningSection>
+        </div>
+      ) : null}
+    </aside>
+  );
+}
+
+function TuningSection({
+  id,
+  title,
+  active,
+  onSelect,
+  children,
+}: {
+  id: TuningSectionId;
+  title: string;
+  active: TuningSectionId;
+  onSelect: (section: TuningSectionId) => void;
+  children: ReactNode;
+}) {
+  const expanded = active === id;
+  return (
+    <section className={`sd-tuning-section ${expanded ? "is-open" : ""}`}>
+      <button type="button" className="sd-tuning-section-head" onClick={() => onSelect(id)} aria-expanded={expanded}>
+        <span>{title}</span>
+        <i>{expanded ? "−" : "+"}</i>
+      </button>
+      {expanded ? <div className="sd-tuning-section-body">{children}</div> : null}
+    </section>
+  );
+}
+
+function TogglePositionControl({ value, onChange }: { value: ClosePosition; onChange: (value: ClosePosition) => void }) {
+  return (
+    <div className="sd-timing-toggle-row">
+      <span>CLOSE POSITION</span>
+      <button type="button" className={value === "top-left" ? "is-on" : ""} onClick={() => onChange(value === "top-left" ? "top-right" : "top-left")}>{value}</button>
+    </div>
+  );
+}
+function ToggleControl({ label, enabled, onToggle }: { label: string; enabled: boolean; onToggle: () => void }) {
+  return (
+    <div className="sd-timing-toggle-row">
+      <span>{label}</span>
+      <button type="button" className={enabled ? "is-on" : ""} onClick={onToggle}>{enabled ? "ON" : "OFF"}</button>
+    </div>
+  );
+}
+function TimingControl({
+  label,
+  description,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  onChange: (value: number) => void;
+}) {
+  const change = (next: number) => onChange(clampTiming(next, min, max, value));
+  return (
+    <div className="sd-timing-control">
+      <div className="sd-timing-control-copy">
+        <strong>{label}</strong>
+        <small>{description}</small>
+      </div>
+      <div className="sd-timing-control-inputs">
+        <button type="button" onClick={() => change(value - step)} aria-label={`${label} 減少`}>−</button>
+        <label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(event) => change(Number(event.target.value))}
+            aria-label={`${label} 數值`}
+          />
+          <span>{unit}</span>
+        </label>
+        <button type="button" onClick={() => change(value + step)} aria-label={`${label} 增加`}>＋</button>
+      </div>
+    </div>
+  );
+}
+
+function clampTiming(value: unknown, min: number, max: number, fallback: number) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(number)));
+}
+
+function easeScroll(value: number) {
+  const t = Math.max(0, Math.min(1, value));
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function animateScrollToElement(
+  element: HTMLElement,
+  durationMs: number,
+  targetViewportYPercent: number,
+  motionMode: MotionMode,
+) {
+  const rect = element.getBoundingClientRect();
+  const targetViewportY = window.innerHeight * (Math.max(20, Math.min(78, targetViewportYPercent)) / 100);
+  const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  const targetY = Math.max(0, Math.min(maxScroll, window.scrollY + rect.top + rect.height / 2 - targetViewportY));
+
+  if (motionMode === "reduced" || durationMs <= 0 || Math.abs(targetY - window.scrollY) < 2) {
+    window.scrollTo({ top: targetY, behavior: "auto" });
+    return Promise.resolve();
+  }
+
+  const startY = window.scrollY;
+  const delta = targetY - startY;
+  const startedAt = window.performance.now();
+
+  return new Promise<void>((resolve) => {
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / durationMs);
+      window.scrollTo(0, startY + delta * easeScroll(progress));
+      if (progress >= 1) {
+        window.scrollTo(0, targetY);
+        resolve();
+        return;
+      }
+      window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+  });
+}
+function normalizeHandoffTiming(value: Partial<HandoffTiming> | undefined): HandoffTiming {
+  const source = value || {};
+  return {
+    preHold: clampTiming(source.preHold, 0, 2000, DEFAULT_HANDOFF_TIMING.preHold),
+    realFade: clampTiming(source.realFade, 300, 2500, DEFAULT_HANDOFF_TIMING.realFade),
+    particleHold: clampTiming(source.particleHold, 0, 2500, DEFAULT_HANDOFF_TIMING.particleHold),
+    particleFade: clampTiming(source.particleFade, 200, 2500, DEFAULT_HANDOFF_TIMING.particleFade),
+    fadeBlur: clampTiming(source.fadeBlur, 0, 12, DEFAULT_HANDOFF_TIMING.fadeBlur),
+    revealDelay: clampTiming(source.revealDelay, 0, 1200, DEFAULT_HANDOFF_TIMING.revealDelay),
+    revealDuration: clampTiming(source.revealDuration, 300, 2500, DEFAULT_HANDOFF_TIMING.revealDuration),
+    revealFeather: clampTiming(source.revealFeather, 0, 48, DEFAULT_HANDOFF_TIMING.revealFeather),
+    tailBias: clampTiming(source.tailBias, 0, 100, DEFAULT_HANDOFF_TIMING.tailBias),
+    scanEnabled: typeof source.scanEnabled === "boolean" ? source.scanEnabled : DEFAULT_HANDOFF_TIMING.scanEnabled,
+    scanWidth: clampTiming(source.scanWidth, 2, 30, DEFAULT_HANDOFF_TIMING.scanWidth),
+    scanIntensity: clampTiming(source.scanIntensity, 0, 100, DEFAULT_HANDOFF_TIMING.scanIntensity),
+    scanSoftness: clampTiming(source.scanSoftness, 0, 20, DEFAULT_HANDOFF_TIMING.scanSoftness),
+  };
+}
+
+function normalizeParticleTuning(value: Partial<ParticleTuning> | undefined): ParticleTuning {
+  const source = value || {};
+  return {
+    sourceX: clampTiming(source.sourceX, -45, 20, DEFAULT_PARTICLE_TUNING.sourceX),
+    sourceY: clampTiming(source.sourceY, 0, 60, DEFAULT_PARTICLE_TUNING.sourceY),
+    entryAngle: clampTiming(source.entryAngle, -16, 26, DEFAULT_PARTICLE_TUNING.entryAngle),
+    streamCount: clampTiming(source.streamCount, 2, 3, DEFAULT_PARTICLE_TUNING.streamCount),
+    streamVerticalSpacing: clampTiming(source.streamVerticalSpacing, 8, 54, DEFAULT_PARTICLE_TUNING.streamVerticalSpacing),
+    curveAmplitude: clampTiming(source.curveAmplitude, 0, 44, DEFAULT_PARTICLE_TUNING.curveAmplitude),
+    interweaveAmount: clampTiming(source.interweaveAmount, 0, 44, DEFAULT_PARTICLE_TUNING.interweaveAmount),
+    convergencePosition: clampTiming(source.convergencePosition, 18, 58, DEFAULT_PARTICLE_TUNING.convergencePosition),
+    initialInflowSpeed: clampTiming(source.initialInflowSpeed, 45, 180, DEFAULT_PARTICLE_TUNING.initialInflowSpeed),
+    curvedDriftSpeed: clampTiming(source.curvedDriftSpeed, 40, 180, DEFAULT_PARTICLE_TUNING.curvedDriftSpeed),
+    approachDeceleration: clampTiming(source.approachDeceleration, 20, 160, DEFAULT_PARTICLE_TUNING.approachDeceleration),
+    attachmentSpeed: clampTiming(source.attachmentSpeed, 40, 180, DEFAULT_PARTICLE_TUNING.attachmentSpeed),
+    attractionStrength: clampTiming(source.attractionStrength, 20, 160, DEFAULT_PARTICLE_TUNING.attractionStrength),
+    supplyUntilFormation: clampTiming(source.supplyUntilFormation, 55, 100, DEFAULT_PARTICLE_TUNING.supplyUntilFormation),
+    trailLength: clampTiming(source.trailLength, 15, 160, DEFAULT_PARTICLE_TUNING.trailLength),
+    trailBrightness: clampTiming(source.trailBrightness, 0, 150, DEFAULT_PARTICLE_TUNING.trailBrightness),
+    totalFormationDuration: clampTiming(source.totalFormationDuration, 1800, 7200, DEFAULT_PARTICLE_TUNING.totalFormationDuration),
+    leftToRightSpeed: clampTiming(source.leftToRightSpeed, 45, 180, DEFAULT_PARTICLE_TUNING.leftToRightSpeed),
+    xTimingWeight: clampTiming(source.xTimingWeight, 20, 95, DEFAULT_PARTICLE_TUNING.xTimingWeight),
+    structureTimingWeight: clampTiming(source.structureTimingWeight, 0, 60, DEFAULT_PARTICLE_TUNING.structureTimingWeight),
+    timingJitter: clampTiming(source.timingJitter, 0, 50, DEFAULT_PARTICLE_TUNING.timingJitter),
+    finalFrameDelay: clampTiming(source.finalFrameDelay, 0, 25, DEFAULT_PARTICLE_TUNING.finalFrameDelay),
+    handleStart: clampTiming(source.handleStart, 0, 45, DEFAULT_PARTICLE_TUNING.handleStart),
+    handleSpan: clampTiming(source.handleSpan, 5, 55, DEFAULT_PARTICLE_TUNING.handleSpan),
+    handleDuration: clampTiming(source.handleDuration, 5, 45, DEFAULT_PARTICLE_TUNING.handleDuration),
+    shaftStart: clampTiming(source.shaftStart, 0, 65, DEFAULT_PARTICLE_TUNING.shaftStart),
+    shaftSpan: clampTiming(source.shaftSpan, 5, 65, DEFAULT_PARTICLE_TUNING.shaftSpan),
+    shaftDuration: clampTiming(source.shaftDuration, 5, 45, DEFAULT_PARTICLE_TUNING.shaftDuration),
+    frameStart: clampTiming(source.frameStart, 10, 80, DEFAULT_PARTICLE_TUNING.frameStart),
+    frameSpan: clampTiming(source.frameSpan, 8, 65, DEFAULT_PARTICLE_TUNING.frameSpan),
+    frameDuration: clampTiming(source.frameDuration, 3, 30, DEFAULT_PARTICLE_TUNING.frameDuration),
+    stringStart: clampTiming(source.stringStart, 55, 96, DEFAULT_PARTICLE_TUNING.stringStart),
+    stringSpan: clampTiming(source.stringSpan, 4, 32, DEFAULT_PARTICLE_TUNING.stringSpan),
+    stringDuration: clampTiming(source.stringDuration, 3, 24, DEFAULT_PARTICLE_TUNING.stringDuration),
+    handleLead: clampTiming(source.handleLead, 0, 18, DEFAULT_PARTICLE_TUNING.handleLead),
+    shaftLead: clampTiming(source.shaftLead, 0, 18, DEFAULT_PARTICLE_TUNING.shaftLead),
+    frameLead: clampTiming(source.frameLead, 0, 18, DEFAULT_PARTICLE_TUNING.frameLead),
+    stringLead: clampTiming(source.stringLead, 0, 18, DEFAULT_PARTICLE_TUNING.stringLead),
+    preFlowAlpha: clampTiming(source.preFlowAlpha, 0, 100, DEFAULT_PARTICLE_TUNING.preFlowAlpha),
+    completionPulseDuration: clampTiming(source.completionPulseDuration, 100, 1000, DEFAULT_PARTICLE_TUNING.completionPulseDuration),
+    normalParticleCount: clampTiming(source.normalParticleCount, 700, 1600, DEFAULT_PARTICLE_TUNING.normalParticleCount),
+    degradedParticleCount: clampTiming(source.degradedParticleCount, 320, 760, DEFAULT_PARTICLE_TUNING.degradedParticleCount),
+    particleCoreSize: clampTiming(source.particleCoreSize, 45, 140, DEFAULT_PARTICLE_TUNING.particleCoreSize),
+    glowSize: clampTiming(source.glowSize, 35, 160, DEFAULT_PARTICLE_TUNING.glowSize),
+    glowStrength: clampTiming(source.glowStrength, 0, 150, DEFAULT_PARTICLE_TUNING.glowStrength),
+    localDriftAmount: clampTiming(source.localDriftAmount, 0, 150, DEFAULT_PARTICLE_TUNING.localDriftAmount),
+    idleScanSpeed: clampTiming(source.idleScanSpeed, 35, 180, DEFAULT_PARTICLE_TUNING.idleScanSpeed),
+  };
+}
+
+function normalizeTutorialTuning(value: Partial<TutorialTuning> | undefined): TutorialTuning {
+  const source = value || {};
+  const closePosition = source.closePosition === "top-right" ? "top-right" : DEFAULT_TUTORIAL_TUNING.closePosition;
+  return {
+    enabled: typeof source.enabled === "boolean" ? source.enabled : DEFAULT_TUTORIAL_TUNING.enabled,
+    bubbleWidth: clampTiming(source.bubbleWidth, 220, 360, DEFAULT_TUTORIAL_TUNING.bubbleWidth),
+    bubbleRadius: clampTiming(source.bubbleRadius, 10, 28, DEFAULT_TUTORIAL_TUNING.bubbleRadius),
+    bubblePadding: clampTiming(source.bubblePadding, 10, 24, DEFAULT_TUTORIAL_TUNING.bubblePadding),
+    bubbleOffsetX: clampTiming(source.bubbleOffsetX, -240, 240, DEFAULT_TUTORIAL_TUNING.bubbleOffsetX),
+    bubbleOffsetY: clampTiming(source.bubbleOffsetY, -300, 300, DEFAULT_TUTORIAL_TUNING.bubbleOffsetY),
+    headingSize: clampTiming(source.headingSize, 15, 28, DEFAULT_TUTORIAL_TUNING.headingSize),
+    textSize: clampTiming(source.textSize, 11, 18, DEFAULT_TUTORIAL_TUNING.textSize),
+    step1PointerX: clampTiming(source.step1PointerX, 0, 100, DEFAULT_TUTORIAL_TUNING.step1PointerX),
+    step2PointerX: clampTiming(source.step2PointerX, 0, 100, DEFAULT_TUTORIAL_TUNING.step2PointerX),
+    step1StartDelay: clampTiming(source.step1StartDelay, 0, 2500, DEFAULT_TUTORIAL_TUNING.step1StartDelay),
+    demoCount: clampTiming(source.demoCount, 1, 6, DEFAULT_TUTORIAL_TUNING.demoCount),
+    demoTravelDistance: clampTiming(source.demoTravelDistance, 20, 120, DEFAULT_TUTORIAL_TUNING.demoTravelDistance),
+    singleDemoDuration: clampTiming(source.singleDemoDuration, 300, 1800, DEFAULT_TUTORIAL_TUNING.singleDemoDuration),
+    gapBetweenDemos: clampTiming(source.gapBetweenDemos, 0, 1200, DEFAULT_TUTORIAL_TUNING.gapBetweenDemos),
+    step1EndingHold: clampTiming(source.step1EndingHold, 0, 1600, DEFAULT_TUTORIAL_TUNING.step1EndingHold),
+    afterimageStrength: clampTiming(source.afterimageStrength, 0, 100, DEFAULT_TUTORIAL_TUNING.afterimageStrength),
+    motionTrailStrength: clampTiming(source.motionTrailStrength, 0, 100, DEFAULT_TUTORIAL_TUNING.motionTrailStrength),
+    upArrowXPercent: clampTiming(source.upArrowXPercent, 0, 120, DEFAULT_TUTORIAL_TUNING.upArrowXPercent),
+    upArrowYPercent: clampTiming(source.upArrowYPercent, -80, 100, DEFAULT_TUTORIAL_TUNING.upArrowYPercent),
+    downArrowXPercent: clampTiming(source.downArrowXPercent, 0, 120, DEFAULT_TUTORIAL_TUNING.downArrowXPercent),
+    downArrowYPercent: clampTiming(source.downArrowYPercent, -80, 100, DEFAULT_TUTORIAL_TUNING.downArrowYPercent),
+    upArrowLengthPercent: clampTiming(source.upArrowLengthPercent, 20, 130, DEFAULT_TUTORIAL_TUNING.upArrowLengthPercent),
+    downArrowLengthPercent: clampTiming(source.downArrowLengthPercent, 20, 130, DEFAULT_TUTORIAL_TUNING.downArrowLengthPercent),
+    arrowWidth: clampTiming(source.arrowWidth, 2, 10, DEFAULT_TUTORIAL_TUNING.arrowWidth),
+    arrowHeadSize: clampTiming(source.arrowHeadSize, 10, 34, DEFAULT_TUTORIAL_TUNING.arrowHeadSize),
+    arrowGlow: clampTiming(source.arrowGlow, 0, 140, DEFAULT_TUTORIAL_TUNING.arrowGlow),
+    arrowTrail: clampTiming(source.arrowTrail, 0, 140, DEFAULT_TUTORIAL_TUNING.arrowTrail),
+    upDuration: clampTiming(source.upDuration, 250, 1800, DEFAULT_TUTORIAL_TUNING.upDuration),
+    upEndHold: clampTiming(source.upEndHold, 0, 900, DEFAULT_TUTORIAL_TUNING.upEndHold),
+    downDuration: clampTiming(source.downDuration, 250, 1800, DEFAULT_TUTORIAL_TUNING.downDuration),
+    targetGlowEnabled: typeof source.targetGlowEnabled === "boolean" ? source.targetGlowEnabled : DEFAULT_TUTORIAL_TUNING.targetGlowEnabled,
+    targetGlowStrength: clampTiming(source.targetGlowStrength, 0, 120, DEFAULT_TUTORIAL_TUNING.targetGlowStrength),
+    step1FadeDuration: clampTiming(source.step1FadeDuration, 100, 1200, DEFAULT_TUTORIAL_TUNING.step1FadeDuration),
+    transitionWait: clampTiming(source.transitionWait, 0, 1200, DEFAULT_TUTORIAL_TUNING.transitionWait),
+    autoScrollDuration: clampTiming(source.autoScrollDuration, 0, 1800, DEFAULT_TUTORIAL_TUNING.autoScrollDuration),
+    targetViewportYPercent: clampTiming(source.targetViewportYPercent, 35, 72, DEFAULT_TUTORIAL_TUNING.targetViewportYPercent),
+    postScrollHold: clampTiming(source.postScrollHold, 0, 1200, DEFAULT_TUTORIAL_TUNING.postScrollHold),
+    step2FadeInDuration: clampTiming(source.step2FadeInDuration, 100, 1200, DEFAULT_TUTORIAL_TUNING.step2FadeInDuration),
+    step2TextTiming: clampTiming(source.step2TextTiming, 0, 1600, DEFAULT_TUTORIAL_TUNING.step2TextTiming),
+    step2BubbleWidth: clampTiming(source.step2BubbleWidth, 220, 360, DEFAULT_TUTORIAL_TUNING.step2BubbleWidth),
+    step2BubbleOffsetX: clampTiming(source.step2BubbleOffsetX, -240, 240, DEFAULT_TUTORIAL_TUNING.step2BubbleOffsetX),
+    step2BubbleOffsetY: clampTiming(source.step2BubbleOffsetY, -300, 300, DEFAULT_TUTORIAL_TUNING.step2BubbleOffsetY),
+    borderFlowLoopDuration: clampTiming(source.borderFlowLoopDuration, 500, 2400, DEFAULT_TUTORIAL_TUNING.borderFlowLoopDuration),
+    borderFlowLoopCount: clampTiming(source.borderFlowLoopCount, 1, 5, DEFAULT_TUTORIAL_TUNING.borderFlowLoopCount),
+    borderBrightness: clampTiming(source.borderBrightness, 20, 120, DEFAULT_TUTORIAL_TUNING.borderBrightness),
+    borderWidth: clampTiming(source.borderWidth, 1, 5, DEFAULT_TUTORIAL_TUNING.borderWidth),
+    goldRatio: clampTiming(source.goldRatio, 50, 95, DEFAULT_TUTORIAL_TUNING.goldRatio),
+    greenAccentRatio: clampTiming(source.greenAccentRatio, 5, 50, DEFAULT_TUTORIAL_TUNING.greenAccentRatio),
+    glowStrength: clampTiming(source.glowStrength, 0, 140, DEFAULT_TUTORIAL_TUNING.glowStrength),
+    closeButtonDelay: clampTiming(source.closeButtonDelay, 0, 1600, DEFAULT_TUTORIAL_TUNING.closeButtonDelay),
+    closePosition,
+    closeOffsetX: clampTiming(source.closeOffsetX, 0, 80, DEFAULT_TUTORIAL_TUNING.closeOffsetX),
+    closeOffsetY: clampTiming(source.closeOffsetY, 0, 80, DEFAULT_TUTORIAL_TUNING.closeOffsetY),
+    startButtonWidth: clampTiming(source.startButtonWidth, 90, 220, DEFAULT_TUTORIAL_TUNING.startButtonWidth),
+    startButtonHeight: clampTiming(source.startButtonHeight, 34, 64, DEFAULT_TUTORIAL_TUNING.startButtonHeight),
+    startButtonOffsetX: clampTiming(source.startButtonOffsetX, -240, 240, DEFAULT_TUTORIAL_TUNING.startButtonOffsetX),
+    startButtonOffsetY: clampTiming(source.startButtonOffsetY, -300, 300, DEFAULT_TUTORIAL_TUNING.startButtonOffsetY),
+  };
+}
+function normalizeCountdownTuning(value: Partial<CountdownTuning> | undefined): CountdownTuning {
+  const source = value || {};
+  return {
+    seconds: clampTiming(source.seconds, 5, 15, DEFAULT_COUNTDOWN_TUNING.seconds),
+    showCountdown: typeof source.showCountdown === "boolean" ? source.showCountdown : DEFAULT_COUNTDOWN_TUNING.showCountdown,
+    autoEnterAtZero: typeof source.autoEnterAtZero === "boolean" ? source.autoEnterAtZero : DEFAULT_COUNTDOWN_TUNING.autoEnterAtZero,
+    resetOnMeetupChange: typeof source.resetOnMeetupChange === "boolean" ? source.resetOnMeetupChange : DEFAULT_COUNTDOWN_TUNING.resetOnMeetupChange,
+    showSelectedInfo: typeof source.showSelectedInfo === "boolean" ? source.showSelectedInfo : DEFAULT_COUNTDOWN_TUNING.showSelectedInfo,
+  };
+}
+
+function normalizeVisualTuning(value: Partial<VisualTuning> | undefined): VisualTuning {
+  const source = value || {};
+  return {
+    interactionBlockerEnabled: typeof source.interactionBlockerEnabled === "boolean" ? source.interactionBlockerEnabled : DEFAULT_VISUAL_TUNING.interactionBlockerEnabled,
+    overlayOpacity: clampTiming(source.overlayOpacity, 0, 40, DEFAULT_VISUAL_TUNING.overlayOpacity),
+    spotlightStrength: clampTiming(source.spotlightStrength, 0, 100, DEFAULT_VISUAL_TUNING.spotlightStrength),
+    spotlightSoftness: clampTiming(source.spotlightSoftness, 8, 80, DEFAULT_VISUAL_TUNING.spotlightSoftness),
+    skipVisible: typeof source.skipVisible === "boolean" ? source.skipVisible : DEFAULT_VISUAL_TUNING.skipVisible,
+  };
+}
+
+function normalizeOpeningSunTuning(value: Partial<V8OpeningSunControls> | undefined): V8OpeningSunControls {
+  const source = value || {};
+  const normalizeMessage = (
+    message: Partial<V8OpeningSunControls["messages"]["date"]> | undefined,
+    fallback: V8OpeningSunControls["messages"]["date"],
+  ) => ({
+    show: typeof message?.show === "boolean" ? message.show : fallback.show,
+    x: clampTiming(message?.x, -20, 120, fallback.x),
+    y: clampTiming(message?.y, -20, 120, fallback.y),
+    fontSize: clampTiming(message?.fontSize, 4, 48, fallback.fontSize),
+    opacity: clampTiming(message?.opacity, 0, 100, fallback.opacity),
+    width: clampTiming(message?.width, 10, 140, fallback.width),
+    height: clampTiming(message?.height, 4, 80, fallback.height),
+  });
+  const normalizeArrow = (
+    arrow: Partial<V8OpeningSunControls["switchArrows"]["prev"]> | undefined,
+    fallback: V8OpeningSunControls["switchArrows"]["prev"],
+  ) => ({
+    x: clampTiming(arrow?.x, -30, 130, fallback.x),
+    y: clampTiming(arrow?.y, -30, 130, fallback.y),
+    scale: clampTiming(arrow?.scale, 0.3, 3, fallback.scale),
+    rotation: clampTiming(arrow?.rotation, -180, 180, fallback.rotation),
+    opacity: clampTiming(arrow?.opacity, 0, 100, fallback.opacity),
+    zIndex: clampTiming(arrow?.zIndex, 0, 40, fallback.zIndex),
+  });
+  return {
+    safeBox: {
+      width: clampTiming(source.safeBox?.width, 20, 120, v8OpeningSunDefaults.safeBox.width),
+      height: clampTiming(source.safeBox?.height, 20, 120, v8OpeningSunDefaults.safeBox.height),
+      showHelperBox: typeof source.safeBox?.showHelperBox === "boolean" ? source.safeBox.showHelperBox : v8OpeningSunDefaults.safeBox.showHelperBox,
+    },
+    messages: {
+      date: normalizeMessage(source.messages?.date, v8OpeningSunDefaults.messages.date),
+      name: normalizeMessage(source.messages?.name, v8OpeningSunDefaults.messages.name),
+      time: normalizeMessage(source.messages?.time, v8OpeningSunDefaults.messages.time),
+      note: normalizeMessage(source.messages?.note, v8OpeningSunDefaults.messages.note),
+    },
+    switchArrows: {
+      show: typeof source.switchArrows?.show === "boolean" ? source.switchArrows.show : v8OpeningSunDefaults.switchArrows.show,
+      prev: normalizeArrow(source.switchArrows?.prev, v8OpeningSunDefaults.switchArrows.prev),
+      next: normalizeArrow(source.switchArrows?.next, v8OpeningSunDefaults.switchArrows.next),
+    },
+  };
+}
+function RacketImage({ src, className = "" }: { src: string; className?: string }) {
+  return <img className={className} src={src} alt="" aria-hidden="true" draggable={false} />;
+}
+
+function TutorialOverlay({
+  step,
+  tuning,
+  visual,
+  spotlightRect,
+  frontCardRect,
+  arrowPhase,
+  closeVisible,
+  startCountdown,
+  motionMode,
+  onSkip,
+  onStart,
+}: {
+  step: TutorialStep;
+  tuning: TutorialTuning;
+  visual: VisualTuning;
+  spotlightRect: { top: number; left: number; width: number; height: number };
+  frontCardRect: { top: number; left: number; width: number; height: number };
+  arrowPhase: TutorialArrowPhase;
+  closeVisible: boolean;
+  startCountdown: number | null;
+  motionMode: MotionMode;
+  onSkip: () => void;
+  onStart: () => void;
+}) {
+  const isStep1 = step === "step1";
+  const isStep2 = step === "step2";
+  const isTransition = step === "transition";
+  const isStart = isStep2 && closeVisible;
+  const bubbleStyle = getTutorialBubbleStyle(step, tuning, spotlightRect, frontCardRect);
+
+  return (
+    <div className={`sd-tutorial-overlay is-${step} motion-${motionMode}`} role="dialog" aria-modal="true" aria-label="系統教學">
+      {visual.interactionBlockerEnabled ? (
+        <TutorialBlockers allowTarget={isStep2} spotlightRect={spotlightRect} />
+      ) : null}
+      <span
+        className="sd-tutorial-spotlight"
+        data-enabled={tuning.targetGlowEnabled ? "true" : "false"}
+        style={
+          {
+            "--spot-top": `${spotlightRect.top}px`,
+            "--spot-left": `${spotlightRect.left}px`,
+            "--spot-width": `${spotlightRect.width}px`,
+            "--spot-height": `${spotlightRect.height}px`,
+            "--spot-glow": `${tuning.targetGlowStrength / 100}`,
+          } as CSSProperties
+        }
+      />
+      {visual.skipVisible ? (
+        <button type="button" className="sd-tutorial-skip" onClick={onSkip}>Skip</button>
+      ) : null}
+      {isStep1 ? (
+        <TutorialSwipeArrows tuning={tuning} frontCardRect={frontCardRect} phase={arrowPhase} />
+      ) : null}
+      {!isTransition ? (
+        <button
+          type="button"
+          className={`sd-tutorial-callout is-${isStart ? "start" : isStep2 ? "step2" : "step1"}`}
+          style={bubbleStyle}
+          onClick={isStart ? onStart : undefined}
+          aria-disabled={isStart ? undefined : true}
+          tabIndex={isStart ? 0 : -1}
+        >
+          <span>
+            {isStart ? (
+              <>
+                開始使用
+                <small>{startCountdown ?? 3} 秒後自動進入</small>
+              </>
+            ) : isStep2 ? (
+              <>
+                2. 點選進入
+                <br />
+                報名頁面
+              </>
+            ) : (
+              "1. 撥動選擇"
+            )}
+          </span>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function TutorialSwipeArrows({
+  tuning,
+  frontCardRect,
+  phase,
+}: {
+  tuning: TutorialTuning;
+  frontCardRect: { top: number; left: number; width: number; height: number };
+  phase: TutorialArrowPhase;
+}) {
+  if (!frontCardRect.width || !frontCardRect.height) return null;
+  const upStyle = getCardAnchoredArrowStyle(frontCardRect, tuning.upArrowXPercent, tuning.upArrowYPercent, tuning.upArrowLengthPercent, tuning, "up");
+  const downStyle = getCardAnchoredArrowStyle(frontCardRect, tuning.downArrowXPercent, tuning.downArrowYPercent, tuning.downArrowLengthPercent, tuning, "down");
+  return (
+    <div className={`sd-tutorial-arrows is-${phase || "idle"}`} aria-hidden="true">
+      <span className={`sd-tutorial-arrow is-up ${phase === "up" ? "is-active" : ""}`} style={upStyle}>
+        <i />
+      </span>
+      <span className={`sd-tutorial-arrow is-down ${phase === "down" ? "is-active" : ""}`} style={downStyle}>
+        <i />
+      </span>
+    </div>
+  );
+}
+
+function TutorialBlockers({
+  allowTarget,
+  spotlightRect,
+}: {
+  allowTarget: boolean;
+  spotlightRect: { top: number; left: number; width: number; height: number };
+}) {
+  if (!allowTarget) return <span className="sd-tutorial-blocker is-full" />;
+  const pad = 10;
+  const top = Math.max(0, spotlightRect.top - pad);
+  const left = Math.max(0, spotlightRect.left - pad);
+  const right = Math.max(0, window.innerWidth - spotlightRect.left - spotlightRect.width - pad);
+  const bottom = Math.max(0, window.innerHeight - spotlightRect.top - spotlightRect.height - pad);
+  const width = spotlightRect.width + pad * 2;
+  const height = spotlightRect.height + pad * 2;
+  return (
+    <>
+      <span className="sd-tutorial-blocker" style={{ top: 0, left: 0, right: 0, height: top }} />
+      <span className="sd-tutorial-blocker" style={{ top: top + height, left: 0, right: 0, bottom: 0 }} />
+      <span className="sd-tutorial-blocker" style={{ top, left: 0, width: left, height }} />
+      <span className="sd-tutorial-blocker" style={{ top, right: 0, width: right, height }} />
+    </>
+  );
+}
+
+function getTutorialBubbleStyle(
+  step: TutorialStep,
+  tuning: TutorialTuning,
+  spotlightRect: { top: number; left: number; width: number; height: number },
+  frontCardRect: { top: number; left: number; width: number; height: number },
+) {
+  const isStep2 = step === "step2";
+  const pointerX = isStep2 ? tuning.step2PointerX : tuning.step1PointerX;
+  const shared = getSharedTutorialCalloutRect(
+    frontCardRect,
+    spotlightRect,
+    tuning.bubbleOffsetX,
+    tuning.bubbleOffsetY,
+  );
+  return {
+    width: `${shared.width}px`,
+    top: `${shared.top}px`,
+    left: `${shared.left}px`,
+    "--bubble-radius": `${tuning.bubbleRadius}px`,
+    "--bubble-padding": `${tuning.bubblePadding}px`,
+    "--bubble-pointer-x": `${pointerX}%`,
+  } as CSSProperties;
+}
+
+function getTutorialStartStyle(
+  tuning: TutorialTuning,
+  frontCardRect: { top: number; left: number; width: number; height: number },
+  spotlightRect: { top: number; left: number; width: number; height: number },
+) {
+  const shared = getSharedTutorialCalloutRect(
+    frontCardRect,
+    spotlightRect,
+    tuning.bubbleOffsetX,
+    tuning.bubbleOffsetY,
+  );
+  const height = Math.max(tuning.startButtonHeight, 52);
+  return {
+    width: `${shared.width}px`,
+    height: `${height}px`,
+    left: `${shared.left}px`,
+    top: `${shared.top}px`,
+  } as CSSProperties;
+}
+
+function getSharedTutorialCalloutRect(
+  frontCardRect: { top: number; left: number; width: number; height: number },
+  fallbackRect: { top: number; left: number; width: number; height: number },
+  offsetX = 0,
+  offsetY = 0,
+) {
+  const viewportWidth = typeof window === "undefined" ? 390 : window.innerWidth;
+  const viewportHeight = typeof window === "undefined" ? 760 : window.innerHeight;
+  const anchor = frontCardRect.width ? frontCardRect : fallbackRect;
+  const width = Math.max(104, anchor.width * 0.38);
+  const left = anchor.left + anchor.width * 0.6 + offsetX;
+  const top = anchor.top + anchor.height * 0.58 + offsetY;
+  return {
+    width,
+    left: Math.max(12, Math.min(viewportWidth - width - 12, left)),
+    top: Math.max(58, Math.min(viewportHeight - 72, top)),
+  };
+}
+
+function getCardAnchoredArrowStyle(
+  rect: { top: number; left: number; width: number; height: number },
+  xPercent: number,
+  yPercent: number,
+  lengthPercent: number,
+  tuning: TutorialTuning,
+  direction: "up" | "down",
+) {
+  const length = Math.max(26, rect.height * (lengthPercent / 100));
+  const x = rect.left + rect.width * (xPercent / 100);
+  const y = rect.top + rect.height * (yPercent / 100);
+  return {
+    left: `${x}px`,
+    top: `${y}px`,
+    height: `${length}px`,
+    "--arrow-width": `${tuning.arrowWidth}px`,
+    "--arrow-head": `${tuning.arrowHeadSize}px`,
+    "--arrow-glow": `${tuning.arrowGlow / 100}`,
+    "--arrow-trail": `${tuning.arrowTrail / 100}`,
+    "--arrow-duration": `${direction === "up" ? tuning.upDuration : tuning.downDuration}ms`,
+  } as CSSProperties;
+}function formatPreviewEventLabel(event: AlphaEvent | null | undefined) {
+  if (!event) return "聚會";
+  return `${shortEventDate(event.eventDate)} ${event.name}`.trim();
+}
+function shortEventDate(value: string) {
+  const [, month = "", day = ""] = String(value || "").split("-");
+  const monthNumber = Number(month);
+  const dayNumber = Number(day);
+  return monthNumber > 0 && dayNumber > 0 ? `${monthNumber}/${dayNumber}` : value;
+}
+
+function FloatingAnnotations({
+  event,
+  titleRef,
+  onOpenMeetupPicker,
+}: {
+  event: AlphaEvent | null;
+  titleRef: RefObject<HTMLElement | null>;
+  onOpenMeetupPicker: () => void;
+}) {
+  if (!event) return null;
+  const note = event.eventNote?.trim() || "—";
+
+  return (
+    <div className="sd-annotations" aria-label="聚會資訊">
+      <div className="sd-annotation a-name">
+        <button
+          ref={titleRef as RefObject<HTMLButtonElement | null>}
+          className="sd-event-name sd-event-switch"
+          type="button"
+          onClick={onOpenMeetupPicker}
+          aria-label={`切換聚會，目前為 ${event.name}`}
+        >
+          {shortEventDate(event.eventDate)} {event.name}
+        </button>
+        <small className="sd-event-note">{note}</small>
+      </div>
+      <Annotation className="a-fee" label="費用" value={`$${Number(event.tempFee || 0)}`} />
+      <Annotation className="a-ball" label="用球" value={event.ballType || "依現場公告"} />
+      <Annotation
+        className="a-cap"
+        label="上限"
+        value={`${Number(event.maxPeople || 0)} 人`}
+      />
+    </div>
+  );
+}
+
+function Annotation({
+  className,
+  label,
+  value,
+}: {
+  className: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className={`sd-annotation ${className}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  tone,
+  center = false,
+}: {
+  label: string;
+  value: number;
+  tone: "green" | "gold" | "neutral";
+  center?: boolean;
+}) {
+  return (
+    <div className={`sd-metric ${center ? "is-center" : ""}`}>
+      <span>{label}</span>
+      <strong className={`tone-${tone}`}>{value}</strong>
+      <i />
+    </div>
+  );
+}
+
+function HomepageStyles() {
+  return (
+    <style>{`
+      .sd-page {
+        --gold: #d8b95e;
+        --green: #9df416;
+        min-height: 100svh;
+        overflow-x: clip;
+        color: #f7f6ef;
+        background:
+          radial-gradient(90% 58% at 74% 14%, rgba(216,185,94,.08), transparent 56%),
+          radial-gradient(70% 44% at 50% 102%, rgba(157,244,22,.055), transparent 62%),
+          linear-gradient(180deg, #11151a 0%, #080b0f 62%, #05070a 100%);
+      }
+
+      .sd-page::before,
+      .sd-page::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .sd-page::before {
+        z-index: 0;
+        opacity: .50;
+        background-image:
+          linear-gradient(128deg, transparent 0 35%, rgba(216,185,94,.16) 35.2% 35.48%, transparent 35.76%),
+          linear-gradient(133deg, transparent 0 64%, rgba(255,255,255,.075) 64.1% 64.27%, transparent 64.55%),
+          repeating-linear-gradient(135deg, rgba(255,255,255,.040) 0 1px, transparent 1px 13px),
+          repeating-linear-gradient(45deg, transparent 0 17px, rgba(216,185,94,.030) 17px 18px);
+      }
+
+      .sd-page::after {
+        z-index: 1;
+        background:
+          radial-gradient(100% 80% at 50% 40%, transparent 42%, rgba(0,0,0,.72) 100%),
+          linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.46));
+      }
+
+      .sd-header,
+      .sd-hero,
+      .sd-roster,
+      .sd-notice,
+      .sd-sheet-layer {
+        position: relative;
+        z-index: 2;
+      }
+
+      .sd-header {
+        min-height: 72px;
+        display: grid;
+        place-items: center;
+        padding: calc(env(safe-area-inset-top) + 14px) 16px 0;
+      }
+
+      .sd-header p {
+        margin: 0;
+        color: rgba(216,185,94,.76);
+        font: 600 11px/1.2 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .48em;
+      }
+
+      .sd-timing-lab {
+        position: fixed;
+        z-index: 65;
+        left: 8px;
+        bottom: calc(env(safe-area-inset-bottom) + 8px);
+        width: min(226px, calc(100vw - 18px));
+        border: 1px solid rgba(216,185,94,.30);
+        border-radius: 16px;
+        background: rgba(5,8,11,.93);
+        color: rgba(255,255,255,.90);
+        box-shadow: 0 18px 42px rgba(0,0,0,.42);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        overflow: hidden;
+      }
+
+      .sd-timing-lab:not(.is-expanded) {
+        width: 26px;
+        height: 26px;
+        border-color: rgba(216,185,94,.16);
+        border-radius: 50%;
+        background: rgba(5,8,11,.20);
+        box-shadow: none;
+        opacity: .34;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+
+      .sd-timing-lab:not(.is-expanded):hover,
+      .sd-timing-lab:not(.is-expanded):focus-within {
+        border-color: rgba(216,185,94,.34);
+        opacity: .72;
+      }
+
+      .sd-timing-lab:not(.is-expanded) .sd-timing-lab-head {
+        min-height: 24px;
+        padding: 0;
+        display: grid;
+        place-items: center;
+      }
+
+      .sd-timing-lab:not(.is-expanded) .sd-timing-lab-head > span {
+        display: none;
+      }
+
+      .sd-timing-lab-head {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 9px 8px 11px;
+      }
+
+      .sd-timing-lab-head > span {
+        display: grid;
+        gap: 3px;
+        min-width: 0;
+      }
+
+      .sd-timing-lab-head strong {
+        color: var(--gold);
+        font: 700 10px/1 "Chakra Petch", monospace;
+        letter-spacing: .12em;
+      }
+
+      .sd-timing-lab-head small {
+        color: rgba(157,244,22,.70);
+        font: 700 9px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-timing-lab-head button,
+      .sd-timing-actions button,
+      .sd-timing-freeze {
+        border: 1px solid rgba(216,185,94,.24);
+        border-radius: 999px;
+        background: rgba(255,255,255,.035);
+        color: rgba(247,246,239,.82);
+      }
+
+      .sd-timing-lab-head button {
+        min-width: 48px;
+        min-height: 30px;
+        padding: 0 9px;
+        font-size: 10px;
+      }
+
+      .sd-timing-lab-toggle span {
+        display: inline-block;
+      }
+
+      .sd-timing-lab:not(.is-expanded) .sd-timing-lab-toggle {
+        width: 24px;
+        min-width: 24px;
+        height: 24px;
+        min-height: 24px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: rgba(216,185,94,.72);
+        font-size: 13px;
+        line-height: 1;
+      }
+
+      .sd-timing-lab-body {
+        max-height: min(62svh, 520px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 0 9px 9px;
+        border-top: 1px solid rgba(255,255,255,.06);
+      }
+
+      .sd-timing-control {
+        display: grid;
+        gap: 6px;
+        padding: 8px 1px;
+        border-bottom: 1px solid rgba(255,255,255,.055);
+      }
+
+      .sd-timing-control-copy {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .sd-timing-control-copy strong {
+        color: rgba(216,185,94,.86);
+        font: 700 9.5px/1 "Chakra Petch", monospace;
+        letter-spacing: .06em;
+        white-space: nowrap;
+      }
+
+      .sd-timing-control-copy small {
+        min-width: 0;
+        color: rgba(255,255,255,.46);
+        font-size: 9px;
+        line-height: 1.2;
+        text-align: right;
+      }
+
+      .sd-timing-control-inputs {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) 34px;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .sd-timing-control-inputs > button {
+        height: 32px;
+        border: 1px solid rgba(255,255,255,.13);
+        border-radius: 9px;
+        background: rgba(255,255,255,.04);
+        color: #fff;
+        font-size: 17px;
+        line-height: 1;
+      }
+
+      .sd-timing-control-inputs label {
+        position: relative;
+        display: block;
+      }
+
+      .sd-timing-control-inputs input {
+        width: 100%;
+        height: 32px;
+        border: 1px solid rgba(216,185,94,.24);
+        border-radius: 9px;
+        background: rgba(0,0,0,.34);
+        color: #fff;
+        padding: 0 29px 0 8px;
+        text-align: right;
+        font: 700 12px/1 "Chakra Petch", monospace;
+        outline: none;
+      }
+
+      .sd-timing-control-inputs label span {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255,255,255,.34);
+        font-size: 9px;
+        pointer-events: none;
+      }
+
+      .sd-timing-scan-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 9px 2px 2px;
+      }
+
+      .sd-timing-scan-head span {
+        color: rgba(216,185,94,.72);
+        font: 700 9px/1 "Chakra Petch", monospace;
+        letter-spacing: .12em;
+      }
+
+      .sd-timing-scan-head button {
+        min-width: 44px;
+        min-height: 27px;
+        border: 1px solid rgba(216,185,94,.24);
+        border-radius: 999px;
+        background: rgba(255,255,255,.035);
+        color: rgba(255,255,255,.52);
+        font: 700 9px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-timing-scan-head button.is-on {
+        border-color: rgba(157,244,22,.42);
+        color: var(--green);
+        background: rgba(157,244,22,.055);
+      }
+
+      .sd-timing-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 9px 2px 6px;
+      }
+
+      .sd-timing-summary span {
+        color: rgba(255,255,255,.42);
+        font: 700 9px/1 "Chakra Petch", monospace;
+        letter-spacing: .12em;
+      }
+
+      .sd-timing-summary strong {
+        color: rgba(157,244,22,.84);
+        font: 700 11px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-timing-freeze {
+        width: 100%;
+        min-height: 34px;
+        margin: 1px 0 7px;
+        font-size: 11px;
+      }
+
+      .sd-timing-freeze.is-on {
+        border-color: rgba(157,244,22,.48);
+        color: var(--green);
+        background: rgba(157,244,22,.055);
+      }
+
+      .sd-timing-actions {
+        display: grid;
+        grid-template-columns: 1fr .78fr;
+        gap: 6px;
+      }
+
+      .sd-timing-actions button {
+        min-height: 38px;
+        padding: 0 8px;
+        font-size: 10px;
+      }
+
+      .sd-timing-actions button.is-primary {
+        border-color: rgba(157,244,22,.46);
+        color: #101607;
+        background: linear-gradient(180deg, #b8ff18, #83cb08);
+        font-weight: 800;
+      }
+
+      .sd-tuning-section {
+        border-bottom: 1px solid rgba(255,255,255,.055);
+      }
+
+      .sd-tuning-section-head {
+        width: 100%;
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border: 0;
+        background: transparent;
+        color: rgba(247,246,239,.82);
+        padding: 0 2px;
+        text-align: left;
+        font: 800 10px/1.2 "Noto Sans TC", sans-serif;
+      }
+
+      .sd-tuning-section-head i {
+        color: rgba(157,244,22,.74);
+        font-style: normal;
+      }
+
+      .sd-tuning-section.is-open .sd-tuning-section-head span {
+        color: rgba(216,185,94,.92);
+      }
+
+      .sd-tuning-section-body {
+        padding: 0 0 9px;
+      }
+
+      .sd-timing-subgroup {
+        margin: 8px 0 2px;
+        color: rgba(157,244,22,.70);
+        font: 800 9px/1.1 "Noto Sans TC", sans-serif;
+        letter-spacing: .06em;
+      }
+
+      .sd-timing-toggle-row {
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border-bottom: 1px solid rgba(255,255,255,.055);
+        color: rgba(216,185,94,.78);
+        font: 800 9.5px/1 "Chakra Petch", monospace;
+        letter-spacing: .06em;
+      }
+
+      .sd-timing-toggle-row button {
+        min-width: 48px;
+        min-height: 27px;
+        border: 1px solid rgba(216,185,94,.24);
+        border-radius: 999px;
+        background: rgba(255,255,255,.035);
+        color: rgba(255,255,255,.52);
+        font: 800 9px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-timing-toggle-row button.is-on {
+        border-color: rgba(157,244,22,.42);
+        color: var(--green);
+        background: rgba(157,244,22,.055);
+      }
+
+      .sd-timing-actions.is-grid {
+        grid-template-columns: 1fr 1fr;
+        margin-top: 8px;
+      }
+
+      .sd-timing-actions.is-grid button:only-child {
+        grid-column: 1 / -1;
+      }
+
+      .sd-tutorial-overlay {
+        position: fixed;
+        z-index: 72;
+        inset: 0;
+        pointer-events: none;
+        background: rgba(0,0,0,var(--sd-tutorial-overlay, 0));
+      }
+
+      .sd-tutorial-blocker {
+        position: fixed;
+        z-index: 1;
+        pointer-events: auto;
+        background: transparent;
+      }
+
+      .sd-tutorial-blocker.is-full {
+        inset: 0;
+      }
+
+      .sd-tutorial-spotlight {
+        position: fixed;
+        z-index: 2;
+        top: calc(var(--spot-top, 0px) - 10px);
+        left: calc(var(--spot-left, 0px) - 10px);
+        width: calc(var(--spot-width, 0px) + 20px);
+        height: calc(var(--spot-height, 0px) + 20px);
+        border-radius: 24px;
+        pointer-events: none;
+        opacity: calc(var(--sd-tutorial-spotlight, .72) * var(--spot-glow, .68));
+        box-shadow:
+          0 0 var(--sd-tutorial-softness, 34px) rgba(157,244,22,.24),
+          inset 0 0 0 1px rgba(157,244,22,.34);
+      }
+
+      .sd-tutorial-spotlight[data-enabled="false"] {
+        opacity: 0;
+      }
+
+      .sd-tutorial-skip {
+        position: fixed;
+        z-index: 5;
+        pointer-events: auto;
+        top: calc(env(safe-area-inset-top) + 12px);
+        right: 16px;
+        border: 1px solid rgba(157,244,22,.30);
+        border-radius: 999px;
+        background: rgba(235,239,229,.82);
+        color: rgba(13,20,14,.86);
+        padding: 8px 13px;
+        font: 900 12px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        box-shadow: 0 0 16px rgba(157,244,22,.12);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+
+      .sd-tutorial-callout {
+        position: fixed;
+        z-index: 4;
+        pointer-events: none;
+        display: grid;
+        place-items: center;
+        gap: 3px;
+        min-height: 42px;
+        padding: var(--bubble-padding, 15px);
+        border: 1.25px solid rgba(97,198,58,.78);
+        border-radius: var(--bubble-radius, 22px);
+        background: linear-gradient(180deg, rgba(244,248,240,.90), rgba(218,229,213,.78));
+        color: rgba(10,18,12,.92);
+        appearance: none;
+        box-shadow: 0 0 22px rgba(157,244,22,.22), 0 10px 26px rgba(0,0,0,.16);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        animation: tutorial-callout-in var(--sd-step2-fade, 300ms) ease both;
+      }
+
+      .sd-tutorial-callout.is-start {
+        pointer-events: auto;
+        cursor: pointer;
+      }
+
+      .sd-tutorial-callout::before {
+        content: "";
+        position: absolute;
+        top: -8px;
+        left: var(--bubble-pointer-x, 52%);
+        width: 15px;
+        height: 15px;
+        border-left: 1.25px solid rgba(97,198,58,.78);
+        border-top: 1.25px solid rgba(97,198,58,.78);
+        background: rgba(238,246,232,.88);
+        transform: translateX(-50%) rotate(45deg);
+        border-radius: 4px 0 0 0;
+      }
+
+      .sd-tutorial-callout.is-step2::before {
+        top: auto;
+        bottom: -8px;
+        border-top: 0;
+        border-left: 0;
+        border-right: 1.25px solid rgba(97,198,58,.78);
+        border-bottom: 1.25px solid rgba(97,198,58,.78);
+        border-radius: 0 0 4px 0;
+      }
+
+      .sd-tutorial-callout.is-start::before {
+        display: none;
+      }
+
+      .sd-tutorial-callout span {
+        position: relative;
+        z-index: 1;
+        display: block;
+        text-align: center;
+        font: 950 var(--sd-tutorial-heading, 19px)/1.18 "Noto Sans TC", sans-serif;
+        letter-spacing: .03em;
+      }
+
+      .sd-tutorial-callout small {
+        display: block;
+        margin-top: 4px;
+        font: 850 10px/1 "Noto Sans TC", sans-serif;
+        color: rgba(10,18,12,.72);
+      }
+
+      @keyframes tutorial-callout-in {
+        from { opacity: 0; transform: translateY(8px) scale(.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      .sd-tutorial-arrows {
+        position: fixed;
+        z-index: 4;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .sd-tutorial-arrow {
+        position: fixed;
+        width: calc(var(--arrow-head, 18px) * 1.8);
+        transform: translateX(-50%);
+        opacity: .72;
+        filter: drop-shadow(0 0 calc(16px * var(--arrow-glow, .8)) rgba(157,244,22,.46));
+      }
+
+      .sd-tutorial-arrow::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: var(--arrow-width, 4px);
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(157,244,22,.96), rgba(79,207,44,.82));
+        box-shadow: 0 0 10px rgba(157,244,22,calc(.50 * var(--arrow-glow, .8)));
+        transform: translateX(-50%);
+      }
+
+      .sd-tutorial-arrow::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: var(--arrow-head, 18px);
+        height: var(--arrow-head, 18px);
+        border-top: var(--arrow-width, 4px) solid rgba(246,250,241,.96);
+        border-left: var(--arrow-width, 4px) solid rgba(157,244,22,.96);
+        filter: drop-shadow(0 0 8px rgba(157,244,22,calc(.55 * var(--arrow-glow, .8))));
+      }
+
+      .sd-tutorial-arrow i {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .sd-tutorial-arrow i::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: calc(var(--arrow-width, 4px) * 2.8);
+        height: 36%;
+        border-radius: 999px;
+        background: linear-gradient(180deg, transparent, rgba(255,255,255,calc(.62 * var(--arrow-trail, .76))), rgba(157,244,22,calc(.78 * var(--arrow-trail, .76))), transparent);
+        transform: translateX(-50%);
+        opacity: 0;
+      }
+
+      .sd-tutorial-arrow.is-up::after {
+        top: 0;
+        transform: translate(-50%, -15%) rotate(45deg);
+      }
+
+      .sd-tutorial-arrow.is-down::after {
+        bottom: 0;
+        transform: translate(-50%, 15%) rotate(225deg);
+      }
+
+      .sd-tutorial-arrow.is-active {
+        opacity: 1;
+      }
+
+      .sd-tutorial-arrow.is-up.is-active {
+        animation: tutorial-arrow-up var(--arrow-duration, 820ms) ease-in-out both;
+      }
+
+      .sd-tutorial-arrow.is-down.is-active {
+        animation: tutorial-arrow-down var(--arrow-duration, 820ms) ease-in-out both;
+      }
+
+      .sd-tutorial-arrow.is-up.is-active i::before {
+        animation: tutorial-arrow-trail-up var(--arrow-duration, 820ms) ease-in-out both;
+      }
+
+      .sd-tutorial-arrow.is-down.is-active i::before {
+        animation: tutorial-arrow-trail-down var(--arrow-duration, 820ms) ease-in-out both;
+      }
+
+      @keyframes tutorial-arrow-up {
+        0% { transform: translate(-50%, 18px); opacity: .35; }
+        18%, 78% { opacity: 1; }
+        100% { transform: translate(-50%, -18px); opacity: .72; }
+      }
+
+      @keyframes tutorial-arrow-down {
+        0% { transform: translate(-50%, -16px); opacity: .35; }
+        18%, 78% { opacity: 1; }
+        100% { transform: translate(-50%, 16px); opacity: .72; }
+      }
+
+      @keyframes tutorial-arrow-trail-up {
+        0% { top: 72%; opacity: 0; }
+        18% { opacity: .85; }
+        100% { top: -8%; opacity: 0; }
+      }
+
+      @keyframes tutorial-arrow-trail-down {
+        0% { top: -8%; opacity: 0; }
+        18% { opacity: .85; }
+        100% { top: 72%; opacity: 0; }
+      }
+
+      .sd-hero-ticket-stack-wrap.is-tutorial-target {
+        filter: drop-shadow(0 0 calc(18px * var(--spot-glow, .68)) rgba(157,244,22,.18));
+      }
+
+      .sd-hero-ticket-stack-wrap.is-tutorial-demoing::after {
+        content: "";
+        position: absolute;
+        inset: 46px 16px 22px;
+        border-radius: 22px;
+        pointer-events: none;
+        background:
+          linear-gradient(180deg, rgba(216,185,94,calc(.13 * var(--sd-demo-trail, .28))), transparent 44%),
+          radial-gradient(70% 32% at 50% 18%, rgba(157,244,22,calc(.18 * var(--sd-demo-afterimage, .34))), transparent 68%);
+        animation: tutorial-ticket-trail .52s ease-out 1;
+      }
+
+      @keyframes tutorial-ticket-trail {
+        0% { opacity: 0; transform: translateY(calc(-1 * var(--sd-demo-travel, 54px))); }
+        35% { opacity: 1; }
+        100% { opacity: 0; transform: translateY(var(--sd-demo-travel, 54px)); }
+      }
+
+      .sd-hero-picker-footer > button.is-tutorial-focus {
+        position: relative;
+        z-index: 73;
+        overflow: hidden;
+        box-shadow:
+          0 0 calc(22px * var(--sd-border-glow, .7)) rgba(157,244,22,.22),
+          0 0 calc(26px * var(--sd-border-glow, .7)) rgba(216,185,94,.20),
+          inset 0 0 0 var(--sd-border-width, 2px) rgba(216,185,94,calc(.55 * var(--sd-border-brightness, .7)));
+      }
+
+      .sd-hero-picker-footer > button.is-tutorial-focus::after {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        border-radius: inherit;
+        pointer-events: none;
+        background: conic-gradient(
+          from 0deg,
+          transparent 0 56%,
+          rgba(216,185,94,calc(.92 * var(--sd-border-brightness, .7))) 61%,
+          rgba(216,185,94,calc(.88 * var(--sd-border-brightness, .7))) 68%,
+          rgba(157,244,22,calc(.78 * var(--sd-border-brightness, .7))) 73%,
+          transparent 78% 100%
+        );
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        padding: var(--sd-border-width, 2px);
+        animation: tutorial-border-flow var(--sd-border-loop, 1200ms) linear var(--sd-border-loops, 2);
+      }
+
+      @keyframes tutorial-border-flow {
+        to { transform: rotate(1turn); }
+      }      .sd-particles {
+        position: fixed;
+        z-index: 3;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        transition:
+          opacity var(--sd-particle-fade, 1100ms) ease,
+          filter var(--sd-particle-fade, 1100ms) ease;
+      }
+
+      .is-materializing .sd-particles {
+        opacity: 1;
+        filter: none;
+      }
+
+      .is-meetup-preview .sd-particles,
+      .is-rotating-to-active .sd-particles,
+      .is-active .sd-particles {
+        opacity: 0;
+        filter: blur(var(--sd-fade-blur, 0px));
+      }
+
+      .sd-particles.is-handoff-source-hidden,
+      .is-handoff-replaying .sd-particles {
+        opacity: 0 !important;
+      }
+
+      .sd-particle-handoff {
+        position: fixed;
+        z-index: 3;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        filter: none;
+        pointer-events: none;
+        transition:
+          opacity var(--sd-particle-fade, 1100ms) ease,
+          filter var(--sd-particle-fade, 1100ms) ease;
+      }
+
+      .sd-particle-handoff.is-visible,
+      .sd-particle-handoff.is-replay-visible {
+        opacity: 1;
+      }
+
+      .sd-particle-handoff.is-visible.is-fading,
+      .sd-particle-handoff.is-replay-visible.is-replay-fading {
+        opacity: 0;
+        filter: blur(var(--sd-fade-blur, 0px));
+        -webkit-mask-image: linear-gradient(
+          90deg,
+          rgba(0,0,0,.16) 0%,
+          rgba(0,0,0,.58) calc(100% - var(--sd-tail-bias, 65%)),
+          #000 100%
+        );
+        mask-image: linear-gradient(
+          90deg,
+          rgba(0,0,0,.16) 0%,
+          rgba(0,0,0,.58) calc(100% - var(--sd-tail-bias, 65%)),
+          #000 100%
+        );
+      }
+
+      .sd-particle-handoff.is-replay-visible {
+        z-index: 19;
+      }
+
+      .sd-particle-handoff.is-drifting,
+      .sd-particle-handoff.is-replay-drifting {
+        animation: handoff-snapshot-drift 2.4s ease-in-out infinite;
+      }
+
+      .sd-hero {
+        width: min(100%, 560px);
+        min-height: max(610px, calc(100svh - 72px));
+        margin: 0 auto;
+        isolation: isolate;
+      }
+
+      /*
+       * Preview racket is sized from the same 54vw-ish long-axis target as the
+       * particle assembly. 85.5deg maps the source image's vertical long axis
+       * to the particle target angle (-4.5deg). The active state then uses one
+       * continuous translate + rotate + scale transform instead of a top jump.
+       */
+      .sd-racket-wrap {
+        position: absolute;
+        z-index: 4;
+        left: 50%;
+        top: var(--sd-particle-match-top, 46px);
+        width: clamp(205px, 54vw, 232px);
+        aspect-ratio: 971 / 1619;
+        opacity: 0;
+        transform: translate3d(-50%, 0, 0) rotate(85.5deg) scale(.90);
+        transform-origin: 50% 52%;
+        transition:
+          opacity var(--sd-real-fade, 1200ms) ease,
+          transform 1.35s cubic-bezier(.2,.9,.2,1);
+        will-change: transform, opacity;
+      }
+
+      .sd-racket-wrap.is-materialized {
+        opacity: 1;
+        transform:
+          translate3d(
+            calc(-50% + var(--sd-handoff-x, 0px)),
+            var(--sd-handoff-y, 0px),
+            0
+          )
+          rotate(85.5deg)
+          scale(.94);
+      }
+
+      .sd-racket-reveal {
+        position: absolute;
+        z-index: 2;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 0;
+        overflow: visible;
+        pointer-events: none;
+      }
+
+      .sd-racket-reveal-clip {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .is-materializing .sd-racket-reveal,
+      .is-handoff-replay-materializing .sd-racket-reveal,
+      .is-handoff-replay-fading .sd-racket-reveal {
+        animation: racket-handle-to-head var(--sd-reveal-duration, 1050ms) linear var(--sd-reveal-delay, 150ms) both;
+      }
+
+      .is-materializing .sd-racket-reveal-clip,
+      .is-handoff-replay-materializing .sd-racket-reveal-clip,
+      .is-handoff-replay-fading .sd-racket-reveal-clip {
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          #000 var(--sd-reveal-feather, 18px),
+          #000 100%
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          transparent 0,
+          #000 var(--sd-reveal-feather, 18px),
+          #000 100%
+        );
+      }
+
+      .is-meetup-preview .sd-racket-reveal,
+      .is-rotating-to-active .sd-racket-reveal,
+      .is-active .sd-racket-reveal {
+        height: 100%;
+      }
+
+      .sd-racket-scan-line {
+        position: absolute;
+        z-index: 5;
+        left: 7%;
+        right: 7%;
+        top: 0;
+        height: var(--sd-scan-width, 10px);
+        transform: translateY(-50%);
+        opacity: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(216,185,94,.42) 22%,
+          rgba(247,239,199,.96) 49%,
+          rgba(157,244,22,.72) 62%,
+          transparent 100%
+        );
+        filter: blur(var(--sd-scan-softness, 5px));
+        box-shadow:
+          0 0 10px rgba(216,185,94,.26),
+          0 0 16px rgba(157,244,22,.12);
+        pointer-events: none;
+      }
+
+      .is-materializing .sd-racket-scan-line,
+      .is-handoff-replay-materializing .sd-racket-scan-line,
+      .is-handoff-replay-fading .sd-racket-scan-line {
+        animation: racket-scan-edge var(--sd-reveal-duration, 1050ms) linear var(--sd-reveal-delay, 150ms) both;
+      }
+
+      .is-meetup-preview .sd-racket-scan-line,
+      .is-rotating-to-active .sd-racket-scan-line,
+      .is-active .sd-racket-scan-line {
+        opacity: 0;
+      }
+
+      .is-handoff-replay-materializing .sd-racket-scan-line,
+      .is-handoff-replay-fading .sd-racket-scan-line {
+        animation: racket-scan-edge var(--sd-reveal-duration, 1050ms) linear var(--sd-reveal-delay, 150ms) both;
+      }
+
+      .is-rotating-to-active .sd-racket-wrap,
+      .is-active .sd-racket-wrap {
+        top: 40px;
+        transform: translate3d(-39%, 74px, 0) rotate(18deg) scale(1.50);
+      }
+
+      .is-meetup-preview .sd-racket-wrap { z-index: 9; }
+
+      .is-handoff-replaying .sd-racket-wrap {
+        z-index: 20 !important;
+        top: var(--sd-particle-match-top, 46px) !important;
+        transform:
+          translate3d(
+            calc(-50% + var(--sd-handoff-x, 0px)),
+            var(--sd-handoff-y, 0px),
+            0
+          )
+          rotate(85.5deg)
+          scale(.94) !important;
+      }
+
+      .is-handoff-replay-prehold .sd-racket-wrap {
+        opacity: 0 !important;
+        transition: none !important;
+      }
+
+      .is-handoff-replay-prehold .sd-racket-reveal {
+        height: 0 !important;
+        animation: none !important;
+      }
+
+      .is-handoff-replay-materializing .sd-racket-wrap,
+      .is-handoff-replay-fading .sd-racket-wrap {
+        opacity: 1 !important;
+        transition: opacity var(--sd-real-fade, 1200ms) ease !important;
+      }
+
+      .is-handoff-replaying .sd-racket-main { animation: none !important; }
+      .is-handoff-replaying .sd-racket-shadow { display: none !important; }
+
+      .sd-racket-face-anchor {
+        position: absolute;
+        z-index: 1;
+        left: 50%;
+        top: 26%;
+        width: 2px;
+        height: 2px;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+      }
+
+      .sd-racket-main-switch {
+        position: absolute;
+        z-index: 8;
+        left: 7%;
+        right: 7%;
+        top: 1%;
+        height: 45%;
+        border: 0;
+        border-radius: 48%;
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .sd-racket-main,
+      .sd-racket-shadow img {
+        position: absolute;
+        width: 100%;
+        object-fit: contain;
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+
+      .sd-racket-shadow img {
+        inset: 0;
+        height: 100%;
+      }
+
+      .sd-racket-reveal-clip .sd-racket-main {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        height: auto;
+      }
+
+      .sd-racket-main {
+        filter:
+          drop-shadow(0 22px 38px rgba(0,0,0,.54))
+          drop-shadow(0 0 16px rgba(216,185,94,.12));
+        animation: racket-breathe 5.6s ease-in-out infinite;
+      }
+
+      .is-materializing .sd-racket-main {
+        animation: none;
+      }
+
+      .sd-racket-shadow {
+        --shadow-x: -10px;
+        --shadow-y: 7px;
+        --shadow-angle: -.7deg;
+        --shadow-scale: 1.004;
+        --shadow-blur: 1.8px;
+        --shadow-brightness: .70;
+        --shadow-sepia: .34;
+        --shadow-drift-x: 2px;
+        --shadow-drift-y: -7px;
+        --shadow-sway: -.25deg;
+        --shadow-duration: 5.9s;
+        position: absolute;
+        inset: 0;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        opacity: 0;
+        transform:
+          translate(var(--shadow-x), var(--shadow-y))
+          rotate(var(--shadow-angle))
+          scale(var(--shadow-scale));
+        transform-origin: 50% 52%;
+        filter:
+          blur(var(--shadow-blur))
+          brightness(var(--shadow-brightness))
+          sepia(var(--shadow-sepia));
+        pointer-events: none;
+        will-change: translate, rotate, opacity;
+      }
+
+      .sd-shadow-1 {
+        --shadow-x: -10px;
+        --shadow-y: 7px;
+        --shadow-angle: -.7deg;
+        --shadow-scale: 1.004;
+        --shadow-blur: 1.8px;
+        --shadow-brightness: .70;
+        --shadow-sepia: .34;
+        --shadow-drift-x: 2px;
+        --shadow-drift-y: -7px;
+        --shadow-sway: -.25deg;
+        --shadow-duration: 5.9s;
+      }
+
+      .sd-shadow-2 {
+        --shadow-x: 24px;
+        --shadow-y: 16px;
+        --shadow-angle: -2.7deg;
+        --shadow-scale: 1.016;
+        --shadow-blur: 3.1px;
+        --shadow-brightness: .56;
+        --shadow-sepia: .27;
+        --shadow-drift-x: 4px;
+        --shadow-drift-y: 10px;
+        --shadow-sway: -.55deg;
+        --shadow-duration: 6.8s;
+      }
+
+      .sd-shadow-3 {
+        --shadow-x: -36px;
+        --shadow-y: 8px;
+        --shadow-angle: 1.35deg;
+        --shadow-scale: 1.010;
+        --shadow-blur: 4.4px;
+        --shadow-brightness: .47;
+        --shadow-sepia: .18;
+        --shadow-drift-x: -2px;
+        --shadow-drift-y: -11px;
+        --shadow-sway: .70deg;
+        --shadow-duration: 7.7s;
+      }
+
+      .sd-shadow-4 {
+        --shadow-x: -54px;
+        --shadow-y: 32px;
+        --shadow-angle: -5.1deg;
+        --shadow-scale: 1.028;
+        --shadow-blur: 6.1px;
+        --shadow-brightness: .38;
+        --shadow-sepia: .12;
+        --shadow-drift-x: 5px;
+        --shadow-drift-y: 8px;
+        --shadow-sway: -.82deg;
+        --shadow-duration: 8.9s;
+      }
+
+      .is-rotating-to-active .sd-racket-shadow,
+      .is-active .sd-racket-shadow {
+        pointer-events: auto;
+        animation: shadow-breathe var(--shadow-duration) ease-in-out infinite;
+      }
+
+      .is-rotating-to-active .sd-shadow-1,
+      .is-active .sd-shadow-1 { opacity: .25; transition: opacity .35s ease .16s; }
+      .is-rotating-to-active .sd-shadow-2,
+      .is-active .sd-shadow-2 { opacity: .17; transition: opacity .35s ease .31s; animation-delay: -1.2s; }
+      .is-rotating-to-active .sd-shadow-3,
+      .is-active .sd-shadow-3 { opacity: .105; transition: opacity .35s ease .49s; animation-delay: -2.6s; }
+      .is-rotating-to-active .sd-shadow-4,
+      .is-active .sd-shadow-4 { opacity: .06; transition: opacity .35s ease .68s; animation-delay: -4.1s; }
+
+      .sd-preview-system-title {
+        position: absolute;
+        z-index: 8;
+        top: 12px;
+        left: 18px;
+        right: 18px;
+        display: grid;
+        justify-items: center;
+        gap: 7px;
+        color: var(--gold);
+        text-align: center;
+        pointer-events: none;
+        animation: preview-system-title-in .48s cubic-bezier(.2,.82,.18,1) both;
+      }
+
+      .sd-preview-system-title strong {
+        color: rgba(239,205,111,.96);
+        font: 700 clamp(22px, 6vw, 28px)/1.08 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .16em;
+        text-indent: .16em;
+        text-shadow:
+          0 2px 16px rgba(0,0,0,.38),
+          0 0 16px rgba(216,185,94,.08);
+      }
+
+      .sd-preview-system-title span {
+        display: grid;
+        grid-template-columns: 28px auto 28px;
+        gap: 9px;
+        align-items: center;
+        color: rgba(216,185,94,.48);
+        font: 650 8.5px/1 "Chakra Petch", sans-serif;
+        letter-spacing: .24em;
+        text-indent: .24em;
+        white-space: nowrap;
+      }
+
+      .sd-preview-system-title i {
+        display: block;
+        width: 28px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(216,185,94,.42));
+      }
+
+      .sd-preview-system-title i:last-child {
+        transform: scaleX(-1);
+      }
+
+      .sd-preview-system-title.is-leaving {
+        animation: preview-system-title-out .22s ease both;
+      }
+
+      .sd-hero-meetup-picker {
+        position: absolute;
+        z-index: 8;
+        left: 12px;
+        right: 12px;
+        top: 154px;
+        color: #fff;
+        animation: hero-ticket-in .48s cubic-bezier(.2,.82,.18,1) both;
+      }
+
+      .sd-hero-ticket-stack-wrap {
+        position: relative;
+        height: 314px;
+      }
+
+      .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero {
+        position: relative;
+      }
+
+      .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero.has-1 { top: 112px; }
+      .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero.has-2 { top: 54px; }
+      .sd-hero-ticket-stack-wrap .sd-ticket-stack-hero.has-3 { top: 0; }
+
+      .sd-hero-no-events {
+        height: 100%;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        color: rgba(247,246,239,.72);
+        font-size: 14px;
+        letter-spacing: .08em;
+        text-align: center;
+      }
+
+      .sd-hero-picker-footer {
+        position: relative;
+        z-index: 7;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 132px;
+        gap: 9px 12px;
+        align-items: center;
+        margin: 12px 6px 0;
+        padding: 11px 11px 10px;
+        border-top: 1px solid rgba(216,185,94,.14);
+        background: linear-gradient(180deg, rgba(5,8,11,.20), rgba(5,8,11,.58));
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      .sd-hero-picker-footer > span,
+      .sd-selected-meetup {
+        min-width: 0;
+        overflow: hidden;
+        display: grid;
+        gap: 3px;
+        color: rgba(255,255,255,.54);
+        font-size: 11px;
+      }
+
+      .sd-selected-meetup > span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .sd-hero-picker-footer > span strong,
+      .sd-selected-meetup strong {
+        color: rgba(247,246,239,.94);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .sd-selected-meetup small {
+        color: rgba(157,244,22,.70);
+        font: 800 11px/1 "Chakra Petch", monospace;
+        letter-spacing: .06em;
+      }
+      .sd-hero-picker-footer > button {
+        min-height: 46px;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #b8ff18, #83cb08);
+        color: #101607;
+        font-weight: 850;
+        font-size: 14px;
+        box-shadow: 0 0 24px rgba(157,244,22,.18);
+      }
+
+      .sd-hero-picker-footer > button:disabled {
+        opacity: .45;
+      }
+
+
+      .sd-annotations {
+        position: absolute;
+        z-index: 7;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+        animation: fade-in .55s ease .45s forwards;
+      }
+
+      .sd-annotation {
+        position: absolute;
+        width: min(43vw, 190px);
+        color: rgba(255,255,255,.86);
+        font-size: 11.5px;
+      }
+
+      .sd-annotation::before {
+        content: "";
+        position: absolute;
+        top: 19px;
+        width: 64px;
+        height: 1px;
+        background: linear-gradient(90deg, rgba(216,185,94,.8), transparent);
+      }
+
+      .sd-annotation span {
+        display: block;
+        color: rgba(216,185,94,.74);
+        letter-spacing: .18em;
+      }
+
+      .sd-annotation strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 15px;
+        font-weight: 550;
+        line-height: 1.42;
+      }
+
+      .a-name {
+        left: 18px;
+        top: 18px;
+        width: min(58vw, 238px);
+      }
+
+      .a-name::before {
+        top: 31px;
+        width: 92px;
+      }
+
+      .a-name .sd-event-name {
+        color: var(--gold);
+        font: 600 21px/1.28 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .08em;
+      }
+
+      .sd-event-switch {
+        display: block;
+        appearance: none;
+        -webkit-appearance: none;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        text-align: left;
+        pointer-events: auto;
+        cursor: pointer;
+      }
+
+      .a-name .sd-event-note {
+        display: block;
+        margin-top: 8px;
+        color: rgba(255,255,255,.62);
+        font-size: 12px;
+        line-height: 1.48;
+        letter-spacing: .03em;
+      }
+
+      .a-fee {
+        left: 18px;
+        top: 176px;
+      }
+
+      /* 用球 / 上限放到拍面左側的空白區，不再靠右。 */
+      .a-ball {
+        left: 22px;
+        top: 78px;
+        text-align: left;
+      }
+
+      .a-cap {
+        left: 30px;
+        top: 128px;
+        text-align: left;
+      }
+
+      .a-ball::before,
+      .a-cap::before,
+      .a-fee::before { left: 0; }
+
+      .a-fee strong { font-size: 17px; }
+
+      .sd-racket-switch-bubble {
+        position: absolute;
+        z-index: 14;
+        top: 84px;
+        left: 148px;
+        right: auto;
+        min-height: 30px;
+        border: 1px solid rgba(216,185,94,.38);
+        border-radius: 12px;
+        background: rgba(6,9,12,.72);
+        color: rgba(239,205,111,.94);
+        padding: 5px 10px 6px;
+        font: 650 11px/1.1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .08em;
+        box-shadow: 0 8px 22px rgba(0,0,0,.28), 0 0 14px rgba(216,185,94,.08);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        opacity: 0;
+        cursor: pointer;
+        animation: racket-switch-bubble-cycle 6s ease-in-out .8s infinite both;
+      }
+
+      .sd-racket-switch-bubble::after {
+        content: "";
+        position: absolute;
+        left: auto;
+        right: -4px;
+        bottom: 7px;
+        width: 8px;
+        height: 8px;
+        border-top: 1px solid rgba(216,185,94,.38);
+        border-right: 1px solid rgba(216,185,94,.38);
+        background: rgba(6,9,12,.72);
+        transform: rotate(45deg);
+      }
+
+      .sd-racket-tap-bubble {
+        position: absolute;
+        z-index: 14;
+        top: 48px;
+        right: 44px;
+        min-height: 29px;
+        border: 1px solid rgba(216,185,94,.34);
+        border-radius: 11px;
+        background: rgba(6,9,12,.70);
+        color: rgba(239,205,111,.92);
+        padding: 5px 9px 6px;
+        font: 650 10.5px/1.1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: .10em;
+        box-shadow: 0 8px 20px rgba(0,0,0,.24), 0 0 12px rgba(216,185,94,.07);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        opacity: 0;
+        cursor: pointer;
+        animation: racket-tap-bubble-cycle 6s ease-in-out .8s infinite both;
+      }
+
+      .sd-racket-tap-bubble::after {
+        content: "";
+        position: absolute;
+        left: 11px;
+        bottom: -4px;
+        width: 8px;
+        height: 8px;
+        border-right: 1px solid rgba(216,185,94,.34);
+        border-bottom: 1px solid rgba(216,185,94,.34);
+        background: rgba(6,9,12,.70);
+        transform: rotate(45deg);
+      }
+
+      .sd-metrics {
+        position: absolute;
+        z-index: 9;
+        left: 16px;
+        right: 16px;
+        top: 238px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        align-items: center;
+      }
+
+      .sd-metric {
+        text-align: center;
+        padding: 8px 4px;
+      }
+
+      .sd-metric.is-center {
+        border-radius: 999px;
+        background:
+          radial-gradient(70% 100% at 50% 50%, rgba(4,7,10,.38), transparent 76%),
+          rgba(4,7,10,.14);
+        filter: drop-shadow(0 10px 20px rgba(0,0,0,.28));
+      }
+
+      .sd-metric span {
+        display: block;
+        margin-bottom: 2px;
+        color: rgba(255,255,255,.62);
+        font-size: 11px;
+        letter-spacing: .12em;
+      }
+
+      .sd-metric strong {
+        display: block;
+        font: 700 clamp(34px, 10vw, 48px)/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+      }
+
+      .tone-green { color: var(--green); }
+      .tone-gold { color: #f0bd5c; }
+      .tone-neutral { color: rgba(255,255,255,.86); }
+
+      .sd-metric i {
+        display: block;
+        width: 34px;
+        height: 2px;
+        margin: 7px auto 0;
+        background: currentColor;
+        opacity: .7;
+      }
+
+      .sd-actions {
+        position: absolute;
+        z-index: 10;
+        left: 16px;
+        right: 16px;
+        top: 330px;
+        display: grid;
+        grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
+        gap: clamp(32px, 8.5vw, 48px);
+      }
+
+      .sd-actions::before {
+        content: "";
+        position: absolute;
+        left: 47%;
+        top: -16px;
+        width: 1px;
+        height: 194px;
+        transform: rotate(18deg);
+        background: linear-gradient(180deg, transparent, rgba(216,185,94,.38), transparent);
+      }
+
+      .sd-action-zone {
+        min-width: 0;
+        display: grid;
+        gap: 10px;
+        align-content: start;
+      }
+
+      .sd-action-zone h2 {
+        margin: 0 0 2px;
+        font-size: 16px;
+        letter-spacing: .18em;
+        text-align: center;
+      }
+
+      .sd-season h2 { color: var(--gold); }
+      .sd-casual h2 { color: var(--green); }
+
+      .sd-action-zone button,
+      .sd-action-zone input {
+        width: 100%;
+        height: 46px;
+        min-height: 46px;
+        border-radius: 999px;
+        font-size: 15px;
+      }
+
+      .sd-action-zone button {
+        border: 1px solid rgba(216,185,94,.62);
+        background: rgba(5,8,11,.34);
+        color: var(--gold);
+      }
+
+      .sd-casual input {
+        border: 1px solid rgba(255,255,255,.22);
+        background: rgba(5,8,11,.42);
+        color: #fff;
+        padding: 0 14px;
+        text-align: center;
+        outline: none;
+        font-size: 16px;
+      }
+
+      .sd-casual input::placeholder { color: rgba(255,255,255,.44); }
+
+      .sd-casual .sd-submit {
+        border-color: transparent;
+        background: linear-gradient(180deg, #b8ff18, #83cb08);
+        color: #101607;
+        font-weight: 800;
+        box-shadow: 0 0 24px rgba(157,244,22,.24);
+      }
+
+      .sd-casual .sd-cancel {
+        border-color: rgba(157,244,22,.55);
+        color: var(--green);
+      }
+
+      .sd-action-zone button:disabled,
+      .sd-action-zone input:disabled {
+        opacity: .45;
+      }
+
+      .sd-pending {
+        position: absolute;
+        z-index: 14;
+        left: 50%;
+        top: 496px;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: rgba(255,255,255,.72);
+        font-size: 12px;
+      }
+
+      .sd-pending span {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--green);
+        animation: pending-dot .9s ease-in-out infinite alternate;
+      }
+
+      .sd-pending span:nth-child(2) { animation-delay: .14s; }
+      .sd-pending span:nth-child(3) { animation-delay: .28s; }
+
+      .sd-scroll-cue {
+        position: absolute;
+        z-index: 18;
+        left: 50%;
+        bottom: 12px;
+        width: 58px;
+        height: 42px;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        background: transparent;
+        padding: 3px 0;
+        color: var(--green);
+        cursor: pointer;
+      }
+
+      .sd-scroll-cue span {
+        position: relative;
+        display: block;
+        flex: 0 0 7px;
+        width: 28px;
+        height: 7px;
+        opacity: .24;
+        filter: drop-shadow(0 0 5px rgba(157,244,22,.30));
+        animation: scroll-cue-wave 1.7s ease-in-out infinite;
+      }
+
+      .sd-scroll-cue span + span { margin-top: -1px; }
+
+      .sd-scroll-cue span::before,
+      .sd-scroll-cue span::after {
+        content: "";
+        position: absolute;
+        top: 1px;
+        width: 14px;
+        height: 2px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .sd-scroll-cue span::before { left: 0; transform: rotate(17deg); transform-origin: right center; }
+      .sd-scroll-cue span::after { right: 0; transform: rotate(-17deg); transform-origin: left center; }
+      .sd-scroll-cue span:nth-child(2) { width: 25px; animation-delay: .16s; }
+      .sd-scroll-cue span:nth-child(2)::before,
+      .sd-scroll-cue span:nth-child(2)::after { width: 12.5px; }
+      .sd-scroll-cue span:nth-child(3) { width: 22px; animation-delay: .32s; }
+      .sd-scroll-cue span:nth-child(3)::before,
+      .sd-scroll-cue span:nth-child(3)::after { width: 11px; }
+
+      .is-roster-visible .sd-scroll-cue {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .22s ease;
+      }
+
+      .sd-load-error {
+        position: absolute;
+        z-index: 9;
+        left: 20px;
+        right: 20px;
+        top: 310px;
+        border: 1px solid rgba(216,185,94,.24);
+        border-radius: 22px;
+        background: rgba(5,8,11,.64);
+        padding: 18px;
+        backdrop-filter: blur(14px);
+      }
+
+      .sd-load-error h1 {
+        margin: 0 0 8px;
+        color: var(--gold);
+        font-size: 18px;
+      }
+
+      .sd-load-error p {
+        color: rgba(255,255,255,.72);
+        font-size: 13px;
+      }
+
+      .sd-load-error button {
+        min-height: 42px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--green);
+        padding: 0 18px;
+        font-weight: 800;
+      }
+
+      .sd-roster {
+        width: min(calc(100% - 32px), 560px);
+        margin: 0 auto 40px;
+        padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+      }
+
+      .sd-roster-title {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto 42px;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 0;
+        background: linear-gradient(180deg, rgba(8,11,15,.96), rgba(8,11,15,.78));
+        backdrop-filter: blur(10px);
+      }
+
+      .sd-roster-title h2 {
+        margin: 0;
+        color: rgba(255,255,255,.9);
+        font-size: 16px;
+        letter-spacing: .12em;
+      }
+
+      .sd-roster-title span {
+        color: var(--gold);
+        font-size: 14px;
+      }
+
+      .sd-roster-title button {
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgba(216,185,94,.35);
+        border-radius: 50%;
+        background: rgba(255,255,255,.04);
+        color: var(--gold);
+      }
+
+      .sd-roster-list {
+        display: grid;
+        gap: 8px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .sd-roster-list li {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr) 52px;
+        align-items: center;
+        min-height: 44px;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+        color: rgba(255,255,255,.9);
+      }
+
+      .sd-roster-list li.is-changed {
+        animation: changed-person 1.4s ease;
+      }
+
+      .sd-roster-no {
+        color: rgba(216,185,94,.7);
+        font-family: "Chakra Petch", monospace;
+      }
+
+      .sd-roster-list strong {
+        font-weight: 500;
+      }
+
+      .sd-roster-list em {
+        font-style: normal;
+        font-size: 12px;
+        text-align: right;
+      }
+
+      .sd-roster-list .is-season { color: var(--gold); }
+      .sd-roster-list .is-casual { color: rgba(210,255,164,.92); }
+      .sd-waiting-title {
+        margin: 22px 0 8px;
+        color: rgba(255,255,255,.68);
+        letter-spacing: .14em;
+        font-size: 13px;
+      }
+
+      .sd-empty {
+        margin: 12px 0;
+        color: rgba(255,255,255,.48);
+        font-size: 13px;
+      }
+
+      .sd-back-top {
+        position: fixed;
+        left: 50%;
+        right: auto;
+        bottom: calc(env(safe-area-inset-bottom) + 66px);
+        z-index: 30;
+        width: 58px;
+        height: 42px;
+        transform: translate(-50%, 10px) scale(.94);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(7,10,14,.18);
+        padding: 3px 0;
+        color: var(--green);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .26s ease, transform .32s cubic-bezier(.2,.82,.2,1);
+      }
+
+      .sd-back-top span {
+        position: relative;
+        display: block;
+        flex: 0 0 7px;
+        width: 28px;
+        height: 7px;
+        opacity: .24;
+        filter: drop-shadow(0 0 5px rgba(157,244,22,.30));
+        animation: back-top-wave 1.7s ease-in-out infinite;
+      }
+
+      .sd-back-top span + span { margin-top: -1px; }
+
+      .sd-back-top span::before,
+      .sd-back-top span::after {
+        content: "";
+        position: absolute;
+        top: 4px;
+        width: 14px;
+        height: 2px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .sd-back-top span::before {
+        left: 0;
+        transform: rotate(-17deg);
+        transform-origin: right center;
+      }
+
+      .sd-back-top span::after {
+        right: 0;
+        transform: rotate(17deg);
+        transform-origin: left center;
+      }
+
+      .sd-back-top span:nth-child(2) { width: 25px; animation-delay: .16s; }
+      .sd-back-top span:nth-child(2)::before,
+      .sd-back-top span:nth-child(2)::after { width: 12.5px; }
+      .sd-back-top span:nth-child(3) { width: 22px; animation-delay: .32s; }
+      .sd-back-top span:nth-child(3)::before,
+      .sd-back-top span:nth-child(3)::after { width: 11px; }
+
+      .is-roster-visible .sd-back-top {
+        opacity: .92;
+        transform: translate(-50%, 0) scale(1);
+        pointer-events: auto;
+      }
+
+      .sd-sheet-layer {
+        position: fixed;
+        z-index: 70;
+        inset: 0;
+        display: flex;
+        align-items: flex-end;
+      }
+
+      .sd-sheet-backdrop {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        background: rgba(0,0,0,.62);
+        backdrop-filter: blur(9px);
+      }
+
+      .sd-bottom-sheet {
+        position: relative;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        width: 100%;
+        max-height: min(82svh, 680px);
+        overflow: hidden;
+        border: 1px solid rgba(216,185,94,.26);
+        border-bottom: 0;
+        border-radius: 28px 28px 0 0;
+        background:
+          radial-gradient(80% 52% at 88% 0%, rgba(216,185,94,.10), transparent 62%),
+          linear-gradient(180deg, rgba(19,23,28,.98), rgba(7,10,14,.99));
+        color: #f7f6ef;
+        box-shadow: 0 -24px 72px rgba(0,0,0,.52);
+      }
+
+      .sd-sheet-header {
+        position: relative;
+        min-height: 72px;
+        padding: 22px 76px 16px 18px;
+        border-bottom: 1px solid rgba(216,185,94,.14);
+      }
+
+      .sd-bottom-sheet h2 {
+        margin: 0;
+        color: rgba(247,246,239,.96);
+        font-size: 28px;
+        line-height: 1.1;
+        letter-spacing: .04em;
+      }
+
+      .sd-sheet-close {
+        position: absolute;
+        right: 16px;
+        top: 14px;
+        width: 46px;
+        height: 46px;
+        border: 1px solid rgba(216,185,94,.34);
+        border-radius: 50%;
+        background: rgba(5,8,11,.72);
+        color: var(--gold);
+        font-size: 28px;
+        font-weight: 500;
+        line-height: 1;
+      }
+
+      .sd-sheet-scroll {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding: 14px 16px 12px;
+      }
+
+      .sd-person-list {
+        min-height: min-content;
+      }
+
+      .sd-person-card {
+        width: 100%;
+        border: 1px solid rgba(216,185,94,.18);
+        border-radius: 18px;
+        background: rgba(255,255,255,.035);
+        color: rgba(247,246,239,.92);
+        text-align: left;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.018);
+      }
+
+      .sd-person-card + .sd-person-card { margin-top: 9px; }
+
+      .sd-person-card.is-picked {
+        border-color: rgba(157,244,22,.78);
+        background: rgba(157,244,22,.055);
+        box-shadow:
+          0 0 0 1px rgba(157,244,22,.16),
+          0 0 24px rgba(157,244,22,.08);
+      }
+
+      .sd-ticket-sheet .sd-sheet-header {
+        padding-right: 148px;
+      }
+
+      .sd-ticket-counter {
+        position: absolute;
+        right: 82px;
+        top: 24px;
+        color: rgba(216,185,94,.62);
+        font: 700 11px/1 "Chakra Petch", monospace;
+        letter-spacing: .08em;
+      }
+
+      .sd-ticket-scroll {
+        overflow: hidden;
+        padding: 10px 16px 8px;
+        touch-action: none;
+      }
+
+      .sd-event-ticket-stack {
+        --ticket-drag-main: 0px;
+        --ticket-drag-mid: 0px;
+        --ticket-drag-back: 0px;
+        position: relative;
+        width: 100%;
+        height: 312px;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      .sd-event-ticket-stack.has-1 { height: 168px; }
+      .sd-event-ticket-stack.has-2 { height: 230px; }
+
+      .sd-event-ticket {
+        --ticket-x: 0px;
+        --ticket-angle: 0deg;
+        --ticket-y: 0px;
+        --ticket-drag: 0px;
+        --ticket-frame: rgba(216,185,94,.25);
+        --ticket-top-start: rgba(216,185,94,.62);
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        top: 0;
+        display: block;
+        height: 160px;
+        border: 1px solid var(--ticket-frame);
+        border-radius: 3px 15px 7px 15px;
+        clip-path: polygon(
+          11px 0,
+          100% 0,
+          100% calc(100% - 8px),
+          calc(100% - 8px) 100%,
+          0 100%,
+          0 11px
+        );
+        color: rgba(247,246,239,.94);
+        padding: 13px 15px 14px 18px;
+        text-align: left;
+        overflow: hidden;
+        transform:
+          translate3d(
+            var(--ticket-x),
+            calc(var(--ticket-y) + var(--ticket-drag)),
+            0
+          )
+          rotate(var(--ticket-angle));
+        transform-origin: 48% 44%;
+        filter: drop-shadow(0 12px 18px rgba(0,0,0,.24));
+        transition:
+          transform .46s cubic-bezier(.2,.82,.18,1),
+          filter .18s ease,
+          border-color .22s ease,
+          background .28s ease;
+        will-change: transform, filter;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .sd-event-ticket::before {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        left: 14px;
+        right: 12px;
+        top: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          var(--ticket-top-start) 0 28%,
+          rgba(216,185,94,.24) 34% 54%,
+          rgba(255,255,255,.07) 70%,
+          transparent
+        );
+        pointer-events: none;
+      }
+
+      .sd-event-ticket::after {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        left: 5px;
+        top: 17px;
+        width: 1px;
+        height: 28px;
+        background: linear-gradient(180deg, var(--ticket-top-start), transparent);
+        opacity: .80;
+        pointer-events: none;
+      }
+
+      .sd-ticket-slot-0 {
+        --ticket-y: 120px;
+        --ticket-drag: var(--ticket-drag-main);
+        z-index: 4;
+        background:
+          linear-gradient(135deg, transparent 43%, var(--ticket-frame) 47% 55%, transparent 59%) 0 0 / 11px 11px no-repeat,
+          linear-gradient(135deg, transparent 40%, var(--ticket-frame) 46% 56%, transparent 62%) 100% 100% / 8px 8px no-repeat,
+          radial-gradient(78% 120% at 92% 8%, rgba(216,185,94,.085), transparent 61%),
+          linear-gradient(145deg, rgba(17,22,21,.99), rgba(5,8,11,.995));
+        filter: drop-shadow(0 19px 24px rgba(0,0,0,.34));
+      }
+
+      .sd-ticket-slot-1 {
+        --ticket-y: 58px;
+        --ticket-drag: var(--ticket-drag-mid);
+        z-index: 3;
+        --ticket-frame: rgba(216,185,94,.20);
+        --ticket-top-start: rgba(216,185,94,.46);
+        background:
+          linear-gradient(135deg, transparent 43%, var(--ticket-frame) 47% 55%, transparent 59%) 0 0 / 11px 11px no-repeat,
+          linear-gradient(135deg, transparent 40%, var(--ticket-frame) 46% 56%, transparent 62%) 100% 100% / 8px 8px no-repeat,
+          radial-gradient(72% 110% at 10% 0%, rgba(255,255,255,.026), transparent 58%),
+          linear-gradient(145deg, rgba(18,23,21,.98), rgba(7,11,12,.995));
+        filter: drop-shadow(0 13px 18px rgba(0,0,0,.27));
+      }
+
+      .sd-ticket-slot-2 {
+        --ticket-y: 0px;
+        --ticket-drag: var(--ticket-drag-back);
+        z-index: 2;
+        --ticket-frame: rgba(216,185,94,.16);
+        --ticket-top-start: rgba(216,185,94,.34);
+        background:
+          linear-gradient(135deg, transparent 43%, var(--ticket-frame) 47% 55%, transparent 59%) 0 0 / 11px 11px no-repeat,
+          linear-gradient(135deg, transparent 40%, var(--ticket-frame) 46% 56%, transparent 62%) 100% 100% / 8px 8px no-repeat,
+          radial-gradient(72% 100% at 84% 0%, rgba(157,244,22,.025), transparent 60%),
+          linear-gradient(145deg, rgba(10,15,16,.99), rgba(5,8,11,.995));
+        filter: drop-shadow(0 9px 14px rgba(0,0,0,.22));
+      }
+
+      /* Hero preview: keep alternate meetups readable but subordinate to the racket. */
+      .sd-ticket-stack-hero .sd-ticket-slot-1 {
+        opacity: .52;
+        filter:
+          brightness(.78)
+          saturate(.82)
+          drop-shadow(0 10px 15px rgba(0,0,0,.22));
+      }
+
+      .sd-ticket-stack-hero .sd-ticket-slot-2 {
+        opacity: .30;
+        filter:
+          brightness(.68)
+          saturate(.72)
+          blur(.18px)
+          drop-shadow(0 7px 11px rgba(0,0,0,.18));
+      }
+
+      .sd-event-ticket-stack.has-1 .sd-ticket-slot-0 { --ticket-y: 0px; }
+      .sd-event-ticket-stack.has-2 .sd-ticket-slot-1 { --ticket-y: 0px; }
+      .sd-event-ticket-stack.has-2 .sd-ticket-slot-0 { --ticket-y: 62px; }
+
+      .sd-event-ticket.is-current:not(.is-picked) {
+        --ticket-frame: rgba(216,185,94,.42);
+      }
+
+      .sd-event-ticket.is-picked {
+        --ticket-frame: rgba(216,185,94,.62);
+        --ticket-top-start: rgba(157,244,22,.92);
+        filter:
+          drop-shadow(0 19px 24px rgba(0,0,0,.35))
+          drop-shadow(0 0 10px rgba(157,244,22,.07));
+      }
+
+      .sd-event-ticket.is-pressed {
+        scale: .985;
+        filter:
+          drop-shadow(0 15px 20px rgba(0,0,0,.32))
+          brightness(1.07);
+      }
+
+      .sd-event-ticket:disabled { opacity: 1; }
+
+      .sd-ticket-identity {
+        position: absolute;
+        z-index: 5;
+        left: 16px;
+        right: 14px;
+        top: 9px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 9px;
+        align-items: center;
+        min-height: 38px;
+      }
+
+      .sd-ticket-slot-1 .sd-ticket-identity,
+      .sd-ticket-slot-2 .sd-ticket-identity {
+        top: 7px;
+        left: 15px;
+        right: 12px;
+        min-height: 42px;
+        padding: 4px 5px 5px;
+        border-radius: 6px;
+        background: linear-gradient(180deg, rgba(5,8,10,.68), rgba(5,8,10,.18));
+      }
+
+      .sd-ticket-date {
+        color: #f0c968;
+        font: 780 23px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        letter-spacing: -.025em;
+        white-space: nowrap;
+        text-shadow: 0 1px 8px rgba(0,0,0,.42);
+      }
+
+      .sd-ticket-name {
+        min-width: 0;
+        overflow: hidden;
+        color: rgba(250,248,240,.98);
+        font-size: 22px;
+        line-height: 1.05;
+        font-weight: 760;
+        letter-spacing: .018em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-shadow: 0 1px 8px rgba(0,0,0,.46);
+      }
+
+      .sd-ticket-identity em {
+        flex: 0 0 auto;
+        border: 1px solid rgba(216,185,94,.38);
+        border-radius: 999px;
+        background: rgba(216,185,94,.095);
+        color: rgba(245,204,116,.98);
+        padding: 8px 10px;
+        font-size: 13px;
+        line-height: 1;
+        font-style: normal;
+        font-weight: 850;
+        white-space: nowrap;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+      }
+
+      .sd-ticket-slot-0 .sd-ticket-date { font-size: 26px; }
+      .sd-ticket-slot-0 .sd-ticket-name { font-size: 24px; }
+      .sd-ticket-slot-0 .sd-ticket-identity em { font-size: 14px; padding: 8px 10px; }
+
+      .sd-ticket-slot-1 .sd-ticket-date,
+      .sd-ticket-slot-2 .sd-ticket-date {
+        font-size: 22px;
+        color: rgba(240,201,104,.96);
+      }
+
+      .sd-ticket-slot-1 .sd-ticket-name,
+      .sd-ticket-slot-2 .sd-ticket-name {
+        font-size: 21px;
+        color: rgba(249,247,239,.93);
+      }
+
+      .sd-ticket-slot-1 .sd-ticket-identity em,
+      .sd-ticket-slot-2 .sd-ticket-identity em {
+        font-size: 12px;
+        padding: 7px 9px;
+        color: rgba(244,203,116,.95);
+      }
+
+      .sd-ticket-note {
+        position: absolute;
+        z-index: 3;
+        left: 18px;
+        right: 18px;
+        top: 55px;
+        display: -webkit-box;
+        overflow: hidden;
+        color: rgba(255,255,255,.52);
+        font-size: 13.5px;
+        line-height: 1.35;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .sd-ticket-secondary {
+        position: absolute;
+        z-index: 3;
+        left: 18px;
+        right: 20px;
+        bottom: 14px;
+        display: flex;
+        align-items: flex-end;
+        gap: 34px;
+        padding-top: 9px;
+      }
+
+      .sd-ticket-secondary::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: min(62%, 180px);
+        height: 1px;
+        background: linear-gradient(90deg, rgba(216,185,94,.22), transparent);
+      }
+
+      .sd-ticket-secondary.is-note-empty { bottom: 25px; }
+
+      .sd-ticket-secondary > span {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 5px;
+        align-items: baseline;
+      }
+
+      .sd-ticket-secondary small {
+        color: rgba(216,185,94,.58);
+        font-size: 11px;
+        letter-spacing: .10em;
+      }
+
+      .sd-ticket-secondary strong {
+        color: rgba(247,246,239,.95);
+        font: 780 21px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+      }
+
+      .sd-ticket-scan {
+        position: absolute;
+        z-index: 2;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 42%;
+        opacity: 0;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(157,244,22,.02),
+          rgba(157,244,22,.12),
+          transparent
+        );
+        transform: translateX(-160%);
+        pointer-events: none;
+      }
+
+      .sd-event-ticket.is-picked .sd-ticket-scan {
+        animation: ticket-confirm-scan .40s ease-out 1;
+      }
+
+      .sd-ticket-more-root {
+        position: absolute;
+        z-index: 1;
+        top: 282px;
+        right: 26px;
+        min-width: 82px;
+        height: 30px;
+        border: 1px solid rgba(216,185,94,.18);
+        border-radius: 3px 12px 6px 12px;
+        clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 8px);
+        background: rgba(7,11,12,.96);
+        color: rgba(216,185,94,.70);
+        font: 700 11px/1 "Chakra Petch", "Noto Sans TC", sans-serif;
+        transform: rotate(2.1deg) translateX(5px);
+        filter: drop-shadow(0 8px 12px rgba(0,0,0,.20));
+      }
+
+      .sd-ticket-hint {
+        margin: 1px 0 0;
+        color: rgba(255,255,255,.32);
+        text-align: center;
+        font-size: 10px;
+        letter-spacing: .08em;
+      }
+
+      .sd-event-ticket-stack.is-transitioning .sd-ticket-slot-0 {
+        animation: ticket-promote .50s cubic-bezier(.18,.84,.2,1) both;
+      }
+
+      .sd-event-ticket-stack.is-transitioning .sd-ticket-slot-1,
+      .sd-event-ticket-stack.is-transitioning .sd-ticket-slot-2 {
+        animation: ticket-settle .34s cubic-bezier(.2,.8,.2,1) both;
+      }
+
+      .sd-person-card {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) 58px;
+        gap: 10px;
+        align-items: center;
+        min-height: 58px;
+        padding: 0 14px;
+      }
+
+      .sd-person-card span {
+        color: var(--gold);
+        font: 700 13px/1 "Chakra Petch", monospace;
+      }
+
+      .sd-person-card strong {
+        color: rgba(247,246,239,.94);
+        font-weight: 600;
+      }
+
+      .sd-person-card em {
+        color: rgba(216,185,94,.82);
+        font-style: normal;
+        text-align: right;
+        font-size: 12px;
+      }
+
+      .sd-sheet-footer {
+        position: relative;
+        z-index: 2;
+        padding: 10px 16px calc(env(safe-area-inset-bottom) + 14px);
+        border-top: 1px solid rgba(216,185,94,.16);
+        background: rgba(7,10,14,.96);
+        box-shadow: 0 -14px 30px rgba(0,0,0,.22);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+      }
+
+      .sd-sheet-selected {
+        display: block;
+        min-height: 18px;
+        margin-bottom: 8px;
+        overflow: hidden;
+        color: rgba(255,255,255,.62);
+        font-size: 12px;
+        line-height: 1.4;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .sd-sheet-selected strong {
+        color: rgba(247,246,239,.92);
+        font-weight: 600;
+      }
+
+      .sd-sheet-confirm {
+        width: 100%;
+        min-height: 54px;
+        margin: 0;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #b8ff18, #83cb08);
+        color: #101607;
+        font-weight: 800;
+        font-size: 16px;
+        box-shadow: 0 0 24px rgba(157,244,22,.18);
+      }
+
+      .sd-sheet-confirm:disabled {
+        background: rgba(255,255,255,.08);
+        color: rgba(255,255,255,.30);
+        box-shadow: none;
+        opacity: 1;
+      }
+
+      @keyframes handoff-snapshot-drift {
+        0%, 100% { transform: translate3d(0, 0, 0); }
+        50% { transform: translate3d(1px, -1px, 0); }
+      }
+
+      @keyframes racket-handle-to-head {
+        from { height: 0%; }
+        to { height: 100%; }
+      }
+
+      @keyframes racket-scan-edge {
+        0% { opacity: 0; }
+        4% { opacity: calc(var(--sd-scan-enabled, 1) * var(--sd-scan-intensity, .48)); }
+        88% { opacity: calc(var(--sd-scan-enabled, 1) * var(--sd-scan-intensity, .48)); }
+        100% { opacity: 0; }
+      }
+
+      @keyframes racket-breathe {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-3px) scale(1.01); }
+      }
+
+      @keyframes shadow-breathe {
+        0%, 100% {
+          translate: 0 0;
+          rotate: 0deg;
+        }
+        31% {
+          translate:
+            calc(var(--shadow-drift-x) * .42)
+            calc(var(--shadow-drift-y) * .66);
+          rotate: calc(var(--shadow-sway) * .38);
+        }
+        73% {
+          translate: var(--shadow-drift-x) var(--shadow-drift-y);
+          rotate: var(--shadow-sway);
+        }
+      }
+
+      @keyframes preview-rail {
+        from { transform: scaleX(0); transform-origin: left; }
+        to { transform: scaleX(1); transform-origin: left; }
+      }
+
+      @keyframes hero-ticket-in {
+        0% { opacity: 0; translate: 0 12px; scale: .985; }
+        62% { opacity: 1; translate: 0 -2px; scale: 1.008; }
+        100% { opacity: 1; translate: 0 0; scale: 1; }
+      }
+
+      @keyframes preview-system-title-in {
+        0% { opacity: 0; translate: 0 8px; }
+        100% { opacity: 1; translate: 0 0; }
+      }
+
+      @keyframes preview-system-title-out {
+        from { opacity: 1; translate: 0 0; }
+        to { opacity: 0; translate: 0 -5px; }
+      }
+
+      @keyframes preview-swipe-cycle {
+        0% { opacity: 0; transform: translateY(6px); }
+        8%, 48% { opacity: .88; transform: translateY(0); }
+        58%, 100% { opacity: 0; transform: translateY(-3px); }
+      }
+
+      @keyframes preview-swipe-light {
+        from { stroke-dashoffset: 120; }
+        to { stroke-dashoffset: 0; }
+      }
+
+      @keyframes racket-switch-bubble-cycle {
+        0%, 8% { opacity: 0; transform: translateY(4px) scale(.98); }
+        16%, 42% { opacity: .82; transform: translateY(0) scale(1); }
+        27% { opacity: 1; transform: translateY(-1px) scale(1.02); }
+        50%, 100% { opacity: 0; transform: translateY(-2px) scale(.99); }
+      }
+
+      @keyframes racket-tap-bubble-cycle {
+        0%, 46% { opacity: 0; transform: translateY(3px) scale(.98); }
+        54%, 78% { opacity: .80; transform: translateY(0) scale(1); }
+        66% { opacity: .96; transform: translateY(-1px) scale(1.02); }
+        88%, 100% { opacity: 0; transform: translateY(-2px) scale(.99); }
+      }
+
+      @keyframes scroll-cue-wave {
+        0%, 100% { opacity: .18; translate: 0 -2px; }
+        38% { opacity: .96; translate: 0 2px; }
+        72% { opacity: .34; translate: 0 5px; }
+      }
+
+      @keyframes back-top-wave {
+        0%, 100% { opacity: .18; translate: 0 2px; }
+        38% { opacity: .96; translate: 0 -2px; }
+        72% { opacity: .34; translate: 0 -5px; }
+      }
+
+      @keyframes ticket-promote {
+        0% { translate: 0 7px; scale: .985; filter: brightness(.98); }
+        54% { translate: 0 -11px; scale: 1.014; filter: brightness(1.08); }
+        100% { translate: 0 0; scale: 1; filter: brightness(1); }
+      }
+
+      @keyframes ticket-settle {
+        0% { translate: 0 3px; }
+        55% { translate: 0 -3px; }
+        100% { translate: 0 0; }
+      }
+
+      @keyframes ticket-confirm-scan {
+        0% { transform: translateX(-160%); opacity: 0; }
+        18% { opacity: 1; }
+        100% { transform: translateX(320%); opacity: 0; }
+      }
+
+      @keyframes fade-in {
+        to { opacity: 1; }
+      }
+
+      @keyframes pending-dot {
+        from { transform: translateY(0); opacity: .35; }
+        to { transform: translateY(-5px); opacity: 1; }
+      }
+
+      @keyframes changed-person {
+        0%, 100% { background: transparent; }
+        35% { background: rgba(157,244,22,.10); }
+      }
+
+      @media (min-width: 431px) {
+        .sd-hero { min-height: max(630px, calc(100svh - 72px)); }
+        .sd-racket-wrap { width: 232px; }
+        .is-rotating-to-active .sd-racket-wrap,
+        .is-active .sd-racket-wrap {
+          top: 34px;
+          transform: translate3d(-39%, 68px, 0) rotate(18deg) scale(1.57);
+        }
+        .sd-hero-meetup-picker { top: 164px; left: 20px; right: 20px; }
+        .sd-metrics { top: 256px; }
+        .sd-actions { top: 352px; left: 30px; right: 30px; }
+        .sd-pending { top: 518px; }
+        .sd-bottom-sheet {
+          width: min(520px, calc(100% - 32px));
+          margin: 0 auto 16px;
+          border-radius: 28px;
+        }
+      }
+
+      @media (max-width: 374px) {
+        .sd-header p { font-size: 10px; letter-spacing: .38em; }
+        .sd-hero { min-height: max(590px, calc(100svh - 72px)); }
+        .sd-racket-wrap { width: 205px; }
+        .is-rotating-to-active .sd-racket-wrap,
+        .is-active .sd-racket-wrap {
+          top: 36px;
+          transform: translate3d(-39%, 68px, 0) rotate(18deg) scale(1.43);
+        }
+        .sd-hero-meetup-picker { top: 146px; left: 8px; right: 8px; }
+        .sd-annotation { font-size: 10px; width: 42vw; }
+        .a-name { left: 14px; top: 16px; width: 61vw; }
+        .a-name .sd-event-name { font-size: 19px; }
+        .a-ball { left: 16px; top: 68px; }
+        .a-cap { left: 24px; top: 114px; }
+        .a-fee { left: 14px; top: 160px; }
+        .sd-metrics { top: 220px; left: 12px; right: 12px; }
+        .sd-metric strong { font-size: 34px; }
+        .sd-actions { top: 308px; left: 14px; right: 14px; gap: 28px; }
+        .sd-pending { top: 476px; }
+        .sd-racket-switch-bubble { top: 76px; left: 134px; right: auto; font-size: 10.5px; }
+        .sd-racket-tap-bubble { top: 46px; right: 30px; font-size: 10px; }
+        .sd-timing-lab { left: 6px; width: min(214px, calc(100vw - 12px)); }
+        .sd-event-ticket { left: 4px; right: 4px; padding-left: 15px; padding-right: 12px; }
+        .sd-ticket-identity { left: 13px; right: 10px; gap: 6px; }
+        .sd-ticket-slot-0 .sd-ticket-date { font-size: 23px; }
+        .sd-ticket-slot-0 .sd-ticket-name { font-size: 21px; }
+        .sd-ticket-slot-0 .sd-ticket-identity em { padding: 7px 7px; font-size: 11px; }
+        .sd-ticket-slot-1 .sd-ticket-date,
+        .sd-ticket-slot-2 .sd-ticket-date { font-size: 20px; }
+        .sd-ticket-slot-1 .sd-ticket-name,
+        .sd-ticket-slot-2 .sd-ticket-name { font-size: 19px; }
+        .sd-ticket-slot-1 .sd-ticket-identity em,
+        .sd-ticket-slot-2 .sd-ticket-identity em { padding: 6px 7px; font-size: 10.5px; }
+        .sd-action-zone button,
+        .sd-action-zone input { font-size: 16px; }
+      }
+
+      .motion-reduced .sd-particle-handoff,
+      .motion-reduced .sd-racket-wrap,
+      .motion-reduced .sd-racket-main,
+      .motion-reduced .sd-racket-shadow,
+      .motion-reduced .sd-hero-meetup-picker,
+      .motion-reduced .sd-preview-system-title,
+      .motion-reduced .sd-event-ticket,
+      .motion-reduced .sd-event-ticket-stack,
+      .motion-reduced .sd-ticket-scan,
+      .motion-reduced .sd-scroll-cue span,
+      .motion-reduced .sd-back-top span,
+      .motion-reduced .sd-annotations,
+      .motion-reduced .sd-racket-switch-bubble,
+      .motion-reduced .sd-racket-tap-bubble,
+      .motion-reduced .sd-pending span {
+        animation: none !important;
+        transition-duration: .01ms !important;
+      }
+
+      .motion-reduced .sd-racket-switch-bubble,
+      .motion-reduced .sd-racket-tap-bubble {
+        opacity: .76 !important;
+        transform: none !important;
+      }
+      .motion-reduced .sd-racket-reveal {
+        height: 100% !important;
+        animation: none !important;
+      }
+
+      .motion-reduced .sd-racket-scan-line {
+        display: none;
+      }
+
+      .motion-reduced .sd-racket-shadow {
+        display: none;
+      }
+    `}</style>
+  );
+}

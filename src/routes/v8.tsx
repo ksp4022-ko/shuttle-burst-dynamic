@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { V8SeasonConfirmGate } from "@/components/v8-season-confirm/V8SeasonConfirmGate";
-import { Index } from "./index";
+import { Index } from "@/components/homepage/HomepageIndex";
 
 export const Route = createFileRoute("/v8")({
   head: () => ({

@@ -47,6 +47,10 @@ export type HomepageHandoffTiming = {
     events: AlphaEvent[],
     preferredEventId: string | null | undefined,
   ) => AlphaEvent | null;
+  // V9 only (V9-067): the first meetup's roster, so V9 can hand over one it
+  // already started fetching alongside the meetup list. Without it the roster
+  // is fetched after the list (unchanged for V8).
+  loadInitialRoster?: (eventId: string, signal: AbortSignal) => Promise<AlphaRoster>;
   disabled?: boolean;
 };
 
@@ -141,6 +145,7 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     ...(handoffTiming?.preferredEventId ? { preferredEventId: handoffTiming.preferredEventId } : {}),
     ...(handoffTiming?.loadEvents ? { loadEvents: handoffTiming.loadEvents } : {}),
     ...(handoffTiming?.chooseInitialEvent ? { chooseInitialEvent: handoffTiming.chooseInitialEvent } : {}),
+    ...(handoffTiming?.loadInitialRoster ? { loadInitialRoster: handoffTiming.loadInitialRoster } : {}),
   };
 
   const selectedEvent = useMemo(
@@ -219,7 +224,12 @@ export function useHomepageFlow(handoffTiming?: HomepageHandoffTiming) {
     if (!nextEvent) throw new Error("找不到最近聚會。");
 
     setSelectedEventId(nextEvent.id);
-    setRoster(await withStartupRetry((signal) => getAlphaRoster(nextEvent.id, signal)));
+    const loadInitialRoster = handoffTimingRef.current.loadInitialRoster;
+    setRoster(
+      await withStartupRetry((signal) =>
+        loadInitialRoster ? loadInitialRoster(nextEvent.id, signal) : getAlphaRoster(nextEvent.id, signal),
+      ),
+    );
     return true;
   }, []);
 

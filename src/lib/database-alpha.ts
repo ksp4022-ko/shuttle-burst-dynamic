@@ -208,15 +208,25 @@ function authHeaders(token?: string): HeadersInit {
   return trimmed ? { authorization: `Bearer ${trimmed}` } : {};
 }
 
+// V9-066: a GET with a content-type header is not a "simple" CORS request,
+// so the browser sends an OPTIONS preflight first (one extra round trip per
+// call). GETs (never a body) skip the header -- for now only on /v9test,
+// until it is accepted there.
+function skipsGetContentType() {
+  if (typeof window === "undefined") return false;
+  return window.location.pathname.split("/").includes("v9test");
+}
+
 export async function alphaFetch<T>(
   path: string,
   init?: RequestInit,
   query?: Record<string, string | number | undefined>,
 ) {
+  const isGet = (init?.method ?? "GET").toUpperCase() === "GET";
   const response = await fetch(apiUrl(path, query), {
     ...init,
     headers: {
-      "content-type": "application/json",
+      ...(isGet && skipsGetContentType() ? {} : { "content-type": "application/json" }),
       ...(init && init.headers ? init.headers : {}),
     },
   });

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Index } from "./index";
+import { Index } from "@/components/homepage/HomepageIndex";
 
 export const Route = createFileRoute("/v8test/rian")({
   head: () => ({
