@@ -14,7 +14,7 @@ import {
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { meetupTimeLabel, parseMeetupName } from "@/lib/meetup-name";
-import { isV9TestRoute, v9StorageKey } from "@/lib/v9-route";
+import { v9StorageKey } from "@/lib/v9-route";
 import { loadV9InitialRoster, startV9RosterPrefetch } from "@/lib/v9-roster-prefetch";
 import { isV9Standalone } from "@/lib/v9-touch";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
@@ -143,19 +143,13 @@ export function V9App() {
     realFadeMs: 0,
     skipIntro: true,
     preferredEventId: () => readSelectedEventId(siteId),
-    // V9-067 (/v9test until accepted): the first roster is fetched alongside
-    // the meetup list.
+    // V9-067: the first roster is fetched alongside the meetup list.
     loadEvents: (signal) => {
-      if (isV9TestRoute()) startV9RosterPrefetch(siteId);
+      startV9RosterPrefetch(siteId);
       return loadV9Events(signal);
     },
     chooseInitialEvent: chooseV9InitialEvent,
-    ...(isV9TestRoute()
-      ? {
-          loadInitialRoster: (eventId: string, signal: AbortSignal) =>
-            loadV9InitialRoster(siteId, eventId, signal),
-        }
-      : {}),
+    loadInitialRoster: (eventId, signal) => loadV9InitialRoster(siteId, eventId, signal),
   });
   const {
     phase,

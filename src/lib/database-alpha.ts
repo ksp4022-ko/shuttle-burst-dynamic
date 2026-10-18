@@ -210,11 +210,12 @@ function authHeaders(token?: string): HeadersInit {
 
 // V9-066: a GET with a content-type header is not a "simple" CORS request,
 // so the browser sends an OPTIONS preflight first (one extra round trip per
-// call). GETs (never a body) skip the header -- for now only on /v9test,
-// until it is accepted there.
+// call). GETs (never a body) skip the header on /v9 and /v9test (V8 keeps
+// its locked behavior).
 function skipsGetContentType() {
   if (typeof window === "undefined") return false;
-  return window.location.pathname.split("/").includes("v9test");
+  const segments = window.location.pathname.split("/");
+  return segments.includes("v9") || segments.includes("v9test");
 }
 
 export async function alphaFetch<T>(
