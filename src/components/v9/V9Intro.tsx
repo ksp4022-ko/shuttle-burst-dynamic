@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { isV9TestRoute } from "@/lib/v9-route";
 import { V9Busy } from "./V9Busy";
 
 // V9-040 / V9-041: the opening screen and the shot into the deck.
@@ -18,6 +19,10 @@ import { V9Busy } from "./V9Busy";
 // gets a 200ms crossfade instead.
 
 const MIN_MS = 3000;
+// V9-068: one rally instead of two (the shot waits for the shuttle's return,
+// so it lands at 1.6s instead of 3.2s once the data is in); /v9test until
+// accepted.
+const MIN_MS_TEST = 1500;
 const SWING_MS = 260;
 const SWING_HIT = 0.45; // where in the swing the racket meets the shuttle
 // Hit-stop: everything freezes on contact while yellow impact marks pop
@@ -256,7 +261,7 @@ export function V9Intro({
   const finished = useRef(false);
 
   useEffect(() => {
-    const id = window.setTimeout(() => setMinPassed(true), MIN_MS);
+    const id = window.setTimeout(() => setMinPassed(true), isV9TestRoute() ? MIN_MS_TEST : MIN_MS);
     return () => window.clearTimeout(id);
   }, []);
 

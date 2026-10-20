@@ -75,7 +75,10 @@ function loadStrip(url: string, onLoad?: () => void) {
 // icons and the mascot strip the viewer saw last time, so both are cached
 // before the home shows; the other strips follow a moment later, so a
 // meetup switch never waits on a download.
-export function v9PreloadArt() {
+// V9-070 (/v9test until accepted): with deferRest the other strips wait for
+// v9PreloadRestArt() (the loading screen gone), so they don't share the
+// startup bandwidth with the data and the strip on screen.
+export function v9PreloadArt({ deferRest = false }: { deferRest?: boolean } = {}) {
   const base = import.meta.env.BASE_URL;
   const urls = DOCK_ICONS.map((key) => `${base}v9/icons/dock-${key}.webp`);
   try {
@@ -85,9 +88,19 @@ export function v9PreloadArt() {
     // Storage blocked: the strip just loads when it is needed.
   }
   for (const url of urls) loadStrip(url);
-  window.setTimeout(() => {
-    for (const key of Object.keys(SPRITES)) loadStrip(`${base}v9/mascot/${key}.webp`);
-  }, 1500);
+  if (!deferRest) window.setTimeout(v9PreloadRestArt, 1500);
+}
+
+let restRequested = false;
+
+export function v9PreloadRestArt() {
+  if (restRequested) return;
+  restRequested = true;
+  const base = import.meta.env.BASE_URL;
+  for (const key of Object.keys(SPRITES)) {
+    const url = `${base}v9/mascot/${key}.webp`;
+    if (!LOADED.has(url)) loadStrip(url);
+  }
 }
 
 export function V9MascotArt({

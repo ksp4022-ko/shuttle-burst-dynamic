@@ -14,7 +14,7 @@ import {
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { meetupTimeLabel, parseMeetupName } from "@/lib/meetup-name";
-import { v9StorageKey } from "@/lib/v9-route";
+import { isV9TestRoute, v9StorageKey } from "@/lib/v9-route";
 import { loadV9InitialRoster, startV9RosterPrefetch } from "@/lib/v9-roster-prefetch";
 import { isV9Standalone } from "@/lib/v9-touch";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
@@ -41,7 +41,7 @@ import {
   v8ClaimedMemberIds,
   type V8LineIdentity,
 } from "@/lib/v8-line-auth-storage";
-import { v9PreloadArt } from "./V9Mascot";
+import { v9PreloadArt, v9PreloadRestArt } from "./V9Mascot";
 import { V9ViewAsBar, V9ViewAsPicker } from "./V9ViewAs";
 import { useV9BillDue } from "./useV9BillDue";
 import { v9EventPhase, type V9EventPhase } from "@/lib/v9-event-time";
@@ -234,7 +234,7 @@ export function V9App() {
   const returnFeedbackRef = useRef<{ signupId: string; name: string } | null>(null);
 
   useEffect(() => {
-    v9PreloadArt();
+    v9PreloadArt({ deferRest: isV9TestRoute() });
   }, []);
 
   // V9 has no intro: go straight to the flow's "active" phase so its roster
@@ -661,6 +661,10 @@ export function V9App() {
     sheet === "meetup" || sheet === "roster" || sheet === "proxy" || sheet === "me" ? sheet : null;
 
   const intro = introStage !== "done";
+  // V9-070: the other mascot strips once the loading screen is gone.
+  useEffect(() => {
+    if (!intro) v9PreloadRestArt();
+  }, [intro]);
   // V9-048: once the deck is in, and on every
   // meetup switch, back to the top (logo + date in view); if the CTA would
   // still sit under the Dock, scroll just enough to show it above the Dock.
