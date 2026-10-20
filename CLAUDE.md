@@ -88,3 +88,10 @@ Reply format (user preference):
 - Storage: V9-owned keys use the `v9:` prefix (`v9:` on /v9, `v9test:` on /v9test, via `v9StorageKey`). LINE token/identity are shared with V8.
 - Verification and report format: same as V8 above.
 - Pending workflow: when the user raises an issue and says "pending", record it in `docs/V9_PENDING.md` with the next `V9-NNN` number and change no code; discuss a plan, record it once the user confirms, and implement only after the user says "開工".
+
+## V11 Rules
+- Baseline: `docs/V11_BASELINE.md` (V11 truth for scope and decisions).
+- `/v11test/*` = development / real-device verification (PREVIEW tag, `v11test:` storage keys). `/v11/*` opens only after the user accepts; `/v9` stays production until then.
+- V11 changes presentation only (falling-meetup stage + 墨糰 guide). Same backend, hooks and business rules as V9; no Worker/D1 changes unless explicitly requested.
+- Isolation: V11 code lives in `src/components/v11/` and `src/lib/v11-*`. V11 may import V9 components and hooks; V9/V8/V7 must never import V11.
+- Shared-file edits, verification and report format: same as V9 above (call out "影響共用檔", with `/v8` and `/v9` regression checks).
