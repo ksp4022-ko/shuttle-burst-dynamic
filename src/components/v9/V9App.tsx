@@ -14,7 +14,7 @@ import {
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { meetupTimeLabel, parseMeetupName } from "@/lib/meetup-name";
-import { isV9TestRoute, v9StorageKey } from "@/lib/v9-route";
+import { v9StorageKey } from "@/lib/v9-route";
 import { loadV9InitialRoster, startV9RosterPrefetch } from "@/lib/v9-roster-prefetch";
 import { isV9Standalone } from "@/lib/v9-touch";
 import { V9Intro, type V9IntroStage } from "./V9Intro";
@@ -234,7 +234,7 @@ export function V9App() {
   const returnFeedbackRef = useRef<{ signupId: string; name: string } | null>(null);
 
   useEffect(() => {
-    v9PreloadArt({ deferRest: isV9TestRoute() });
+    v9PreloadArt();
   }, []);
 
   // V9 has no intro: go straight to the flow's "active" phase so its roster

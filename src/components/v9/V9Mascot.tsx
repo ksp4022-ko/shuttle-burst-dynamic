@@ -73,12 +73,11 @@ function loadStrip(url: string, onLoad?: () => void) {
 
 // Called once on app start (behind the loading screen): fetch the Dock
 // icons and the mascot strip the viewer saw last time, so both are cached
-// before the home shows; the other strips follow a moment later, so a
-// meetup switch never waits on a download.
-// V9-070 (/v9test until accepted): with deferRest the other strips wait for
+// before the home shows. V9-070: the other strips wait for
 // v9PreloadRestArt() (the loading screen gone), so they don't share the
-// startup bandwidth with the data and the strip on screen.
-export function v9PreloadArt({ deferRest = false }: { deferRest?: boolean } = {}) {
+// startup bandwidth with the data and the strip on screen, and are cached
+// before a meetup switch needs them.
+export function v9PreloadArt() {
   const base = import.meta.env.BASE_URL;
   const urls = DOCK_ICONS.map((key) => `${base}v9/icons/dock-${key}.webp`);
   try {
@@ -88,7 +87,6 @@ export function v9PreloadArt({ deferRest = false }: { deferRest?: boolean } = {}
     // Storage blocked: the strip just loads when it is needed.
   }
   for (const url of urls) loadStrip(url);
-  if (!deferRest) window.setTimeout(v9PreloadRestArt, 1500);
 }
 
 let restRequested = false;
