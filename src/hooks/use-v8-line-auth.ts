@@ -23,6 +23,16 @@ import {
 const LINE_HANDOFF_RETURN_PARAM = "line_handoff";
 const LINE_HANDOFF_POLL_MS = 2500;
 
+// V11-005: on iOS the PWA opens the LINE login in a Safari sheet over the
+// app, so the app page never reloads; the redeem loop below must start when
+// the login is tapped, not only on page load. Test routes first (/v9test,
+// /v11test); /v8 and /v9 keep the old behaviour until accepted.
+function handoffStartsOnTap() {
+  if (typeof window === "undefined") return false;
+  const segments = window.location.pathname.split("/");
+  return segments.includes("v9test") || segments.includes("v11test");
+}
+
 export type V8LineAuthDiagnostic = {
   status:
     | "checking"
@@ -59,6 +69,8 @@ export function useV8LineAuth() {
   const [identity, setIdentity] = useState<V8LineIdentity | null>(() => loadV8LineIdentity());
   const [token, setToken] = useState<string | null>(() => loadV8LineToken());
   const [loading, setLoading] = useState(true);
+  // Bumped when a PWA login is started, so the handoff loop starts (V11-005).
+  const [handoffRound, setHandoffRound] = useState(0);
   const [diagnostic, setDiagnostic] = useState<V8LineAuthDiagnostic>({
     status: "checking",
     message: "正在確認這個瀏覽器是否已有 LINE 登入狀態。",
@@ -265,7 +277,7 @@ export function useV8LineAuth() {
       cancelled = true;
       stop();
     };
-  }, [loading, token]);
+  }, [loading, token, handoffRound]);
 
   const startLogin = () => {
     if (!isV8StandaloneApp()) {
@@ -279,6 +291,7 @@ export function useV8LineAuth() {
         return;
       }
       saveV8LineHandoff(handoff.secret);
+      if (handoffStartsOnTap()) setHandoffRound((round) => round + 1);
       const returnTo = new URL(window.location.href);
       returnTo.searchParams.set(LINE_HANDOFF_RETURN_PARAM, "1");
       window.location.href = getV8LineLoginStartUrl(returnTo.toString(), handoff.hash);

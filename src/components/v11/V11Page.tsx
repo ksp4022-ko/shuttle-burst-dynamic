@@ -8,6 +8,7 @@ import { V9SeasonGate } from "@/components/v9/V9SeasonGate";
 import { isV11TestRoute, v11StorageKey } from "@/lib/v11-route";
 import { v9NewVersionOnline } from "@/lib/v9-version";
 import { V11Card } from "./V11Card";
+import { V11AuthHint } from "./V11AuthHint";
 import { V11Celebrate } from "./V11Celebrate";
 import { V11Intro } from "./V11Intro";
 import { V11PullRefresh } from "./V11PullRefresh";
@@ -23,7 +24,7 @@ import { useV11Meetups } from "./useV11Meetups";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/20-8";
+export const V11_TEST_BUILD = "10/21-1";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -210,6 +211,16 @@ function V11App() {
     meetups?.[meetups.length - 1] ??
     null;
   const onDock = (kind: V11SheetKind) => setPanel((last) => (last === kind ? null : kind));
+  // V11-005: the PWA picked up the login it was waiting for.
+  const lastAuth = useRef(auth.diagnostic.status);
+  useEffect(() => {
+    const was = lastAuth.current;
+    lastAuth.current = auth.diagnostic.status;
+    if (was === "handoff-waiting" && auth.diagnostic.status === "session-ready") {
+      setNotice("LINE 登入成功！");
+      apiRef.current?.cheer();
+    }
+  }, [auth.diagnostic.status]);
   const pullRefresh = useCallback(async () => {
     // The version check and the data refresh run side by side (V9-063).
     const data = refresh().then(() => {
@@ -271,6 +282,7 @@ function V11App() {
             </button>
           </div>
         ) : null}
+        {ready ? <V11AuthHint diagnostic={auth.diagnostic} still={still} /> : null}
         {error ? <p className="v11-notice">{error}</p> : null}
 
         {ready && view === "stage" ? (

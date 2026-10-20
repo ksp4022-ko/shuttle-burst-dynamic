@@ -167,6 +167,12 @@ body.v11-locked { overflow: hidden; }
 .v11-panels .v9-sheet-body { padding-top: 12px; }
 .v11-panels .v9-sheet-backdrop { background: rgba(20, 20, 20, .4); }
 
+/* V11-005 LINE login hint */
+.v11-authhint { display: grid; grid-template-columns: 52px minmax(0, 1fr) 32px; align-items: center; gap: 8px; background: var(--v11-cream); border: 2.5px solid var(--v11-ink); border-radius: 18px; padding: 8px 10px; box-shadow: var(--v11-hard); }
+.v11-authhint-mochi { width: 52px; height: 52px; }
+.v11-authhint p { margin: 0; font-weight: 700; font-size: 14px; }
+.v11-authhint button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--v11-ink); background: var(--v11-cream); font-size: 18px; line-height: 1; padding: 0; }
+
 /* D13 opening screen */
 .v11-intro { position: fixed; inset: 0; z-index: 90; background: #ff5226; display: grid; place-items: center; align-content: center; gap: 8px; }
 .v11-intro-title { display: grid; justify-items: center; gap: 6px; }
