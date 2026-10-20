@@ -21,17 +21,20 @@ export function v11RowRect(id: string): V11SrcRect | null {
 export function V11Row({
   meetup,
   signedIn,
+  current = false,
   onOpen,
 }: {
   meetup: V11Meetup;
   signedIn: boolean;
+  // V11-006: 目前這場 wears a 目前 tag.
+  current?: boolean;
   onOpen: (id: string, rect: V11SrcRect) => void;
 }) {
   const tone = TONE[meetup.tone];
   return (
     <button
       type="button"
-      className={`v11-row${meetup.next ? " is-next" : ""}`}
+      className={`v11-row${meetup.next ? " is-next" : ""}${current ? " is-current" : ""}`}
       data-v11-row={meetup.id}
       onClick={(e) => {
         const r = e.currentTarget.getBoundingClientRect();
@@ -44,6 +47,7 @@ export function V11Row({
         });
       }}
     >
+      {current ? <span className="v11-current-tag">目前</span> : null}
       <span className="v11-row-tag" style={{ background: tone.bg, color: tone.fg }}>
         {meetup.tag}
       </span>
@@ -68,10 +72,12 @@ export function V11Row({
 export function V11List({
   meetups,
   signedIn,
+  currentId,
   onOpen,
 }: {
   meetups: V11Meetup[];
   signedIn: boolean;
+  currentId: string | null;
   onOpen: (id: string, rect: V11SrcRect) => void;
 }) {
   const upcoming = meetups.filter((m) => !m.ended);
@@ -79,7 +85,15 @@ export function V11List({
   return (
     <section className="v11-list" aria-label="聚會列表">
       {upcoming.length ? (
-        upcoming.map((m) => <V11Row key={m.id} meetup={m} signedIn={signedIn} onOpen={onOpen} />)
+        upcoming.map((m) => (
+          <V11Row
+            key={m.id}
+            meetup={m}
+            signedIn={signedIn}
+            current={m.id === currentId}
+            onOpen={onOpen}
+          />
+        ))
       ) : (
         <p className="v11-empty">目前沒有開放中的聚會。</p>
       )}
@@ -87,7 +101,13 @@ export function V11List({
         <details className="v11-ended">
           <summary>已結束 {ended.length} 場</summary>
           {ended.map((m) => (
-            <V11Row key={m.id} meetup={m} signedIn={signedIn} onOpen={onOpen} />
+            <V11Row
+              key={m.id}
+              meetup={m}
+              signedIn={signedIn}
+              current={m.id === currentId}
+              onOpen={onOpen}
+            />
           ))}
         </details>
       ) : null}

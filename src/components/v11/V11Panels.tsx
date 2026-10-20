@@ -44,11 +44,64 @@ export type V11SheetKind = "roster" | "bill" | "proxy" | "me" | "join" | "viewas
 
 const SITE_NAMES: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 
+// V11-006: the meetup a panel acts on, as a date you can tap to switch.
+function V11MeetupPick({
+  focus,
+  meetups,
+  onPick,
+}: {
+  focus: V11Meetup | null;
+  meetups: V11Meetup[];
+  onPick: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  if (!focus) return null;
+  const upcoming = meetups.filter((m) => !m.ended);
+  const ended = meetups.filter((m) => m.ended);
+  const choice = (m: V11Meetup) => (
+    <button
+      key={m.id}
+      type="button"
+      className={`v11-pick-item${m.id === focus.id ? " is-on" : ""}`}
+      aria-pressed={m.id === focus.id}
+      onClick={() => {
+        onPick(m.id);
+        setOpen(false);
+      }}
+    >
+      {m.date}
+      <small>{m.ended ? "已結束" : m.weekday.replace("週", "")}</small>
+    </button>
+  );
+  return (
+    <div className="v11-pick">
+      <button
+        type="button"
+        className="v11-pick-now"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {focus.date}（{focus.weekday.replace("週", "")}）<span aria-hidden="true">▼</span>
+        <small>換場</small>
+      </button>
+      {open ? (
+        <div className="v11-pick-list">
+          {upcoming.map(choice)}
+          {ended.length ? <span className="v11-pick-sep">已結束</span> : null}
+          {ended.map(choice)}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function V11Panels({
   sheet,
   setSheet,
   siteId,
   focus,
+  meetups,
+  onPick,
   roster,
   auth,
   viewAs,
@@ -63,6 +116,9 @@ export function V11Panels({
   setSheet: (sheet: V11SheetKind | null) => void;
   siteId: string;
   focus: V11Meetup | null;
+  // V11-006: every meetup, and switching 目前這場 from a panel.
+  meetups: V11Meetup[];
+  onPick: (id: string) => void;
   roster: AlphaRoster | null;
   auth: ReturnType<typeof useV8LineAuth>;
   viewAs: V8LineIdentity | null;
@@ -305,7 +361,8 @@ export function V11Panels({
     <div className="v9-app v11-panels">
       <V9Styles />
 
-      <V9Sheet open={sheet === "roster"} title="名單" subtitle={subtitle} onClose={closeSheet}>
+      <V9Sheet open={sheet === "roster"} title="名單" onClose={closeSheet}>
+        <V11MeetupPick focus={focus} meetups={meetups} onPick={onPick} />
         {roster ? (
           <V9RosterContent
             tab={rosterTab}
@@ -328,6 +385,7 @@ export function V11Panels({
           subtitle={SITE_NAMES[siteId]}
           onClose={closeSheet}
         >
+          <V11MeetupPick focus={focus} meetups={meetups} onPick={onPick} />
           <V9CourtRules rules={rules} confirmed={roster?.summary.confirmedCount ?? 0} />
         </V9Sheet>
       )}
@@ -359,9 +417,10 @@ export function V11Panels({
       <V9Sheet
         open={sheet === "proxy"}
         title="代報 · 代退"
-        subtitle={subtitle ? `${subtitle}・幫朋友報名或取消臨打` : "幫朋友報名或取消臨打"}
+        subtitle="幫朋友報名或取消臨打"
         onClose={closeSheet}
       >
+        <V11MeetupPick focus={focus} meetups={meetups} onPick={onPick} />
         <V9ProxyContent
           key={eventId}
           tab={proxyTab}

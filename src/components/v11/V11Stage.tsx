@@ -2,6 +2,13 @@ import { useEffect, useRef, type MutableRefObject } from "react";
 import type MatterNS from "matter-js";
 import type { V11Meetup } from "@/lib/v11-meetups";
 import { V11Mochi } from "./v11-mochi";
+import {
+  v11DrawExtra,
+  v11ExtraShape,
+  type V11Extra,
+  type V11ExtraKind,
+  type V11Shape,
+} from "./v11-extras";
 
 // The falling-meetup stage (docs/V11_BASELINE.md D3–D6): an orange court
 // where every meetup that has not ended is a calendar sticker, plus one grey
@@ -39,7 +46,8 @@ const CJK = '"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-se
 const DISP = '"Dela Gothic One","Arial Black",system-ui,sans-serif';
 const TAU = Math.PI * 2;
 
-type Spec = { kind: "meetup" | "more" | "ended"; id: string };
+type Spec = { kind: "meetup" | "more" | "ended" | V11ExtraKind; id: string };
+const isExtra = (kind: Spec["kind"]) => kind !== "meetup" && kind !== "more" && kind !== "ended";
 
 // The stage holds the next few meetups; later ones fold into one
 // "之後 N 場" sticker, past ones into "已結束 N 場". Both open a list.
@@ -65,6 +73,9 @@ function loadMatter(): Promise<typeof MatterNS> {
 
 export function V11Stage({
   meetups,
+  extras,
+  currentId,
+  bubble,
   signedIn,
   intro,
   hiddenId,
@@ -74,6 +85,12 @@ export function V11Stage({
   onPhysicsFail,
 }: {
   meetups: V11Meetup[];
+  // V11-007 / V11-008: the small stickers (each only when it applies).
+  extras: V11Extra[];
+  // V11-006: 目前這場 (the meetup the dock acts on) wears a 目前 tag.
+  currentId: string | null;
+  // V11-007: what 墨糰 is saying right now ("" = nothing).
+  bubble: string;
   signedIn: boolean;
   // The opening screen is up: 墨糰 is still on it (D13).
   intro: boolean;
@@ -88,9 +105,21 @@ export function V11Stage({
   const courtRef = useRef<HTMLCanvasElement>(null);
   const mochiRef = useRef<HTMLCanvasElement>(null);
   // Latest props for the animation loop (it lives outside React renders).
-  const live = useRef({ meetups, signedIn, hiddenId, onTap, onPhysicsFail, still });
-  live.current = { meetups, signedIn, hiddenId, onTap, onPhysicsFail, still };
+  const live = useRef({
+    meetups,
+    extras,
+    currentId,
+    signedIn,
+    hiddenId,
+    onTap,
+    onPhysicsFail,
+    still,
+  });
+  live.current = { meetups, extras, currentId, signedIn, hiddenId, onTap, onPhysicsFail, still };
   const rebuildRef = useRef<() => void>(() => {});
+  const syncRef = useRef<() => void>(() => {});
+  // Extras come and go without re-dropping the pile.
+  const extrasKey = extras.map((x) => x.id).join(",");
 
   // Which stickers exist: rebuild (re-drop) only when that set changes.
   const upcoming = meetups.filter((m) => !m.ended);
@@ -140,12 +169,22 @@ export function V11Stage({
         .map((m) => ({ kind: "meetup", id: m.id }));
       if (upcoming.length > V11_STAGE_MAX) list.push({ kind: "more", id: "more" });
       if (live.current.meetups.some((m) => m.ended)) list.push({ kind: "ended", id: "ended" });
+      for (const x of live.current.extras) list.push({ kind: x.kind, id: x.id });
       return list;
     };
     const SW = () => S * 0.9;
     const SH = () => S * 0.64;
     const ER = () => S * 0.3;
     const pad = () => Math.max(4, S * 0.045);
+    const shapeOf = (spec: Spec): V11Shape =>
+      spec.kind === "meetup"
+        ? { type: "rect", w: SW(), h: SH(), r: SH() * 0.16 }
+        : spec.kind === "more" || spec.kind === "ended"
+          ? { type: "circle", r: ER() }
+          : v11ExtraShape(spec.kind, S);
+    // The 龍虎 logo for the easter-egg sticker.
+    const logo = new Image();
+    logo.src = `${import.meta.env.BASE_URL}v9/brand/logo.webp`;
 
     const dims = () => {
       const r = stage.getBoundingClientRect();
@@ -164,36 +203,43 @@ export function V11Stage({
     };
 
     const layoutStatic = () => {
-      items = specs().map((spec, i) => {
-        const col = i % 2;
-        const row = Math.floor(i / 2);
-        const h = spec.kind !== "meetup" ? ER() * 2 : SH();
-        return {
-          spec,
-          position: { x: W * (col ? 0.72 : 0.29), y: H - 14 - h / 2 - row * (SH() + 6) },
-          angle: (i % 2 ? 0.07 : -0.06) * (row % 2 ? -1 : 1),
-          body: null,
-          tilt: 0,
-        };
-      });
+      items = specs()
+        .filter((spec) => !isExtra(spec.kind))
+        .map((spec, i) => {
+          const col = i % 2;
+          const row = Math.floor(i / 2);
+          const h = spec.kind !== "meetup" ? ER() * 2 : SH();
+          return {
+            spec,
+            position: { x: W * (col ? 0.72 : 0.29), y: H - 14 - h / 2 - row * (SH() + 6) },
+            angle: (i % 2 ? 0.07 : -0.06) * (row % 2 ? -1 : 1),
+            body: null,
+            tilt: 0,
+          };
+        });
     };
 
     const spawn = (spec: Spec) => {
       if (!M || !engine) return;
       const x = W * (0.18 + Math.random() * 0.52);
       const y = live.current.still ? H * 0.5 : -S * 0.7;
+      const light = spec.kind === "shuttle";
       const common = {
-        restitution: 0.32,
+        restitution: light ? 0.5 : 0.32,
         friction: 0.5,
-        frictionAir: 0.014,
+        // Shuttles drift down like the real thing.
+        frictionAir: light ? 0.06 : 0.014,
         angle: (Math.random() - 0.5) * 1.1,
+        ...(light ? { density: 0.0004 } : {}),
       };
+      const shape = shapeOf(spec);
+      const edge = isExtra(spec.kind) ? 2 : pad();
       const body =
-        spec.kind !== "meetup"
-          ? M.Bodies.circle(x, y, ER() + pad(), common)
-          : M.Bodies.rectangle(x, y, SW() + pad() * 2, SH() + pad() * 2, {
+        shape.type === "circle"
+          ? M.Bodies.circle(x, y, shape.r + edge, common)
+          : M.Bodies.rectangle(x, y, shape.w + edge * 2, shape.h + edge * 2, {
               ...common,
-              chamfer: { radius: SH() * 0.16 + pad() },
+              chamfer: { radius: shape.r + edge },
             });
       M.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
       const item: Item = {
@@ -279,6 +325,36 @@ export function V11Stage({
       timers.push(window.setTimeout(raiseRoof, (still ? 0 : 160 * list.length) + 1600));
     };
     rebuildRef.current = build;
+
+    // Extras that appeared drop in on their own; ones that went away leave.
+    const syncExtras = () => {
+      if (!M || !engine) return;
+      const want = new Set(live.current.extras.map((x) => x.id));
+      for (const it of [...items]) {
+        if (!isExtra(it.spec.kind) || want.has(it.spec.id)) continue;
+        if (it.body) M.Composite.remove(engine.world, it.body);
+        items = items.filter((x) => x !== it);
+      }
+      const have = new Set(items.map((it) => it.spec.id));
+      live.current.extras
+        .filter((x) => !have.has(x.id))
+        .forEach((x, i) =>
+          timers.push(
+            window.setTimeout(() => {
+              if (!engine || items.some((it) => it.spec.id === x.id)) return;
+              spawnInside({ kind: x.kind, id: x.id });
+            }, 160 * i),
+          ),
+        );
+    };
+    syncRef.current = syncExtras;
+    // Once the roof is down, newcomers start just inside the top edge.
+    const spawnInside = (spec: Spec) => {
+      if (!M) return;
+      spawn(spec);
+      const it = items[items.length - 1];
+      if (it?.body) M.Body.setPosition(it.body, { x: it.body.position.x, y: S * 0.4 });
+    };
 
     const raiseRoof = () => {
       if (!M || !topWall) return;
@@ -372,6 +448,12 @@ export function V11Stage({
       ctx.save();
       ctx.translate(it.position.x, it.position.y);
       ctx.rotate(it.angle);
+      if (isExtra(it.spec.kind)) {
+        const ex = live.current.extras.find((x) => x.id === it.spec.id);
+        if (ex) v11DrawExtra(ctx, ex, S, lw, logo);
+        ctx.restore();
+        return;
+      }
       if (it.spec.kind !== "meetup") {
         const r = ER();
         const more = it.spec.kind === "more";
@@ -455,6 +537,24 @@ export function V11Stage({
         else if (m.mine.status === "waiting") badge(bx, by, r, "#f6c21c", "備");
         else badge(bx, by, r, GREY, "假");
       }
+      if (m.id === live.current.currentId) {
+        // V11-006: 目前 tag on the top-left corner.
+        const th = h * 0.2;
+        ctx.font = `800 ${th * 0.62}px ${CJK}`;
+        const tw = ctx.measureText("目前").width + th * 0.9;
+        const tx = -w / 2 - p * 0.4;
+        const ty = -h / 2 - p - th * 0.55;
+        rr(tx, ty, tw, th, th / 2);
+        ctx.fillStyle = INK;
+        ctx.fill();
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = CREAM;
+        ctx.stroke();
+        ctx.fillStyle = CREAM;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("目前", tx + tw / 2, ty + th / 2 + th * 0.03);
+      }
       if (m.next) {
         // 下一場 tag riding on the top edge.
         const th = h * 0.2;
@@ -507,22 +607,23 @@ export function V11Stage({
         const s = Math.sin(-it.angle);
         const lx = dx * c - dy * s;
         const ly = dx * s + dy * c;
+        const shape = shapeOf(it.spec);
         const inside =
-          it.spec.kind !== "meetup"
-            ? Math.hypot(lx, ly) < ER() + 6
-            : Math.abs(lx) < SW() / 2 + 6 && Math.abs(ly) < SH() / 2 + 6;
+          shape.type === "circle"
+            ? Math.hypot(lx, ly) < shape.r + 6
+            : Math.abs(lx) < shape.w / 2 + 6 && Math.abs(ly) < shape.h / 2 + 6;
         if (inside) return it;
       }
       return null;
     };
     const rectOfItem = (it: Item): V11SrcRect => {
       const r = cv.getBoundingClientRect();
-      const ended = it.spec.kind !== "meetup";
+      const shape = shapeOf(it.spec);
       return {
         cx: r.left + it.position.x,
         cy: r.top + it.position.y,
-        w: ended ? ER() * 2 : SW(),
-        h: ended ? ER() * 2 : SH(),
+        w: shape.type === "circle" ? shape.r * 2 : shape.w,
+        h: shape.type === "circle" ? shape.r * 2 : shape.h,
         angle: it.angle,
       };
     };
@@ -564,6 +665,14 @@ export function V11Stage({
       const done = press;
       press = null;
       if (!done.moved && performance.now() - done.t < 300) {
+        const kind = done.item.spec.kind;
+        const b = done.item.body;
+        if (kind === "shuttle" || kind === "dragon") {
+          // Just for fun: a hop, and 墨糰 waves / jumps.
+          if (b && M) M.Body.setVelocity(b, { x: (Math.random() - 0.5) * 6, y: -9 });
+          mochi.react(kind === "shuttle" ? "excited" : "surprised", 900);
+          return;
+        }
         live.current.onTap(done.item.spec.id, rectOfItem(done.item));
       }
     };
@@ -648,15 +757,16 @@ export function V11Stage({
         }
       }
       ctx.clearRect(0, 0, W, H);
-      // The 下一場 sticker is drawn last so its tag stays on top of the pile.
+      // 下一場 and 目前 are drawn last so their tags stay on top of the pile.
       const nextId = live.current.meetups.find((m) => m.next)?.id;
-      let nextItem: Item | null = null;
+      const curId = live.current.currentId;
+      const late: Item[] = [];
       for (const it of items) {
         if (it.spec.id === live.current.hiddenId) continue;
-        if (it.spec.id === nextId) nextItem = it;
+        if (it.spec.id === nextId || it.spec.id === curId) late.push(it);
         else drawSticker(it);
       }
-      if (nextItem) drawSticker(nextItem);
+      late.sort((a) => (a.spec.id === curId ? 1 : -1)).forEach(drawSticker);
       mochi.frame(ms / 1000, dt / 1000, live.current.still);
       raf = requestAnimationFrame(loop);
     };
@@ -711,6 +821,10 @@ export function V11Stage({
     };
   }, [apiRef]);
 
+  useEffect(() => {
+    syncRef.current();
+  }, [extrasKey]);
+
   // A new set of meetups drops in again (data refreshes keep the pile).
   const firstKey = useRef(specKey);
   useEffect(() => {
@@ -741,6 +855,11 @@ export function V11Stage({
         className={`v11-stage-mochi${intro ? " is-away" : ""}`}
         aria-hidden="true"
       />
+      {bubble && !intro ? (
+        <p key={bubble} className="v11-stage-bubble" role="status">
+          {bubble}
+        </p>
+      ) : null}
     </div>
   );
 }

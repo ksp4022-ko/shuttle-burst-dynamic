@@ -35,6 +35,8 @@ export type V11Meetup = {
   confirmed: number;
   max: number;
   waiting: number;
+  // 季打 on leave for this meetup (V11-007 名單膠帶).
+  leave: number;
   remain: number;
   mine: V11Mine | null;
 };
@@ -134,6 +136,7 @@ export function v11Meetup(
     confirmed,
     max: event.maxPeople,
     waiting,
+    leave: roster ? roster.fixedLeave.length : 0,
     remain,
     mine: v11MineOf(roster, identity),
     next: false,

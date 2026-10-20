@@ -17,6 +17,7 @@ import { V11Panels, type V11SheetKind } from "./V11Panels";
 import { V11_STAGE_MAX, V11Stage, type V11SrcRect, type V11StageApi } from "./V11Stage";
 import { V11Styles } from "./V11Styles";
 import { useV11Meetups } from "./useV11Meetups";
+import { useV11Bubble, useV11Extras } from "./useV11Extras";
 
 // V11 (docs/V11_BASELINE.md): each meetup is a falling sticker and 墨糰 is
 // the guide: live meetups on a stage (or a list), a card per meetup where
@@ -24,7 +25,7 @@ import { useV11Meetups } from "./useV11Meetups";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/21-1";
+export const V11_TEST_BUILD = "10/21-2";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -93,6 +94,8 @@ function V11App() {
   const endedOpen = listSheet !== null;
   const [notice, setNotice] = useState("");
   const [panel, setPanel] = useState<V11SheetKind | null>(null);
+  // V11-006: 目前這場 (null = the next meetup).
+  const [currentId, setCurrentId] = useState<string | null>(null);
   // D13: the opening screen, until the meetups are in.
   const [introDone, setIntroDone] = useState(false);
   const endIntro = useCallback(() => setIntroDone(true), []);
@@ -118,6 +121,8 @@ function V11App() {
     }
     setClosing(false);
     setOpen({ id, src });
+    // V11-006: the tapped meetup becomes 目前這場 for the dock.
+    setCurrentId(id);
     apiRef.current?.hold(id);
   }, []);
   const closeCard = useCallback(() => setClosing(true), []);
@@ -203,14 +208,44 @@ function V11App() {
   }, [view, stopGravity]);
 
   const current = open && meetups ? meetups.find((m) => m.id === open.id) : null;
-  // The panels act on the open meetup, else the next one to play.
+  // V11-006: the dock and the panels act on 目前這場 -- the meetup last
+  // tapped (or picked in a panel), else the next one to play.
   const focus =
     current ??
+    meetups?.find((m) => m.id === currentId) ??
     meetups?.find((m) => m.next) ??
     meetups?.find((m) => !m.ended) ??
     meetups?.[meetups.length - 1] ??
     null;
   const onDock = (kind: V11SheetKind) => setPanel((last) => (last === kind ? null : kind));
+  // V11-007 / V11-008: the small stickers and 墨糰's lines.
+  const { extras, lines } = useV11Extras({
+    meetups,
+    focus,
+    signedIn,
+    profileComplete: Boolean(lineIdentity?.profileComplete),
+    token: auth.token,
+    siteId,
+    asIdentityId: viewing && viewAs ? viewAs.id : undefined,
+  });
+  const bubble = useV11Bubble(
+    lines,
+    !introDone || Boolean(open) || panel !== null || endedOpen || view !== "stage",
+  );
+  // Taps on the small stickers.
+  const onStageTap = useCallback(
+    (id: string, src: V11SrcRect) => {
+      if (id === "tape") setPanel("roster");
+      else if (id === "receipt") setPanel("bill");
+      else if (id === "plus") setPanel("courtRules");
+      else if (id === "stamp") setPanel("me");
+      else if (id === "badge" || id === "ticket") {
+        const target = id === "ticket" ? meetups?.find((m) => m.next) : focus;
+        if (target) openMeetup(target.id, apiRef.current?.rectOf(target.id) ?? src);
+      } else openMeetup(id, src);
+    },
+    [meetups, focus, openMeetup],
+  );
   // V11-005: the PWA picked up the login it was waiting for.
   const lastAuth = useRef(auth.diagnostic.status);
   useEffect(() => {
@@ -290,17 +325,25 @@ function V11App() {
             // The pile drops in once the opening screen has gone (D13).
             meetups={introDone ? (meetups ?? []) : []}
             intro={!introDone}
+            extras={introDone ? extras : []}
+            currentId={focus?.id ?? null}
+            bubble={bubble}
             signedIn={signedIn}
             hiddenId={open?.id ?? null}
             still={still}
             apiRef={apiRef}
-            onTap={openMeetup}
+            onTap={onStageTap}
             onPhysicsFail={onPhysicsFail}
           />
         ) : null}
         {ready && view === "list" ? (
           meetups ? (
-            <V11List meetups={meetups} signedIn={signedIn} onOpen={openMeetup} />
+            <V11List
+              meetups={meetups}
+              signedIn={signedIn}
+              currentId={focus?.id ?? null}
+              onOpen={openMeetup}
+            />
           ) : (
             <p className="v11-notice">讀取聚會中…</p>
           )
@@ -415,6 +458,10 @@ function V11App() {
               >
                 <V11DockIcon kind={kind} />
                 {label}
+                {/* V11-006: which meetup 名單 / 代報 act on. */}
+                {(kind === "roster" || kind === "proxy") && focus ? (
+                  <span className="v11-dock-date">{focus.date}</span>
+                ) : null}
               </button>
             ))}
           </div>
@@ -427,6 +474,8 @@ function V11App() {
           setSheet={setPanel}
           siteId={siteId}
           focus={focus}
+          meetups={meetups ?? []}
+          onPick={setCurrentId}
           roster={focus ? (rosters[focus.id] ?? null) : null}
           auth={auth}
           viewAs={viewing ? viewAs : null}
