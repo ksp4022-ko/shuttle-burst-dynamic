@@ -14,7 +14,7 @@ import { useV11Meetups } from "./useV11Meetups";
 // list, and a read-only card. Actions arrive in phase 3, V9 panels in 4.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/20-3";
+export const V11_TEST_BUILD = "10/20-4";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";

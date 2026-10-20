@@ -138,7 +138,8 @@ export function V11Stage({
       const r = stage.getBoundingClientRect();
       W = r.width;
       H = r.height;
-      S = Math.min(W * 0.44, H * 0.36, 210);
+      // 2026-10-20: stickers ¾ of the first size, so the pile has room.
+      S = Math.min(W * 0.44, H * 0.36, 210) * 0.75;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       cv.width = Math.round(W * dpr);
       cv.height = Math.round(H * dpr);
