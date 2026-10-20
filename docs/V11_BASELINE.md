@@ -96,7 +96,7 @@ V11 只改前端呈現；不改 Worker、D1、帳務、報名規則、請假／�
 | Phase | 內容 |
 |---|---|
 | 0 | Artifact 原型（假資料）：舞台、貼紙、資訊卡、墨糰對話、搖一搖。使用者 iPhone 確認手感 — **已驗收 2026-10-20**（https://claude.ai/artifact/GX4xi7sr92wwcDotCQNsPB） |
-| 1 | 建立 `/v11test` 路由、V11 儲存鍵、PREVIEW 標籤；Worker returnTo（交 Codex） — 前端完成 10/20-1；Worker V6-049 待部署 |
+| 1 | 建立 `/v11test` 路由、V11 儲存鍵、PREVIEW 標籤；Worker returnTo（交 Codex） — 前端完成 10/20-1；Worker V6-049 已部署 78c5e06b（2026-10-20） |
 | 2 | 接真資料：聚會、身分、名單；舞台＋列表模式 — 完成 10/20-2（/v11test），待 iPhone 驗收。舞台只放最近 4 場，其餘收成「之後 N 場」貼紙（實際資料有 13 場未結束，待使用者確認） |
 | 3 | 資訊卡＋墨糰對話＋報名／請假／消假／取消 |
 | 4 | 套用 V9 面板（名單、代報、帳單、球員卡、季打確認、Discord、管理員檢視）＋橘色外觀 |

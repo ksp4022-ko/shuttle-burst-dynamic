@@ -92,6 +92,7 @@ Reply format (user preference):
 ## V11 Rules
 - Baseline: `docs/V11_BASELINE.md` (V11 truth for scope and decisions).
 - `/v11test/*` = development / real-device verification (PREVIEW tag, `v11test:` storage keys). `/v11/*` opens only after the user accepts; `/v9` stays production until then.
+- LINE login / Discord link accept `/v11` and `/v11test` as returnTo (Worker V6-049, 78c5e06b).
 - V11 changes presentation only (falling-meetup stage + 墨糰 guide). Same backend, hooks and business rules as V9; no Worker/D1 changes unless explicitly requested.
 - Isolation: V11 code lives in `src/components/v11/` and `src/lib/v11-*`. V11 may import V9 components and hooks; V9/V8/V7 must never import V11.
 - Shared-file edits, verification and report format: same as V9 above (call out "影響共用檔", with `/v8` and `/v9` regression checks).
