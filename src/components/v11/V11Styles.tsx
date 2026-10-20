@@ -125,6 +125,46 @@ a.v11-opt { color: var(--v11-ink); text-decoration: none; display: inline-block;
 .v11-sheet-x { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--v11-ink); background: var(--v11-cream); font-size: 20px; line-height: 1; padding: 0; }
 body.v11-locked { overflow: hidden; }
 
+/* card: panel links under 墨糰 */
+.v11-more { display: flex; flex-wrap: wrap; gap: 4px 14px; border-top: 2px dashed #d9cfbf; padding-top: 8px; }
+.v11-more button { border: 0; background: none; padding: 2px 0; font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; color: var(--v11-muted); }
+
+/* dock (phase 4) */
+.v11-wrap { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.v11-dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--v11-cream); border-top: 2.5px solid var(--v11-ink);
+  padding: 8px max(16px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.v11-dock-in { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.v11-dock button { border: 0; background: transparent; display: grid; justify-items: center; gap: 2px; font-size: 12px; font-weight: 800; padding: 4px 0; border-radius: 12px; }
+.v11-dock button[aria-pressed="true"] { background: var(--v11-orange); color: var(--v11-cream); }
+.v11-acct.is-me { cursor: pointer; }
+.v11-toast {
+  position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 80; margin: 0;
+  max-width: calc(100% - 32px); background: var(--v11-ink); color: var(--v11-cream); border-radius: 999px; padding: 9px 18px;
+  font-weight: 700; font-size: 14px; text-align: center; box-shadow: 2px 3px 0 rgba(20, 20, 20, .3);
+}
+.v11-viewas { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--v11-ink); color: var(--v11-cream); border-radius: 14px; padding: 8px 12px; font-size: 14px; }
+.v11-viewas button { border: 2px solid var(--v11-cream); background: transparent; color: var(--v11-cream); border-radius: 999px; padding: 3px 10px; font-weight: 800; white-space: nowrap; }
+
+/* V9 panels in the V11 look (D2 + D12): V9's own components and sheets,
+   recoloured through its tokens; only the sheet chrome is restyled here. */
+.v11-panels.v9-app { min-height: 0; padding: 0; background: none; }
+.v11-panels {
+  --v9-ink: #141414; --v9-paper: #fffdf7; --v9-cream: #f6eee2; --v9-card: #fffdf7; --v9-muted: #5d5a52;
+  --v9-orange: #ff5226; --v9-yellow: #f6c21c; --v9-green: #2fbf5b; --v9-mint: #e3f9e8; --v9-blue: #2f6fe0;
+  --v9-sky: #e2ebfb; --v9-red: #e23b2e; --v9-rose: #fde3df;
+  font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+}
+.v11-panels .v9-sheet { border-width: 3px; box-shadow: none; overflow: hidden; }
+.v11-panels .v9-sheet-head { background: #ff5226; border-bottom: 3px solid #141414; padding-bottom: 12px; }
+.v11-panels .v9-sheet-grab { background: rgba(20, 20, 20, .35); }
+.v11-panels .v9-sheet-titles h2 { color: #141414; }
+.v11-panels .v9-sheet-titles p { color: #141414; opacity: .8; }
+.v11-panels .v9-sheet-close { background: #fffdf7; box-shadow: 2px 3px 0 #141414; }
+.v11-panels .v9-sheet-body { padding-top: 12px; }
+.v11-panels .v9-sheet-backdrop { background: rgba(20, 20, 20, .4); }
+
 @media (prefers-reduced-motion: reduce) {
   .v11-btn:active { transform: none; }
 }

@@ -86,5 +86,14 @@ export function useV11Meetups(identity: V8LineIdentity | null) {
   );
 
   const refresh = useCallback(() => load(), [load]);
-  return { meetups, error, refresh };
+  // Ended meetups are not polled; their roster is read when a panel needs it.
+  const ensureRoster = useCallback(async (eventId: string) => {
+    try {
+      const roster = await getAlphaRoster(eventId);
+      setRosters((last) => ({ ...last, [eventId]: roster }));
+    } catch {
+      // The panel shows what it has.
+    }
+  }, []);
+  return { meetups, rosters, error, refresh, ensureRoster };
 }

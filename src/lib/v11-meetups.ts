@@ -168,3 +168,11 @@ export function v11MarkNext(list: V11Meetup[]): V11Meetup[] {
   const next = list.find((m) => !m.ended && !m.started);
   return next ? list.map((m) => (m === next ? { ...m, next: true } : m)) : list;
 }
+
+// 正取 / 備取 in the API order (the 名單 panel and 排位).
+export function v11SortedRoster(roster: AlphaRoster) {
+  return {
+    confirmed: byOrder([...roster.fixedConfirmed, ...roster.tempConfirmed]),
+    waiting: byOrder([...roster.fixedWaiting, ...roster.tempWaiting]),
+  };
+}

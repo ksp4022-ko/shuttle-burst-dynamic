@@ -23,12 +23,18 @@ export type V11Viewer = {
   signedIn: boolean;
   // A confirmed name (V9-006 臨打報名卡): needed before V11 can sign up.
   profileComplete: boolean;
+  // V9-021: an admin looking at someone else's page -- status only.
+  readOnly?: boolean;
 };
 
 export function v11Speech(
   m: V11Meetup,
   viewer: V11Viewer,
 ): { expr: V11MochiExpr; say: string; choices: V11Choice[] } {
+  if (viewer.readOnly && !m.ended) {
+    const seen = v11Speech(m, { ...viewer, readOnly: false });
+    return { ...seen, say: `（唯讀檢視）\n${seen.say}`, choices: [] };
+  }
   if (m.ended) return { expr: "proud", say: `${m.date} 這場已經結束了，辛苦大家！`, choices: [] };
   if (!viewer.signedIn)
     return {

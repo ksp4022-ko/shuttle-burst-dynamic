@@ -55,7 +55,8 @@ export function V11Card({
   viewer,
   token,
   myName,
-  firstTimeHref,
+  hasCourtRules,
+  onPanel,
   src,
   still,
   closing,
@@ -71,8 +72,9 @@ export function V11Card({
   viewer: V11Viewer;
   token: string | null;
   myName: string;
-  // 第一次報名 (name / 季打 claim) is still on V9 until phase 4.
-  firstTimeHref: string;
+  hasCourtRules: boolean;
+  // Opens one of the V9 panels for this meetup (phase 4).
+  onPanel: (kind: "roster" | "bill" | "proxy" | "join" | "courtRules") => void;
   src: V11SrcRect;
   still: boolean;
   closing: boolean;
@@ -93,7 +95,6 @@ export function V11Card({
     | { kind: "talk"; said?: string; ok?: boolean; withStatus?: boolean }
     | { kind: "confirm"; action: V11ActionKind }
     | { kind: "busy" }
-    | { kind: "first-time" }
   >({ kind: "talk" });
   const talk = v11Speech(meetup, viewer);
   const fee = typeof meetup.event.tempFee === "number" ? `$${meetup.event.tempFee}` : "—";
@@ -108,15 +109,13 @@ export function V11Card({
       ? "送出中…"
       : step.kind === "confirm"
         ? "確認一下："
-        : step.kind === "first-time"
-          ? "第一次報名要先確認名字（季打要選自己的名字），這一步下一階段才搬進來。\n現在請先到正式版報名一次，之後就能在這裡操作。"
-          : step.said
-            ? // A success already says where you stand, except 取消請假, whose
-              // new place (正取 / 備取) is only known from the refreshed roster.
-              step.ok && !step.withStatus
-              ? step.said
-              : `${step.said}\n${talk.say}`
-            : talk.say;
+        : step.said
+          ? // A success already says where you stand, except 取消請假, whose
+            // new place (正取 / 備取) is only known from the refreshed roster.
+            step.ok && !step.withStatus
+            ? step.said
+            : `${step.said}\n${talk.say}`
+          : talk.say;
 
   const run = async (action: V11ActionKind) => {
     if (!token) {
@@ -367,19 +366,6 @@ export function V11Card({
                     先不要
                   </button>
                 </>
-              ) : step.kind === "first-time" ? (
-                <>
-                  <a className="v11-opt is-main" href={firstTimeHref}>
-                    到正式版報名
-                  </a>
-                  <button
-                    type="button"
-                    className="v11-opt"
-                    onClick={() => setStep({ kind: "talk" })}
-                  >
-                    回到這場
-                  </button>
-                </>
               ) : step.kind === "talk" ? (
                 talk.choices.map((choice) => (
                   <button
@@ -388,7 +374,8 @@ export function V11Card({
                     className={`v11-opt is-${choice.tone}`}
                     onClick={() => {
                       if (choice.kind === "login") onLogin();
-                      else if (choice.kind === "first-time") setStep({ kind: "first-time" });
+                      // 第一次報名: V9's 臨打報名卡 (name, or pick a 季打 name).
+                      else if (choice.kind === "first-time") onPanel("join");
                       else setStep({ kind: "confirm", action: choice.kind });
                     }}
                   >
@@ -397,7 +384,26 @@ export function V11Card({
                 ))
               ) : null}
             </div>
-            <p className="v11-later">名單、代報、帳單會在下一階段搬進來。</p>
+            <div className="v11-more">
+              <button type="button" onClick={() => onPanel("roster")}>
+                看名單
+              </button>
+              {signedIn ? (
+                <button type="button" onClick={() => onPanel("bill")}>
+                  我的帳單
+                </button>
+              ) : null}
+              {hasCourtRules ? (
+                <button type="button" onClick={() => onPanel("courtRules")}>
+                  加場規則
+                </button>
+              ) : null}
+              {signedIn && viewer.profileComplete && !viewer.readOnly && !meetup.ended ? (
+                <button type="button" onClick={() => onPanel("proxy")}>
+                  幫朋友報名
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

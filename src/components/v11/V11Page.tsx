@@ -1,20 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { configuredSiteId } from "@/lib/database-alpha";
+import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
+import { V9_COURT_RULES } from "@/lib/v9-court-rules";
 import { v9IdentityName } from "@/lib/v9-display";
+import { V9SeasonGate } from "@/components/v9/V9SeasonGate";
 import { isV11TestRoute, v11StorageKey } from "@/lib/v11-route";
 import { V11Card } from "./V11Card";
 import { V11List, V11Row, v11RowRect } from "./V11List";
+import { V11Panels, type V11SheetKind } from "./V11Panels";
 import { V11_STAGE_MAX, V11Stage, type V11SrcRect, type V11StageApi } from "./V11Stage";
 import { V11Styles } from "./V11Styles";
 import { useV11Meetups } from "./useV11Meetups";
 
 // V11 (docs/V11_BASELINE.md): each meetup is a falling sticker and 墨糰 is
-// the guide. Phase 2: live meetups, my status per meetup, the stage and the
-// list, and a read-only card. Actions arrive in phase 3, V9 panels in 4.
+// the guide: live meetups on a stage (or a list), a card per meetup where
+// 墨糰 signs you up / takes your leave (phase 3), and the V9 panels behind a
+// dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/20-5";
+export const V11_TEST_BUILD = "10/20-6";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -35,11 +40,26 @@ function saveView(view: View) {
   }
 }
 
+// While the admin's 季打確認 switch is on, V9's confirm page replaces the app
+// (same gate as /v9).
 export function V11Page() {
+  return (
+    <V9SeasonGate>
+      <V11App />
+    </V9SeasonGate>
+  );
+}
+
+function V11App() {
   const auth = useV8LineAuth();
-  const signedIn = Boolean(auth.identity);
-  const { meetups, error, refresh } = useV11Meetups(auth.identity);
   const lineIdentity = auth.identity;
+  // V9-021: an admin can look at someone else's page, read-only.
+  const isAdmin = lineIdentity?.role === "admin" && Boolean(auth.token);
+  const [viewAs, setViewAs] = useState<V8LineIdentity | null>(null);
+  const viewing = isAdmin && viewAs !== null;
+  const shownIdentity = viewing ? viewAs : lineIdentity;
+  const signedIn = Boolean(shownIdentity);
+  const { meetups, rosters, error, refresh, ensureRoster } = useV11Meetups(shownIdentity);
   // Same name V9 signs up with.
   const myName = lineIdentity
     ? lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName
@@ -67,6 +87,7 @@ export function V11Page() {
   const [listSheet, setListSheet] = useState<"more" | "ended" | null>(null);
   const endedOpen = listSheet !== null;
   const [notice, setNotice] = useState("");
+  const [panel, setPanel] = useState<V11SheetKind | null>(null);
 
   const switchView = (next: View) => {
     setView(next);
@@ -165,6 +186,14 @@ export function V11Page() {
   }, [view, stopGravity]);
 
   const current = open && meetups ? meetups.find((m) => m.id === open.id) : null;
+  // The panels act on the open meetup, else the next one to play.
+  const focus =
+    current ??
+    meetups?.find((m) => m.next) ??
+    meetups?.find((m) => !m.ended) ??
+    meetups?.[meetups.length - 1] ??
+    null;
+  const onDock = (kind: V11SheetKind) => setPanel((last) => (last === kind ? null : kind));
   const sheetRows =
     listSheet === "more"
       ? (meetups?.filter((m) => !m.ended).slice(V11_STAGE_MAX) ?? [])
@@ -184,7 +213,9 @@ export function V11Page() {
             {/* After mount only: the stored LINE identity is read from
                 localStorage, which the prerendered HTML does not have. */}
             {!ready ? null : auth.identity ? (
-              <span className="v11-acct">{v9IdentityName(auth.identity)}</span>
+              <button type="button" className="v11-acct is-me" onClick={() => setPanel("me")}>
+                {v9IdentityName(auth.identity)}
+              </button>
             ) : (
               <button
                 type="button"
@@ -198,8 +229,17 @@ export function V11Page() {
           </div>
         </header>
 
+        {viewing && viewAs ? (
+          <div className="v11-viewas" role="status">
+            <span>
+              檢視中：<strong>{v9IdentityName(viewAs)}</strong>（唯讀）
+            </span>
+            <button type="button" onClick={() => setViewAs(null)}>
+              結束檢視
+            </button>
+          </div>
+        ) : null}
         {error ? <p className="v11-notice">{error}</p> : null}
-        {notice ? <p className="v11-notice">{notice}</p> : null}
 
         {ready && view === "stage" ? (
           <V11Stage
@@ -289,10 +329,15 @@ export function V11Page() {
           meetup={current}
           siteId={siteId}
           siteLabel={siteLabel}
-          viewer={{ signedIn, profileComplete: Boolean(lineIdentity?.profileComplete) }}
+          viewer={{
+            signedIn,
+            profileComplete: Boolean(lineIdentity?.profileComplete),
+            readOnly: viewing,
+          }}
           token={auth.token}
           myName={myName}
-          firstTimeHref={`${import.meta.env.BASE_URL}v9/${siteId}/`}
+          hasCourtRules={Boolean(V9_COURT_RULES[siteId])}
+          onPanel={setPanel}
           onRefresh={refresh}
           src={open.src}
           still={still}
@@ -303,6 +348,96 @@ export function V11Page() {
           onLogin={auth.startLogin}
         />
       ) : null}
+
+      {ready ? (
+        <nav className="v11-dock" aria-label="快速功能">
+          <div className="v11-dock-in">
+            {(
+              [
+                ["roster", "名單"],
+                ["proxy", "代報"],
+                ["bill", "帳單"],
+                ["me", "我"],
+              ] as const
+            ).map(([kind, label]) => (
+              <button
+                key={kind}
+                type="button"
+                aria-pressed={panel === kind}
+                onClick={() => onDock(kind)}
+              >
+                <V11DockIcon kind={kind} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      ) : null}
+
+      {ready ? (
+        <V11Panels
+          sheet={panel}
+          setSheet={setPanel}
+          siteId={siteId}
+          focus={focus}
+          roster={focus ? (rosters[focus.id] ?? null) : null}
+          auth={auth}
+          viewAs={viewing ? viewAs : null}
+          setViewAs={setViewAs}
+          notify={setNotice}
+          onChanged={refresh}
+          ensureRoster={ensureRoster}
+        />
+      ) : null}
+
+      {notice ? (
+        <p className="v11-toast" role="status">
+          {notice}
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+function V11DockIcon({ kind }: { kind: "roster" | "proxy" | "bill" | "me" }) {
+  const common = {
+    viewBox: "0 0 24 24",
+    width: 24,
+    height: 24,
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2.2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  if (kind === "roster")
+    return (
+      <svg {...common}>
+        <path d="M8 6h12M8 12h12M8 18h12" />
+        <circle cx="4" cy="6" r="1.2" fill="currentColor" />
+        <circle cx="4" cy="12" r="1.2" fill="currentColor" />
+        <circle cx="4" cy="18" r="1.2" fill="currentColor" />
+      </svg>
+    );
+  if (kind === "proxy")
+    return (
+      <svg {...common}>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M18.5 8v6M15.5 11h6" />
+      </svg>
+    );
+  if (kind === "bill")
+    return (
+      <svg {...common}>
+        <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
+        <path d="M9 8h6M9 12h6" />
+      </svg>
+    );
+  return (
+    <svg {...common}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c1-4 4.2-6 8-6s7 2 8 6" />
+    </svg>
   );
 }

@@ -65,7 +65,8 @@ export function V9Page() {
   );
 }
 
-function V9SeasonGate({ children }: { children: ReactNode }) {
+// Exported for V11, which wraps its own page in the same gate.
+export function V9SeasonGate({ children }: { children: ReactNode }) {
   // The app starts loading right away; the check runs alongside it and only
   // swaps in the confirm page when the switch is on. Any failure keeps the
   // app (fail open, as before).
