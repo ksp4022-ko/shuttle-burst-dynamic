@@ -25,6 +25,8 @@ export type V11Meetup = {
   weekday: string; // "週四"
   time: string; // "22:00–24:00" or ""
   started: boolean;
+  // The nearest meetup that has not started: highlighted on the stage.
+  next: boolean;
   ended: boolean;
   tone: V11Tone;
   tag: string; // 尚缺 N / 備取 N / 額滿 / 已結束
@@ -125,6 +127,7 @@ export function v11Meetup(
     waiting,
     remain,
     mine: v11MineOf(roster, identity),
+    next: false,
   };
 }
 
@@ -149,4 +152,10 @@ export function v11MineLabel(mine: V11Mine | null, signedIn: boolean) {
   if (mine.status === "leave") return "已請假";
   const what = mine.status === "confirmed" ? "正取" : "備取";
   return mine.rank ? `${what} #${mine.rank}` : what;
+}
+
+// Marks the nearest meetup that has not started (list is in date order).
+export function v11MarkNext(list: V11Meetup[]): V11Meetup[] {
+  const next = list.find((m) => !m.ended && !m.started);
+  return next ? list.map((m) => (m === next ? { ...m, next: true } : m)) : list;
 }

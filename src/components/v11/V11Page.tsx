@@ -14,7 +14,7 @@ import { useV11Meetups } from "./useV11Meetups";
 // list, and a read-only card. Actions arrive in phase 3, V9 panels in 4.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/20-2";
+export const V11_TEST_BUILD = "10/20-3";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -104,48 +104,60 @@ export function V11Page() {
     return () => window.clearTimeout(id);
   }, [notice]);
 
-  // 搖一搖: the button, plus the phone's motion sensor once allowed. iOS asks
-  // for permission on the first tap of the button (D11).
-  const motionAsked = useRef(false);
-  const shakeCool = useRef(0);
-  const stateRef = useRef({ view, open, endedOpen, still });
-  stateRef.current = { view, open, endedOpen, still };
-  const enableMotion = async () => {
-    if (motionAsked.current) return;
-    motionAsked.current = true;
+  // 重力 (D11, 2026-10-20): while on, gravity follows how the phone is held,
+  // so tilting it slides the stickers. iOS asks for permission on the first
+  // tap. Off puts gravity straight down again.
+  const [gravityOn, setGravityOn] = useState(false);
+  const orient = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
+  const stopGravity = useCallback(() => {
+    if (orient.current) window.removeEventListener("deviceorientation", orient.current);
+    orient.current = null;
+    apiRef.current?.setGravity(null);
+    setGravityOn(false);
+  }, []);
+  const startGravity = async () => {
     try {
-      if (typeof DeviceMotionEvent === "undefined") return;
-      const ask = (DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> })
-        .requestPermission;
-      if (typeof ask === "function" && (await ask()) !== "granted") return;
-      window.addEventListener("devicemotion", onMotion);
+      const ask = (
+        globalThis.DeviceOrientationEvent as unknown as {
+          requestPermission?: () => Promise<string>;
+        }
+      )?.requestPermission;
+      if (typeof ask === "function" && (await ask()) !== "granted") {
+        setNotice("沒有開啟動作權限，重力感應用不了");
+        return;
+      }
     } catch {
-      // No sensor or no permission: the button still works.
+      setNotice("這台裝置不支援重力感應");
+      return;
     }
+    let heard = false;
+    const onOrient = (e: DeviceOrientationEvent) => {
+      if (e.beta == null || e.gamma == null) return;
+      heard = true;
+      const beta = (e.beta * Math.PI) / 180;
+      const gamma = (e.gamma * Math.PI) / 180;
+      // Gravity projected onto the screen (portrait), turned with the screen.
+      let x = Math.cos(beta) * Math.sin(gamma);
+      let y = Math.sin(beta);
+      const turn = ((screen.orientation?.angle ?? 0) * Math.PI) / 180;
+      [x, y] = [x * Math.cos(turn) + y * Math.sin(turn), -x * Math.sin(turn) + y * Math.cos(turn)];
+      apiRef.current?.setGravity({ x, y });
+    };
+    orient.current = onOrient;
+    window.addEventListener("deviceorientation", onOrient);
+    setGravityOn(true);
+    window.setTimeout(() => {
+      if (!heard && orient.current === onOrient) {
+        stopGravity();
+        setNotice("這台裝置沒有重力感應");
+      }
+    }, 1500);
   };
-  const onMotion = (e: DeviceMotionEvent) => {
-    let mag = 0;
-    const a = e.acceleration;
-    if (a && a.x != null) mag = Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0);
-    else if (e.accelerationIncludingGravity) {
-      const g = e.accelerationIncludingGravity;
-      mag = Math.abs(Math.hypot(g.x ?? 0, g.y ?? 0, g.z ?? 0) - 9.81);
-    }
-    const s = stateRef.current;
-    const t = performance.now();
-    if (
-      mag > 14 &&
-      t > shakeCool.current &&
-      s.view === "stage" &&
-      !s.open &&
-      !s.endedOpen &&
-      !s.still
-    ) {
-      shakeCool.current = t + 1500;
-      apiRef.current?.shake();
-    }
-  };
-  useEffect(() => () => window.removeEventListener("devicemotion", onMotion), []);
+  useEffect(() => stopGravity, [stopGravity]);
+  // Leaving the stage turns it off.
+  useEffect(() => {
+    if (view !== "stage") stopGravity();
+  }, [view, stopGravity]);
 
   const current = open && meetups ? meetups.find((m) => m.id === open.id) : null;
   const sheetRows =
@@ -207,13 +219,11 @@ export function V11Page() {
               <>
                 <button
                   type="button"
-                  className="v11-btn is-go"
-                  onClick={() => {
-                    void enableMotion();
-                    apiRef.current?.shake();
-                  }}
+                  className={`v11-btn${gravityOn ? " is-go" : ""}`}
+                  aria-pressed={gravityOn}
+                  onClick={() => (gravityOn ? stopGravity() : void startGravity())}
                 >
-                  搖一搖
+                  重力：{gravityOn ? "開" : "關"}
                 </button>
                 <button type="button" className="v11-btn" onClick={() => apiRef.current?.drop()}>
                   重新掉落

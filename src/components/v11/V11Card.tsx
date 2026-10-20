@@ -198,7 +198,10 @@ export function V11Card({
         <article className="v11-card" ref={cardRef}>
           <div className="v11-card-band" style={{ background: tone, color: toneFg }}>
             {meetup.tag}
-            <span>{siteLabel}</span>
+            <span>
+              {meetup.next ? <span className="v11-next-tag">下一場</span> : null}
+              {siteLabel}
+            </span>
           </div>
           <button
             type="button"

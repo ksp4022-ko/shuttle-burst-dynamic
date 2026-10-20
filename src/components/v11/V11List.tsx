@@ -31,7 +31,7 @@ export function V11Row({
   return (
     <button
       type="button"
-      className="v11-row"
+      className={`v11-row${meetup.next ? " is-next" : ""}`}
       data-v11-row={meetup.id}
       onClick={(e) => {
         const r = e.currentTarget.getBoundingClientRect();
@@ -48,7 +48,10 @@ export function V11Row({
         {meetup.tag}
       </span>
       <span className="v11-row-mid">
-        <span className="v11-row-d">{meetup.date}</span>
+        <span className="v11-row-d">
+          {meetup.date}
+          {meetup.next ? <span className="v11-next-tag">下一場</span> : null}
+        </span>
         <span className="v11-row-w">
           {meetup.weekday} {meetup.time}
         </span>

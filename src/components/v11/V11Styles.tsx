@@ -9,7 +9,7 @@ const V11_CSS = `
 .v11-app {
   --v11-orange: #ff5226; --v11-stage: #ff7046; --v11-ink: #141414; --v11-cream: #fffdf7;
   --v11-sand: #f6eee2; --v11-muted: #5d5a52; --v11-red: #e23b2e; --v11-yellow: #f6c21c;
-  --v11-green: #3be46a; --v11-grey: #bdb6aa; --v11-hard: 3px 4px 0 var(--v11-ink);
+  --v11-green: #3be46a; --v11-grey: #bdb6aa; --v11-blue: #2f6fe0; --v11-hard: 3px 4px 0 var(--v11-ink);
   --v11-display: "Dela Gothic One", "Arial Black", system-ui, sans-serif;
   --v11-body: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
   min-height: 100dvh; background: var(--v11-orange); color: var(--v11-ink); font-family: var(--v11-body);
@@ -57,6 +57,9 @@ const V11_CSS = `
   display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; align-items: stretch; text-align: left; padding: 0;
   border: 2.5px solid var(--v11-ink); border-radius: 18px; background: var(--v11-cream); overflow: hidden; box-shadow: var(--v11-hard);
 }
+.v11-row.is-next { border-color: var(--v11-ink); box-shadow: 0 0 0 4px var(--v11-blue), var(--v11-hard); }
+.v11-next-tag { display: inline-block; vertical-align: middle; margin-left: 8px; font-family: var(--v11-body); font-size: 12px; font-weight: 800; letter-spacing: .04em; line-height: 1.5; color: var(--v11-cream); background: var(--v11-blue); border: 2px solid var(--v11-ink); border-radius: 999px; padding: 0 8px; }
+.v11-card-band .v11-next-tag { margin: 0 8px 0 0; letter-spacing: .04em; }
 .v11-row-tag { display: grid; place-items: center; font-weight: 800; font-size: 14px; border-right: 2.5px solid var(--v11-ink); padding: 8px 4px; text-align: center; }
 .v11-row-mid { padding: 10px 12px; min-width: 0; display: grid; }
 .v11-row-d { font-family: var(--v11-display); font-size: 24px; line-height: 1; }

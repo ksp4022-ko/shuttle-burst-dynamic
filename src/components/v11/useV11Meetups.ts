@@ -3,7 +3,7 @@ import { getAlphaRoster, type AlphaEvent, type AlphaRoster } from "@/lib/databas
 import type { V8LineIdentity } from "@/lib/v8-line-auth-storage";
 import { v9EventPhase } from "@/lib/v9-event-time";
 import { loadV9Events } from "@/lib/v9-events";
-import { v11Meetup, type V11Meetup } from "@/lib/v11-meetups";
+import { v11MarkNext, v11Meetup, type V11Meetup } from "@/lib/v11-meetups";
 
 // V11 stage data: the same meetup list V9 shows (loadV9Events, V9-024) plus
 // the roster of every meetup that has not ended, so each sticker carries
@@ -68,7 +68,9 @@ export function useV11Meetups(identity: V8LineIdentity | null) {
   const meetups = useMemo<V11Meetup[] | null>(
     () =>
       events
-        ? events.map((event) => v11Meetup(event, rosters[event.id] ?? null, identity, nowMs))
+        ? v11MarkNext(
+            events.map((event) => v11Meetup(event, rosters[event.id] ?? null, identity, nowMs)),
+          )
         : null,
     [events, rosters, identity, nowMs],
   );

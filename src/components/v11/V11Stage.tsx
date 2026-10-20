@@ -13,7 +13,8 @@ import { V11Mochi } from "./v11-mochi";
 
 export type V11SrcRect = { cx: number; cy: number; w: number; h: number; angle: number };
 export type V11StageApi = {
-  shake: () => void;
+  // Gravity in screen units (down = {x: 0, y: 1}); null puts it back down.
+  setGravity: (g: { x: number; y: number } | null) => void;
   drop: () => void;
   rectOf: (id: string) => V11SrcRect | null;
   // Holds a sticker in place while its card is open.
@@ -21,6 +22,8 @@ export type V11StageApi = {
 };
 
 const INK = "#141414";
+// D4 (2026-10-20): the nearest not-started meetup gets a blue halo + 下一場 tag.
+const NEXT = "#2f6fe0";
 const CREAM = "#fffdf7";
 const TONE: Record<V11Meetup["tone"], { bg: string; fg: string }> = {
   open: { bg: "#e23b2e", fg: CREAM },
@@ -44,7 +47,11 @@ type Item = {
   position: { x: number; y: number };
   angle: number;
   body: MatterNS.Body | null;
+  // Resting tilt the sticker rights itself to (a little hand-placed lean).
+  tilt: number;
 };
+
+const GRAVITY = 1.1;
 
 function loadMatter(): Promise<typeof MatterNS> {
   return import("matter-js").then(
@@ -103,6 +110,7 @@ export function V11Stage({
     let mochiBody: MatterNS.Body | null = null;
     let items: Item[] = [];
     let drag: MatterNS.Constraint | null = null;
+    let grav = { x: 0, y: 1 };
     let press: { x: number; y: number; t: number; item: Item; moved: boolean } | null = null;
     let timers: number[] = [];
     let held: Item | null = null;
@@ -147,6 +155,7 @@ export function V11Stage({
           position: { x: W * (col ? 0.72 : 0.29), y: H - 14 - h / 2 - row * (SH() + 6) },
           angle: (i % 2 ? 0.07 : -0.06) * (row % 2 ? -1 : 1),
           body: null,
+          tilt: 0,
         };
       });
     };
@@ -169,7 +178,13 @@ export function V11Stage({
               chamfer: { radius: SH() * 0.16 + pad() },
             });
       M.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
-      const item: Item = { spec, position: body.position, angle: body.angle, body };
+      const item: Item = {
+        spec,
+        position: body.position,
+        angle: body.angle,
+        body,
+        tilt: (Math.random() - 0.5) * 0.16,
+      };
       items.push(item);
       M.Composite.add(engine.world, body);
     };
@@ -185,7 +200,8 @@ export function V11Stage({
         return;
       }
       engine = M.Engine.create();
-      engine.gravity.y = 1.1;
+      engine.gravity.x = grav.x * GRAVITY;
+      engine.gravity.y = grav.y * GRAVITY;
       const t = 200;
       const wall = { isStatic: true, friction: 0.6 };
       M.Composite.add(engine.world, [
@@ -341,7 +357,7 @@ export function V11Stage({
       ctx.shadowColor = "rgba(20,20,20,.28)";
       ctx.shadowOffsetX = 3;
       ctx.shadowOffsetY = 4;
-      ctx.fillStyle = CREAM;
+      ctx.fillStyle = m.next ? NEXT : CREAM;
       rr(-w / 2 - p, -h / 2 - p, w + p * 2, h + p * 2, rad + p);
       ctx.fill();
       ctx.shadowColor = "transparent";
@@ -380,6 +396,24 @@ export function V11Stage({
         if (m.mine.status === "confirmed") badge(bx, by, r, "#3be46a", "✓");
         else if (m.mine.status === "waiting") badge(bx, by, r, "#f6c21c", "備");
         else badge(bx, by, r, GREY, "假");
+      }
+      if (m.next) {
+        // 下一場 tag riding on the top edge.
+        const th = h * 0.2;
+        ctx.font = `800 ${th * 0.62}px ${CJK}`;
+        const tw = ctx.measureText("下一場").width + th * 0.9;
+        const tx = -w / 2 + w * 0.42;
+        const ty = -h / 2 - p - th * 0.55;
+        rr(tx, ty, tw, th, th / 2);
+        ctx.fillStyle = NEXT;
+        ctx.fill();
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = INK;
+        ctx.stroke();
+        ctx.fillStyle = CREAM;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("下一場", tx + tw / 2, ty + th / 2 + th * 0.03);
       }
       ctx.restore();
     };
@@ -487,17 +521,15 @@ export function V11Stage({
 
     // ---------- api ----------
     apiRef.current = {
-      shake: () => {
-        if (!M) return;
-        for (const it of items) {
-          if (!it.body || it.body.isStatic) continue;
-          M.Body.setVelocity(it.body, {
-            x: (Math.random() - 0.5) * 14,
-            y: -8 - Math.random() * 10,
-          });
-          M.Body.setAngularVelocity(it.body, (Math.random() - 0.5) * 0.4);
+      setGravity: (g) => {
+        const was = grav;
+        grav = g ?? { x: 0, y: 1 };
+        if (engine) {
+          engine.gravity.x = grav.x * GRAVITY;
+          engine.gravity.y = grav.y * GRAVITY;
         }
-        mochi.react("surprised", 650);
+        // A big swing of the phone startles 墨糰.
+        if (Math.hypot(grav.x - was.x, grav.y - was.y) > 0.9) mochi.react("surprised", 600);
       },
       drop: () => {
         build();
@@ -520,6 +552,17 @@ export function V11Stage({
       const dt = Math.min(ms - last, 32);
       last = ms;
       if (M && engine) {
+        // Self-righting: once a sticker slows down it turns back toward
+        // upright (plus its own small tilt) so the date reads the right way.
+        // A sticker in the finger keeps whatever angle it is dragged to.
+        for (const it of items) {
+          const b = it.body;
+          if (!b || b.isStatic || b === drag?.bodyB || b.speed > 6) continue;
+          let diff = (it.tilt - b.angle) % (Math.PI * 2);
+          if (diff > Math.PI) diff -= Math.PI * 2;
+          if (diff < -Math.PI) diff += Math.PI * 2;
+          M.Body.setAngularVelocity(b, b.angularVelocity * 0.9 + diff * 0.012);
+        }
         M.Engine.update(engine, dt);
         for (const it of items) {
           if (it.body) {
@@ -530,7 +573,15 @@ export function V11Stage({
       }
       ctx.clearRect(0, 0, W, H);
       drawCourt();
-      for (const it of items) if (it.spec.id !== live.current.hiddenId) drawSticker(it);
+      // The 下一場 sticker is drawn last so its tag stays on top of the pile.
+      const nextId = live.current.meetups.find((m) => m.next)?.id;
+      let nextItem: Item | null = null;
+      for (const it of items) {
+        if (it.spec.id === live.current.hiddenId) continue;
+        if (it.spec.id === nextId) nextItem = it;
+        else drawSticker(it);
+      }
+      if (nextItem) drawSticker(nextItem);
       mochi.frame(ms / 1000, dt / 1000, live.current.still);
       raf = requestAnimationFrame(loop);
     };
