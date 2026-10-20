@@ -25,12 +25,13 @@ const LINE_HANDOFF_POLL_MS = 2500;
 
 // V11-005: on iOS the PWA opens the LINE login in a Safari sheet over the
 // app, so the app page never reloads; the redeem loop below must start when
-// the login is tapped, not only on page load. Test routes first (/v9test,
-// /v11test); /v8 and /v9 keep the old behaviour until accepted.
+// the login is tapped, not only on page load. On V9 and V11 (accepted on
+// /v11test 2026-10-21, /v9 approved by the user); /v8 and /v8test keep the
+// old behaviour.
 function handoffStartsOnTap() {
   if (typeof window === "undefined") return false;
   const segments = window.location.pathname.split("/");
-  return segments.includes("v9test") || segments.includes("v11test");
+  return ["v9", "v9test", "v11", "v11test"].some((route) => segments.includes(route));
 }
 
 export type V8LineAuthDiagnostic = {
