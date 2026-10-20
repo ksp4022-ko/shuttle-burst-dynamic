@@ -64,6 +64,11 @@ jobs:
           cp dist/client/index.html dist/client/v9test/index.html
           cp dist/client/index.html dist/client/v9test/rian/index.html
           cp dist/client/index.html dist/client/v9test/kangxuan/index.html
+          # /v11test/* = V11 development route (see docs/V11_BASELINE.md).
+          mkdir -p dist/client/v11test dist/client/v11test/rian dist/client/v11test/kangxuan
+          cp dist/client/index.html dist/client/v11test/index.html
+          cp dist/client/index.html dist/client/v11test/rian/index.html
+          cp dist/client/index.html dist/client/v11test/kangxuan/index.html
           # /v10CtlPanel = V6 admin panel (see docs/V6_ADMIN_BASELINE.md).
           mkdir -p dist/client/v10CtlPanel
           cp dist/client/index.html dist/client/v10CtlPanel/index.html

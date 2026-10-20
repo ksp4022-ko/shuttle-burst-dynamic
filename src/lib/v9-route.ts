@@ -13,6 +13,13 @@ export function isV9TestRoute() {
 // Route-scoped session/local storage keys ("v9:<key>", or "v9test:<key>"
 // on the dev route so testing never touches production state). LINE token
 // and identity are shared with V8 on purpose (no second login).
+// V11 reuses V9 panels (docs/V11_BASELINE.md D2); on V11 routes their keys
+// take the V11 prefix so V11 testing never touches /v9 state.
 export function v9StorageKey(key: string) {
+  if (typeof window !== "undefined") {
+    const segments = window.location.pathname.split("/");
+    if (segments.includes("v11test")) return `v11test:${key}`;
+    if (segments.includes("v11")) return `v11:${key}`;
+  }
   return `${isV9TestRoute() ? "v9test" : "v9"}:${key}`;
 }

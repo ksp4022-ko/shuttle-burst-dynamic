@@ -117,11 +117,13 @@ function configuredFrontendVersion() {
 
   // /v8test/* is the V8 test route family and uses the same V8 API.
   // /v9/* (and its /v9test dev route) is a new UI over the same V8 API
-  // (V9 changes presentation only).
+  // (V9 changes presentation only). So is V11 (/v11test, docs/V11_BASELINE.md).
   return segments.includes("v8") ||
     segments.includes("v8test") ||
     segments.includes("v9") ||
-    segments.includes("v9test")
+    segments.includes("v9test") ||
+    segments.includes("v11") ||
+    segments.includes("v11test")
     ? "v8"
     : "v7";
 }
@@ -210,12 +212,12 @@ function authHeaders(token?: string): HeadersInit {
 
 // V9-066: a GET with a content-type header is not a "simple" CORS request,
 // so the browser sends an OPTIONS preflight first (one extra round trip per
-// call). GETs (never a body) skip the header on /v9 and /v9test (V8 keeps
-// its locked behavior).
+// call). GETs (never a body) skip the header on /v9 and /v9test, and on
+// V11 which shares V9's data path (V8 keeps its locked behavior).
 function skipsGetContentType() {
   if (typeof window === "undefined") return false;
   const segments = window.location.pathname.split("/");
-  return segments.includes("v9") || segments.includes("v9test");
+  return ["v9", "v9test", "v11", "v11test"].some((s) => segments.includes(s));
 }
 
 export async function alphaFetch<T>(
