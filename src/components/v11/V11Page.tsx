@@ -6,7 +6,11 @@ import { V9_COURT_RULES } from "@/lib/v9-court-rules";
 import { v9IdentityName } from "@/lib/v9-display";
 import { V9SeasonGate } from "@/components/v9/V9SeasonGate";
 import { isV11TestRoute, v11StorageKey } from "@/lib/v11-route";
+import { v9NewVersionOnline } from "@/lib/v9-version";
 import { V11Card } from "./V11Card";
+import { V11Celebrate } from "./V11Celebrate";
+import { V11Intro } from "./V11Intro";
+import { V11PullRefresh } from "./V11PullRefresh";
 import { V11List, V11Row, v11RowRect } from "./V11List";
 import { V11Panels, type V11SheetKind } from "./V11Panels";
 import { V11_STAGE_MAX, V11Stage, type V11SrcRect, type V11StageApi } from "./V11Stage";
@@ -19,7 +23,7 @@ import { useV11Meetups } from "./useV11Meetups";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/20-7";
+export const V11_TEST_BUILD = "10/20-8";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -88,6 +92,18 @@ function V11App() {
   const endedOpen = listSheet !== null;
   const [notice, setNotice] = useState("");
   const [panel, setPanel] = useState<V11SheetKind | null>(null);
+  // D13: the opening screen, until the meetups are in.
+  const [introDone, setIntroDone] = useState(false);
+  const endIntro = useCallback(() => setIntroDone(true), []);
+  const introTarget = useCallback(
+    () => document.querySelector(".v11-stage-mochi")?.getBoundingClientRect() ?? null,
+    [],
+  );
+  // D15: bumped when I land a 正取 seat.
+  const [party, setParty] = useState(0);
+  const celebrate = useCallback(() => setParty((n) => n + 1), []);
+  // D14: pull to refresh -- data, the 代退 list, and a newer build if out.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const switchView = (next: View) => {
     setView(next);
@@ -119,10 +135,10 @@ function V11App() {
   }, []);
 
   useEffect(() => {
-    const locked = Boolean(open) || endedOpen;
+    const locked = Boolean(open) || endedOpen || !introDone;
     document.body.classList.toggle("v11-locked", locked);
     return () => document.body.classList.remove("v11-locked");
-  }, [open, endedOpen]);
+  }, [open, endedOpen, introDone]);
 
   useEffect(() => {
     if (!notice) return;
@@ -194,6 +210,18 @@ function V11App() {
     meetups?.[meetups.length - 1] ??
     null;
   const onDock = (kind: V11SheetKind) => setPanel((last) => (last === kind ? null : kind));
+  const pullRefresh = useCallback(async () => {
+    // The version check and the data refresh run side by side (V9-063).
+    const data = refresh().then(() => {
+      setRefreshKey((n) => n + 1);
+      apiRef.current?.cheer();
+    });
+    if (await v9NewVersionOnline()) {
+      window.location.reload();
+      await new Promise(() => undefined);
+    }
+    await data;
+  }, [refresh]);
   const sheetRows =
     listSheet === "more"
       ? (meetups?.filter((m) => !m.ended).slice(V11_STAGE_MAX) ?? [])
@@ -202,6 +230,10 @@ function V11App() {
   return (
     <div className="v11-app">
       <V11Styles />
+      <V11PullRefresh
+        blocked={!introDone || Boolean(open) || endedOpen || panel !== null}
+        onRefresh={pullRefresh}
+      />
       <div className="v11-wrap">
         <header className="v11-top">
           <div className="v11-brand">
@@ -243,7 +275,9 @@ function V11App() {
 
         {ready && view === "stage" ? (
           <V11Stage
-            meetups={meetups ?? []}
+            // The pile drops in once the opening screen has gone (D13).
+            meetups={introDone ? (meetups ?? []) : []}
+            intro={!introDone}
             signedIn={signedIn}
             hiddenId={open?.id ?? null}
             still={still}
@@ -339,6 +373,7 @@ function V11App() {
           hasCourtRules={Boolean(V9_COURT_RULES[siteId])}
           onPanel={setPanel}
           onRefresh={refresh}
+          onCelebrate={celebrate}
           src={open.src}
           still={still}
           closing={closing}
@@ -387,8 +422,20 @@ function V11App() {
           notify={setNotice}
           onChanged={refresh}
           ensureRoster={ensureRoster}
+          refreshKey={refreshKey}
+          onCelebrate={celebrate}
         />
       ) : null}
+
+      <V11Celebrate playKey={party} still={still} />
+      {introDone ? null : (
+        <V11Intro
+          ready={ready && (meetups !== null || Boolean(error))}
+          still={still}
+          target={introTarget}
+          onDone={endIntro}
+        />
+      )}
 
       {notice ? (
         <p className="v11-toast" role="status">

@@ -56,6 +56,8 @@ export function V11Panels({
   notify,
   onChanged,
   ensureRoster,
+  refreshKey,
+  onCelebrate,
 }: {
   sheet: V11SheetKind | null;
   setSheet: (sheet: V11SheetKind | null) => void;
@@ -68,6 +70,10 @@ export function V11Panels({
   notify: (message: string) => void;
   onChanged: () => Promise<void>;
   ensureRoster: (eventId: string) => Promise<void>;
+  // Bumped by a pull-to-refresh: the 代退 list is read again (D14).
+  refreshKey: number;
+  // Landed a 正取 seat (D15).
+  onCelebrate: () => void;
 }) {
   const lineIdentity = auth.identity;
   const lineToken = auth.token;
@@ -81,6 +87,11 @@ export function V11Panels({
 
   const { identity, cancellableTempSignups, cancellableLoading, refreshCancellableTempSignups } =
     useCurrentIdentity({ roster, lineIdentity, lineAuthToken: lineToken, eventId });
+  useEffect(() => {
+    if (refreshKey) void refreshCancellableTempSignups();
+    // Only on a new pull, not when the callback changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
   const { confirmed, waiting } = useMemo(
     () => (roster ? v11SortedRoster(roster) : { confirmed: [], waiting: [] }),
     [roster],
@@ -213,6 +224,7 @@ export function V11Panels({
       void auth.refreshIdentity();
       await onChanged();
       setSheet(null);
+      if (result.status === "confirmed") onCelebrate();
       notify(
         result.position
           ? `報名好了！${result.status === "confirmed" ? "正取" : "備取"}第 ${result.position} 位`

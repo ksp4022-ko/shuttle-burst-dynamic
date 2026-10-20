@@ -19,6 +19,8 @@ export type V11StageApi = {
   rectOf: (id: string) => V11SrcRect | null;
   // Holds a sticker in place while its card is open.
   hold: (id: string | null) => void;
+  // 墨糰 nods: a refresh finished (D14).
+  cheer: () => void;
 };
 
 const INK = "#141414";
@@ -64,6 +66,7 @@ function loadMatter(): Promise<typeof MatterNS> {
 export function V11Stage({
   meetups,
   signedIn,
+  intro,
   hiddenId,
   still,
   apiRef,
@@ -72,6 +75,8 @@ export function V11Stage({
 }: {
   meetups: V11Meetup[];
   signedIn: boolean;
+  // The opening screen is up: 墨糰 is still on it (D13).
+  intro: boolean;
   hiddenId: string | null;
   still: boolean;
   apiRef: MutableRefObject<V11StageApi | null>;
@@ -96,7 +101,9 @@ export function V11Stage({
       .map((m) => m.id)
       .join(",") +
     (upcoming.length > V11_STAGE_MAX ? "|more" : "") +
-    (endedCount ? "|ended" : "");
+    (endedCount ? "|ended" : "") +
+    // D14: a new 下一場 drops the pile again too.
+    `|next:${meetups.find((m) => m.next)?.id ?? ""}`;
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -590,6 +597,7 @@ export function V11Stage({
         const it = items.find((x) => x.spec.id === id);
         return it ? rectOfItem(it) : null;
       },
+      cheer: () => mochi.react("happy", 900),
       hold: (id) => {
         if (held?.body && M) M.Body.setStatic(held.body, false);
         held = id ? (items.find((x) => x.spec.id === id) ?? null) : null;
@@ -728,7 +736,11 @@ export function V11Stage({
         className="v11-stage-canvas"
         aria-label="聚會貼紙舞台：每張貼紙是一場聚會，點一下看這場；也可以切到列表"
       />
-      <canvas ref={mochiRef} className="v11-stage-mochi" aria-hidden="true" />
+      <canvas
+        ref={mochiRef}
+        className={`v11-stage-mochi${intro ? " is-away" : ""}`}
+        aria-hidden="true"
+      />
     </div>
   );
 }

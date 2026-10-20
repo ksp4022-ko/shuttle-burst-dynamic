@@ -65,6 +65,7 @@ export function V11Card({
   onClosed,
   onLogin,
   onRefresh,
+  onCelebrate,
 }: {
   meetup: V11Meetup;
   siteId: string;
@@ -83,6 +84,8 @@ export function V11Card({
   onClosed: () => void;
   onLogin: () => void;
   onRefresh: () => Promise<void>;
+  // Landed a 正取 seat (D15).
+  onCelebrate: () => void;
 }) {
   const signedIn = viewer.signedIn;
   const cardRef = useRef<HTMLElement>(null);
@@ -117,6 +120,9 @@ export function V11Card({
             : `${step.said}\n${talk.say}`
           : talk.say;
 
+  // The meetup as last rendered: read after a refresh to see where I landed.
+  const latest = useRef(meetup);
+  latest.current = meetup;
   const run = async (action: V11ActionKind) => {
     if (!token) {
       setStep({ kind: "talk", said: "登入狀態已過期，請重新用 LINE 登入。", ok: false });
@@ -140,6 +146,12 @@ export function V11Card({
       if ((action === "signup" || action === "return") && !still) {
         const r = mochiCanvas.current?.getBoundingClientRect();
         if (r) confetti(r.left + r.width / 2, r.top + r.height / 3);
+      }
+      // D15: a 正取 seat gets the big celebration (once the refreshed
+      // roster has rendered).
+      if (action === "signup" || action === "return") {
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        if (latest.current.mine?.status === "confirmed") onCelebrate();
       }
     }
   };
