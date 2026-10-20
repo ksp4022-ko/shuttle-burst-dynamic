@@ -16,6 +16,8 @@ export type V11Mine = {
   status: "confirmed" | "waiting" | "leave";
   // Place in the API-ordered 正取 / 備取 list (V9 排位); null on 請假.
   rank: number | null;
+  // My signup row on this meetup (what 請假 / 取消 act on).
+  signupId: string;
 };
 
 export type V11Meetup = {
@@ -75,7 +77,7 @@ export function v11MineOf(
         : fixed.status === "waiting"
           ? rankIn(waiting, fixed.signupId)
           : null;
-    return { type: "fixed", status: fixed.status, rank };
+    return { type: "fixed", status: fixed.status, rank, signupId: fixed.signupId };
   }
   const name = v9IdentityName(identity);
   const mineRow = (row: SignupWithCreator) =>
@@ -84,9 +86,16 @@ export function v11MineOf(
       row.createdByLineIdentityId === identity.id &&
       row.name === name);
   const conf = roster.tempConfirmed.find(mineRow);
-  if (conf) return { type: "temp", status: "confirmed", rank: rankIn(confirmed, conf.id) };
+  if (conf)
+    return {
+      type: "temp",
+      status: "confirmed",
+      rank: rankIn(confirmed, conf.id),
+      signupId: conf.id,
+    };
   const wait = roster.tempWaiting.find(mineRow);
-  if (wait) return { type: "temp", status: "waiting", rank: rankIn(waiting, wait.id) };
+  if (wait)
+    return { type: "temp", status: "waiting", rank: rankIn(waiting, wait.id), signupId: wait.id };
   return null;
 }
 

@@ -14,7 +14,7 @@ import { useV11Meetups } from "./useV11Meetups";
 // list, and a read-only card. Actions arrive in phase 3, V9 panels in 4.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/20-4";
+export const V11_TEST_BUILD = "10/20-5";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -38,7 +38,12 @@ function saveView(view: View) {
 export function V11Page() {
   const auth = useV8LineAuth();
   const signedIn = Boolean(auth.identity);
-  const { meetups, error } = useV11Meetups(auth.identity);
+  const { meetups, error, refresh } = useV11Meetups(auth.identity);
+  const lineIdentity = auth.identity;
+  // Same name V9 signs up with.
+  const myName = lineIdentity
+    ? lineIdentity.confirmedName || lineIdentity.displayName || lineIdentity.lineDisplayName
+    : "";
   // Read on mount so the prerendered HTML and the first client render match.
   const [ready, setReady] = useState(false);
   const [siteId, setSiteId] = useState("");
@@ -176,7 +181,9 @@ export function V11Page() {
           </div>
           <div className="v11-top-r">
             {siteLabel ? <span className="v11-site">{siteLabel}</span> : null}
-            {auth.identity ? (
+            {/* After mount only: the stored LINE identity is read from
+                localStorage, which the prerendered HTML does not have. */}
+            {!ready ? null : auth.identity ? (
               <span className="v11-acct">{v9IdentityName(auth.identity)}</span>
             ) : (
               <button
@@ -282,7 +289,11 @@ export function V11Page() {
           meetup={current}
           siteId={siteId}
           siteLabel={siteLabel}
-          signedIn={signedIn}
+          viewer={{ signedIn, profileComplete: Boolean(lineIdentity?.profileComplete) }}
+          token={auth.token}
+          myName={myName}
+          firstTimeHref={`${import.meta.env.BASE_URL}v9/${siteId}/`}
+          onRefresh={refresh}
           src={open.src}
           still={still}
           closing={closing}

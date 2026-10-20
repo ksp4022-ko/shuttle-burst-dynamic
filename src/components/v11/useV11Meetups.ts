@@ -16,11 +16,11 @@ export function useV11Meetups(identity: V8LineIdentity | null) {
   const [rosters, setRosters] = useState<Record<string, AlphaRoster>>({});
   const [error, setError] = useState("");
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const busyRef = useRef(false);
+  // One load at a time; a load asked for while another runs waits for it
+  // and then runs, so a refresh after an action always reads fresh data.
+  const inflight = useRef<Promise<void> | null>(null);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    if (busyRef.current) return;
-    busyRef.current = true;
+  const loadOnce = useCallback(async (signal?: AbortSignal) => {
     try {
       const list = await loadV9Events(signal);
       const now = Date.now();
@@ -43,10 +43,20 @@ export function useV11Meetups(identity: V8LineIdentity | null) {
       });
     } catch {
       if (!signal?.aborted) setError("聚會讀取失敗，下拉或稍後再試");
-    } finally {
-      busyRef.current = false;
     }
   }, []);
+  const load = useCallback(
+    (signal?: AbortSignal) => {
+      const run = () => loadOnce(signal);
+      const next = (inflight.current ?? Promise.resolve()).then(run, run);
+      inflight.current = next;
+      void next.finally(() => {
+        if (inflight.current === next) inflight.current = null;
+      });
+      return next;
+    },
+    [loadOnce],
+  );
 
   useEffect(() => {
     const controller = new AbortController();

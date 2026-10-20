@@ -104,6 +104,12 @@ const V11_CSS = `
 .v11-opts:empty { display: none; }
 .v11-opt { border: 2px solid var(--v11-ink); background: var(--v11-cream); border-radius: 999px; padding: 7px 14px; font-weight: 800; font-size: 14px; box-shadow: 2px 3px 0 var(--v11-ink); }
 .v11-opt.is-main { background: var(--v11-green); }
+a.v11-opt { color: var(--v11-ink); text-decoration: none; display: inline-block; }
+.v11-opt.is-warn { background: var(--v11-yellow); }
+.v11-opt:active { transform: translate(2px, 2px); box-shadow: none; }
+.v11-confirm { background: var(--v11-sand); border-radius: 14px; padding: 10px 12px; }
+.v11-confirm p { margin: 0; font-weight: 700; white-space: pre-line; }
+.v11-confetti { position: fixed; z-index: 70; width: 9px; height: 14px; border: 1.5px solid var(--v11-ink); border-radius: 2px; pointer-events: none; }
 .v11-later { margin: 0; font-size: 12px; color: var(--v11-muted); border-top: 2px dashed #d9cfbf; padding-top: 8px; }
 
 /* ended sheet */

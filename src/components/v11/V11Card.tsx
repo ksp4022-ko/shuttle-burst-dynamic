@@ -1,12 +1,20 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { V9_COURT_RULES } from "@/lib/v9-court-rules";
 import { v11CourtLabel, v11MineLabel, type V11Meetup } from "@/lib/v11-meetups";
-import { V11Mochi, type V11MochiExpr } from "./v11-mochi";
+import {
+  v11ConfirmText,
+  v11RunAction,
+  v11Speech,
+  type V11ActionKind,
+  type V11Viewer,
+} from "./v11-actions";
+import { V11Mochi } from "./v11-mochi";
 import type { V11SrcRect } from "./V11Stage";
 
 // The info card (D6): the tapped sticker flies up and grows into this card;
-// 墨糰 talks under it. Phase 2 is read-only: 墨糰 says where you stand on
-// this meetup. Actions (報名／請假…) arrive in phase 3.
+// 墨糰 talks under it: where you stand on this meetup and what you can do
+// (phase 3). Every action asks for 確認送出 first, then 墨糰 thinks while
+// it is sent and the data refreshes.
 
 const TONE_BG: Record<V11Meetup["tone"], string> = {
   open: "#e23b2e",
@@ -15,33 +23,39 @@ const TONE_BG: Record<V11Meetup["tone"], string> = {
   ended: "#bdb6aa",
 };
 
-function speech(m: V11Meetup, signedIn: boolean): { expr: V11MochiExpr; say: string } {
-  if (m.ended) return { expr: "proud", say: `${m.date} 這場已經結束了，辛苦大家！` };
-  if (!signedIn) return { expr: "neutral", say: "先用 LINE 登入，我才知道你是誰喔。" };
-  const mine = m.mine;
-  if (mine?.status === "confirmed")
-    return {
-      expr: "happy",
-      say: `你在正取${mine.rank ? `第 ${mine.rank} 位` : ""}，${m.date} 球場見！`,
-    };
-  if (mine?.status === "waiting")
-    return {
-      expr: "attentive",
-      say: `你排備取${mine.rank ? `第 ${mine.rank} 位` : ""}。\n有人取消或請假，就會依序遞補。`,
-    };
-  if (mine?.status === "leave") return { expr: "sleepy", say: "這場你請假了，好好休息。" };
-  if (m.remain > 0) return { expr: "curious", say: `這場還缺 ${m.remain} 人，要來嗎？` };
-  return {
-    expr: "surprised",
-    say: m.waiting ? `已經額滿了，目前備取 ${m.waiting} 人。` : "剛好額滿了！",
-  };
+// A few paper bits flying out of 墨糰 when you land a seat.
+function confetti(x: number, y: number) {
+  const colors = ["#e23b2e", "#f6c21c", "#3be46a", "#fffdf7", "#2f6fe0"];
+  for (let i = 0; i < 18; i++) {
+    const bit = document.createElement("span");
+    bit.className = "v11-confetti";
+    bit.style.left = `${x}px`;
+    bit.style.top = `${y}px`;
+    bit.style.background = colors[i % colors.length] ?? "#fffdf7";
+    document.body.append(bit);
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+    const d = 70 + Math.random() * 90;
+    bit.animate(
+      [
+        { transform: "translate(-50%,-50%) rotate(0)", opacity: 1 },
+        {
+          transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d + 60}px) rotate(${(Math.random() - 0.5) * 720}deg)`,
+          opacity: 0,
+        },
+      ],
+      { duration: 900 + Math.random() * 300, easing: "cubic-bezier(.2,.7,.4,1)" },
+    ).onfinish = () => bit.remove();
+  }
 }
 
 export function V11Card({
   meetup,
   siteId,
   siteLabel,
-  signedIn,
+  viewer,
+  token,
+  myName,
+  firstTimeHref,
   src,
   still,
   closing,
@@ -49,11 +63,16 @@ export function V11Card({
   onClose,
   onClosed,
   onLogin,
+  onRefresh,
 }: {
   meetup: V11Meetup;
   siteId: string;
   siteLabel: string;
-  signedIn: boolean;
+  viewer: V11Viewer;
+  token: string | null;
+  myName: string;
+  // 第一次報名 (name / 季打 claim) is still on V9 until phase 4.
+  firstTimeHref: string;
   src: V11SrcRect;
   still: boolean;
   closing: boolean;
@@ -61,14 +80,70 @@ export function V11Card({
   onClose: () => void;
   onClosed: () => void;
   onLogin: () => void;
+  onRefresh: () => Promise<void>;
 }) {
+  const signedIn = viewer.signedIn;
   const cardRef = useRef<HTMLElement>(null);
   const guideRef = useRef<HTMLDivElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const mochiCanvas = useRef<HTMLCanvasElement>(null);
   const mochiRef = useRef<V11Mochi | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const { expr, say } = speech(meetup, signedIn);
+  const [step, setStep] = useState<
+    | { kind: "talk"; said?: string; ok?: boolean; withStatus?: boolean }
+    | { kind: "confirm"; action: V11ActionKind }
+    | { kind: "busy" }
+    | { kind: "first-time" }
+  >({ kind: "talk" });
+  const talk = v11Speech(meetup, viewer);
+  const fee = typeof meetup.event.tempFee === "number" ? `$${meetup.event.tempFee}` : "—";
+  const expr =
+    step.kind === "confirm"
+      ? "attentive"
+      : step.kind === "talk" && step.said && step.ok === false
+        ? "sad"
+        : talk.expr;
+  const say =
+    step.kind === "busy"
+      ? "送出中…"
+      : step.kind === "confirm"
+        ? "確認一下："
+        : step.kind === "first-time"
+          ? "第一次報名要先確認名字（季打要選自己的名字），這一步下一階段才搬進來。\n現在請先到正式版報名一次，之後就能在這裡操作。"
+          : step.said
+            ? // A success already says where you stand, except 取消請假, whose
+              // new place (正取 / 備取) is only known from the refreshed roster.
+              step.ok && !step.withStatus
+              ? step.said
+              : `${step.said}\n${talk.say}`
+            : talk.say;
+
+  const run = async (action: V11ActionKind) => {
+    if (!token) {
+      setStep({ kind: "talk", said: "登入狀態已過期，請重新用 LINE 登入。", ok: false });
+      return;
+    }
+    setStep({ kind: "busy" });
+    const mochi = mochiRef.current;
+    if (mochi) mochi.think = true;
+    const result = await v11RunAction(action, meetup, token, myName);
+    // Fresh counts and status before 墨糰 talks again.
+    if (result.ok) await onRefresh();
+    if (mochi) mochi.think = false;
+    setStep({
+      kind: "talk",
+      said: result.message,
+      ok: result.ok,
+      withStatus: action === "return",
+    });
+    if (result.ok) {
+      mochi?.react("excited", 1400);
+      if ((action === "signup" || action === "return") && !still) {
+        const r = mochiCanvas.current?.getBoundingClientRect();
+        if (r) confetti(r.left + r.width / 2, r.top + r.height / 3);
+      }
+    }
+  };
   const court = v11CourtLabel(meetup, V9_COURT_RULES[siteId]);
 
   // Fly in from the sticker (FLIP).
@@ -184,7 +259,6 @@ export function V11Card({
         : meetup.mine?.status === "leave"
           ? "#bdb6aa"
           : "#fffdf7";
-  const fee = typeof meetup.event.tempFee === "number" ? `$${meetup.event.tempFee}` : "—";
 
   return (
     <div className="v11-modal" role="dialog" aria-modal="true" aria-label={`${meetup.date} 聚會`}>
@@ -267,15 +341,63 @@ export function V11Card({
         <div className="v11-guide" ref={guideRef}>
           <canvas ref={mochiCanvas} className="v11-guide-mochi" aria-hidden="true" />
           <div className="v11-bubble">
-            <p className="v11-say">{say}</p>
+            <p className="v11-say" aria-live="polite">
+              {say}
+            </p>
+            {step.kind === "confirm" ? (
+              <div className="v11-confirm">
+                <p>{v11ConfirmText(step.action, meetup, myName, fee)}</p>
+              </div>
+            ) : null}
             <div className="v11-opts">
-              {!signedIn && !meetup.ended ? (
-                <button type="button" className="v11-opt is-main" onClick={onLogin}>
-                  LINE 登入
-                </button>
+              {step.kind === "confirm" ? (
+                <>
+                  <button
+                    type="button"
+                    className="v11-opt is-main"
+                    onClick={() => void run(step.action)}
+                  >
+                    確認送出
+                  </button>
+                  <button
+                    type="button"
+                    className="v11-opt"
+                    onClick={() => setStep({ kind: "talk" })}
+                  >
+                    先不要
+                  </button>
+                </>
+              ) : step.kind === "first-time" ? (
+                <>
+                  <a className="v11-opt is-main" href={firstTimeHref}>
+                    到正式版報名
+                  </a>
+                  <button
+                    type="button"
+                    className="v11-opt"
+                    onClick={() => setStep({ kind: "talk" })}
+                  >
+                    回到這場
+                  </button>
+                </>
+              ) : step.kind === "talk" ? (
+                talk.choices.map((choice) => (
+                  <button
+                    key={choice.kind}
+                    type="button"
+                    className={`v11-opt is-${choice.tone}`}
+                    onClick={() => {
+                      if (choice.kind === "login") onLogin();
+                      else if (choice.kind === "first-time") setStep({ kind: "first-time" });
+                      else setStep({ kind: "confirm", action: choice.kind });
+                    }}
+                  >
+                    {choice.label}
+                  </button>
+                ))
               ) : null}
             </div>
-            <p className="v11-later">報名、請假等操作下一階段在這裡接上，現在請先到正式版操作。</p>
+            <p className="v11-later">名單、代報、帳單會在下一階段搬進來。</p>
           </div>
         </div>
       </div>
