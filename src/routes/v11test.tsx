@@ -15,6 +15,13 @@ export const Route = createFileRoute("/v11test")({
         href: `${import.meta.env.BASE_URL}v9/brand/favicon-32.png`,
       },
       { rel: "apple-touch-icon", href: `${import.meta.env.BASE_URL}v9/brand/icon-180.png` },
+      // D12: Dela Gothic One for the English / digit display type only.
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap",
+      },
     ],
   }),
   component: V11Page,

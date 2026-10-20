@@ -1,86 +1,287 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useV8LineAuth } from "@/hooks/use-v8-line-auth";
 import { configuredSiteId } from "@/lib/database-alpha";
 import { v9IdentityName } from "@/lib/v9-display";
-import { isV11TestRoute } from "@/lib/v11-route";
+import { isV11TestRoute, v11StorageKey } from "@/lib/v11-route";
+import { V11Card } from "./V11Card";
+import { V11List, V11Row, v11RowRect } from "./V11List";
+import { V11_STAGE_MAX, V11Stage, type V11SrcRect, type V11StageApi } from "./V11Stage";
+import { V11Styles } from "./V11Styles";
+import { useV11Meetups } from "./useV11Meetups";
 
 // V11 (docs/V11_BASELINE.md): each meetup is a falling sticker and 墨糰 is
-// the guide. Phase 1 is only the route shell: header, PREVIEW tag, site and
-// LINE login, so routing and the login round trip can be checked on a
-// phone. The stage arrives in phase 2.
+// the guide. Phase 2: live meetups, my status per meetup, the stage and the
+// list, and a read-only card. Actions arrive in phase 3, V9 panels in 4.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/20-1";
+export const V11_TEST_BUILD = "10/20-2";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
+type View = "stage" | "list";
+
+function readView(): View | null {
+  try {
+    const v = window.localStorage.getItem(v11StorageKey("view"));
+    return v === "list" || v === "stage" ? v : null;
+  } catch {
+    return null;
+  }
+}
+function saveView(view: View) {
+  try {
+    window.localStorage.setItem(v11StorageKey("view"), view);
+  } catch {
+    // Only a convenience.
+  }
+}
 
 export function V11Page() {
   const auth = useV8LineAuth();
+  const signedIn = Boolean(auth.identity);
+  const { meetups, error } = useV11Meetups(auth.identity);
   // Read on mount so the prerendered HTML and the first client render match.
-  const [site, setSite] = useState("");
+  const [ready, setReady] = useState(false);
+  const [siteId, setSiteId] = useState("");
   const [preview, setPreview] = useState(false);
+  const [still, setStill] = useState(false);
+  const [view, setView] = useState<View>("stage");
   useEffect(() => {
-    setSite(SITE_LABELS[configuredSiteId()] || "");
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    setSiteId(configuredSiteId());
     setPreview(isV11TestRoute());
+    setStill(reduce);
+    setView(reduce ? "list" : (readView() ?? "stage"));
+    setReady(true);
   }, []);
+  const siteLabel = SITE_LABELS[siteId] || "";
+
+  const apiRef = useRef<V11StageApi | null>(null);
+  const [open, setOpen] = useState<{ id: string; src: V11SrcRect } | null>(null);
+  const [closing, setClosing] = useState(false);
+  // The "之後 N 場" / "已結束 N 場" stickers open a list sheet.
+  const [listSheet, setListSheet] = useState<"more" | "ended" | null>(null);
+  const endedOpen = listSheet !== null;
+  const [notice, setNotice] = useState("");
+
+  const switchView = (next: View) => {
+    setView(next);
+    saveView(next);
+  };
+
+  const openMeetup = useCallback((id: string, src: V11SrcRect) => {
+    if (id === "ended" || id === "more") {
+      setListSheet(id);
+      return;
+    }
+    setClosing(false);
+    setOpen({ id, src });
+    apiRef.current?.hold(id);
+  }, []);
+  const closeCard = useCallback(() => setClosing(true), []);
+  const closeTo = useCallback((): V11SrcRect | null => {
+    if (!open) return null;
+    return (view === "stage" ? apiRef.current?.rectOf(open.id) : null) ?? v11RowRect(open.id);
+  }, [open, view]);
+  const onClosed = useCallback(() => {
+    apiRef.current?.hold(null);
+    setOpen(null);
+    setClosing(false);
+  }, []);
+  const onPhysicsFail = useCallback(() => {
+    setNotice("動態效果載入失敗，先改用列表");
+    setView("list");
+  }, []);
+
+  useEffect(() => {
+    const locked = Boolean(open) || endedOpen;
+    document.body.classList.toggle("v11-locked", locked);
+    return () => document.body.classList.remove("v11-locked");
+  }, [open, endedOpen]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const id = window.setTimeout(() => setNotice(""), 3000);
+    return () => window.clearTimeout(id);
+  }, [notice]);
+
+  // 搖一搖: the button, plus the phone's motion sensor once allowed. iOS asks
+  // for permission on the first tap of the button (D11).
+  const motionAsked = useRef(false);
+  const shakeCool = useRef(0);
+  const stateRef = useRef({ view, open, endedOpen, still });
+  stateRef.current = { view, open, endedOpen, still };
+  const enableMotion = async () => {
+    if (motionAsked.current) return;
+    motionAsked.current = true;
+    try {
+      if (typeof DeviceMotionEvent === "undefined") return;
+      const ask = (DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> })
+        .requestPermission;
+      if (typeof ask === "function" && (await ask()) !== "granted") return;
+      window.addEventListener("devicemotion", onMotion);
+    } catch {
+      // No sensor or no permission: the button still works.
+    }
+  };
+  const onMotion = (e: DeviceMotionEvent) => {
+    let mag = 0;
+    const a = e.acceleration;
+    if (a && a.x != null) mag = Math.hypot(a.x ?? 0, a.y ?? 0, a.z ?? 0);
+    else if (e.accelerationIncludingGravity) {
+      const g = e.accelerationIncludingGravity;
+      mag = Math.abs(Math.hypot(g.x ?? 0, g.y ?? 0, g.z ?? 0) - 9.81);
+    }
+    const s = stateRef.current;
+    const t = performance.now();
+    if (
+      mag > 14 &&
+      t > shakeCool.current &&
+      s.view === "stage" &&
+      !s.open &&
+      !s.endedOpen &&
+      !s.still
+    ) {
+      shakeCool.current = t + 1500;
+      apiRef.current?.shake();
+    }
+  };
+  useEffect(() => () => window.removeEventListener("devicemotion", onMotion), []);
+
+  const current = open && meetups ? meetups.find((m) => m.id === open.id) : null;
+  const sheetRows =
+    listSheet === "more"
+      ? (meetups?.filter((m) => !m.ended).slice(V11_STAGE_MAX) ?? [])
+      : (meetups?.filter((m) => m.ended) ?? []);
 
   return (
     <div className="v11-app">
       <V11Styles />
-      <header className="v11-top">
-        <div className="v11-brand">
-          <span className="v11-word">OnCourt</span>
-          {preview ? <span className="v11-preview">PREVIEW {V11_TEST_BUILD}</span> : null}
-        </div>
-        <div className="v11-top-r">
-          {site ? <span className="v11-site">{site}</span> : null}
-          {auth.identity ? (
-            <span className="v11-acct">{v9IdentityName(auth.identity)}</span>
+      <div className="v11-wrap">
+        <header className="v11-top">
+          <div className="v11-brand">
+            <span className="v11-word">OnCourt</span>
+            {preview ? <span className="v11-preview">PREVIEW {V11_TEST_BUILD}</span> : null}
+          </div>
+          <div className="v11-top-r">
+            {siteLabel ? <span className="v11-site">{siteLabel}</span> : null}
+            {auth.identity ? (
+              <span className="v11-acct">{v9IdentityName(auth.identity)}</span>
+            ) : (
+              <button
+                type="button"
+                className="v11-acct is-line"
+                disabled={auth.loading}
+                onClick={auth.startLogin}
+              >
+                {auth.loading ? "…" : "LINE 登入"}
+              </button>
+            )}
+          </div>
+        </header>
+
+        {error ? <p className="v11-notice">{error}</p> : null}
+        {notice ? <p className="v11-notice">{notice}</p> : null}
+
+        {ready && view === "stage" ? (
+          <V11Stage
+            meetups={meetups ?? []}
+            signedIn={signedIn}
+            hiddenId={open?.id ?? null}
+            still={still}
+            apiRef={apiRef}
+            onTap={openMeetup}
+            onPhysicsFail={onPhysicsFail}
+          />
+        ) : null}
+        {ready && view === "list" ? (
+          meetups ? (
+            <V11List meetups={meetups} signedIn={signedIn} onOpen={openMeetup} />
           ) : (
+            <p className="v11-notice">讀取聚會中…</p>
+          )
+        ) : null}
+
+        {ready ? (
+          <div className="v11-bar">
+            {view === "stage" ? (
+              <>
+                <button
+                  type="button"
+                  className="v11-btn is-go"
+                  onClick={() => {
+                    void enableMotion();
+                    apiRef.current?.shake();
+                  }}
+                >
+                  搖一搖
+                </button>
+                <button type="button" className="v11-btn" onClick={() => apiRef.current?.drop()}>
+                  重新掉落
+                </button>
+              </>
+            ) : null}
             <button
               type="button"
-              className="v11-acct is-line"
-              disabled={auth.loading}
-              onClick={auth.startLogin}
+              className="v11-btn is-end"
+              onClick={() => switchView(view === "stage" ? "list" : "stage")}
             >
-              {auth.loading ? "…" : "LINE 登入"}
+              {view === "stage" ? "列表" : "舞台"}
             </button>
-          )}
+          </div>
+        ) : null}
+      </div>
+
+      {endedOpen ? (
+        <div className="v11-sheet-layer">
+          <div className="v11-scrim" onClick={() => setListSheet(null)} />
+          <section
+            className="v11-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="v11-ended-title"
+          >
+            <header>
+              <h2 id="v11-ended-title">{listSheet === "more" ? "之後的聚會" : "已結束的聚會"}</h2>
+              <button
+                type="button"
+                className="v11-sheet-x"
+                aria-label="關閉"
+                onClick={() => setListSheet(null)}
+              >
+                ×
+              </button>
+            </header>
+            {sheetRows.map((m) => (
+              <V11Row
+                key={m.id}
+                meetup={m}
+                signedIn={signedIn}
+                onOpen={(id, rect) => {
+                  setListSheet(null);
+                  openMeetup(id, rect);
+                }}
+              />
+            ))}
+          </section>
         </div>
-      </header>
-      <section className="v11-note">
-        <h1>V11 建置中</h1>
-        <p>第 1 階段：網址和 LINE 登入。聚會舞台和墨糰在第 2 階段接上。</p>
-        <p>
-          要報名請先到正式版 <a href="../../v9/">OnCourt</a>。
-        </p>
-      </section>
+      ) : null}
+
+      {open && current ? (
+        <V11Card
+          key={open.id}
+          meetup={current}
+          siteId={siteId}
+          siteLabel={siteLabel}
+          signedIn={signedIn}
+          src={open.src}
+          still={still}
+          closing={closing}
+          closeTo={closeTo}
+          onClose={closeCard}
+          onClosed={onClosed}
+          onLogin={auth.startLogin}
+        />
+      ) : null}
     </div>
   );
 }
-
-function V11Styles() {
-  return <style>{V11_CSS}</style>;
-}
-
-const V11_CSS = `
-.v11-app {
-  --v11-orange: #ff5226; --v11-ink: #141414; --v11-cream: #fffdf7; --v11-green: #3be46a;
-  min-height: 100dvh; background: var(--v11-orange); color: var(--v11-ink);
-  font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
-  padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
-  display: grid; align-content: start; gap: 16px; max-width: 520px; margin: 0 auto;
-}
-.v11-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.v11-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.v11-word { font-family: "Arial Black", system-ui, sans-serif; font-weight: 900; font-size: 26px; line-height: 1; letter-spacing: -.01em; }
-.v11-preview { font-size: 10px; font-weight: 800; letter-spacing: .08em; background: var(--v11-ink); color: var(--v11-cream); border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
-.v11-top-r { display: flex; align-items: center; gap: 8px; }
-.v11-site { font-weight: 800; letter-spacing: .08em; }
-.v11-acct { border: 2px solid var(--v11-ink); background: var(--v11-cream); color: var(--v11-ink); border-radius: 999px; padding: 5px 12px; font: inherit; font-weight: 700; font-size: 14px; box-shadow: 2px 3px 0 var(--v11-ink); white-space: nowrap; }
-.v11-acct.is-line { background: var(--v11-green); cursor: pointer; }
-.v11-note { background: var(--v11-cream); border: 2.5px solid var(--v11-ink); border-radius: 22px; padding: 16px 18px; box-shadow: 3px 4px 0 var(--v11-ink); display: grid; gap: 6px; }
-.v11-note h1 { margin: 0; font-size: 20px; }
-.v11-note p { margin: 0; line-height: 1.6; }
-.v11-note a { color: var(--v11-ink); font-weight: 800; }
-`;
