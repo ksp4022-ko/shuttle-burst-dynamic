@@ -25,12 +25,12 @@ const V11_CSS = `
 
 /* header */
 .v11-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.v11-brand { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; }
+.v11-brand { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; flex: 1 1 auto; }
 .v11-word { font-family: var(--v11-display); font-size: 26px; line-height: 1; letter-spacing: -.01em; }
 .v11-preview { font-size: 10px; font-weight: 800; letter-spacing: .08em; background: var(--v11-ink); color: var(--v11-cream); border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
-.v11-top-r { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.v11-site { font-weight: 800; letter-spacing: .08em; white-space: nowrap; }
-.v11-acct { border: 2px solid var(--v11-ink); background: var(--v11-cream); border-radius: 999px; padding: 5px 12px; font-weight: 700; font-size: 14px; box-shadow: 2px 3px 0 var(--v11-ink); white-space: nowrap; max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
+.v11-top-r { display: flex; align-items: center; gap: 8px; flex: none; }
+.v11-site { font-weight: 800; letter-spacing: .08em; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.v11-acct { border: 2px solid var(--v11-ink); background: var(--v11-cream); border-radius: 999px; padding: 5px 12px; font-weight: 700; font-size: 14px; box-shadow: 2px 3px 0 var(--v11-ink); white-space: nowrap; flex: none; }
 .v11-acct.is-line { background: var(--v11-green); }
 
 /* stage */
@@ -41,6 +41,7 @@ const V11_CSS = `
 }
 .v11-stage-title { position: absolute; left: 16px; top: 14px; margin: 0; font-family: var(--v11-display); font-weight: 400; font-size: clamp(34px, 10vw, 50px); line-height: .92; pointer-events: none; }
 .v11-stage-title small { display: block; font-family: var(--v11-body); font-weight: 700; font-size: 12px; letter-spacing: .06em; margin-top: 10px; line-height: 1.4; }
+.v11-stage-court { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .v11-stage-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: pan-y; cursor: grab; }
 .v11-stage-canvas.is-grabbing { cursor: grabbing; }
 .v11-stage-mochi { position: absolute; right: 6px; top: 6px; width: 30%; max-width: 150px; aspect-ratio: 1; pointer-events: none; }
@@ -65,9 +66,10 @@ const V11_CSS = `
 .v11-row-d { font-family: var(--v11-display); font-size: 24px; line-height: 1; }
 .v11-row-w { font-size: 13px; color: var(--v11-muted); font-weight: 700; }
 .v11-row-mine { align-self: center; margin-right: 12px; font-size: 12px; font-weight: 800; border: 2px solid var(--v11-ink); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
-.v11-ended { border: 2.5px dashed var(--v11-ink); border-radius: 18px; padding: 10px 12px; background: rgba(255, 253, 247, .35); display: grid; gap: 10px; }
-.v11-ended summary { font-weight: 800; cursor: pointer; }
-.v11-ended .v11-row { box-shadow: none; }
+.v11-row { width: 100%; }
+.v11-ended { display: grid; gap: 10px; }
+.v11-ended summary { font-weight: 800; cursor: pointer; padding: 4px 2px; }
+.v11-ended .v11-row { margin-top: 10px; }
 .v11-empty { margin: 0; font-weight: 700; }
 
 /* card */

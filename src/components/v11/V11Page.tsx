@@ -19,7 +19,7 @@ import { useV11Meetups } from "./useV11Meetups";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/20-6";
+export const V11_TEST_BUILD = "10/20-7";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -214,7 +214,7 @@ function V11App() {
                 localStorage, which the prerendered HTML does not have. */}
             {!ready ? null : auth.identity ? (
               <button type="button" className="v11-acct is-me" onClick={() => setPanel("me")}>
-                {v9IdentityName(auth.identity)}
+                {shortName(v9IdentityName(auth.identity))}
               </button>
             ) : (
               <button
@@ -397,6 +397,12 @@ function V11App() {
       ) : null}
     </div>
   );
+}
+
+// V11-003: up to 6 characters of the name, then "…".
+function shortName(name: string) {
+  const chars = Array.from(name);
+  return chars.length > 6 ? `${chars.slice(0, 6).join("")}…` : name;
 }
 
 function V11DockIcon({ kind }: { kind: "roster" | "proxy" | "bill" | "me" }) {

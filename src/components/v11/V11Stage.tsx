@@ -80,6 +80,7 @@ export function V11Stage({
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const courtRef = useRef<HTMLCanvasElement>(null);
   const mochiRef = useRef<HTMLCanvasElement>(null);
   // Latest props for the animation loop (it lives outside React renders).
   const live = useRef({ meetups, signedIn, hiddenId, onTap, onPhysicsFail, still });
@@ -101,9 +102,11 @@ export function V11Stage({
     const stage = stageRef.current;
     const cv = canvasRef.current;
     const mc = mochiRef.current;
-    if (!stage || !cv || !mc) return;
+    const court = courtRef.current;
+    if (!stage || !cv || !mc || !court) return;
     const ctx = cv.getContext("2d");
-    if (!ctx) return;
+    const cctx = court.getContext("2d");
+    if (!ctx || !cctx) return;
     const mochi = new V11Mochi(mc, "neutral");
     let M: typeof MatterNS | null = null;
     let engine: MatterNS.Engine | null = null;
@@ -111,6 +114,9 @@ export function V11Stage({
     let items: Item[] = [];
     let drag: MatterNS.Constraint | null = null;
     let grav = { x: 0, y: 1 };
+    let topWall: MatterNS.Body | null = null;
+    // V11-001: when each sticker started resting on 墨糰 (body id → ms).
+    const onMochi = new Map<number, number>();
     let press: { x: number; y: number; t: number; item: Item; moved: boolean } | null = null;
     let timers: number[] = [];
     let held: Item | null = null;
@@ -144,6 +150,10 @@ export function V11Stage({
       cv.width = Math.round(W * dpr);
       cv.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      court.width = cv.width;
+      court.height = cv.height;
+      cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawCourt();
     };
 
     const layoutStatic = () => {
@@ -209,8 +219,13 @@ export function V11Stage({
         M.Bodies.rectangle(W / 2, H + t / 2, W + 2 * t, t, wall),
         M.Bodies.rectangle(-t / 2, H / 2, t, H * 4, wall),
         M.Bodies.rectangle(W + t / 2, H / 2, t, H * 4, wall),
-        M.Bodies.rectangle(W / 2, -H * 1.2 - t / 2, W + 2 * t, t, wall),
       ]);
+      // The roof starts high so stickers can fall in from above; once they
+      // have landed it drops to the stage's top edge (V11-001), so none can
+      // rest out of sight above the stage.
+      topWall = M.Bodies.rectangle(W / 2, -H * 1.2 - t / 2, W + 2 * t, t, wall);
+      M.Composite.add(engine.world, topWall);
+      onMochi.clear();
       // 墨糰 is a solid bump in the corner: stickers bounce off its head.
       const sr = stage.getBoundingClientRect();
       const mr = mc.getBoundingClientRect();
@@ -221,6 +236,21 @@ export function V11Stage({
         { isStatic: true, restitution: 0.6 },
       );
       M.Composite.add(engine.world, mochiBody);
+      const touching = (pair: MatterNS.Pair) =>
+        pair.bodyA === mochiBody ? pair.bodyB : pair.bodyB === mochiBody ? pair.bodyA : null;
+      M.Events.on(engine, "collisionActive", (event) => {
+        const now = performance.now();
+        for (const pair of event.pairs) {
+          const other = touching(pair);
+          if (other && !onMochi.has(other.id)) onMochi.set(other.id, now);
+        }
+      });
+      M.Events.on(engine, "collisionEnd", (event) => {
+        for (const pair of event.pairs) {
+          const other = touching(pair);
+          if (other) onMochi.delete(other.id);
+        }
+      });
       M.Events.on(engine, "collisionStart", (event) => {
         for (const pair of event.pairs) {
           const other =
@@ -235,11 +265,26 @@ export function V11Stage({
       drag = null;
       press = null;
       const still = live.current.still;
-      specs().forEach((spec, i) =>
+      const list = specs();
+      list.forEach((spec, i) =>
         timers.push(window.setTimeout(() => spawn(spec), (still ? 0 : 160 * i) + 120)),
       );
+      timers.push(window.setTimeout(raiseRoof, (still ? 0 : 160 * list.length) + 1600));
     };
     rebuildRef.current = build;
+
+    const raiseRoof = () => {
+      if (!M || !topWall) return;
+      const t = 200;
+      // Anything still above the stage is put back just inside it first.
+      for (const it of items) {
+        const b = it.body;
+        if (!b || b.bounds.min.y >= 0) continue;
+        M.Body.setPosition(b, { x: b.position.x, y: (b.bounds.max.y - b.bounds.min.y) / 2 + 2 });
+        M.Body.setVelocity(b, { x: 0, y: 0 });
+      }
+      M.Body.setPosition(topWall, { x: W / 2, y: -t / 2 });
+    };
 
     // ---------- drawing ----------
     const rr = (x: number, y: number, w: number, h: number, r: number) => {
@@ -247,42 +292,47 @@ export function V11Stage({
       ctx.roundRect(x, y, w, h, r);
     };
     const drawCourt = () => {
-      // A doubles badminton court, 13.4 m × 6.1 m, in faint chalk.
-      const margin = 18;
-      const sc = Math.min((W - margin * 2) / 6.1, (H - margin * 2) / 13.4);
+      // V11-002: a doubles badminton court (13.4 m × 6.1 m) in faint chalk,
+      // turned 30° clockwise on its own layer under the title and stickers.
+      // Its length reaches across the stage; the ends may be cropped.
+      const turn = Math.PI / 6;
+      const sc = ((W * Math.sin(turn) + H * Math.cos(turn)) / 13.4) * 1.05;
       const cw = 6.1 * sc;
       const ch = 13.4 * sc;
-      const x0 = (W - cw) / 2;
-      const y0 = (H - ch) / 2;
-      ctx.save();
-      ctx.strokeStyle = "rgba(255,253,247,.32)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x0, y0, cw, ch);
+      const x0 = -cw / 2;
+      const y0 = -ch / 2;
+      const c = cctx;
+      c.clearRect(0, 0, W, H);
+      c.save();
+      c.translate(W / 2, H / 2);
+      c.rotate(turn);
+      c.strokeStyle = "rgba(255,253,247,.32)";
+      c.lineWidth = 2;
+      c.strokeRect(x0, y0, cw, ch);
       const side = 0.46 * sc;
-      const mid = y0 + ch / 2;
       const short = 1.98 * sc;
       const long = 0.76 * sc;
-      ctx.beginPath();
-      ctx.moveTo(x0 + side, y0);
-      ctx.lineTo(x0 + side, y0 + ch);
-      ctx.moveTo(x0 + cw - side, y0);
-      ctx.lineTo(x0 + cw - side, y0 + ch);
-      for (const y of [mid - short, mid + short, y0 + long, y0 + ch - long]) {
-        ctx.moveTo(x0, y);
-        ctx.lineTo(x0 + cw, y);
+      c.beginPath();
+      c.moveTo(x0 + side, y0);
+      c.lineTo(x0 + side, y0 + ch);
+      c.moveTo(x0 + cw - side, y0);
+      c.lineTo(x0 + cw - side, y0 + ch);
+      for (const y of [-short, short, y0 + long, y0 + ch - long]) {
+        c.moveTo(x0, y);
+        c.lineTo(x0 + cw, y);
       }
-      ctx.moveTo(x0 + cw / 2, y0);
-      ctx.lineTo(x0 + cw / 2, mid - short);
-      ctx.moveTo(x0 + cw / 2, mid + short);
-      ctx.lineTo(x0 + cw / 2, y0 + ch);
-      ctx.stroke();
-      ctx.setLineDash([6, 5]);
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(x0 - 6, mid);
-      ctx.lineTo(x0 + cw + 6, mid);
-      ctx.stroke();
-      ctx.restore();
+      c.moveTo(0, y0);
+      c.lineTo(0, -short);
+      c.moveTo(0, short);
+      c.lineTo(0, y0 + ch);
+      c.stroke();
+      c.setLineDash([6, 5]);
+      c.lineWidth = 3;
+      c.beginPath();
+      c.moveTo(x0 - 6, 0);
+      c.lineTo(x0 + cw + 6, 0);
+      c.stroke();
+      c.restore();
     };
     const badge = (x: number, y: number, r: number, bg: string, label: string) => {
       ctx.beginPath();
@@ -572,8 +622,24 @@ export function V11Stage({
           }
         }
       }
+      // V11-001: a sticker that has sat on 墨糰 for a second gets shrugged off.
+      if (M && mochiBody) {
+        const now = performance.now();
+        for (const it of items) {
+          const b = it.body;
+          const since = b ? onMochi.get(b.id) : undefined;
+          if (!b || since === undefined || now - since < 1000 || b.speed > 1.5) continue;
+          if (b === drag?.bodyB) continue;
+          const dx = b.position.x - mochiBody.position.x;
+          const dy = b.position.y - mochiBody.position.y;
+          const d = Math.hypot(dx, dy) || 1;
+          M.Body.setVelocity(b, { x: (dx / d) * 7 - 2, y: (dy / d) * 4 - 6 });
+          M.Body.setAngularVelocity(b, (Math.random() - 0.5) * 0.3);
+          onMochi.set(b.id, now + 600);
+          mochi.react("surprised", 700);
+        }
+      }
       ctx.clearRect(0, 0, W, H);
-      drawCourt();
       // The 下一場 sticker is drawn last so its tag stays on top of the pile.
       const nextId = live.current.meetups.find((m) => m.next)?.id;
       let nextItem: Item | null = null;
@@ -647,6 +713,7 @@ export function V11Stage({
 
   return (
     <div className="v11-stage" ref={stageRef}>
+      <canvas ref={courtRef} className="v11-stage-court" aria-hidden="true" />
       <h1 className="v11-stage-title">
         PICK
         <br />A GAME
