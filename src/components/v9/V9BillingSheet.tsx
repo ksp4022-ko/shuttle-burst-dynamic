@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useV8PersonalBillingTest } from "@/hooks/use-v8-personal-billing-test";
+import { v9Deadline } from "@/lib/v9-season";
 import { V9PaymentMethods } from "./V9PaymentMethods";
+import { useV9Staged } from "./useV9Test";
 import type {
   V8BillingGuestItem,
   V8BillingRefundSource,
@@ -364,6 +366,7 @@ function V9SiteBill({
   });
   const readyBill = billing.state.kind === "ready" ? billing.state.billing : null;
   const failed = billing.state.kind === "error" || billing.state.kind === "auth";
+  const staged = useV9Staged();
   const summary = readyBill ? billSummary(readyBill) : null;
   const summaryNet = summary ? summary.net : null;
   const summaryHas = summary ? summary.hasRecords : null;
@@ -434,13 +437,26 @@ function V9SiteBill({
       refunds.find((item) => item.toSeasonId && item.toSeasonId === seasonId)?.toSeasonName ||
       "本季";
     const creditTotal = (season?.refundCreditTotal ?? 0) + refundDue;
+    // V9-073: a paid 本季 季費 is settled, so its fee and leave-credit rows
+    // fold away and 季費狀態 says when it was paid. Cash refunds still due
+    // (they count in the 小計) keep a 上季請假抵扣 row of their own.
+    const paidSeason = staged && season?.status === "paid";
     const historyTotal =
       totals.otherGuestOutstandingTotal +
       pastSeasons.reduce((sum, item) => sum + item.outstanding, 0);
     body = (
       <>
         <div className="v9-bill-lines">
-          {(season || formerFixed) && (
+          {paidSeason && refundDue > 0 && (
+            <BillLine label="上季請假抵扣" value={`-${money(refundDue)}`}>
+              <ul className="v9-bill-detail-list">
+                {refunds.map((item) => (
+                  <CashRefundRow key={item.creditId} item={item} />
+                ))}
+              </ul>
+            </BillLine>
+          )}
+          {!paidSeason && (season || formerFixed) && (
             <>
               <BillLine
                 label={seasonFeeLabel(season, seasonName, withGroup)}
@@ -521,8 +537,11 @@ function V9SiteBill({
         {season && (
           <div className="v9-bill-line">
             <span>季費狀態</span>
-            <span className={`v9-badge ${season.status === "paid" ? "is-green" : "is-red"}`}>
-              {season.status === "paid" ? "已繳" : "未繳"}
+            <span className="v9-bill-paid">
+              {paidSeason && season.paidAt ? <small>{v9Deadline(season.paidAt)}</small> : null}
+              <span className={`v9-badge ${season.status === "paid" ? "is-green" : "is-red"}`}>
+                {season.status === "paid" ? "已繳" : "未繳"}
+              </span>
             </span>
           </div>
         )}

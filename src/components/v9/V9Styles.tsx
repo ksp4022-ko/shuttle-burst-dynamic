@@ -643,6 +643,10 @@ html.v9-page-lock, html.v9-page-lock body { overscroll-behavior: none; }
 .v9-sheet-titles { flex: 1; min-width: 0; }
 .v9-sheet-titles h2 { margin: 0; font-size: 20px; font-weight: 900; }
 .v9-sheet-titles p { margin: 1px 0 0; font-size: 13px; color: var(--v9-muted); font-weight: 700; }
+/* V9-073: one line, subtitle right-aligned at the title's size; a long one
+   wraps under the title, still on the right. */
+.v9-sheet-titles.is-inline { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; }
+.v9-sheet-titles.is-inline p { margin: 0 0 0 auto; font-size: 20px; font-weight: 900; line-height: 1.25; text-align: right; }
 .v9-sheet-close {
   flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
   border: 2.5px solid var(--v9-ink); background: #fff; cursor: pointer; box-shadow: 0 2px 0 var(--v9-ink);
@@ -707,6 +711,9 @@ html.v9-page-lock, html.v9-page-lock body { overscroll-behavior: none; }
 .v9-bill-lines { display: grid; }
 .v9-bill-total.is-refund { background: #8fc1ec; }
 .v9-bill-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 2px dashed #eadfca; font-weight: 700; }
+/* V9-073: 季費狀態 已繳 with when it was paid. */
+.v9-bill-paid { display: inline-flex; align-items: center; gap: 8px; }
+.v9-bill-paid small { font-size: 13px; font-weight: 700; color: var(--v9-muted); }
 .v9-bill-line strong { font-variant-numeric: tabular-nums; }
 .v9-bill-line.is-expandable { display: block; padding: 0; }
 .v9-bill-line summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; cursor: pointer; list-style: none; }

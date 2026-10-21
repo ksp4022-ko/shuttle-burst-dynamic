@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { V9Icon } from "./V9Icons";
+import { useV9Staged } from "./useV9Test";
 
 // Bottom sheet: slides up over a light backdrop; closes by the X, a tap on
 // the backdrop, Escape, or dragging the grab bar / header down.
@@ -27,6 +28,8 @@ export function V9Sheet({
   const dragStartRef = useRef<number | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<ReactNode>(children);
+  // V9-073: title and subtitle on one line, the subtitle on the right.
+  const inline = useV9Staged();
   if (open) contentRef.current = children;
 
   useEffect(() => {
@@ -100,7 +103,7 @@ export function V9Sheet({
           onPointerCancel={onPointerEnd}
         >
           <span className="v9-sheet-grab" aria-hidden="true" />
-          <div className="v9-sheet-titles">
+          <div className={`v9-sheet-titles${inline ? " is-inline" : ""}`}>
             <h2>{title}</h2>
             {subtitle ? <p>{subtitle}</p> : null}
           </div>
