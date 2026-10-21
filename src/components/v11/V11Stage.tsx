@@ -232,7 +232,10 @@ export function V11Stage({
       // V11-018: everything drops in on the left, away from 墨糰 (top right).
       // V11-024: everything drops in at the top left and rolls right down
       // the sloped floor.
-      const x = W * (0.1 + Math.random() * 0.14);
+      // V11-026: the meetup drops straight down the middle so it wedges in
+      // the middle of the pile.
+      const meetup = spec.kind === "meetup";
+      const x = meetup ? W * (0.46 + Math.random() * 0.08) : W * (0.1 + Math.random() * 0.14);
       const y = live.current.still ? H * 0.5 : -S * 0.7;
       const light = spec.kind === "shuttle";
       const common = {
@@ -256,13 +259,18 @@ export function V11Stage({
               chamfer: { radius: shape.r + edge },
             });
       M.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
-      if (!live.current.still) M.Body.setVelocity(body, { x: 2.5 + Math.random() * 2, y: 0 });
+      if (!live.current.still && !meetup)
+        M.Body.setVelocity(body, { x: 2.5 + Math.random() * 2, y: 0 });
       const item: Item = {
         spec,
         position: body.position,
         angle: body.angle,
         body,
-        tilt: (Math.random() - 0.5) * 0.16,
+        // V11-026: the two tubes may rest leaning up to 15°.
+        tilt:
+          spec.kind === "more" || spec.kind === "ended"
+            ? (Math.random() - 0.5) * 0.52
+            : (Math.random() - 0.5) * 0.16,
       };
       items.push(item);
       M.Composite.add(engine.world, body);
@@ -346,17 +354,22 @@ export function V11Stage({
         const shape = shapeOf(spec);
         return shape.type === "circle" ? Math.PI * shape.r * shape.r : shape.w * shape.h;
       };
-      const bySize = [...list].sort((a, b) => area(b) - area(a));
+      const bySize = list.filter((x) => x.kind !== "meetup").sort((a, b) => area(b) - area(a));
       const order: Spec[] = [];
       while (bySize.length) {
         order.push(bySize.shift()!);
         const small = bySize.pop();
         if (small) order.push(small);
       }
+      // V11-026: the meetup goes in halfway through.
+      order.splice(Math.floor(order.length / 2), 0, ...list.filter((x) => x.kind === "meetup"));
       order.forEach((spec, i) =>
         timers.push(window.setTimeout(() => spawn(spec), (still ? 0 : DROP_GAP * i) + 120)),
       );
-      timers.push(window.setTimeout(raiseRoof, (still ? 0 : DROP_GAP * order.length) + 1600));
+      // V11-026: once everything is down, a quick side-to-side shake
+      // loosens the pile; then the roof comes down.
+      if (!still) timers.push(window.setTimeout(shake, DROP_GAP * order.length + 900));
+      timers.push(window.setTimeout(raiseRoof, still ? 0 : DROP_GAP * order.length + 900 + 800));
     };
     rebuildRef.current = build;
 
@@ -387,6 +400,30 @@ export function V11Stage({
       if (!M) return;
       const it = spawn(spec);
       if (it?.body) M.Body.setPosition(it.body, { x: it.body.position.x, y: S * 0.4 });
+    };
+
+    const shake = () => {
+      if (!M || !engine) return;
+      const e = engine;
+      for (const it of items) {
+        const b = it.body;
+        if (b && !b.isStatic && b !== drag?.bodyB)
+          M.Body.setVelocity(b, { x: b.velocity.x, y: b.velocity.y - 2.5 });
+      }
+      mochi.react("surprised", 600);
+      const steps = [0.9, -0.9, 0.6, -0.4];
+      steps.forEach((k, i) =>
+        timers.push(
+          window.setTimeout(() => {
+            e.gravity.x = (grav.x + k) * GRAVITY;
+          }, i * 150),
+        ),
+      );
+      timers.push(
+        window.setTimeout(() => {
+          e.gravity.x = grav.x * GRAVITY;
+        }, steps.length * 150),
+      );
     };
 
     const raiseRoof = () => {
