@@ -25,7 +25,7 @@ import { useV11Bubble, useV11Extras } from "./useV11Extras";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/21-18";
+export const V11_TEST_BUILD = "10/21-19";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -92,6 +92,15 @@ function V11App() {
   // The "之後 N 場" / "已結束 N 場" stickers open a list sheet.
   const [listSheet, setListSheet] = useState<"more" | "ended" | null>(null);
   const endedOpen = listSheet !== null;
+  // V11-029: the list sheet slides out before it goes away.
+  const [sheetLeaving, setSheetLeaving] = useState(false);
+  const closeListSheet = () => {
+    setSheetLeaving(true);
+    window.setTimeout(() => {
+      setListSheet(null);
+      setSheetLeaving(false);
+    }, 240);
+  };
   const [notice, setNotice] = useState("");
   const [panel, setPanel] = useState<V11SheetKind | null>(null);
   // V11-006: 目前這場 (null = the next meetup).
@@ -146,10 +155,17 @@ function V11App() {
     return () => document.body.classList.remove("v11-locked");
   }, [open, endedOpen, introDone]);
 
+  // V11-029: the toast slides back up before it goes.
+  const [toastOut, setToastOut] = useState(false);
   useEffect(() => {
+    setToastOut(false);
     if (!notice) return;
+    const out = window.setTimeout(() => setToastOut(true), 2800);
     const id = window.setTimeout(() => setNotice(""), 3000);
-    return () => window.clearTimeout(id);
+    return () => {
+      window.clearTimeout(out);
+      window.clearTimeout(id);
+    };
   }, [notice]);
 
   // 重力 (D11, 2026-10-20): while on, gravity follows how the phone is held,
@@ -382,8 +398,8 @@ function V11App() {
       </div>
 
       {endedOpen ? (
-        <div className="v11-sheet-layer">
-          <div className="v11-scrim" onClick={() => setListSheet(null)} />
+        <div className={`v11-sheet-layer${sheetLeaving ? " is-leaving" : ""}`}>
+          <div className="v11-scrim" onClick={closeListSheet} />
           <section
             className="v11-sheet"
             role="dialog"
@@ -396,7 +412,7 @@ function V11App() {
                 type="button"
                 className="v11-sheet-x"
                 aria-label="關閉"
-                onClick={() => setListSheet(null)}
+                onClick={closeListSheet}
               >
                 ×
               </button>
@@ -464,7 +480,9 @@ function V11App() {
                 {label}
                 {/* V11-006: which meetup 名單 / 代報 act on. */}
                 {(kind === "roster" || kind === "proxy") && focus ? (
-                  <span className="v11-dock-date">{focus.date}</span>
+                  <span key={focus.date} className="v11-dock-date">
+                    {focus.date}
+                  </span>
                 ) : null}
               </button>
             ))}
@@ -503,7 +521,7 @@ function V11App() {
       )}
 
       {notice ? (
-        <p className="v11-toast" role="status">
+        <p key={notice} className={`v11-toast${toastOut ? " is-out" : ""}`} role="status">
           {notice}
         </p>
       ) : null}

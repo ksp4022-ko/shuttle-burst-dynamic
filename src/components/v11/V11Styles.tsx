@@ -232,8 +232,49 @@ body.v11-locked { overflow: hidden; }
 .v11-pull.is-busy::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; border: 2px solid var(--v11-cream); border-right-color: transparent; vertical-align: -1px; animation: v11-spin .7s linear infinite; }
 @keyframes v11-spin { to { transform: rotate(360deg); } }
 
+/* V11-029: motion for things that used to pop in or out. */
+.v11-sheet-layer .v11-sheet { animation: v11-sheet-in .32s cubic-bezier(.32,.72,0,1) both; }
+.v11-sheet-layer .v11-scrim { animation: v11-fade-in .2s ease-out both; }
+.v11-sheet-layer.is-leaving .v11-sheet { animation: v11-sheet-out .24s cubic-bezier(.32,.72,0,1) both; }
+.v11-sheet-layer.is-leaving .v11-scrim { animation: v11-fade-out .24s ease-out both; }
+@keyframes v11-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes v11-sheet-out { from { transform: none; } to { transform: translateY(100%); } }
+@keyframes v11-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes v11-fade-out { from { opacity: 1; } to { opacity: 0; } }
+.v11-toast { animation: v11-toast-in .28s cubic-bezier(.23,1,.32,1) both; }
+.v11-toast.is-out { animation: v11-toast-out .2s ease-in both; }
+@keyframes v11-toast-in { from { opacity: 0; transform: translate(-50%, -120%); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes v11-toast-out { from { opacity: 1; transform: translateX(-50%); } to { opacity: 0; transform: translate(-50%, -120%); } }
+.v11-pick-now span { display: inline-block; transition: transform .16s cubic-bezier(.23,1,.32,1); }
+.v11-pick-now[aria-expanded="true"] span { transform: rotate(180deg); }
+.v11-pick-list > * { animation: v11-pick-in .2s cubic-bezier(.23,1,.32,1) both; }
+.v11-pick-list > :nth-child(2) { animation-delay: 20ms; }
+.v11-pick-list > :nth-child(3) { animation-delay: 40ms; }
+.v11-pick-list > :nth-child(4) { animation-delay: 60ms; }
+.v11-pick-list > :nth-child(5) { animation-delay: 80ms; }
+.v11-pick-list > :nth-child(6) { animation-delay: 100ms; }
+.v11-pick-list > :nth-child(7) { animation-delay: 120ms; }
+.v11-pick-list > :nth-child(n+8) { animation-delay: 140ms; }
+@keyframes v11-pick-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+.v11-dock button { transition: transform .12s ease-out; }
+.v11-dock button:active { transform: scale(.95); }
+.v11-dock-date { animation: v11-pop .18s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes v11-pop { from { transform: scale(.8); } to { transform: none; } }
+.v11-back { animation: v11-back-in .22s cubic-bezier(.23,1,.32,1) 80ms both; }
+@keyframes v11-back-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.v11-current-tag { animation: v11-check-in .2s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes v11-check-in { from { transform: scale(.5); } to { transform: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   .v11-stage-bubble { animation: none; }
   .v11-btn:active { transform: none; }
+  /* V11-029: fades only, no movement or bounce. */
+  .v11-sheet-layer .v11-sheet, .v11-sheet-layer.is-leaving .v11-sheet,
+  .v11-pick-list > *, .v11-back, .v11-dock-date, .v11-current-tag { animation-name: v11-fade-in; }
+  .v11-sheet-layer.is-leaving .v11-sheet { animation-name: v11-fade-out; }
+  .v11-toast { animation: v11-fade-in .2s ease-out both; }
+  .v11-toast.is-out { animation: v11-fade-out .2s ease-out both; }
+  .v11-dock button:active { transform: none; }
+  .v11-pick-now span { transition: none; }
 }
 `;
