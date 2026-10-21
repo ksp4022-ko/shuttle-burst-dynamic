@@ -52,10 +52,10 @@ type Item = {
   tilt: number;
 };
 
-// V11-018: a quicker fall.
-const GRAVITY = 1.7;
+// V11-018 / V11-025: a quicker fall.
+const GRAVITY = 2.4;
 // V11-024: the floor's slope (radians) and the gap between drops (ms).
-const FLOOR_TILT = 0.1;
+const FLOOR_TILT = 0.17;
 const DROP_GAP = 300;
 
 function loadMatter(): Promise<typeof MatterNS> {
@@ -285,7 +285,7 @@ export function V11Stage({
       const t = 200;
       const wall = { isStatic: true, friction: 0.6 };
       M.Composite.add(engine.world, [
-        // V11-024: an unseen floor sloping down to the right (about 6°),
+        // V11-024 / V11-025: an unseen floor sloping down to the right (about 10°),
         // level with the stage's bottom edge at the right wall.
         M.Bodies.rectangle(W / 2, H - W * FLOOR_TILT * 0.5 + t / 2, W + 2 * t, t, {
           ...wall,
