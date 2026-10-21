@@ -25,7 +25,7 @@ import { useV11Bubble, useV11Extras } from "./useV11Extras";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/21-17";
+export const V11_TEST_BUILD = "10/21-18";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -366,14 +366,18 @@ function V11App() {
                 </button>
               </>
             ) : null}
-            <button
-              type="button"
-              className="v11-btn is-end"
-              onClick={() => switchView(view === "stage" ? "list" : "stage")}
-            >
-              {view === "stage" ? "列表" : "舞台"}
-            </button>
+            {view === "stage" ? (
+              <button type="button" className="v11-btn is-end" onClick={() => switchView("list")}>
+                所有聚會
+              </button>
+            ) : null}
           </div>
+        ) : null}
+        {/* V11-028: the list goes back to the stage by a floating button. */}
+        {ready && view === "list" ? (
+          <button type="button" className="v11-back" onClick={() => switchView("stage")}>
+            ← 返回
+          </button>
         ) : null}
       </div>
 

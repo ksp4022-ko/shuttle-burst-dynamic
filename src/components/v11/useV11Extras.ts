@@ -142,26 +142,45 @@ export function useV11Extras({
     return list;
   }, [focus, amount, next, now, siteId, progress]);
 
-  // 墨糰's short lines about 目前這場 and what is due.
+  // 墨糰's short lines: what is happening (目前這場, 最近一場, 帳單), each
+  // followed by a tip on how to use the page (V11-028), round and round.
   const lines = useMemo(() => {
-    const out: string[] = [];
+    const news: string[] = [];
+    if (!signedIn) news.push("點右上角用 LINE 登入");
     if (focus && !focus.ended) {
-      if (focus.remain > 0) out.push(`${focus.date} 還缺 ${focus.remain} 人`);
-      else
-        out.push(
-          focus.waiting ? `${focus.date} 額滿，備取 ${focus.waiting} 人` : `${focus.date} 剛好額滿`,
-        );
       const mine = focus.mine;
       // V11-012: say which meetup.
-      if (signedIn && mine?.status === "confirmed") out.push(`${focus.date} 你是正取喔！`);
+      if (signedIn && mine?.status === "confirmed") news.push(`${focus.date} 你是正取喔！`);
       if (signedIn && mine?.status === "waiting")
-        out.push(mine.rank ? `${focus.date} 你在備取第 ${mine.rank} 位` : `${focus.date} 你在備取`);
-      if (signedIn && mine?.status === "leave") out.push(`${focus.date} 你請假了`);
-      if (typeof focus.event.tempFee === "number") out.push(`臨打費 $${focus.event.tempFee}`);
+        news.push(
+          mine.rank ? `${focus.date} 你在備取第 ${mine.rank} 位` : `${focus.date} 你在備取`,
+        );
+      if (signedIn && mine?.status === "leave") news.push(`${focus.date} 你請假了`);
+      if (focus.remain > 0) news.push(`${focus.date} 還缺 ${focus.remain} 人`);
+      else
+        news.push(
+          focus.waiting ? `${focus.date} 額滿，備取 ${focus.waiting} 人` : `${focus.date} 剛好額滿`,
+        );
     }
-    if (next) out.push(`最近一場 ${countdown(next, now)}`);
-    if (amount > 0) out.push(`帳單還有 $${amount.toLocaleString("en-US")} 喔`);
-    if (!signedIn) out.push("點右上角用 LINE 登入");
+    if (next) news.push(`最近一場 ${countdown(next, now)}`);
+    if (amount > 0) news.push(`帳單還有 $${amount.toLocaleString("en-US")} 喔`);
+    const tips = [
+      "點聚會貼紙，就能報名或請假",
+      "要請假：先點那一場，再按「請假」",
+      "想看別場？按「所有聚會」或點球桶",
+      "下面的名單、代報，都跟著打勾那場",
+      "幫朋友報名：按下面的「代報」",
+      "點計分板看名單，點收據看帳單",
+      "按「重新掉落」，貼紙再丟一次",
+      "連點我三下，有驚喜喔",
+    ];
+    const out: string[] = [];
+    for (let i = 0; i < Math.max(news.length, tips.length); i++) {
+      const say = news[i];
+      const tip = tips[i];
+      if (say) out.push(say);
+      if (tip) out.push(tip);
+    }
     return out;
   }, [focus, signedIn, next, now, amount]);
 

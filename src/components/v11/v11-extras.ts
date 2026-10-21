@@ -668,20 +668,18 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
 
   if (ex.kind === "bag" && shape.type === "rect") {
     // V11-023: a duffel racket bag like the reference: cream body, a big
-    // green sweep with a yellow line, two black handles, the shuttle mark.
+    // green sweep with a yellow line, a black handle, the shuttle mark.
     const { w, h } = shape;
     const top = -h / 2 + h * 0.28;
     const bh = h / 2 - top;
     const body = new Path2D();
     roundRect(body, -w / 2, top, w, bh, bh * 0.42);
-    const handles = [-1, 1].map((d) => {
-      const a = new Path2D();
-      const cx = d * w * 0.15;
-      a.ellipse(cx, top + h * 0.04, w * 0.14, h * 0.3, 0, Math.PI, 0);
-      a.ellipse(cx, top + h * 0.04, w * 0.07, h * 0.15, 0, 0, Math.PI, true);
-      a.closePath();
-      return a;
-    });
+    // V11-028: one handle, in the middle.
+    const handle = new Path2D();
+    handle.ellipse(0, top + h * 0.04, w * 0.2, h * 0.3, 0, Math.PI, 0);
+    handle.ellipse(0, top + h * 0.04, w * 0.13, h * 0.17, 0, 0, Math.PI, true);
+    handle.closePath();
+    const handles = [handle];
     const outline = new Path2D();
     outline.addPath(body);
     for (const a of handles) outline.addPath(a);

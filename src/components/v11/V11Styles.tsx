@@ -133,6 +133,13 @@ body.v11-locked { overflow: hidden; }
 
 /* dock (phase 4) */
 .v11-wrap { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+/* V11-028: back to the stage, over the list, above the dock. */
+.v11-back {
+  position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); z-index: 21;
+  font-weight: 900; font-size: 16px; border: 2.5px solid var(--v11-ink); background: var(--v11-yellow, #f6c21c); color: var(--v11-ink);
+  border-radius: 999px; padding: 10px 18px; box-shadow: var(--v11-hard);
+}
+.v11-back:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--v11-ink); }
 .v11-dock {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--v11-cream); border-top: 2.5px solid var(--v11-ink);
   padding: 8px max(16px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));

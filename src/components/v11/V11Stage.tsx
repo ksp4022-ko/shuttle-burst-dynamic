@@ -35,6 +35,8 @@ export type V11StageApi = {
   cheer: () => void;
 };
 
+const CJK = '"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif';
+
 type Spec = { kind: "meetup" | "more" | "ended" | V11ExtraKind; id: string };
 const DRAGON: V11Extra = { kind: "dragon", id: "dragon" };
 const isExtra = (kind: Spec["kind"]) => kind !== "meetup" && kind !== "more" && kind !== "ended";
@@ -109,8 +111,19 @@ export function V11Stage({
     onTap,
     onPhysicsFail,
     still,
+    intro,
   });
-  live.current = { meetups, extras, currentId, signedIn, hiddenId, onTap, onPhysicsFail, still };
+  live.current = {
+    meetups,
+    extras,
+    currentId,
+    signedIn,
+    hiddenId,
+    onTap,
+    onPhysicsFail,
+    still,
+    intro,
+  };
   const rebuildRef = useRef<() => void>(() => {});
   const syncRef = useRef<() => void>(() => {});
   // Extras come and go without re-dropping the pile.
@@ -146,6 +159,7 @@ export function V11Stage({
     let drag: MatterNS.Constraint | null = null;
     let grav = { x: 0, y: 1 };
     let topWall: MatterNS.Body | null = null;
+    let floor: MatterNS.Body | null = null;
     // V11-001: when each sticker started resting on 墨糰 (body id → ms).
     const onMochi = new Map<number, number>();
     let press: { x: number; y: number; t: number; item: Item; moved: boolean } | null = null;
@@ -292,13 +306,15 @@ export function V11Stage({
       engine.gravity.y = grav.y * GRAVITY;
       const t = 200;
       const wall = { isStatic: true, friction: 0.6 };
+      // V11-024 / V11-025: an unseen floor sloping down to the right (about
+      // 10°), level with the stage's bottom edge at the right wall. V11-028:
+      // it levels out once everything has landed (levelFloor).
+      floor = M.Bodies.rectangle(W / 2, H - W * FLOOR_TILT * 0.5 + t / 2, W + 2 * t, t, {
+        ...wall,
+        angle: FLOOR_TILT,
+      });
       M.Composite.add(engine.world, [
-        // V11-024 / V11-025: an unseen floor sloping down to the right (about 10°),
-        // level with the stage's bottom edge at the right wall.
-        M.Bodies.rectangle(W / 2, H - W * FLOOR_TILT * 0.5 + t / 2, W + 2 * t, t, {
-          ...wall,
-          angle: FLOOR_TILT,
-        }),
+        floor,
         M.Bodies.rectangle(-t / 2, H / 2, t, H * 4, wall),
         M.Bodies.rectangle(W + t / 2, H / 2, t, H * 4, wall),
       ]);
@@ -358,8 +374,13 @@ export function V11Stage({
       // of it at the end.
       const popping = !still && list.some((x) => x.kind === "more");
       const later = popping ? list.filter((x) => x.kind === "shuttle") : [];
+      // V11-028: the shoe and the racket pop out of the bag the same way.
+      const bagged =
+        !still && list.some((x) => x.kind === "bag")
+          ? list.filter((x) => x.kind === "shoe" || x.kind === "racket")
+          : [];
       const bySize = list
-        .filter((x) => x.kind !== "meetup" && !later.includes(x))
+        .filter((x) => x.kind !== "meetup" && !later.includes(x) && !bagged.includes(x))
         .sort((a, b) => area(b) - area(a));
       const order: Spec[] = [];
       while (bySize.length) {
@@ -377,9 +398,16 @@ export function V11Stage({
       const settled = DROP_GAP * order.length + 900;
       if (!still) timers.push(window.setTimeout(shake, settled));
       later.forEach((spec, i) =>
-        timers.push(window.setTimeout(() => popFromTube(spec), settled + 700 + i * 320)),
+        timers.push(window.setTimeout(() => popOut(spec, "more"), settled + 700 + i * 320)),
       );
-      timers.push(window.setTimeout(raiseRoof, still ? 0 : settled + (later.length ? 1500 : 800)));
+      const bagAt = settled + 700 + later.length * 320 + 200;
+      bagged.forEach((spec, i) =>
+        timers.push(window.setTimeout(() => popOut(spec, "bag"), bagAt + i * 360)),
+      );
+      const popsEnd =
+        later.length || bagged.length ? bagAt + bagged.length * 360 + 600 : settled + 800;
+      timers.push(window.setTimeout(raiseRoof, still ? 0 : popsEnd));
+      timers.push(window.setTimeout(levelFloor, still ? 0 : popsEnd + 400));
     };
     rebuildRef.current = build;
 
@@ -412,14 +440,15 @@ export function V11Stage({
       if (it?.body) M.Body.setPosition(it.body, { x: it.body.position.x, y: S * 0.4 });
     };
 
-    // V11-027: a shuttle shoots out of the 之後 tube's open top, cork first,
-    // and 墨糰 cheers. Without the tube it just drops in.
-    const popFromTube = (spec: Spec) => {
+    // V11-027 / V11-028: a shuttle shoots out of the 之後 tube's open top
+    // (cork first); the shoe and the racket out of the bag's top. 墨糰
+    // cheers. Without the tube / bag it just drops in.
+    const popOut = (spec: Spec, from: "more" | "bag") => {
       if (!M) return;
-      const tube = items.find((x) => x.spec.kind === "more")?.body;
+      const tube = items.find((x) => x.spec.kind === from)?.body;
       const it = spawn(spec);
       if (!tube || !it?.body) return;
-      const shape = v11CountShape(S);
+      const shape = from === "more" ? v11CountShape(S) : v11ExtraShape("bag", S);
       const half = shape.type === "rect" ? shape.h / 2 : S * 0.4;
       const a = tube.angle;
       // The tube's axis, pointing out of its top.
@@ -430,7 +459,7 @@ export function V11Stage({
         x: tube.position.x + ux * out,
         y: tube.position.y + uy * out,
       });
-      M.Body.setAngle(it.body, a + Math.PI);
+      M.Body.setAngle(it.body, spec.kind === "shuttle" ? a + Math.PI : a);
       const speed = 13 + Math.random() * 3;
       M.Body.setVelocity(it.body, {
         x: ux * speed + (Math.random() - 0.5) * 4,
@@ -462,6 +491,28 @@ export function V11Stage({
           e.gravity.x = grav.x * GRAVITY;
         }, steps.length * 150),
       );
+    };
+
+    // V11-028: the sloped floor tilts back level over half a second, so the
+    // pile settles across the whole bottom (no gap on the left).
+    const levelFloor = () => {
+      if (!M || !floor) return;
+      const body = floor;
+      const t = 200;
+      const from = body.angle;
+      const fromY = body.position.y;
+      const toY = H + t / 2;
+      const steps = 12;
+      for (let i = 1; i <= steps; i++) {
+        timers.push(
+          window.setTimeout(() => {
+            if (!M) return;
+            const k = i / steps;
+            M.Body.setAngle(body, from * (1 - k));
+            M.Body.setPosition(body, { x: W / 2, y: fromY + (toY - fromY) * k });
+          }, i * 45),
+        );
+      }
     };
 
     const raiseRoof = () => {
@@ -552,6 +603,59 @@ export function V11Stage({
             signedIn: live.current.signedIn,
           });
       }
+      ctx.restore();
+    };
+
+    // V11-028: the meetup sticker says what a tap on it does (請假 / 報名 …)
+    // in a small bubble above it, now and then (between 墨糰's lines).
+    const hintStart = performance.now();
+    const hintOf = (m: V11Meetup) => {
+      if (!live.current.signedIn) return "點我看這場";
+      if (m.mine?.status === "leave") return "消假點這裡";
+      if (m.mine?.type === "fixed") return "請假點這裡";
+      if (m.mine) return "取消點這裡";
+      return m.started ? "" : "報名點這裡";
+    };
+    const drawMeetupHint = (ms: number) => {
+      if (live.current.intro || live.current.hiddenId) return;
+      const phase = (ms - hintStart) % 12000;
+      if (phase < 6000 || phase > 10000) return;
+      const it = items.find((x) => x.spec.kind === "meetup");
+      const m = it && live.current.meetups.find((x) => x.id === it.spec.id);
+      if (!it || !m || it.body === drag?.bodyB) return;
+      const text = hintOf(m);
+      if (!text) return;
+      // Pop in over the first 200ms.
+      const k = Math.min(1, (phase - 6000) / 200);
+      ctx.save();
+      ctx.font = `900 14px ${CJK}`;
+      const tw = ctx.measureText(text).width + 22;
+      const th = 28;
+      const x = Math.max(6, Math.min(W - tw - 6, it.position.x - tw / 2));
+      const y = Math.max(6, it.position.y - SH() / 2 - pad() - th - 14);
+      const tipX = Math.max(x + 14, Math.min(x + tw - 14, it.position.x));
+      ctx.translate(tipX, y + th);
+      ctx.scale(k, k);
+      ctx.translate(-tipX, -(y + th));
+      ctx.beginPath();
+      ctx.roundRect(x, y, tw, th, th / 2);
+      ctx.moveTo(tipX - 7, y + th - 1);
+      ctx.lineTo(tipX, y + th + 9);
+      ctx.lineTo(tipX + 7, y + th - 1);
+      ctx.fillStyle = "#f6c21c";
+      ctx.shadowColor = "rgba(20,20,20,.3)";
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 3;
+      ctx.fill();
+      ctx.shadowColor = "transparent";
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#141414";
+      ctx.stroke();
+      ctx.fillStyle = "#141414";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, x + tw / 2, y + th / 2 + 1);
       ctx.restore();
     };
 
@@ -771,6 +875,7 @@ export function V11Stage({
         else drawSticker(it);
       }
       late.sort((a) => (a.spec.id === curId ? 1 : -1)).forEach(drawSticker);
+      drawMeetupHint(ms);
       mochi.frame(ms / 1000, dt / 1000, live.current.still);
       raf = requestAnimationFrame(loop);
     };
