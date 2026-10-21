@@ -160,6 +160,9 @@ export function V11Stage({
     let grav = { x: 0, y: 1 };
     let topWall: MatterNS.Body | null = null;
     let floor: MatterNS.Body | null = null;
+    // V11-030: when the next idle wiggle may happen (ms); Infinity until the
+    // drop has settled.
+    let nextWiggle = Infinity;
     // V11-001: when each sticker started resting on 墨糰 (body id → ms).
     const onMochi = new Map<number, number>();
     let press: { x: number; y: number; t: number; item: Item; moved: boolean } | null = null;
@@ -181,16 +184,19 @@ export function V11Stage({
       for (const x of live.current.extras) list.push({ kind: x.kind, id: x.id });
       return list;
     };
-    // V11-018: a squarer calendar card.
-    const SW = () => S * 0.82;
-    const SH = () => S * 0.74;
+    // V11-018: a squarer calendar card. V11-030: the meetup is the star at
+    // 1.3×; the decorations are drawn at 0.85× (info stickers stay full size
+    // so their text stays at 11pt or more, V11-020).
+    const SW = () => S * 0.82 * 1.3;
+    const SH = () => S * 0.74 * 1.3;
+    const XS = (kind: Spec["kind"]) => (V11_DECOR.has(kind as V11ExtraKind) ? S * 0.85 : S);
     const pad = () => Math.max(4, S * 0.045);
     const shapeOf = (spec: Spec): V11Shape =>
       spec.kind === "meetup"
         ? { type: "rect", w: SW(), h: SH(), r: SH() * 0.16 }
         : spec.kind === "more" || spec.kind === "ended"
           ? v11CountShape(S)
-          : v11ExtraShape(spec.kind, S);
+          : v11ExtraShape(spec.kind, XS(spec.kind));
     // V11-013: the 龍虎 logo loads only when the easter egg is found.
     let logo: HTMLImageElement | null = null;
     let mochiTaps: number[] = [];
@@ -263,7 +269,7 @@ export function V11Stage({
       const shape = shapeOf(spec);
       const edge = pad();
       // V11-016 / V11-022: shuttle, racket and shoe follow their outline.
-      const hull = v11HullOf(spec as { kind: V11ExtraKind; id: string }, S, pad());
+      const hull = v11HullOf(spec as { kind: V11ExtraKind; id: string }, XS(spec.kind), pad());
       const body = hull
         ? M.Bodies.fromVertices(x, y, [hull.verts], common)
         : shape.type === "circle"
@@ -295,6 +301,7 @@ export function V11Stage({
       timers.forEach((id) => window.clearTimeout(id));
       timers = [];
       held = null;
+      nextWiggle = Infinity;
       dims();
       if (!M) {
         engine = null;
@@ -448,13 +455,13 @@ export function V11Stage({
       const tube = items.find((x) => x.spec.kind === from)?.body;
       const it = spawn(spec);
       if (!tube || !it?.body) return;
-      const shape = from === "more" ? v11CountShape(S) : v11ExtraShape("bag", S);
+      const shape = from === "more" ? v11CountShape(S) : v11ExtraShape("bag", XS("bag"));
       const half = shape.type === "rect" ? shape.h / 2 : S * 0.4;
       const a = tube.angle;
       // The tube's axis, pointing out of its top.
       const ux = Math.sin(a);
       const uy = -Math.cos(a);
-      const out = half + S * 0.22;
+      const out = half + S * 0.2;
       M.Body.setPosition(it.body, {
         x: tube.position.x + ux * out,
         y: tube.position.y + uy * out,
@@ -467,6 +474,21 @@ export function V11Stage({
       });
       M.Body.setAngularVelocity(it.body, (Math.random() - 0.5) * 0.3);
       mochi.react("excited", 700);
+    };
+
+    // V11-030: now and then one resting sticker gives a small hop and a
+    // twist, then settles back (self-righting), so the pile feels alive.
+    const wiggle = (ms: number) => {
+      nextWiggle = ms + 6000 + Math.random() * 2000;
+      const c = live.current;
+      if (!M || !engine || c.still || c.intro || c.hiddenId || drag || press) return;
+      const resting = items.filter(
+        (it) => it.body && !it.body.isStatic && it.body.speed < 0.4 && it !== held,
+      );
+      const it = resting[Math.floor(Math.random() * resting.length)];
+      if (!it?.body) return;
+      M.Body.setVelocity(it.body, { x: (Math.random() - 0.5) * 1.2, y: -3.2 });
+      M.Body.setAngularVelocity(it.body, (Math.random() < 0.5 ? -1 : 1) * 0.07);
     };
 
     const shake = () => {
@@ -503,6 +525,7 @@ export function V11Stage({
       const fromY = body.position.y;
       const toY = H + t / 2;
       const steps = 12;
+      nextWiggle = performance.now() + 3000;
       for (let i = 1; i <= steps; i++) {
         timers.push(
           window.setTimeout(() => {
@@ -582,9 +605,9 @@ export function V11Stage({
         const ex = live.current.extras.find((x) => x.id === it.spec.id);
         const egg = it.spec.kind === "dragon" ? DRAGON : null;
         // A hull body sits at the hull's centroid, not at the art's origin.
-        const hull = v11HullOf(it.spec as { kind: V11ExtraKind; id: string }, S, p);
+        const hull = v11HullOf(it.spec as { kind: V11ExtraKind; id: string }, XS(it.spec.kind), p);
         if (hull) ctx.translate(-hull.centre.x, -hull.centre.y);
-        if (ex ?? egg) v11DrawExtra(ctx, (ex ?? egg)!, S, lw, p, logo);
+        if (ex ?? egg) v11DrawExtra(ctx, (ex ?? egg)!, XS(it.spec.kind), lw, p, logo);
       } else if (it.spec.kind !== "meetup") {
         const more = it.spec.kind === "more";
         const n = more
@@ -876,6 +899,7 @@ export function V11Stage({
       }
       late.sort((a) => (a.spec.id === curId ? 1 : -1)).forEach(drawSticker);
       drawMeetupHint(ms);
+      if (ms > nextWiggle) wiggle(ms);
       mochi.frame(ms / 1000, dt / 1000, live.current.still);
       raf = requestAnimationFrame(loop);
     };

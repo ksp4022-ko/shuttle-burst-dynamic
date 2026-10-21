@@ -93,7 +93,6 @@ const RED = "#e23b2e";
 const GREEN = "#3be46a";
 const YELLOW = "#f6c21c";
 const GREY = "#bdb6aa";
-const BLUE = "#2f6fe0";
 const CJK = '"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif';
 const DISP = '"Dela Gothic One","Arial Black",system-ui,sans-serif';
 const TAU = Math.PI * 2;
@@ -165,6 +164,8 @@ type Art = {
   outline: Path2D;
   ext: number;
   margin?: string;
+  // V11-030: the meetup casts a deeper shadow than the rest.
+  shadow?: number;
   paint: (c: CanvasRenderingContext2D) => void;
 };
 
@@ -208,7 +209,7 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
       ext: w / 2 + h * 0.1,
       paint: (c) => {
         // Stand first, so the cards sit on it.
-        c.fillStyle = INK;
+        c.fillStyle = GEAR_DEEP;
         c.fill(base);
         ink(c);
         c.stroke(base);
@@ -286,7 +287,7 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
       outline: paper,
       ext: h / 2,
       paint: (c) => {
-        c.fillStyle = "#ffffff";
+        c.fillStyle = CREAM;
         c.fill(paper);
         ink(c);
         c.stroke(paper);
@@ -339,7 +340,7 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
       outline: body,
       ext: w / 2,
       paint: (c) => {
-        c.fillStyle = INK;
+        c.fillStyle = GEAR_DEEP;
         c.fill(body);
         ink(c);
         c.stroke(body);
@@ -908,7 +909,10 @@ function meetupArt(
   return {
     outline,
     ext: w / 2 + checkR + p,
-    margin: m.next ? BLUE : CREAM,
+    // V11-030: 最近一場 has a yellow halo and a green tab (the stage keeps to
+    // green / yellow / cream, red only for 尚缺 and money).
+    margin: m.next ? YELLOW : CREAM,
+    shadow: 2,
     paint: (c) => {
       // Sheets under the card.
       sheets.forEach((s, i) => {
@@ -920,7 +924,7 @@ function meetupArt(
       });
       // The tab sits behind the card, so the card's top line closes the ㄇ.
       if (m.next) {
-        c.fillStyle = BLUE;
+        c.fillStyle = GEAR_GREEN;
         c.fill(tab);
         c.lineWidth = lw;
         c.strokeStyle = INK;
@@ -1144,9 +1148,10 @@ function paintSticker(c: CanvasRenderingContext2D, a: Art, pad: number) {
   c.textAlign = "center";
   c.textBaseline = "middle";
   // Die-cut: a margin around the outline, with the stage's hard shadow.
-  c.shadowColor = "rgba(20,20,20,.3)";
-  c.shadowOffsetX = 3;
-  c.shadowOffsetY = 4;
+  const k = a.shadow ?? 1;
+  c.shadowColor = k > 1 ? "rgba(20,20,20,.38)" : "rgba(20,20,20,.3)";
+  c.shadowOffsetX = 3 * k;
+  c.shadowOffsetY = 4 * k;
   c.lineWidth = pad * 2;
   c.strokeStyle = a.margin ?? CREAM;
   c.fillStyle = a.margin ?? CREAM;
@@ -1179,7 +1184,7 @@ function blit(c: CanvasRenderingContext2D, key: string, make: () => Art, pad: nu
     const a = make();
     // Room for the margin and the shadow on every side, so nothing is cut
     // whatever the sticker's angle.
-    const half = Math.ceil(a.ext + pad + 8);
+    const half = Math.ceil(a.ext + pad + 8 * (a.shadow ?? 1));
     img = document.createElement("canvas");
     img.width = img.height = half * 2 * dpr;
     const ic = img.getContext("2d");
