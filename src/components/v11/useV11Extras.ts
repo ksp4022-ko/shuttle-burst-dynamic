@@ -101,7 +101,7 @@ export function useV11Extras({
       list.push({
         kind: "ticket",
         id: "ticket",
-        top: `下一場 ${next.date}`,
+        top: `最近一場 ${next.date}`,
         text: countdown(next, now),
       });
     if (focus && !focus.ended && v11CourtLabel(focus, V9_COURT_RULES[siteId]).boosted) {
@@ -140,7 +140,7 @@ export function useV11Extras({
       if (signedIn && mine?.status === "leave") out.push(`${focus.date} 你請假了`);
       if (typeof focus.event.tempFee === "number") out.push(`臨打費 $${focus.event.tempFee}`);
     }
-    if (next) out.push(`下一場 ${countdown(next, now)}`);
+    if (next) out.push(`最近一場 ${countdown(next, now)}`);
     if (amount > 0) out.push(`帳單還有 $${amount.toLocaleString("en-US")} 喔`);
     if (!signedIn) out.push("點右上角用 LINE 登入");
     return out;

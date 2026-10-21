@@ -60,7 +60,7 @@ export function V11Row({
       <span className="v11-row-mid">
         <span className="v11-row-d">
           {meetup.date}
-          {meetup.next ? <span className="v11-next-tag">下一場</span> : null}
+          {meetup.next ? <span className="v11-next-tag">最近一場</span> : null}
         </span>
         <span className="v11-row-w">
           {meetup.weekday} {meetup.time}

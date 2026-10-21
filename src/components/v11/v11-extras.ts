@@ -88,6 +88,12 @@ const TONE: Record<V11Meetup["tone"], { bg: string; fg: string }> = {
   full: { bg: GREEN, fg: INK },
   ended: { bg: GREY, fg: INK },
 };
+// V11-017: ink colours of my status stamp on the date card.
+const STAMP: Record<"confirmed" | "waiting" | "leave", string> = {
+  confirmed: "#1f9e45",
+  waiting: "#c48a00",
+  leave: "#7d776c",
+};
 const BADGE_BG: Record<Extract<V11Extra, { kind: "badge" }>["tone"], [string, string]> = {
   confirmed: [GREEN, "#1f9e45"],
   waiting: [YELLOW, "#c9930a"],
@@ -112,33 +118,6 @@ function roundRect(p: Path2D, x: number, y: number, w: number, h: number, r: num
   p.arcTo(x, y + h, x, y, r);
   p.arcTo(x, y, x + w, y, r);
   p.closePath();
-}
-
-// A pill tag (下一場 / 正取 #2 …) drawn on top of a sticker.
-function pill(
-  c: CanvasRenderingContext2D,
-  label: string,
-  x: number,
-  y: number,
-  th: number,
-  bg: string,
-  fg: string,
-  lw: number,
-  align: "left" | "center" | "right",
-) {
-  c.font = `900 ${th * 0.6}px ${CJK}`;
-  const tw = c.measureText(label).width + th * 0.8;
-  const tx = align === "left" ? x : align === "right" ? x - tw : x - tw / 2;
-  const p = new Path2D();
-  roundRect(p, tx, y - th / 2, tw, th, th / 2);
-  c.fillStyle = bg;
-  c.fill(p);
-  c.lineWidth = lw;
-  c.strokeStyle = INK;
-  c.stroke(p);
-  c.fillStyle = fg;
-  c.textAlign = "center";
-  c.fillText(label, tx + tw / 2, y + th * 0.03);
 }
 
 // How one sticker is drawn: its outline (for the die-cut margin), how far it
@@ -633,9 +612,20 @@ function meetupArt(
     roundRect(ring, d * w * 0.27 - ringW / 2, -h / 2, ringW, ringH, ringW / 2);
     return ring;
   });
+  // V11-017: 最近一場 is a ㄇ-shaped tab on the top centre, between the rings.
+  const tabW = w * 0.42;
+  const tabH = h * 0.19;
+  const tab = new Path2D();
+  tab.moveTo(-tabW / 2, cy0 + rad);
+  tab.lineTo(-tabW / 2, cy0 - tabH + tabH * 0.35);
+  tab.arcTo(-tabW / 2, cy0 - tabH, 0, cy0 - tabH, tabH * 0.35);
+  tab.arcTo(tabW / 2, cy0 - tabH, tabW / 2, cy0 + rad, tabH * 0.35);
+  tab.lineTo(tabW / 2, cy0 + rad);
+  tab.closePath();
   const outline = new Path2D();
-  for (const part of [card, ...sheets, ...rings]) outline.addPath(part);
+  for (const part of [card, ...sheets, ...rings, ...(m.next ? [tab] : [])]) outline.addPath(part);
   const band = ch * 0.3;
+  const stamped = Boolean(o.mine && m.mine);
   const checkR = h * 0.2;
   return {
     outline,
@@ -650,6 +640,14 @@ function meetupArt(
         c.strokeStyle = INK;
         c.stroke(s);
       });
+      // The tab sits behind the card, so the card's top line closes the ㄇ.
+      if (m.next) {
+        c.fillStyle = BLUE;
+        c.fill(tab);
+        c.lineWidth = lw;
+        c.strokeStyle = INK;
+        c.stroke(tab);
+      }
       // The card with its colour band.
       c.fillStyle = CREAM;
       c.fill(card);
@@ -693,8 +691,16 @@ function meetupArt(
       fit(c, m.tag, w * 0.4, band * 0.56, "800 SIZEpx " + CJK);
       c.fillText(m.tag, 0, cy0 + band * 0.55);
       c.fillStyle = INK;
-      fit(c, m.date, w * 0.84, h * 0.3, "400 SIZEpx " + DISP);
-      c.fillText(m.date, 0, h * 0.02);
+      // With my stamp the date moves left and the stamp takes its right side.
+      if (stamped) {
+        c.textAlign = "left";
+        fit(c, m.date, w * 0.47, h * 0.3, "400 SIZEpx " + DISP);
+        c.fillText(m.date, -w * 0.42, h * 0.02);
+        c.textAlign = "center";
+      } else {
+        fit(c, m.date, w * 0.84, h * 0.3, "400 SIZEpx " + DISP);
+        c.fillText(m.date, 0, h * 0.02);
+      }
       c.beginPath();
       c.moveTo(-w * 0.36, h * 0.19);
       c.lineTo(w * 0.36, h * 0.19);
@@ -705,12 +711,42 @@ function meetupArt(
       const time = `${m.weekday} ${m.time}`.trim();
       fit(c, time, w * 0.8, h * 0.12, "700 SIZEpx " + CJK);
       c.fillText(time, 0, h * 0.29);
-      // Tags: 下一場 between the rings, my status on the bottom edge.
-      if (m.next) pill(c, "下一場", 0, cy0 - h * 0.09, h * 0.18, BLUE, CREAM, lw * 0.8, "center");
-      if (o.mine && m.mine) {
-        const bg =
-          m.mine.status === "confirmed" ? GREEN : m.mine.status === "waiting" ? YELLOW : GREY;
-        pill(c, o.mine, w / 2 + p * 0.3, h / 2 - h * 0.02, h * 0.2, bg, INK, lw * 0.8, "right");
+      if (m.next) {
+        c.fillStyle = CREAM;
+        fit(c, "最近一場", tabW - w * 0.06, tabH * 0.66, "900 SIZEpx " + CJK);
+        c.fillText("最近一場", 0, cy0 - tabH * 0.47);
+      }
+      // V11-017: my status as an ink stamp (outline only) right of the date.
+      if (stamped && m.mine) {
+        const color = STAMP[m.mine.status];
+        const th = h * 0.2;
+        c.save();
+        c.translate(w * 0.3, h * 0.02);
+        c.rotate(-0.18);
+        const label = o.mine.replace(" ", "");
+        const size = fit(c, label, w * 0.3, th * 0.62, "900 SIZEpx " + CJK);
+        const sw = c.measureText(label).width + size * 0.9;
+        const outer = new Path2D();
+        roundRect(outer, -sw / 2, -th / 2, sw, th, th * 0.18);
+        const inset = thin * 1.8;
+        const inner = new Path2D();
+        roundRect(
+          inner,
+          -sw / 2 + inset,
+          -th / 2 + inset,
+          sw - inset * 2,
+          th - inset * 2,
+          th * 0.12,
+        );
+        c.globalAlpha = 0.92;
+        c.strokeStyle = color;
+        c.lineWidth = lw * 0.75;
+        c.stroke(outer);
+        c.lineWidth = thin * 0.7;
+        c.stroke(inner);
+        c.fillStyle = color;
+        c.fillText(label, 0, th * 0.03);
+        c.restore();
       }
       // V11-015: 已選 is a green ✓ on the top-left corner.
       if (o.picked) {

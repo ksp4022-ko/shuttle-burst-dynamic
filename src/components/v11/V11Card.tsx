@@ -284,7 +284,7 @@ export function V11Card({
           <div className="v11-card-band" style={{ background: tone, color: toneFg }}>
             {meetup.tag}
             <span>
-              {meetup.next ? <span className="v11-next-tag">下一場</span> : null}
+              {meetup.next ? <span className="v11-next-tag">最近一場</span> : null}
               {siteLabel}
             </span>
           </div>
