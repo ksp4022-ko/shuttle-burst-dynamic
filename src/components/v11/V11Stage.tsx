@@ -1,9 +1,12 @@
 import { useEffect, useRef, type MutableRefObject } from "react";
 import type MatterNS from "matter-js";
-import { v11MineLabel, type V11Meetup } from "@/lib/v11-meetups";
+import type { V11Meetup } from "@/lib/v11-meetups";
 import { V11Mochi } from "./v11-mochi";
 import {
+  v11DrawCount,
   v11DrawExtra,
+  v11DrawMeetup,
+  v11ShuttleHull,
   v11ExtraShape,
   type V11Extra,
   type V11ExtraKind,
@@ -29,22 +32,6 @@ export type V11StageApi = {
   // 墨糰 nods: a refresh finished (D14).
   cheer: () => void;
 };
-
-const INK = "#141414";
-// D4 (2026-10-20): the nearest not-started meetup gets a blue halo + 下一場 tag.
-const NEXT = "#2f6fe0";
-const CREAM = "#fffdf7";
-const TONE: Record<V11Meetup["tone"], { bg: string; fg: string }> = {
-  open: { bg: "#e23b2e", fg: CREAM },
-  waiting: { bg: "#f6c21c", fg: INK },
-  full: { bg: "#3be46a", fg: INK },
-  ended: { bg: "#bdb6aa", fg: INK },
-};
-const GREY = "#bdb6aa";
-const MUTED = "#5d5a52";
-const CJK = '"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif';
-const DISP = '"Dela Gothic One","Arial Black",system-ui,sans-serif';
-const TAU = Math.PI * 2;
 
 type Spec = { kind: "meetup" | "more" | "ended" | V11ExtraKind; id: string };
 const DRAGON: V11Extra = { kind: "dragon", id: "dragon" };
@@ -234,14 +221,17 @@ export function V11Stage({
         ...(light ? { density: 0.0004 } : {}),
       };
       const shape = shapeOf(spec);
-      const edge = spec.kind === "shuttle" ? 2 : pad();
+      const edge = pad();
+      // V11-016: the shuttle's body follows its drawn outline.
       const body =
-        shape.type === "circle"
-          ? M.Bodies.circle(x, y, shape.r + edge, common)
-          : M.Bodies.rectangle(x, y, shape.w + edge * 2, shape.h + edge * 2, {
-              ...common,
-              chamfer: { radius: shape.r + edge },
-            });
+        spec.kind === "shuttle"
+          ? M.Bodies.fromVertices(x, y, [v11ShuttleHull(S, pad()).verts], common)
+          : shape.type === "circle"
+            ? M.Bodies.circle(x, y, shape.r + edge, common)
+            : M.Bodies.rectangle(x, y, shape.w + edge * 2, shape.h + edge * 2, {
+                ...common,
+                chamfer: { radius: shape.r + edge },
+              });
       M.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
       const item: Item = {
         spec,
@@ -371,10 +361,6 @@ export function V11Stage({
     };
 
     // ---------- drawing ----------
-    const rr = (x: number, y: number, w: number, h: number, r: number) => {
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, h, r);
-    };
     const drawCourt = () => {
       // V11-002: a doubles badminton court (13.4 m × 6.1 m) in faint chalk,
       // turned 30° clockwise on its own layer under the title and stickers.
@@ -418,31 +404,6 @@ export function V11Stage({
       c.stroke();
       c.restore();
     };
-    const badge = (x: number, y: number, r: number, bg: string, label: string) => {
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, TAU);
-      ctx.fillStyle = bg;
-      ctx.fill();
-      ctx.lineWidth = Math.max(2, S * 0.016);
-      ctx.strokeStyle = INK;
-      ctx.stroke();
-      ctx.fillStyle = INK;
-      if (label === "✓") {
-        ctx.beginPath();
-        ctx.moveTo(x - r * 0.42, y + r * 0.02);
-        ctx.lineTo(x - r * 0.1, y + r * 0.34);
-        ctx.lineTo(x + r * 0.45, y - r * 0.32);
-        ctx.lineWidth = r * 0.26;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.stroke();
-      } else {
-        ctx.font = `800 ${r * 1.05}px ${CJK}`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(label, x, y + r * 0.05);
-      }
-    };
     const drawSticker = (it: Item) => {
       const p = pad();
       const lw = Math.max(2, S * 0.018);
@@ -452,139 +413,29 @@ export function V11Stage({
       if (isExtra(it.spec.kind)) {
         const ex = live.current.extras.find((x) => x.id === it.spec.id);
         const egg = it.spec.kind === "dragon" ? DRAGON : null;
+        if (it.spec.kind === "shuttle") {
+          // The body sits at the hull's centroid, not at the cork.
+          const { centre } = v11ShuttleHull(S, p);
+          ctx.translate(-centre.x, -centre.y);
+        }
         if (ex ?? egg) v11DrawExtra(ctx, (ex ?? egg)!, S, lw, p, logo);
-        ctx.restore();
-        return;
-      }
-      if (it.spec.kind !== "meetup") {
-        const r = ER();
+      } else if (it.spec.kind !== "meetup") {
         const more = it.spec.kind === "more";
         const n = more
           ? live.current.meetups.filter((m) => !m.ended).length - V11_STAGE_MAX
           : live.current.meetups.filter((m) => m.ended).length;
-        ctx.shadowColor = "rgba(20,20,20,.28)";
-        ctx.shadowOffsetX = 3;
-        ctx.shadowOffsetY = 4;
-        ctx.fillStyle = CREAM;
-        ctx.beginPath();
-        ctx.arc(0, 0, r + p, 0, TAU);
-        ctx.fill();
-        ctx.shadowColor = "transparent";
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, TAU);
-        ctx.fillStyle = more ? "#f6c21c" : GREY;
-        ctx.fill();
-        ctx.lineWidth = lw;
-        ctx.strokeStyle = INK;
-        ctx.stroke();
-        ctx.fillStyle = INK;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.font = `800 ${r * 0.34}px ${CJK}`;
-        ctx.fillText(more ? "之後" : "已結束", 0, -r * 0.2);
-        ctx.font = `400 ${r * 0.46}px ${DISP}`;
-        ctx.fillText(`${n}場`, 0, r * 0.3);
-        ctx.restore();
-        return;
-      }
-      const m = live.current.meetups.find((x) => x.id === it.spec.id);
-      if (!m) {
-        ctx.restore();
-        return;
-      }
-      const w = SW();
-      const h = SH();
-      const rad = h * 0.16;
-      const tone = TONE[m.tone];
-      ctx.shadowColor = "rgba(20,20,20,.28)";
-      ctx.shadowOffsetX = 3;
-      ctx.shadowOffsetY = 4;
-      ctx.fillStyle = m.next ? NEXT : CREAM;
-      rr(-w / 2 - p, -h / 2 - p, w + p * 2, h + p * 2, rad + p);
-      ctx.fill();
-      ctx.shadowColor = "transparent";
-      rr(-w / 2, -h / 2, w, h, rad);
-      ctx.fillStyle = CREAM;
-      ctx.fill();
-      ctx.save();
-      rr(-w / 2, -h / 2, w, h, rad);
-      ctx.clip();
-      ctx.fillStyle = tone.bg;
-      ctx.fillRect(-w / 2, -h / 2, w, h * 0.3);
-      ctx.restore();
-      ctx.lineWidth = lw;
-      ctx.strokeStyle = INK;
-      ctx.beginPath();
-      ctx.moveTo(-w / 2, -h / 2 + h * 0.3);
-      ctx.lineTo(w / 2, -h / 2 + h * 0.3);
-      ctx.stroke();
-      rr(-w / 2, -h / 2, w, h, rad);
-      ctx.stroke();
-      ctx.textBaseline = "middle";
-      ctx.textAlign = "left";
-      ctx.fillStyle = tone.fg;
-      ctx.font = `800 ${h * 0.16}px ${CJK}`;
-      // V11-015: 已選 is a green ✓ on the top-left corner; the tag moves aside.
-      const picked = m.id === live.current.currentId;
-      const checkR = h * 0.21;
-      ctx.fillText(m.tag, -w / 2 + (picked ? checkR * 1.25 : w * 0.08), -h / 2 + h * 0.155);
-      ctx.fillStyle = INK;
-      ctx.font = `400 ${h * 0.3}px ${DISP}`;
-      ctx.fillText(m.date, -w / 2 + w * 0.08, h * 0.07);
-      ctx.fillStyle = MUTED;
-      ctx.font = `700 ${h * 0.13}px ${CJK}`;
-      ctx.fillText(`${m.weekday} ${m.time}`.trim(), -w / 2 + w * 0.08, h * 0.34);
-      if (m.next) {
-        // 下一場 tag riding on the top edge.
-        const th = h * 0.2;
-        ctx.font = `800 ${th * 0.62}px ${CJK}`;
-        const tw = ctx.measureText("下一場").width + th * 0.9;
-        const tx = -w / 2 + w * 0.42;
-        const ty = -h / 2 - p - th * 0.55;
-        rr(tx, ty, tw, th, th / 2);
-        ctx.fillStyle = NEXT;
-        ctx.fill();
-        ctx.lineWidth = lw;
-        ctx.strokeStyle = INK;
-        ctx.stroke();
-        ctx.fillStyle = CREAM;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("下一場", tx + tw / 2, ty + th / 2 + th * 0.03);
-      }
-      // V11-015: my status as words (正取 #2 / 備取 #1 / 已請假) on the
-      // bottom-right edge.
-      if (live.current.signedIn && m.mine) {
-        const label = v11MineLabel(m.mine, true);
-        const th = h * 0.21;
-        ctx.font = `900 ${th * 0.6}px ${CJK}`;
-        const tw = ctx.measureText(label).width + th * 0.8;
-        const tx = w / 2 + p * 0.5 - tw;
-        const ty = h / 2 + p * 0.3 - th / 2;
-        rr(tx, ty, tw, th, th / 2);
-        ctx.fillStyle =
-          m.mine.status === "confirmed"
-            ? "#3be46a"
-            : m.mine.status === "waiting"
-              ? "#f6c21c"
-              : GREY;
-        ctx.fill();
-        ctx.lineWidth = lw;
-        ctx.strokeStyle = INK;
-        ctx.stroke();
-        ctx.fillStyle = INK;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(label, tx + tw / 2, ty + th / 2 + th * 0.03);
-      }
-      if (picked) {
-        const bx = -w / 2 + checkR * 0.15;
-        const by = -h / 2 + checkR * 0.05;
-        ctx.beginPath();
-        ctx.arc(bx, by, checkR + p * 0.6, 0, TAU);
-        ctx.fillStyle = CREAM;
-        ctx.fill();
-        badge(bx, by, checkR, "#3be46a", "✓");
+        v11DrawCount(ctx, more ? "more" : "ended", n, ER(), lw, p);
+      } else {
+        const m = live.current.meetups.find((x) => x.id === it.spec.id);
+        if (m)
+          v11DrawMeetup(ctx, m, {
+            w: SW(),
+            h: SH(),
+            lw,
+            pad: p,
+            picked: m.id === live.current.currentId,
+            signedIn: live.current.signedIn,
+          });
       }
       ctx.restore();
     };
