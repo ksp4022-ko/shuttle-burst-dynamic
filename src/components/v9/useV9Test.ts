@@ -9,14 +9,3 @@ export function useV9Test() {
   useEffect(() => setTest(isV9TestRoute()), []);
   return test;
 }
-
-// Changes waiting for /v9 acceptance that V11 (which reuses the V9 panels)
-// shows already: on /v9test, /v11test and /v11 once mounted, never on /v9.
-export function useV9Staged() {
-  const [staged, setStaged] = useState(false);
-  useEffect(() => {
-    const parts = window.location.pathname.split("/");
-    setStaged(isV9TestRoute() || parts.includes("v11test") || parts.includes("v11"));
-  }, []);
-  return staged;
-}

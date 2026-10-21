@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useV8PersonalBillingTest } from "@/hooks/use-v8-personal-billing-test";
 import { v9Deadline } from "@/lib/v9-season";
 import { V9PaymentMethods } from "./V9PaymentMethods";
-import { useV9Staged } from "./useV9Test";
 import type {
   V8BillingGuestItem,
   V8BillingRefundSource,
@@ -366,7 +365,6 @@ function V9SiteBill({
   });
   const readyBill = billing.state.kind === "ready" ? billing.state.billing : null;
   const failed = billing.state.kind === "error" || billing.state.kind === "auth";
-  const staged = useV9Staged();
   const summary = readyBill ? billSummary(readyBill) : null;
   const summaryNet = summary ? summary.net : null;
   const summaryHas = summary ? summary.hasRecords : null;
@@ -440,7 +438,7 @@ function V9SiteBill({
     // V9-073: a paid 本季 季費 is settled, so its fee and leave-credit rows
     // fold away and 季費狀態 says when it was paid. Cash refunds still due
     // (they count in the 小計) keep a 上季請假抵扣 row of their own.
-    const paidSeason = staged && season?.status === "paid";
+    const paidSeason = season?.status === "paid";
     const historyTotal =
       totals.otherGuestOutstandingTotal +
       pastSeasons.reduce((sum, item) => sum + item.outstanding, 0);
