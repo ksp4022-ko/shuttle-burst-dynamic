@@ -52,7 +52,8 @@ export function v11ExtraShape(kind: V11ExtraKind, S: number): V11Shape {
     case "plus":
       return { type: "rect", w: S * 0.6, h: S * 0.26, r: S * 0.13 };
     case "stamp":
-      return { type: "rect", w: S * 0.72, h: S * 0.5, r: S * 0.06 };
+      // V11-021: wider, so the two rows of stamps are bigger.
+      return { type: "rect", w: S * 0.96, h: S * 0.56, r: S * 0.06 };
     case "shuttle":
       return { type: "circle", r: S * 0.1 };
     case "dragon":
@@ -390,7 +391,7 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         ex.cells.forEach((state, i) => {
           const cx = x0 + (i % cols) * cell;
           const cy = y0 + Math.floor(i / cols) * cell;
-          const rr = cell * 0.36;
+          const rr = cell * 0.4;
           c.beginPath();
           c.arc(cx, cy, rr, 0, TAU);
           c.lineWidth = thin;
@@ -534,7 +535,7 @@ function meetupArt(
   // V11-018: a squarer card (w × h is 0.82S × 0.74S).
   const cy0 = -h / 2 + h * 0.07;
   const ch = h * 0.86;
-  const RX = w * 0.3;
+  const RX = w * 0.29;
   const rad = h * 0.13;
   const card = new Path2D();
   roundRect(card, -w / 2, cy0, w, ch, rad);
@@ -682,11 +683,12 @@ function meetupArt(
         c.fillText(label, 0, th * 0.04);
         c.restore();
       }
-      // V11-015: 已選 is a green ✓ on the top-left corner.
+      // V11-015 / V11-021: 已選 is a green ✓ on the top-right corner, clear of
+      // the 最近一場 tab.
       if (o.picked) {
         // Mostly inside the card so a sticker against the wall keeps it.
-        const bx = -w / 2 + checkR * 0.6;
-        const by = cy0 + checkR * 0.2;
+        const bx = w / 2 - checkR * 0.2;
+        const by = cy0 + checkR * 0.15;
         c.beginPath();
         c.arc(bx, by, checkR + p * 0.6, 0, TAU);
         c.fillStyle = CREAM;
