@@ -54,6 +54,9 @@ type Item = {
 
 // V11-018: a quicker fall.
 const GRAVITY = 1.7;
+// V11-024: the floor's slope (radians) and the gap between drops (ms).
+const FLOOR_TILT = 0.1;
+const DROP_GAP = 300;
 
 function loadMatter(): Promise<typeof MatterNS> {
   return import("matter-js").then(
@@ -227,7 +230,9 @@ export function V11Stage({
       )
         return null;
       // V11-018: everything drops in on the left, away from 墨糰 (top right).
-      const x = W * (0.12 + Math.random() * 0.34);
+      // V11-024: everything drops in at the top left and rolls right down
+      // the sloped floor.
+      const x = W * (0.1 + Math.random() * 0.14);
       const y = live.current.still ? H * 0.5 : -S * 0.7;
       const light = spec.kind === "shuttle";
       const common = {
@@ -251,6 +256,7 @@ export function V11Stage({
               chamfer: { radius: shape.r + edge },
             });
       M.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
+      if (!live.current.still) M.Body.setVelocity(body, { x: 2.5 + Math.random() * 2, y: 0 });
       const item: Item = {
         spec,
         position: body.position,
@@ -279,7 +285,12 @@ export function V11Stage({
       const t = 200;
       const wall = { isStatic: true, friction: 0.6 };
       M.Composite.add(engine.world, [
-        M.Bodies.rectangle(W / 2, H + t / 2, W + 2 * t, t, wall),
+        // V11-024: an unseen floor sloping down to the right (about 6°),
+        // level with the stage's bottom edge at the right wall.
+        M.Bodies.rectangle(W / 2, H - W * FLOOR_TILT * 0.5 + t / 2, W + 2 * t, t, {
+          ...wall,
+          angle: FLOOR_TILT,
+        }),
         M.Bodies.rectangle(-t / 2, H / 2, t, H * 4, wall),
         M.Bodies.rectangle(W + t / 2, H / 2, t, H * 4, wall),
       ]);
@@ -329,10 +340,23 @@ export function V11Stage({
       press = null;
       const still = live.current.still;
       const list = specs();
-      list.forEach((spec, i) =>
-        timers.push(window.setTimeout(() => spawn(spec), (still ? 0 : 160 * i) + 120)),
+      // V11-024: big and small stickers take turns (biggest, smallest, next
+      // biggest, …) so the small gear wedges between the big ones.
+      const area = (spec: Spec) => {
+        const shape = shapeOf(spec);
+        return shape.type === "circle" ? Math.PI * shape.r * shape.r : shape.w * shape.h;
+      };
+      const bySize = [...list].sort((a, b) => area(b) - area(a));
+      const order: Spec[] = [];
+      while (bySize.length) {
+        order.push(bySize.shift()!);
+        const small = bySize.pop();
+        if (small) order.push(small);
+      }
+      order.forEach((spec, i) =>
+        timers.push(window.setTimeout(() => spawn(spec), (still ? 0 : DROP_GAP * i) + 120)),
       );
-      timers.push(window.setTimeout(raiseRoof, (still ? 0 : 160 * list.length) + 1600));
+      timers.push(window.setTimeout(raiseRoof, (still ? 0 : DROP_GAP * order.length) + 1600));
     };
     rebuildRef.current = build;
 

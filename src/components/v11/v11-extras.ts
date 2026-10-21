@@ -75,13 +75,14 @@ export function v11ExtraShape(kind: V11ExtraKind, S: number): V11Shape {
     case "bag":
       return { type: "rect", w: S * 0.66, h: S * 0.32, r: S * 0.12 };
     case "shoe":
-      return { type: "rect", w: S * 0.54, h: S * 0.36, r: S * 0.06 };
+      return { type: "rect", w: S * 0.27, h: S * 0.18, r: S * 0.03 };
   }
 }
 
 // V11-022: "之後 N 場" / "已結束 N 場" are shuttle tubes.
 export function v11CountShape(S: number): V11Shape {
-  return { type: "rect", w: S * 0.38, h: S * 0.8, r: S * 0.08 };
+  // V11-024: slim, with the label written top to bottom.
+  return { type: "rect", w: S * 0.22, h: S * 0.92, r: S * 0.06 };
 }
 
 const INK = "#141414";
@@ -422,33 +423,78 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
   }
 
   if (ex.kind === "stamp" && shape.type === "rect") {
-    // A loyalty card: one cell per meetup this season.
+    // A loyalty card: one cell per meetup this season. V11-024: a yellow
+    // inner border, two punched holes on the left and a small trophy.
     const { w, h, r } = shape;
     const p = new Path2D();
     roundRect(p, -w / 2, -h / 2, w, h, r);
+    const holeX = -w / 2 + w * 0.055;
+    const shift = w * 0.04;
     return {
       outline: p,
       ext: w / 2,
       paint: (c) => {
         c.fillStyle = "#fff6d8";
         c.fill(p);
+        const inset = lw * 1.6;
+        const border = new Path2D();
+        roundRect(border, -w / 2 + inset, -h / 2 + inset, w - inset * 2, h - inset * 2, r * 0.7);
+        c.lineWidth = lw * 0.9;
+        c.strokeStyle = YELLOW;
+        c.stroke(border);
         ink(c);
         c.stroke(p);
+        // Punched holes: cut through the card, then an ink ring.
+        for (const y of [-h * 0.18, h * 0.18]) {
+          c.save();
+          c.globalCompositeOperation = "destination-out";
+          c.beginPath();
+          c.arc(holeX, y, h * 0.045, 0, TAU);
+          c.fill();
+          c.restore();
+          c.beginPath();
+          c.arc(holeX, y, h * 0.045, 0, TAU);
+          ink(c, thin);
+          c.stroke();
+        }
+        // Trophy in the top-right corner.
+        const tx = w / 2 - w * 0.1;
+        const ty = -h / 2 + h * 0.2;
+        const tr = h * 0.1;
+        const cup = new Path2D();
+        cup.moveTo(tx - tr, ty - tr);
+        cup.lineTo(tx + tr, ty - tr);
+        cup.quadraticCurveTo(tx + tr, ty + tr * 0.6, tx, ty + tr * 0.7);
+        cup.quadraticCurveTo(tx - tr, ty + tr * 0.6, tx - tr, ty - tr);
+        cup.closePath();
+        c.beginPath();
+        c.arc(tx - tr, ty - tr * 0.3, tr * 0.45, Math.PI * 0.5, Math.PI * 1.5);
+        c.arc(tx + tr, ty - tr * 0.3, tr * 0.45, Math.PI * 1.5, Math.PI * 0.5);
+        ink(c, thin);
+        c.stroke();
+        c.fillStyle = YELLOW;
+        c.fill(cup);
+        c.stroke(cup);
+        c.fillStyle = YELLOW;
+        c.fillRect(tx - tr * 0.18, ty + tr * 0.7, tr * 0.36, tr * 0.4);
+        c.strokeRect(tx - tr * 0.18, ty + tr * 0.7, tr * 0.36, tr * 0.4);
+        c.fillRect(tx - tr * 0.6, ty + tr * 1.1, tr * 1.2, tr * 0.32);
+        c.strokeRect(tx - tr * 0.6, ty + tr * 1.1, tr * 1.2, tr * 0.32);
         c.fillStyle = INK;
         c.font = `800 ${h * 0.17}px ${CJK}`;
         const done = ex.cells.filter((x) => x === "done").length;
-        c.fillText(`本季出席 ${done}/${ex.cells.length}`, 0, -h * 0.31);
+        c.fillText(`本季出席 ${done}/${ex.cells.length}`, -w * 0.02, -h * 0.29);
         c.beginPath();
-        c.moveTo(-w * 0.4, -h * 0.17);
-        c.lineTo(w * 0.4, -h * 0.17);
+        c.moveTo(-w * 0.36, -h * 0.15);
+        c.lineTo(w * 0.32, -h * 0.15);
         c.lineWidth = thin;
         c.strokeStyle = "rgba(20,20,20,.25)";
         c.stroke();
         const cols = Math.min(7, Math.max(1, Math.ceil(ex.cells.length / 2)));
         const rows = Math.ceil(ex.cells.length / cols);
-        const cell = Math.min((w * 0.86) / cols, (h * 0.56) / Math.max(1, rows));
-        const x0 = -((cols - 1) * cell) / 2;
-        const y0 = h * 0.12 - ((rows - 1) * cell) / 2;
+        const cell = Math.min((w * 0.8) / cols, (h * 0.52) / Math.max(1, rows));
+        const x0 = shift - ((cols - 1) * cell) / 2;
+        const y0 = h * 0.14 - ((rows - 1) * cell) / 2;
         ex.cells.forEach((state, i) => {
           const cx = x0 + (i % cols) * cell;
           const cy = y0 + Math.floor(i / cols) * cell;
@@ -694,23 +740,25 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
     // V11-023: a court shoe like the reference, side view toe right: cream
     // upper, green heel and toe, yellow side stripe and laces, cream midsole
     // over a green treaded sole. Its body is the outline's hull.
+    // V11-024: half the size it was.
+    const Z = S * 0.5;
     const upper = new Path2D();
-    upper.moveTo(-S * 0.25, S * 0.07);
-    upper.lineTo(-S * 0.25, -S * 0.054);
-    upper.quadraticCurveTo(-S * 0.25, -S * 0.162, -S * 0.17, -S * 0.176);
-    upper.lineTo(-S * 0.08, -S * 0.149);
-    upper.quadraticCurveTo(-S * 0.05, -S * 0.2, -S * 0.01, -S * 0.176);
-    upper.quadraticCurveTo(S * 0.12, -S * 0.081, S * 0.2, -S * 0.027);
-    upper.quadraticCurveTo(S * 0.28, S * 0.01, S * 0.27, S * 0.07);
+    upper.moveTo(-Z * 0.25, Z * 0.07);
+    upper.lineTo(-Z * 0.25, -Z * 0.054);
+    upper.quadraticCurveTo(-Z * 0.25, -Z * 0.162, -Z * 0.17, -Z * 0.176);
+    upper.lineTo(-Z * 0.08, -Z * 0.149);
+    upper.quadraticCurveTo(-Z * 0.05, -Z * 0.2, -Z * 0.01, -Z * 0.176);
+    upper.quadraticCurveTo(Z * 0.12, -Z * 0.081, Z * 0.2, -Z * 0.027);
+    upper.quadraticCurveTo(Z * 0.28, Z * 0.01, Z * 0.27, Z * 0.07);
     upper.closePath();
     const sole = new Path2D();
-    roundRect(sole, -S * 0.265, S * 0.05, S * 0.545, S * 0.1, S * 0.04);
+    roundRect(sole, -Z * 0.265, Z * 0.05, Z * 0.545, Z * 0.1, Z * 0.04);
     const outline = new Path2D();
     outline.addPath(upper);
     outline.addPath(sole);
     return {
       outline,
-      ext: S * 0.3,
+      ext: Z * 0.3,
       paint: (c) => {
         c.fillStyle = CREAM;
         c.fill(upper);
@@ -719,29 +767,29 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         // Green heel counter and toe tip.
         c.fillStyle = GEAR_GREEN;
         c.beginPath();
-        c.moveTo(-S * 0.26, -S * 0.2);
-        c.lineTo(-S * 0.13, -S * 0.2);
-        c.quadraticCurveTo(-S * 0.09, -S * 0.02, -S * 0.15, S * 0.08);
-        c.lineTo(-S * 0.26, S * 0.08);
+        c.moveTo(-Z * 0.26, -Z * 0.2);
+        c.lineTo(-Z * 0.13, -Z * 0.2);
+        c.quadraticCurveTo(-Z * 0.09, -Z * 0.02, -Z * 0.15, Z * 0.08);
+        c.lineTo(-Z * 0.26, Z * 0.08);
         c.closePath();
         c.fill();
         c.beginPath();
-        c.moveTo(S * 0.17, S * 0.08);
-        c.quadraticCurveTo(S * 0.19, S * 0.0, S * 0.3, -S * 0.02);
-        c.lineTo(S * 0.3, S * 0.08);
+        c.moveTo(Z * 0.17, Z * 0.08);
+        c.quadraticCurveTo(Z * 0.19, Z * 0.0, Z * 0.3, -Z * 0.02);
+        c.lineTo(Z * 0.3, Z * 0.08);
         c.closePath();
         c.fill();
         // Yellow side stripe.
         c.strokeStyle = YELLOW;
-        c.lineWidth = S * 0.035;
+        c.lineWidth = Z * 0.035;
         c.beginPath();
-        c.moveTo(-S * 0.06, S * 0.06);
-        c.quadraticCurveTo(S * 0.0, -S * 0.04, S * 0.1, -S * 0.09);
+        c.moveTo(-Z * 0.06, Z * 0.06);
+        c.quadraticCurveTo(Z * 0.0, -Z * 0.04, Z * 0.1, -Z * 0.09);
         c.stroke();
         c.restore();
         // Collar opening.
         c.beginPath();
-        c.ellipse(-S * 0.13, -S * 0.155, S * 0.06, S * 0.02, -0.15, 0, TAU);
+        c.ellipse(-Z * 0.13, -Z * 0.155, Z * 0.06, Z * 0.02, -0.15, 0, TAU);
         c.fillStyle = GEAR_DEEP;
         c.fill();
         ink(c, lw * 0.9);
@@ -750,16 +798,16 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         c.lineCap = "round";
         c.beginPath();
         for (let k = 0; k < 3; k++) {
-          const x = -S * 0.03 + k * S * 0.055;
-          const y = -S * 0.15 + k * S * 0.033;
-          c.moveTo(x - S * 0.02, y);
-          c.lineTo(x + S * 0.025, y + S * 0.012);
+          const x = -Z * 0.03 + k * Z * 0.055;
+          const y = -Z * 0.15 + k * Z * 0.033;
+          c.moveTo(x - Z * 0.02, y);
+          c.lineTo(x + Z * 0.025, y + Z * 0.012);
         }
         c.strokeStyle = INK;
-        c.lineWidth = S * 0.026;
+        c.lineWidth = Z * 0.026;
         c.stroke();
         c.strokeStyle = YELLOW;
-        c.lineWidth = S * 0.014;
+        c.lineWidth = Z * 0.014;
         c.stroke();
         // Sole: cream midsole with a yellow line, green treaded outsole.
         c.fillStyle = CREAM;
@@ -767,18 +815,18 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         c.save();
         c.clip(sole);
         c.fillStyle = GEAR_GREEN;
-        c.fillRect(-S * 0.27, S * 0.1, S * 0.56, S * 0.06);
+        c.fillRect(-Z * 0.27, Z * 0.1, Z * 0.56, Z * 0.06);
         c.fillStyle = YELLOW;
-        c.fillRect(-S * 0.27, S * 0.085, S * 0.56, S * 0.016);
+        c.fillRect(-Z * 0.27, Z * 0.085, Z * 0.56, Z * 0.016);
         c.restore();
         ink(c, lw * 0.9);
         c.stroke(sole);
         c.strokeStyle = "rgba(255,255,255,.55)";
         c.lineWidth = thin * 0.8;
         c.beginPath();
-        for (let x = -S * 0.22; x < S * 0.25; x += S * 0.045) {
-          c.moveTo(x, S * 0.115);
-          c.lineTo(x + S * 0.02, S * 0.14);
+        for (let x = -Z * 0.22; x < Z * 0.25; x += Z * 0.045) {
+          c.moveTo(x, Z * 0.115);
+          c.lineTo(x + Z * 0.02, Z * 0.14);
         }
         c.stroke();
       },
@@ -1051,8 +1099,8 @@ function countArt(kind: "more" | "ended", n: number, S: number, lw: number): Art
       c.fillStyle = green;
       c.beginPath();
       c.moveTo(-w / 2, h / 2);
-      c.lineTo(-w / 2, h / 2 - h * 0.12);
-      c.quadraticCurveTo(0, h / 2 - h * 0.22, w / 2, h / 2 - h * 0.17);
+      c.lineTo(-w / 2, h / 2 - h * 0.08);
+      c.quadraticCurveTo(0, h / 2 - h * 0.15, w / 2, h / 2 - h * 0.12);
       c.lineTo(w / 2, h / 2);
       c.closePath();
       c.fill();
@@ -1073,27 +1121,21 @@ function countArt(kind: "more" | "ended", n: number, S: number, lw: number): Art
       c.fill();
       c.lineWidth = thin;
       c.stroke();
-      // Label and count on the cream middle.
+      // Label written top to bottom, then the count, then 場 under it.
       c.fillStyle = INK;
       c.textAlign = "center";
       c.textBaseline = "middle";
-      const label = more ? "之後" : "已結束";
-      fit(c, label, w * 0.86, h * 0.14, "900 SIZEpx " + CJK);
-      c.fillText(label, 0, -h * 0.1);
+      const chars = [...(more ? "之後" : "已結束")];
+      const ch = Math.min(w * 0.66, h * 0.105);
+      c.font = `900 ${ch}px ${CJK}`;
+      const labelTop = -h * 0.24;
+      chars.forEach((char, i) => c.fillText(char, 0, labelTop + ch * (i + 0.5) * 1.02));
       const num = String(n);
-      const unitFont = `900 ${h * 0.14}px ${CJK}`;
-      c.font = unitFont;
-      const uw = c.measureText("場").width;
-      const gap = w * 0.03;
-      const size = fit(c, num, w * 0.9 - uw - gap, h * 0.24, "400 SIZEpx " + DISP);
-      const nw = c.measureText(num).width;
-      const x0 = -(nw + gap + uw) / 2;
-      const base = h * 0.06 + size * 0.6;
-      c.textAlign = "left";
-      c.textBaseline = "alphabetic";
-      c.fillText(num, x0, base);
-      c.font = unitFont;
-      c.fillText("場", x0 + nw + gap, base);
+      const numY = labelTop + ch * 3.1 + h * 0.06;
+      fit(c, num, w * 0.86, h * 0.13, "400 SIZEpx " + DISP);
+      c.fillText(num, 0, numY);
+      c.font = `900 ${ch}px ${CJK}`;
+      c.fillText("場", 0, numY + h * 0.12);
     },
   };
 }
@@ -1297,7 +1339,7 @@ export function v11HullOf(spec: { kind: V11ExtraKind; id: string }, S: number, p
       [-0.01, -0.2],
       [-0.17, -0.18],
       [-0.25, -0.07],
-    ].map(([x = 0, y = 0]) => ({ x: x * S, y: y * S }));
+    ].map(([x = 0, y = 0]) => ({ x: x * S * 0.5, y: y * S * 0.5 }));
   } else {
     return null;
   }
