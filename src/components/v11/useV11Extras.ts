@@ -5,7 +5,7 @@ import { parseMeetupName } from "@/lib/meetup-name";
 import { v9EventWindow } from "@/lib/v9-event-time";
 import { v11CourtLabel, type V11Meetup } from "@/lib/v11-meetups";
 import { useV9BillDue } from "@/components/v9/useV9BillDue";
-import type { V11Extra, V11StampCell } from "./v11-extras";
+import type { V11Extra, V11FlipPanel, V11StampCell } from "./v11-extras";
 
 // V11-007 / V11-008: which small stickers are on the stage, and the short
 // lines 墨糰 says now and then. Everything here only reads data the page
@@ -26,6 +26,32 @@ function countdown(m: V11Meetup, now: number) {
   if (day === today + 1) return `明天 ${hhmm}`;
   const hours = Math.floor((startMs - now) / 3_600_000);
   return `還有 ${Math.floor(hours / 24)} 天 ${hours % 24} 小時`;
+}
+
+// V11-022: the same countdown as flip panels: 今天／明天 + the start time,
+// otherwise days and hours.
+function countdownPanels(m: V11Meetup, now: number): V11FlipPanel[] {
+  const { startMs } = v9EventWindow(m.event);
+  if (startMs == null) return [{ v: m.date, u: "" }];
+  if (now >= startMs) return [{ v: "進行中", u: "" }];
+  const today = Math.floor((now + TAIPEI_MS) / DAY_MS);
+  const day = Math.floor((startMs + TAIPEI_MS) / DAY_MS);
+  const hhmm = m.time.split("–")[0] ?? "";
+  if (day === today)
+    return [
+      { v: "今天", u: "" },
+      { v: hhmm, u: "" },
+    ];
+  if (day === today + 1)
+    return [
+      { v: "明天", u: "" },
+      { v: hhmm, u: "" },
+    ];
+  const hours = Math.floor((startMs - now) / 3_600_000);
+  return [
+    { v: String(Math.floor(hours / 24)), u: "天" },
+    { v: String(hours % 24).padStart(2, "0"), u: "時" },
+  ];
 }
 
 export function useV11Extras({
@@ -87,9 +113,8 @@ export function useV11Extras({
       list.push({
         kind: "ticket",
         id: "ticket",
-        top: "最近一場",
-        site: parseMeetupName(next.event.name).name || next.date,
-        text: countdown(next, now),
+        site: parseMeetupName(next.event.name).name,
+        panels: countdownPanels(next, now),
       });
     if (focus && !focus.ended && v11CourtLabel(focus, V9_COURT_RULES[siteId]).boosted) {
       list.push({ kind: "plus", id: "plus" });
@@ -106,7 +131,14 @@ export function useV11Extras({
       );
       list.push({ kind: "stamp", id: "stamp", cells });
     }
-    list.push({ kind: "shuttle", id: "shuttle-1" }, { kind: "shuttle", id: "shuttle-2" });
+    list.push(
+      { kind: "shuttle", id: "shuttle-1" },
+      { kind: "shuttle", id: "shuttle-2" },
+      // V11-022: gear that wedges between the bigger stickers.
+      { kind: "racket", id: "racket" },
+      { kind: "bag", id: "bag" },
+      { kind: "shoe", id: "shoe" },
+    );
     return list;
   }, [focus, amount, next, now, siteId, progress]);
 

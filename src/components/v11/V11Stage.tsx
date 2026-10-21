@@ -6,7 +6,9 @@ import {
   v11DrawCount,
   v11DrawExtra,
   v11DrawMeetup,
-  v11ShuttleHull,
+  v11CountShape,
+  v11HullOf,
+  V11_DECOR,
   v11ExtraShape,
   type V11Extra,
   type V11ExtraKind,
@@ -39,7 +41,8 @@ const isExtra = (kind: Spec["kind"]) => kind !== "meetup" && kind !== "more" && 
 
 // The stage holds the next few meetups; later ones fold into one
 // "之後 N 場" sticker, past ones into "已結束 N 場". Both open a list.
-export const V11_STAGE_MAX = 3;
+// V11-022: the nearest 2 (more room for the gear stickers).
+export const V11_STAGE_MAX = 2;
 type Item = {
   spec: Spec;
   position: { x: number; y: number };
@@ -164,13 +167,12 @@ export function V11Stage({
     // V11-018: a squarer calendar card.
     const SW = () => S * 0.82;
     const SH = () => S * 0.74;
-    const ER = () => S * 0.3;
     const pad = () => Math.max(4, S * 0.045);
     const shapeOf = (spec: Spec): V11Shape =>
       spec.kind === "meetup"
         ? { type: "rect", w: SW(), h: SH(), r: SH() * 0.16 }
         : spec.kind === "more" || spec.kind === "ended"
-          ? { type: "circle", r: ER() }
+          ? v11CountShape(S)
           : v11ExtraShape(spec.kind, S);
     // V11-013: the 龍虎 logo loads only when the easter egg is found.
     let logo: HTMLImageElement | null = null;
@@ -199,7 +201,8 @@ export function V11Stage({
         .map((spec, i) => {
           const col = i % 2;
           const row = Math.floor(i / 2);
-          const h = spec.kind !== "meetup" ? ER() * 2 : SH();
+          const tube = v11CountShape(S);
+          const h = spec.kind !== "meetup" && tube.type === "rect" ? tube.h : SH();
           return {
             spec,
             position: { x: W * (col ? 0.72 : 0.29), y: H - 14 - h / 2 - row * (SH() + 6) },
@@ -237,16 +240,16 @@ export function V11Stage({
       };
       const shape = shapeOf(spec);
       const edge = pad();
-      // V11-016: the shuttle's body follows its drawn outline.
-      const body =
-        spec.kind === "shuttle"
-          ? M.Bodies.fromVertices(x, y, [v11ShuttleHull(S, pad()).verts], common)
-          : shape.type === "circle"
-            ? M.Bodies.circle(x, y, shape.r + edge, common)
-            : M.Bodies.rectangle(x, y, shape.w + edge * 2, shape.h + edge * 2, {
-                ...common,
-                chamfer: { radius: shape.r + edge },
-              });
+      // V11-016 / V11-022: shuttle, racket and shoe follow their outline.
+      const hull = v11HullOf(spec.kind as V11ExtraKind, S, pad());
+      const body = hull
+        ? M.Bodies.fromVertices(x, y, [hull.verts], common)
+        : shape.type === "circle"
+          ? M.Bodies.circle(x, y, shape.r + edge, common)
+          : M.Bodies.rectangle(x, y, shape.w + edge * 2, shape.h + edge * 2, {
+              ...common,
+              chamfer: { radius: shape.r + edge },
+            });
       M.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
       const item: Item = {
         spec,
@@ -428,18 +431,16 @@ export function V11Stage({
       if (isExtra(it.spec.kind)) {
         const ex = live.current.extras.find((x) => x.id === it.spec.id);
         const egg = it.spec.kind === "dragon" ? DRAGON : null;
-        if (it.spec.kind === "shuttle") {
-          // The body sits at the hull's centroid, not at the cork.
-          const { centre } = v11ShuttleHull(S, p);
-          ctx.translate(-centre.x, -centre.y);
-        }
+        // A hull body sits at the hull's centroid, not at the art's origin.
+        const hull = v11HullOf(it.spec.kind as V11ExtraKind, S, p);
+        if (hull) ctx.translate(-hull.centre.x, -hull.centre.y);
         if (ex ?? egg) v11DrawExtra(ctx, (ex ?? egg)!, S, lw, p, logo);
       } else if (it.spec.kind !== "meetup") {
         const more = it.spec.kind === "more";
         const n = more
           ? live.current.meetups.filter((m) => !m.ended).length - V11_STAGE_MAX
           : live.current.meetups.filter((m) => m.ended).length;
-        v11DrawCount(ctx, more ? "more" : "ended", n, ER(), lw, p);
+        v11DrawCount(ctx, more ? "more" : "ended", n, S, lw, p);
       } else {
         const m = live.current.meetups.find((x) => x.id === it.spec.id);
         if (m)
@@ -571,7 +572,7 @@ export function V11Stage({
       if (!done.moved && performance.now() - done.t < 300) {
         const kind = done.item.spec.kind;
         const b = done.item.body;
-        if (kind === "shuttle" || kind === "dragon") {
+        if (V11_DECOR.has(kind as V11ExtraKind)) {
           // Just for fun: a hop, and 墨糰 waves / jumps.
           if (b && M) M.Body.setVelocity(b, { x: (Math.random() - 0.5) * 6, y: -9 });
           mochi.react(kind === "shuttle" ? "excited" : "surprised", 900);
