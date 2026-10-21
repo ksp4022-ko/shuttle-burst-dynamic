@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { V9Icon } from "./V9Icons";
 import { useV9Staged } from "./useV9Test";
 
@@ -29,7 +36,26 @@ export function V9Sheet({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<ReactNode>(children);
   // V9-073: title and subtitle on one line, the subtitle on the right.
+  // V9-074: a subtitle too long for that line goes under the title, small
+  // and on the left (measured before paint; again after a resize).
   const inline = useV9Staged();
+  const titlesRef = useRef<HTMLDivElement | null>(null);
+  const lineKey = `${title}|${subtitle ?? ""}`;
+  const [wrappedKey, setWrappedKey] = useState("");
+  const wrapped = wrappedKey === lineKey;
+  useLayoutEffect(() => {
+    if (!inline || !subtitle || wrapped) return;
+    const box = titlesRef.current;
+    const h2 = box?.querySelector("h2");
+    const p = box?.querySelector("p");
+    if (h2 && p && p.offsetTop > h2.offsetTop + h2.offsetHeight / 2) setWrappedKey(lineKey);
+  });
+  useEffect(() => {
+    if (!inline) return;
+    const onResize = () => setWrappedKey("");
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [inline]);
   if (open) contentRef.current = children;
 
   useEffect(() => {
@@ -103,7 +129,10 @@ export function V9Sheet({
           onPointerCancel={onPointerEnd}
         >
           <span className="v9-sheet-grab" aria-hidden="true" />
-          <div className={`v9-sheet-titles${inline ? " is-inline" : ""}`}>
+          <div
+            ref={titlesRef}
+            className={`v9-sheet-titles${inline ? " is-inline" : ""}${inline && wrapped ? " is-wrapped" : ""}`}
+          >
             <h2>{title}</h2>
             {subtitle ? <p>{subtitle}</p> : null}
           </div>

@@ -181,7 +181,8 @@ export function V11Stage({
       W = r.width;
       H = r.height;
       // 2026-10-20: stickers ¾ of the first size, so the pile has room.
-      S = Math.min(W * 0.44, H * 0.36, 210) * 0.75;
+      // V11-020: 15% larger again (3 meetups now) so text reads at 11pt.
+      S = Math.min(W * 0.44, H * 0.36, 210) * 0.86;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       cv.width = Math.round(W * dpr);
       cv.height = Math.round(H * dpr);

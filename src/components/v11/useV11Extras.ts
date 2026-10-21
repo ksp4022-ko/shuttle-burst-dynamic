@@ -3,7 +3,7 @@ import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { V9_COURT_RULES } from "@/lib/v9-court-rules";
 import { parseMeetupName } from "@/lib/meetup-name";
 import { v9EventWindow } from "@/lib/v9-event-time";
-import { v11CourtLabel, v11MineLabel, type V11Meetup } from "@/lib/v11-meetups";
+import { v11CourtLabel, type V11Meetup } from "@/lib/v11-meetups";
 import { useV9BillDue } from "@/components/v9/useV9BillDue";
 import type { V11Extra, V11StampCell } from "./v11-extras";
 
@@ -72,29 +72,14 @@ export function useV11Extras({
   const extras = useMemo<V11Extra[]>(() => {
     const list: V11Extra[] = [];
     if (focus && !focus.ended) {
-      // V11-011: 正取 x/上限, then 尚缺 while there is room, otherwise 備取.
+      // V11-011 / V11-020: 正取 x/上限 (尚缺 / 備取 are on the date card).
       list.push({
         kind: "board",
         id: "board",
         date: focus.date,
         confirmed: focus.confirmed,
         max: focus.max,
-        side:
-          focus.remain > 0
-            ? { label: "尚缺", n: focus.remain }
-            : { label: "備取", n: focus.waiting },
         full: focus.remain <= 0,
-      });
-    }
-    if (focus) {
-      const mine = focus.mine;
-      const [status = "", rank = ""] = v11MineLabel(mine, signedIn).split(" ");
-      list.push({
-        kind: "badge",
-        id: "badge",
-        status,
-        rank,
-        tone: !signedIn || !mine ? "none" : mine.status,
       });
     }
     if (amount > 0) list.push({ kind: "receipt", id: "receipt", amount });
@@ -123,7 +108,7 @@ export function useV11Extras({
     }
     list.push({ kind: "shuttle", id: "shuttle-1" }, { kind: "shuttle", id: "shuttle-2" });
     return list;
-  }, [focus, signedIn, amount, next, now, siteId, progress]);
+  }, [focus, amount, next, now, siteId, progress]);
 
   // 墨糰's short lines about 目前這場 and what is due.
   const lines = useMemo(() => {

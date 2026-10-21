@@ -647,6 +647,9 @@ html.v9-page-lock, html.v9-page-lock body { overscroll-behavior: none; }
    wraps under the title, still on the right. */
 .v9-sheet-titles.is-inline { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; }
 .v9-sheet-titles.is-inline p { margin: 0 0 0 auto; font-size: 20px; font-weight: 900; line-height: 1.25; text-align: right; }
+/* V9-074: too long for the title line: small, under the title, on the left. */
+.v9-sheet-titles.is-inline.is-wrapped { display: block; }
+.v9-sheet-titles.is-inline.is-wrapped p { margin: 1px 0 0; font-size: 13px; font-weight: 700; line-height: inherit; text-align: left; }
 .v9-sheet-close {
   flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
   border: 2.5px solid var(--v9-ink); background: #fff; cursor: pointer; box-shadow: 0 2px 0 var(--v9-ink);
