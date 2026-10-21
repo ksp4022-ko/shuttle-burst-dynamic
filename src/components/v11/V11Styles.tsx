@@ -170,10 +170,10 @@ body.v11-locked { overflow: hidden; }
 /* V11-006 目前這場 */
 .v11-row { position: relative; overflow: visible; }
 .v11-row .v11-row-tag { border-radius: 15px 0 0 15px; }
-.v11-current-tag { position: absolute; left: -6px; top: -13px; z-index: 1; display: inline-flex; align-items: center; gap: 3px; background: #f6c21c; color: var(--v11-ink); border: 2px solid var(--v11-ink); border-radius: 999px; padding: 1px 10px 1px 6px; font-size: 14px; font-weight: 900; line-height: 1.5; box-shadow: 1px 2px 0 var(--v11-ink); }
-.v11-current-tag svg { width: 17px; height: 17px; fill: var(--v11-cream); stroke: var(--v11-ink); stroke-width: 1.6; stroke-linejoin: round; }
+.v11-current-tag { position: absolute; left: -8px; top: -10px; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--v11-green, #3be46a); border: 2.5px solid var(--v11-ink); box-shadow: 0 0 0 2.5px var(--v11-cream); }
+.v11-current-tag svg { width: 20px; height: 20px; fill: none; stroke: var(--v11-ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .v11-dock button { position: relative; }
-.v11-dock-date { position: absolute; top: -6px; right: calc(50% - 32px); background: #f6c21c; color: var(--v11-ink); border: 1.5px solid var(--v11-ink); border-radius: 999px; padding: 0 6px; font-size: 10px; font-weight: 800; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.v11-dock-date { position: absolute; top: -6px; right: calc(50% - 32px); background: var(--v11-green, #3be46a); color: var(--v11-ink); border: 1.5px solid var(--v11-ink); border-radius: 999px; padding: 0 6px; font-size: 10px; font-weight: 800; line-height: 1.6; font-variant-numeric: tabular-nums; }
 .v11-pick { display: grid; gap: 8px; margin-bottom: 10px; }
 .v11-pick-now { justify-self: start; display: inline-flex; align-items: baseline; gap: 6px; border: 2.5px solid #141414; background: #fffdf7; border-radius: 999px; padding: 5px 14px; font-weight: 900; font-size: 16px; box-shadow: 2px 3px 0 #141414; cursor: pointer; }
 .v11-pick-now span { font-size: 11px; }

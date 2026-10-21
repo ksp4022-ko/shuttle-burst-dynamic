@@ -1,11 +1,10 @@
 import { useEffect, useRef, type MutableRefObject } from "react";
 import type MatterNS from "matter-js";
-import type { V11Meetup } from "@/lib/v11-meetups";
+import { v11MineLabel, type V11Meetup } from "@/lib/v11-meetups";
 import { V11Mochi } from "./v11-mochi";
 import {
   v11DrawExtra,
   v11ExtraShape,
-  V11_HAND_PATH,
   type V11Extra,
   type V11ExtraKind,
   type V11Shape,
@@ -525,53 +524,22 @@ export function V11Stage({
       ctx.textAlign = "left";
       ctx.fillStyle = tone.fg;
       ctx.font = `800 ${h * 0.16}px ${CJK}`;
-      ctx.fillText(m.tag, -w / 2 + w * 0.08, -h / 2 + h * 0.155);
+      // V11-015: 已選 is a green ✓ on the top-left corner; the tag moves aside.
+      const picked = m.id === live.current.currentId;
+      const checkR = h * 0.21;
+      ctx.fillText(m.tag, -w / 2 + (picked ? checkR * 1.25 : w * 0.08), -h / 2 + h * 0.155);
       ctx.fillStyle = INK;
       ctx.font = `400 ${h * 0.3}px ${DISP}`;
       ctx.fillText(m.date, -w / 2 + w * 0.08, h * 0.07);
       ctx.fillStyle = MUTED;
       ctx.font = `700 ${h * 0.13}px ${CJK}`;
       ctx.fillText(`${m.weekday} ${m.time}`.trim(), -w / 2 + w * 0.08, h * 0.34);
-      // The 下一場 tag starts after 已選 when the sticker wears both.
-      let nextX = -w / 2 + w * 0.42;
-      if (m.id === live.current.currentId) {
-        // V11-006 / V11-009: 👆 已選 tag on the top-left corner, yellow so it
-        // stands apart from the blue 下一場.
-        const th = h * 0.25;
-        ctx.font = `900 ${th * 0.58}px ${CJK}`;
-        const icon = th * 0.7;
-        const tw = ctx.measureText("已選").width + icon + th * 0.75;
-        const tx = -w / 2 - p * 0.6;
-        const ty = -h / 2 - p - th * 0.6;
-        rr(tx, ty, tw, th, th / 2);
-        ctx.fillStyle = "#f6c21c";
-        ctx.fill();
-        ctx.lineWidth = lw;
-        ctx.strokeStyle = INK;
-        ctx.stroke();
-        ctx.save();
-        ctx.translate(tx + th * 0.3, ty + (th - icon) / 2);
-        ctx.scale(icon / 16, icon / 16);
-        const hand = new Path2D(V11_HAND_PATH);
-        ctx.fillStyle = CREAM;
-        ctx.fill(hand);
-        ctx.lineWidth = 1.6;
-        ctx.lineJoin = "round";
-        ctx.strokeStyle = INK;
-        ctx.stroke(hand);
-        ctx.restore();
-        ctx.fillStyle = INK;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText("已選", tx + th * 0.38 + icon, ty + th / 2 + th * 0.03);
-        nextX = Math.max(nextX, tx + tw + p * 0.4);
-      }
       if (m.next) {
         // 下一場 tag riding on the top edge.
         const th = h * 0.2;
         ctx.font = `800 ${th * 0.62}px ${CJK}`;
         const tw = ctx.measureText("下一場").width + th * 0.9;
-        const tx = nextX;
+        const tx = -w / 2 + w * 0.42;
         const ty = -h / 2 - p - th * 0.55;
         rr(tx, ty, tw, th, th / 2);
         ctx.fillStyle = NEXT;
@@ -584,14 +552,39 @@ export function V11Stage({
         ctx.textBaseline = "middle";
         ctx.fillText("下一場", tx + tw / 2, ty + th / 2 + th * 0.03);
       }
-      // My status sits on top of the tags.
+      // V11-015: my status as words (正取 #2 / 備取 #1 / 已請假) on the
+      // bottom-right edge.
       if (live.current.signedIn && m.mine) {
-        const r = h * 0.17;
-        const bx = w / 2 - r * 0.55;
-        const by = -h / 2 + r * 0.45;
-        if (m.mine.status === "confirmed") badge(bx, by, r, "#3be46a", "✓");
-        else if (m.mine.status === "waiting") badge(bx, by, r, "#f6c21c", "備");
-        else badge(bx, by, r, GREY, "假");
+        const label = v11MineLabel(m.mine, true);
+        const th = h * 0.21;
+        ctx.font = `900 ${th * 0.6}px ${CJK}`;
+        const tw = ctx.measureText(label).width + th * 0.8;
+        const tx = w / 2 + p * 0.5 - tw;
+        const ty = h / 2 + p * 0.3 - th / 2;
+        rr(tx, ty, tw, th, th / 2);
+        ctx.fillStyle =
+          m.mine.status === "confirmed"
+            ? "#3be46a"
+            : m.mine.status === "waiting"
+              ? "#f6c21c"
+              : GREY;
+        ctx.fill();
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = INK;
+        ctx.stroke();
+        ctx.fillStyle = INK;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, tx + tw / 2, ty + th / 2 + th * 0.03);
+      }
+      if (picked) {
+        const bx = -w / 2 + checkR * 0.15;
+        const by = -h / 2 + checkR * 0.05;
+        ctx.beginPath();
+        ctx.arc(bx, by, checkR + p * 0.6, 0, TAU);
+        ctx.fillStyle = CREAM;
+        ctx.fill();
+        badge(bx, by, checkR, "#3be46a", "✓");
       }
       ctx.restore();
     };

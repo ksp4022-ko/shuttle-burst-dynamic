@@ -595,8 +595,3 @@ export function v11DrawExtra(
   const size = img.width / Math.min(window.devicePixelRatio || 1, 2);
   c.drawImage(img, -size / 2, -size / 2, size, size);
 }
-
-// V11-009: the 👆 hand on the 已選 tag (16×16 box), shared by the stage
-// canvas and the list row so both look the same.
-export const V11_HAND_PATH =
-  "M6 9V3a2 2 0 0 1 4 0v4h1.5a2 2 0 0 1 2 2v3a3 3 0 0 1-3 3h-4A3.5 3.5 0 0 1 3 11.5V10a1.5 1.5 0 0 1 3 0z";

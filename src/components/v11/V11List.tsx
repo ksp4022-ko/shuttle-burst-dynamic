@@ -1,6 +1,5 @@
 import { v11MineLabel, type V11Meetup } from "@/lib/v11-meetups";
 import type { V11SrcRect } from "./V11Stage";
-import { V11_HAND_PATH } from "./v11-extras";
 
 // 列表模式 (D10): the same meetups as rows, for reduced motion, a failed
 // physics load, or anyone who prefers it. A row opens the same card.
@@ -27,7 +26,7 @@ export function V11Row({
 }: {
   meetup: V11Meetup;
   signedIn: boolean;
-  // V11-006 / V11-009: 目前這場 wears a 👆 已選 tag.
+  // V11-006 / V11-015: 目前這場 wears a green ✓ (已選).
   current?: boolean;
   onOpen: (id: string, rect: V11SrcRect) => void;
 }) {
@@ -49,11 +48,10 @@ export function V11Row({
       }}
     >
       {current ? (
-        <span className="v11-current-tag">
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d={V11_HAND_PATH} />
+        <span className="v11-current-tag" role="img" aria-label="已選">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 10.5l3.4 3.4L15.2 6.6" />
           </svg>
-          已選
         </span>
       ) : null}
       <span className="v11-row-tag" style={{ background: tone.bg, color: tone.fg }}>
