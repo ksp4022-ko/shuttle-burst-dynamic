@@ -73,15 +73,15 @@ export function v11ExtraShape(kind: V11ExtraKind, S: number): V11Shape {
     case "racket":
       return { type: "rect", w: S * 0.3, h: S * 0.7, r: S * 0.1 };
     case "bag":
-      return { type: "rect", w: S * 0.66, h: S * 0.24, r: S * 0.12 };
+      return { type: "rect", w: S * 0.66, h: S * 0.32, r: S * 0.12 };
     case "shoe":
-      return { type: "rect", w: S * 0.54, h: S * 0.26, r: S * 0.06 };
+      return { type: "rect", w: S * 0.54, h: S * 0.36, r: S * 0.06 };
   }
 }
 
 // V11-022: "之後 N 場" / "已結束 N 場" are shuttle tubes.
 export function v11CountShape(S: number): V11Shape {
-  return { type: "rect", w: S * 0.42, h: S * 0.7, r: S * 0.08 };
+  return { type: "rect", w: S * 0.38, h: S * 0.8, r: S * 0.08 };
 }
 
 const INK = "#141414";
@@ -125,6 +125,37 @@ function roundRect(p: Path2D, x: number, y: number, w: number, h: number, r: num
   p.arcTo(x, y + h, x, y, r);
   p.arcTo(x, y, x + w, y, r);
   p.closePath();
+}
+
+// V11-023: the gear stickers' palette (green / yellow / cream, like the
+// reference set) and the small shuttle mark printed on them.
+const GEAR_GREEN = "#1e7a46";
+const GEAR_DEEP = "#145c34";
+
+function miniShuttle(c: CanvasRenderingContext2D, x: number, y: number, s: number, lw: number) {
+  c.save();
+  c.translate(x, y);
+  const skirt = new Path2D();
+  skirt.moveTo(-s * 0.22, -s * 0.02);
+  skirt.lineTo(-s * 0.42, -s * 0.5);
+  skirt.quadraticCurveTo(0, -s * 0.66, s * 0.42, -s * 0.5);
+  skirt.lineTo(s * 0.22, -s * 0.02);
+  skirt.closePath();
+  c.fillStyle = "#ffffff";
+  c.fill(skirt);
+  c.lineWidth = lw;
+  c.strokeStyle = INK;
+  c.stroke(skirt);
+  const cork = new Path2D();
+  cork.moveTo(-s * 0.24, 0);
+  cork.arc(0, 0, s * 0.24, Math.PI, 0, true);
+  cork.closePath();
+  c.fillStyle = CREAM;
+  c.fill(cork);
+  c.stroke(cork);
+  c.fillStyle = RED;
+  c.fillRect(-s * 0.24, -s * 0.06, s * 0.48, s * 0.1);
+  c.restore();
 }
 
 // How one sticker is drawn: its outline (for the die-cut margin), how far it
@@ -524,7 +555,8 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
   }
 
   if (ex.kind === "racket") {
-    // V11-022: a badminton racket, head up; its body is this outline.
+    // V11-022 / V11-023: a badminton racket with a red grip, drawn head up
+    // and turned to lie flat (v11Lies); its body is this outline.
     const hx = 0;
     const hy = -S * 0.17;
     const rx = S * 0.12;
@@ -557,19 +589,19 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         }
         c.stroke();
         c.restore();
-        // Frame: red with ink edges.
+        // Frame: ink with a grey inner line.
         c.lineWidth = lw * 2.2;
         c.strokeStyle = INK;
         c.stroke(head);
-        c.lineWidth = lw * 1.1;
-        c.strokeStyle = RED;
+        c.lineWidth = lw * 0.7;
+        c.strokeStyle = "#9a958b";
         c.stroke(head);
         // Shaft and grip with its wrap.
         c.fillStyle = "#cfc9bd";
         c.fill(shaft);
         ink(c, thin * 1.4);
         c.stroke(shaft);
-        c.fillStyle = "#2b2b2b";
+        c.fillStyle = RED;
         c.fill(grip);
         c.save();
         c.clip(grip);
@@ -589,69 +621,90 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
   }
 
   if (ex.kind === "bag" && shape.type === "rect") {
-    // V11-022: a racket bag: green capsule, zip, a handle and a front pocket
-    // with a small shuttle mark.
-    const { w, h, r } = shape;
+    // V11-023: a duffel racket bag like the reference: cream body, a big
+    // green sweep with a yellow line, two black handles, the shuttle mark.
+    const { w, h } = shape;
+    const top = -h / 2 + h * 0.28;
+    const bh = h / 2 - top;
     const body = new Path2D();
-    roundRect(body, -w / 2, -h / 2 + h * 0.12, w, h * 0.88, r);
-    const handle = new Path2D();
-    roundRect(handle, -w * 0.16, -h / 2 - h * 0.12, w * 0.32, h * 0.3, h * 0.12);
+    roundRect(body, -w / 2, top, w, bh, bh * 0.42);
+    const handles = [-1, 1].map((d) => {
+      const a = new Path2D();
+      const cx = d * w * 0.15;
+      a.ellipse(cx, top + h * 0.04, w * 0.14, h * 0.3, 0, Math.PI, 0);
+      a.ellipse(cx, top + h * 0.04, w * 0.07, h * 0.15, 0, 0, Math.PI, true);
+      a.closePath();
+      return a;
+    });
     const outline = new Path2D();
     outline.addPath(body);
-    outline.addPath(handle);
+    for (const a of handles) outline.addPath(a);
     return {
       outline,
       ext: w / 2,
       paint: (c) => {
-        c.fillStyle = INK;
-        c.fill(handle);
-        c.fillStyle = "#1f9e45";
-        c.fill(body);
-        ink(c);
-        c.stroke(body);
-        c.setLineDash([thin * 1.4, thin * 1.4]);
-        c.beginPath();
-        c.moveTo(-w * 0.4, -h * 0.12);
-        c.lineTo(w * 0.4, -h * 0.12);
-        c.lineWidth = thin;
-        c.strokeStyle = CREAM;
-        c.stroke();
-        c.setLineDash([]);
-        const pocket = new Path2D();
-        roundRect(pocket, -w * 0.18, -h * 0.02, w * 0.36, h * 0.42, h * 0.1);
-        c.fillStyle = "#17803a";
-        c.fill(pocket);
-        ink(c, thin * 1.2);
-        c.stroke(pocket);
-        // Shuttle mark.
+        for (const a of handles) {
+          c.fillStyle = INK;
+          c.fill(a);
+        }
         c.fillStyle = CREAM;
+        c.fill(body);
+        c.save();
+        c.clip(body);
+        // The green sweep from the bottom left up across the middle.
+        c.fillStyle = GEAR_GREEN;
         c.beginPath();
-        c.moveTo(-h * 0.1, h * 0.06);
-        c.lineTo(h * 0.1, h * 0.06);
-        c.lineTo(h * 0.04, h * 0.2);
-        c.lineTo(-h * 0.04, h * 0.2);
+        c.moveTo(-w / 2, h / 2);
+        c.lineTo(-w / 2, top + bh * 0.2);
+        c.quadraticCurveTo(-w * 0.2, top + bh * 0.1, w * 0.05, top);
+        c.lineTo(w * 0.2, top);
+        c.quadraticCurveTo(-w * 0.05, top + bh * 0.6, -w * 0.12, h / 2);
         c.closePath();
         c.fill();
+        c.strokeStyle = YELLOW;
+        c.lineWidth = lw * 0.9;
         c.beginPath();
-        c.arc(0, h * 0.25, h * 0.06, 0, TAU);
+        c.moveTo(w * 0.27, top);
+        c.quadraticCurveTo(w * 0.02, top + bh * 0.6, -w * 0.04, h / 2);
+        c.stroke();
+        // Green end panel on the right.
+        c.fillStyle = GEAR_GREEN;
+        c.beginPath();
+        c.moveTo(w / 2, h / 2);
+        c.lineTo(w * 0.3, h / 2);
+        c.quadraticCurveTo(w * 0.42, top + bh * 0.55, w / 2, top + bh * 0.4);
+        c.closePath();
         c.fill();
+        c.restore();
+        ink(c);
+        c.stroke(body);
+        // Shuttle mark in a cream disc.
+        c.beginPath();
+        c.arc(w * 0.18, top + bh * 0.5, bh * 0.3, 0, TAU);
+        c.fillStyle = CREAM;
+        c.fill();
+        ink(c, thin);
+        c.stroke();
+        miniShuttle(c, w * 0.18, top + bh * 0.62, bh * 0.42, thin * 0.8);
       },
     };
   }
 
   if (ex.kind === "shoe") {
-    // V11-022: a court shoe, side view: gum sole, white upper, blue panel,
-    // laces. Its body is this outline's convex hull.
+    // V11-023: a court shoe like the reference, side view toe right: cream
+    // upper, green heel and toe, yellow side stripe and laces, cream midsole
+    // over a green treaded sole. Its body is the outline's hull.
     const upper = new Path2D();
-    upper.moveTo(-S * 0.25, S * 0.05);
-    upper.lineTo(-S * 0.24, -S * 0.04);
-    upper.quadraticCurveTo(-S * 0.22, -S * 0.11, -S * 0.12, -S * 0.11);
-    upper.lineTo(-S * 0.06, -S * 0.03);
-    upper.quadraticCurveTo(S * 0.12, -S * 0.04, S * 0.2, S * 0.0);
-    upper.quadraticCurveTo(S * 0.27, S * 0.02, S * 0.26, S * 0.06);
+    upper.moveTo(-S * 0.25, S * 0.07);
+    upper.lineTo(-S * 0.25, -S * 0.054);
+    upper.quadraticCurveTo(-S * 0.25, -S * 0.162, -S * 0.17, -S * 0.176);
+    upper.lineTo(-S * 0.08, -S * 0.149);
+    upper.quadraticCurveTo(-S * 0.05, -S * 0.2, -S * 0.01, -S * 0.176);
+    upper.quadraticCurveTo(S * 0.12, -S * 0.081, S * 0.2, -S * 0.027);
+    upper.quadraticCurveTo(S * 0.28, S * 0.01, S * 0.27, S * 0.07);
     upper.closePath();
     const sole = new Path2D();
-    roundRect(sole, -S * 0.26, S * 0.04, S * 0.53, S * 0.07, S * 0.03);
+    roundRect(sole, -S * 0.265, S * 0.05, S * 0.545, S * 0.1, S * 0.04);
     const outline = new Path2D();
     outline.addPath(upper);
     outline.addPath(sole);
@@ -659,33 +712,75 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
       outline,
       ext: S * 0.3,
       paint: (c) => {
-        c.fillStyle = "#ffffff";
+        c.fillStyle = CREAM;
         c.fill(upper);
         c.save();
         c.clip(upper);
-        c.fillStyle = BLUE;
+        // Green heel counter and toe tip.
+        c.fillStyle = GEAR_GREEN;
         c.beginPath();
-        c.moveTo(-S * 0.2, S * 0.05);
-        c.quadraticCurveTo(-S * 0.02, -S * 0.08, S * 0.16, S * 0.05);
+        c.moveTo(-S * 0.26, -S * 0.2);
+        c.lineTo(-S * 0.13, -S * 0.2);
+        c.quadraticCurveTo(-S * 0.09, -S * 0.02, -S * 0.15, S * 0.08);
+        c.lineTo(-S * 0.26, S * 0.08);
         c.closePath();
         c.fill();
+        c.beginPath();
+        c.moveTo(S * 0.17, S * 0.08);
+        c.quadraticCurveTo(S * 0.19, S * 0.0, S * 0.3, -S * 0.02);
+        c.lineTo(S * 0.3, S * 0.08);
+        c.closePath();
+        c.fill();
+        // Yellow side stripe.
+        c.strokeStyle = YELLOW;
+        c.lineWidth = S * 0.035;
+        c.beginPath();
+        c.moveTo(-S * 0.06, S * 0.06);
+        c.quadraticCurveTo(S * 0.0, -S * 0.04, S * 0.1, -S * 0.09);
+        c.stroke();
         c.restore();
+        // Collar opening.
+        c.beginPath();
+        c.ellipse(-S * 0.13, -S * 0.155, S * 0.06, S * 0.02, -0.15, 0, TAU);
+        c.fillStyle = GEAR_DEEP;
+        c.fill();
         ink(c, lw * 0.9);
         c.stroke(upper);
-        // Laces.
-        c.strokeStyle = INK;
-        c.lineWidth = thin;
+        // Laces: ink under yellow.
+        c.lineCap = "round";
         c.beginPath();
         for (let k = 0; k < 3; k++) {
-          const x = -S * 0.07 + k * S * 0.045;
-          c.moveTo(x, -S * 0.04 + k * S * 0.004);
-          c.lineTo(x + S * 0.03, -S * 0.03 + k * S * 0.006);
+          const x = -S * 0.03 + k * S * 0.055;
+          const y = -S * 0.15 + k * S * 0.033;
+          c.moveTo(x - S * 0.02, y);
+          c.lineTo(x + S * 0.025, y + S * 0.012);
         }
+        c.strokeStyle = INK;
+        c.lineWidth = S * 0.026;
         c.stroke();
-        c.fillStyle = "#e9c46a";
+        c.strokeStyle = YELLOW;
+        c.lineWidth = S * 0.014;
+        c.stroke();
+        // Sole: cream midsole with a yellow line, green treaded outsole.
+        c.fillStyle = CREAM;
         c.fill(sole);
+        c.save();
+        c.clip(sole);
+        c.fillStyle = GEAR_GREEN;
+        c.fillRect(-S * 0.27, S * 0.1, S * 0.56, S * 0.06);
+        c.fillStyle = YELLOW;
+        c.fillRect(-S * 0.27, S * 0.085, S * 0.56, S * 0.016);
+        c.restore();
         ink(c, lw * 0.9);
         c.stroke(sole);
+        c.strokeStyle = "rgba(255,255,255,.55)";
+        c.lineWidth = thin * 0.8;
+        c.beginPath();
+        for (let x = -S * 0.22; x < S * 0.25; x += S * 0.045) {
+          c.moveTo(x, S * 0.115);
+          c.lineTo(x + S * 0.02, S * 0.14);
+        }
+        c.stroke();
       },
     };
   }
@@ -908,84 +1003,92 @@ function meetupArt(
   };
 }
 
-// V11-016 / V11-022: "之後 N 場" / "已結束 N 場" as shuttle tubes. 之後 is
-// a blue tube with its cap on; 已結束 an empty grey one with the cap off.
-// Label, then the number as the main mark with a small 場.
+// V11-016 / V11-022 / V11-023: "之後 N 場" / "已結束 N 場" as shuttle tubes
+// like the reference: a cream tube with green swept bands top and bottom, a
+// yellow line, the open top (yellow inside). 已結束 is the same tube in
+// greys, empty. Label, then the number as the main mark with a small 場.
 function countArt(kind: "more" | "ended", n: number, S: number, lw: number): Art {
   const shape = v11CountShape(S);
   const w = shape.type === "rect" ? shape.w : S * 0.42;
   const h = shape.type === "rect" ? shape.h : S * 0.7;
   const more = kind === "more";
-  const tubeTop = -h / 2 + h * 0.1;
+  const green = more ? GEAR_GREEN : "#8c857a";
+  const deep = more ? GEAR_DEEP : "#5d5a52";
+  const accent = more ? YELLOW : "#d9d3c7";
+  const rimY = -h / 2 + h * 0.06;
   const tube = new Path2D();
-  roundRect(tube, -w / 2, tubeTop, w, h / 2 - tubeTop, w * 0.14);
-  const cap = new Path2D();
-  if (more) roundRect(cap, -w / 2 - w * 0.03, -h / 2, w * 1.06, h * 0.15, w * 0.1);
+  roundRect(tube, -w / 2, rimY, w, h / 2 - rimY, w * 0.16);
+  const rim = new Path2D();
+  rim.ellipse(0, rimY, w / 2, h * 0.055, 0, 0, TAU);
   const outline = new Path2D();
   outline.addPath(tube);
-  if (more) outline.addPath(cap);
+  outline.addPath(rim);
   const thin = lw * 0.55;
   return {
     outline,
     ext: h / 2 + w * 0.1,
     paint: (c) => {
-      c.fillStyle = more ? BLUE : "#cfc9bd";
+      c.fillStyle = CREAM;
       c.fill(tube);
+      c.save();
+      c.clip(tube);
+      // Top band with a swept lower edge, and the yellow line under it.
+      c.fillStyle = green;
+      c.beginPath();
+      c.moveTo(-w / 2, rimY);
+      c.lineTo(w / 2, rimY);
+      c.lineTo(w / 2, rimY + h * 0.1);
+      c.quadraticCurveTo(0, rimY + h * 0.24, -w / 2, rimY + h * 0.14);
+      c.closePath();
+      c.fill();
+      c.strokeStyle = accent;
+      c.lineWidth = lw * 0.9;
+      c.beginPath();
+      c.moveTo(w / 2, rimY + h * 0.14);
+      c.quadraticCurveTo(0, rimY + h * 0.28, -w / 2, rimY + h * 0.18);
+      c.stroke();
+      // Bottom band sweeping up the other way.
+      c.fillStyle = green;
+      c.beginPath();
+      c.moveTo(-w / 2, h / 2);
+      c.lineTo(-w / 2, h / 2 - h * 0.12);
+      c.quadraticCurveTo(0, h / 2 - h * 0.22, w / 2, h / 2 - h * 0.17);
+      c.lineTo(w / 2, h / 2);
+      c.closePath();
+      c.fill();
       // A flat highlight down the left side.
-      c.fillStyle = "rgba(255,255,255,.22)";
-      c.fillRect(-w * 0.36, tubeTop + h * 0.06, w * 0.08, h * 0.74);
+      c.fillStyle = "rgba(255,255,255,.35)";
+      c.fillRect(-w * 0.38, rimY + h * 0.2, w * 0.07, h * 0.5);
+      c.restore();
       c.lineWidth = lw;
       c.strokeStyle = INK;
       c.stroke(tube);
-      if (more) {
-        c.fillStyle = "#1d3f8a";
-        c.fill(cap);
-        c.stroke(cap);
-      } else {
-        // Open top, the cap lying off to one side.
-        c.beginPath();
-        c.ellipse(0, tubeTop + h * 0.02, w * 0.38, h * 0.035, 0, 0, TAU);
-        c.fillStyle = "#57534e";
-        c.fill();
-        c.save();
-        c.translate(w * 0.3, -h / 2 + h * 0.05);
-        c.rotate(0.6);
-        const lid = new Path2D();
-        roundRect(lid, -w * 0.3, -h * 0.05, w * 0.6, h * 0.1, w * 0.06);
-        c.fillStyle = "#8c857a";
-        c.fill(lid);
-        c.lineWidth = thin * 1.4;
-        c.stroke(lid);
-        c.restore();
-      }
-      // Label band.
-      const bandTop = -h * 0.16;
-      const bandH = h * 0.52;
-      c.fillStyle = CREAM;
-      c.fillRect(-w / 2 + lw / 2, bandTop, w - lw, bandH);
+      // Open top: rim, then the inside.
+      c.fillStyle = deep;
+      c.fill(rim);
+      c.stroke(rim);
       c.beginPath();
-      c.moveTo(-w / 2, bandTop);
-      c.lineTo(w / 2, bandTop);
-      c.moveTo(-w / 2, bandTop + bandH);
-      c.lineTo(w / 2, bandTop + bandH);
-      c.lineWidth = thin * 1.3;
-      c.strokeStyle = INK;
+      c.ellipse(0, rimY, w * 0.36, h * 0.033, 0, 0, TAU);
+      c.fillStyle = more ? YELLOW : "#3d3a35";
+      c.fill();
+      c.lineWidth = thin;
       c.stroke();
+      // Label and count on the cream middle.
       c.fillStyle = INK;
       c.textAlign = "center";
       c.textBaseline = "middle";
       const label = more ? "之後" : "已結束";
       fit(c, label, w * 0.86, h * 0.14, "900 SIZEpx " + CJK);
-      c.fillText(label, 0, bandTop + bandH * 0.22);
+      c.fillText(label, 0, -h * 0.1);
       const num = String(n);
       const unitFont = `900 ${h * 0.14}px ${CJK}`;
       c.font = unitFont;
       const uw = c.measureText("場").width;
       const gap = w * 0.03;
-      const size = fit(c, num, w * 0.9 - uw - gap, h * 0.26, "400 SIZEpx " + DISP);
+      const size = fit(c, num, w * 0.9 - uw - gap, h * 0.24, "400 SIZEpx " + DISP);
       const nw = c.measureText(num).width;
       const x0 = -(nw + gap + uw) / 2;
-      const base = bandTop + bandH * 0.62 + size * 0.36;
+      const base = h * 0.06 + size * 0.6;
       c.textAlign = "left";
       c.textBaseline = "alphabetic";
       c.fillText(num, x0, base);
@@ -1050,6 +1153,27 @@ function blit(c: CanvasRenderingContext2D, key: string, make: () => Art, pad: nu
   c.drawImage(img, -size / 2, -size / 2, size, size);
 }
 
+// V11-023: the racket and one of the shuttles lie flat: their art (drawn
+// standing) is turned a quarter left, and so is their body (v11HullOf).
+export function v11Lies(spec: { kind: V11ExtraKind; id: string }) {
+  return spec.kind === "racket" || spec.id === "shuttle-1";
+}
+
+function turned(a: Art): Art {
+  const outline = new Path2D();
+  outline.addPath(a.outline, new DOMMatrix().rotate(-90));
+  return {
+    ...a,
+    outline,
+    paint: (c) => {
+      c.save();
+      c.rotate(-Math.PI / 2);
+      a.paint(c);
+      c.restore();
+    },
+  };
+}
+
 export function v11DrawExtra(
   c: CanvasRenderingContext2D,
   ex: V11Extra,
@@ -1059,7 +1183,15 @@ export function v11DrawExtra(
   logo: HTMLImageElement | null,
 ) {
   const ready = Boolean(logo && logo.complete && logo.naturalWidth);
-  blit(c, `x|${JSON.stringify(ex)}|${S.toFixed(1)}|${ready}`, () => extraArt(ex, S, lw, logo), pad);
+  blit(
+    c,
+    `x|${JSON.stringify(ex)}|${S.toFixed(1)}|${ready}`,
+    () => {
+      const art = extraArt(ex, S, lw, logo);
+      return v11Lies(ex) ? turned(art) : art;
+    },
+    pad,
+  );
 }
 
 export function v11DrawMeetup(
@@ -1134,7 +1266,8 @@ function centroid(pts: Pt[]) {
   return { x: cx / (3 * a), y: cy / (3 * a) };
 }
 
-export function v11HullOf(kind: V11ExtraKind, S: number, pad: number) {
+export function v11HullOf(spec: { kind: V11ExtraKind; id: string }, S: number, pad: number) {
+  const { kind } = spec;
   let raw: Pt[];
   if (kind === "shuttle") {
     const shape = v11ExtraShape("shuttle", S);
@@ -1156,18 +1289,20 @@ export function v11HullOf(kind: V11ExtraKind, S: number, pad: number) {
     raw.push({ x: -S * 0.028, y: S * 0.34 }, { x: S * 0.028, y: S * 0.34 });
   } else if (kind === "shoe") {
     raw = [
-      [-0.26, 0.11],
-      [0.27, 0.11],
-      [0.27, 0.04],
-      [0.26, 0.02],
-      [0.2, 0],
-      [-0.12, -0.11],
-      [-0.22, -0.11],
-      [-0.25, -0.04],
+      [-0.265, 0.15],
+      [0.28, 0.15],
+      [0.28, 0.05],
+      [0.27, 0.03],
+      [0.2, -0.02],
+      [-0.01, -0.2],
+      [-0.17, -0.18],
+      [-0.25, -0.07],
     ].map(([x = 0, y = 0]) => ({ x: x * S, y: y * S }));
   } else {
     return null;
   }
+  // Lying flat: the same quarter turn left as the art.
+  if (v11Lies(spec)) raw = raw.map((p) => ({ x: p.y, y: -p.x }));
   const hull = convexHull(raw);
   const c0 = centroid(hull);
   const grow = pad * 0.6;

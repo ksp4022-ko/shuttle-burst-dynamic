@@ -41,8 +41,8 @@ const isExtra = (kind: Spec["kind"]) => kind !== "meetup" && kind !== "more" && 
 
 // The stage holds the next few meetups; later ones fold into one
 // "之後 N 場" sticker, past ones into "已結束 N 場". Both open a list.
-// V11-022: the nearest 2 (more room for the gear stickers).
-export const V11_STAGE_MAX = 2;
+// V11-023: just the nearest one (the rest fold into the 之後 tube).
+export const V11_STAGE_MAX = 1;
 type Item = {
   spec: Spec;
   position: { x: number; y: number };
@@ -241,7 +241,7 @@ export function V11Stage({
       const shape = shapeOf(spec);
       const edge = pad();
       // V11-016 / V11-022: shuttle, racket and shoe follow their outline.
-      const hull = v11HullOf(spec.kind as V11ExtraKind, S, pad());
+      const hull = v11HullOf(spec as { kind: V11ExtraKind; id: string }, S, pad());
       const body = hull
         ? M.Bodies.fromVertices(x, y, [hull.verts], common)
         : shape.type === "circle"
@@ -432,7 +432,7 @@ export function V11Stage({
         const ex = live.current.extras.find((x) => x.id === it.spec.id);
         const egg = it.spec.kind === "dragon" ? DRAGON : null;
         // A hull body sits at the hull's centroid, not at the art's origin.
-        const hull = v11HullOf(it.spec.kind as V11ExtraKind, S, p);
+        const hull = v11HullOf(it.spec as { kind: V11ExtraKind; id: string }, S, p);
         if (hull) ctx.translate(-hull.centre.x, -hull.centre.y);
         if (ex ?? egg) v11DrawExtra(ctx, (ex ?? egg)!, S, lw, p, logo);
       } else if (it.spec.kind !== "meetup") {
