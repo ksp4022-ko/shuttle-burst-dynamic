@@ -354,7 +354,13 @@ export function V11Stage({
         const shape = shapeOf(spec);
         return shape.type === "circle" ? Math.PI * shape.r * shape.r : shape.w * shape.h;
       };
-      const bySize = list.filter((x) => x.kind !== "meetup").sort((a, b) => area(b) - area(a));
+      // V11-027: with a 之後 tube on the stage, the shuttles wait and pop out
+      // of it at the end.
+      const popping = !still && list.some((x) => x.kind === "more");
+      const later = popping ? list.filter((x) => x.kind === "shuttle") : [];
+      const bySize = list
+        .filter((x) => x.kind !== "meetup" && !later.includes(x))
+        .sort((a, b) => area(b) - area(a));
       const order: Spec[] = [];
       while (bySize.length) {
         order.push(bySize.shift()!);
@@ -368,8 +374,12 @@ export function V11Stage({
       );
       // V11-026: once everything is down, a quick side-to-side shake
       // loosens the pile; then the roof comes down.
-      if (!still) timers.push(window.setTimeout(shake, DROP_GAP * order.length + 900));
-      timers.push(window.setTimeout(raiseRoof, still ? 0 : DROP_GAP * order.length + 900 + 800));
+      const settled = DROP_GAP * order.length + 900;
+      if (!still) timers.push(window.setTimeout(shake, settled));
+      later.forEach((spec, i) =>
+        timers.push(window.setTimeout(() => popFromTube(spec), settled + 700 + i * 320)),
+      );
+      timers.push(window.setTimeout(raiseRoof, still ? 0 : settled + (later.length ? 1500 : 800)));
     };
     rebuildRef.current = build;
 
@@ -400,6 +410,34 @@ export function V11Stage({
       if (!M) return;
       const it = spawn(spec);
       if (it?.body) M.Body.setPosition(it.body, { x: it.body.position.x, y: S * 0.4 });
+    };
+
+    // V11-027: a shuttle shoots out of the 之後 tube's open top, cork first,
+    // and 墨糰 cheers. Without the tube it just drops in.
+    const popFromTube = (spec: Spec) => {
+      if (!M) return;
+      const tube = items.find((x) => x.spec.kind === "more")?.body;
+      const it = spawn(spec);
+      if (!tube || !it?.body) return;
+      const shape = v11CountShape(S);
+      const half = shape.type === "rect" ? shape.h / 2 : S * 0.4;
+      const a = tube.angle;
+      // The tube's axis, pointing out of its top.
+      const ux = Math.sin(a);
+      const uy = -Math.cos(a);
+      const out = half + S * 0.22;
+      M.Body.setPosition(it.body, {
+        x: tube.position.x + ux * out,
+        y: tube.position.y + uy * out,
+      });
+      M.Body.setAngle(it.body, a + Math.PI);
+      const speed = 13 + Math.random() * 3;
+      M.Body.setVelocity(it.body, {
+        x: ux * speed + (Math.random() - 0.5) * 4,
+        y: uy * speed,
+      });
+      M.Body.setAngularVelocity(it.body, (Math.random() - 0.5) * 0.3);
+      mochi.react("excited", 700);
     };
 
     const shake = () => {
