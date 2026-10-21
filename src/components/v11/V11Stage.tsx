@@ -5,6 +5,7 @@ import { V11Mochi } from "./v11-mochi";
 import {
   v11DrawExtra,
   v11ExtraShape,
+  V11_HAND_PATH,
   type V11Extra,
   type V11ExtraKind,
   type V11Shape,
@@ -47,6 +48,7 @@ const DISP = '"Dela Gothic One","Arial Black",system-ui,sans-serif';
 const TAU = Math.PI * 2;
 
 type Spec = { kind: "meetup" | "more" | "ended" | V11ExtraKind; id: string };
+const DRAGON: V11Extra = { kind: "dragon", id: "dragon" };
 const isExtra = (kind: Spec["kind"]) => kind !== "meetup" && kind !== "more" && kind !== "ended";
 
 // The stage holds the next few meetups; later ones fold into one
@@ -182,9 +184,9 @@ export function V11Stage({
         : spec.kind === "more" || spec.kind === "ended"
           ? { type: "circle", r: ER() }
           : v11ExtraShape(spec.kind, S);
-    // The 龍虎 logo for the easter-egg sticker.
-    const logo = new Image();
-    logo.src = `${import.meta.env.BASE_URL}v9/brand/logo.webp`;
+    // V11-013: the 龍虎 logo loads only when the easter egg is found.
+    let logo: HTMLImageElement | null = null;
+    let mochiTaps: number[] = [];
 
     const dims = () => {
       const r = stage.getBoundingClientRect();
@@ -233,7 +235,7 @@ export function V11Stage({
         ...(light ? { density: 0.0004 } : {}),
       };
       const shape = shapeOf(spec);
-      const edge = isExtra(spec.kind) ? 2 : pad();
+      const edge = spec.kind === "shuttle" ? 2 : pad();
       const body =
         shape.type === "circle"
           ? M.Bodies.circle(x, y, shape.r + edge, common)
@@ -331,7 +333,7 @@ export function V11Stage({
       if (!M || !engine) return;
       const want = new Set(live.current.extras.map((x) => x.id));
       for (const it of [...items]) {
-        if (!isExtra(it.spec.kind) || want.has(it.spec.id)) continue;
+        if (!isExtra(it.spec.kind) || want.has(it.spec.id) || it.spec.kind === "dragon") continue;
         if (it.body) M.Composite.remove(engine.world, it.body);
         items = items.filter((x) => x !== it);
       }
@@ -450,7 +452,8 @@ export function V11Stage({
       ctx.rotate(it.angle);
       if (isExtra(it.spec.kind)) {
         const ex = live.current.extras.find((x) => x.id === it.spec.id);
-        if (ex) v11DrawExtra(ctx, ex, S, lw, logo);
+        const egg = it.spec.kind === "dragon" ? DRAGON : null;
+        if (ex ?? egg) v11DrawExtra(ctx, (ex ?? egg)!, S, lw, p, logo);
         ctx.restore();
         return;
       }
@@ -529,38 +532,46 @@ export function V11Stage({
       ctx.fillStyle = MUTED;
       ctx.font = `700 ${h * 0.13}px ${CJK}`;
       ctx.fillText(`${m.weekday} ${m.time}`.trim(), -w / 2 + w * 0.08, h * 0.34);
-      if (live.current.signedIn && m.mine) {
-        const r = h * 0.17;
-        const bx = w / 2 - r * 0.55;
-        const by = -h / 2 + r * 0.45;
-        if (m.mine.status === "confirmed") badge(bx, by, r, "#3be46a", "✓");
-        else if (m.mine.status === "waiting") badge(bx, by, r, "#f6c21c", "備");
-        else badge(bx, by, r, GREY, "假");
-      }
+      // The 下一場 tag starts after 已選 when the sticker wears both.
+      let nextX = -w / 2 + w * 0.42;
       if (m.id === live.current.currentId) {
-        // V11-006: 目前 tag on the top-left corner.
-        const th = h * 0.2;
-        ctx.font = `800 ${th * 0.62}px ${CJK}`;
-        const tw = ctx.measureText("目前").width + th * 0.9;
-        const tx = -w / 2 - p * 0.4;
-        const ty = -h / 2 - p - th * 0.55;
+        // V11-006 / V11-009: 👆 已選 tag on the top-left corner, yellow so it
+        // stands apart from the blue 下一場.
+        const th = h * 0.25;
+        ctx.font = `900 ${th * 0.58}px ${CJK}`;
+        const icon = th * 0.7;
+        const tw = ctx.measureText("已選").width + icon + th * 0.75;
+        const tx = -w / 2 - p * 0.6;
+        const ty = -h / 2 - p - th * 0.6;
         rr(tx, ty, tw, th, th / 2);
-        ctx.fillStyle = INK;
+        ctx.fillStyle = "#f6c21c";
         ctx.fill();
         ctx.lineWidth = lw;
-        ctx.strokeStyle = CREAM;
+        ctx.strokeStyle = INK;
         ctx.stroke();
+        ctx.save();
+        ctx.translate(tx + th * 0.3, ty + (th - icon) / 2);
+        ctx.scale(icon / 16, icon / 16);
+        const hand = new Path2D(V11_HAND_PATH);
         ctx.fillStyle = CREAM;
-        ctx.textAlign = "center";
+        ctx.fill(hand);
+        ctx.lineWidth = 1.6;
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = INK;
+        ctx.stroke(hand);
+        ctx.restore();
+        ctx.fillStyle = INK;
+        ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText("目前", tx + tw / 2, ty + th / 2 + th * 0.03);
+        ctx.fillText("已選", tx + th * 0.38 + icon, ty + th / 2 + th * 0.03);
+        nextX = Math.max(nextX, tx + tw + p * 0.4);
       }
       if (m.next) {
         // 下一場 tag riding on the top edge.
         const th = h * 0.2;
         ctx.font = `800 ${th * 0.62}px ${CJK}`;
         const tw = ctx.measureText("下一場").width + th * 0.9;
-        const tx = -w / 2 + w * 0.42;
+        const tx = nextX;
         const ty = -h / 2 - p - th * 0.55;
         rr(tx, ty, tw, th, th / 2);
         ctx.fillStyle = NEXT;
@@ -572,6 +583,15 @@ export function V11Stage({
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("下一場", tx + tw / 2, ty + th / 2 + th * 0.03);
+      }
+      // My status sits on top of the tags.
+      if (live.current.signedIn && m.mine) {
+        const r = h * 0.17;
+        const bx = w / 2 - r * 0.55;
+        const by = -h / 2 + r * 0.45;
+        if (m.mine.status === "confirmed") badge(bx, by, r, "#3be46a", "✓");
+        else if (m.mine.status === "waiting") badge(bx, by, r, "#f6c21c", "備");
+        else badge(bx, by, r, GREY, "假");
       }
       ctx.restore();
     };
@@ -632,7 +652,10 @@ export function V11Stage({
       const p = point(e);
       if (!p) return;
       const it = hit(p);
-      if (!it) return;
+      if (!it) {
+        tapMochi(p);
+        return;
+      }
       if (e.cancelable) e.preventDefault();
       press = { x: p.x, y: p.y, t: performance.now(), item: it, moved: false };
       if (M && engine && it.body && !it.body.isStatic) {
@@ -647,6 +670,28 @@ export function V11Stage({
         M.Composite.add(engine.world, drag);
       }
       cv.classList.add("is-grabbing");
+    };
+    // V11-013: tap 墨糰 three times and the 龍虎 sticker drops in.
+    const tapMochi = (p: { x: number; y: number }) => {
+      if (!M || !engine || !mochiBody) return;
+      const r = mochiBody.circleRadius ?? 0;
+      if (Math.hypot(p.x - mochiBody.position.x, p.y - mochiBody.position.y) > r * 1.25) return;
+      const now = performance.now();
+      mochiTaps = [...mochiTaps.filter((t) => now - t < 1500), now];
+      mochi.react("curious", 400);
+      if (mochiTaps.length < 3) return;
+      mochiTaps = [];
+      mochi.react("excited", 1400);
+      const egg = items.find((x) => x.spec.kind === "dragon");
+      if (egg?.body) {
+        M.Body.setVelocity(egg.body, { x: (Math.random() - 0.5) * 6, y: -10 });
+        return;
+      }
+      if (!logo) {
+        logo = new Image();
+        logo.src = `${import.meta.env.BASE_URL}v9/brand/logo.webp`;
+      }
+      spawnInside({ kind: "dragon", id: "dragon" });
     };
     const move = (e: MouseEvent | TouchEvent) => {
       if (!press) return;

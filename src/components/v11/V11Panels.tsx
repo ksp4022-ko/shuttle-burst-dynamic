@@ -62,7 +62,7 @@ function V11MeetupPick({
     <button
       key={m.id}
       type="button"
-      className={`v11-pick-item${m.id === focus.id ? " is-on" : ""}`}
+      className={`v11-pick-item${m.id === focus.id ? " is-on" : ""}${m.ended ? " is-ended" : ""}`}
       aria-pressed={m.id === focus.id}
       onClick={() => {
         onPick(m.id);

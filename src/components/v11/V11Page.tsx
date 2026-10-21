@@ -25,7 +25,7 @@ import { useV11Bubble, useV11Extras } from "./useV11Extras";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/21-2";
+export const V11_TEST_BUILD = "10/21-3";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -235,7 +235,7 @@ function V11App() {
   // Taps on the small stickers.
   const onStageTap = useCallback(
     (id: string, src: V11SrcRect) => {
-      if (id === "tape") setPanel("roster");
+      if (id === "board") setPanel("roster");
       else if (id === "receipt") setPanel("bill");
       else if (id === "plus") setPanel("courtRules");
       else if (id === "stamp") setPanel("me");

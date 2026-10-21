@@ -37,7 +37,7 @@ const V11_CSS = `
 .v11-stage {
   position: relative; width: 100%; max-width: 100%; aspect-ratio: 4 / 5; max-height: 64vh; overflow: hidden;
   background: var(--v11-stage); border: 2.5px solid var(--v11-ink); border-radius: 22px; box-shadow: var(--v11-hard);
-  user-select: none; -webkit-user-select: none;
+  user-select: none; -webkit-user-select: none; container-type: inline-size;
 }
 .v11-stage-title { position: absolute; left: 16px; top: 14px; margin: 0; font-family: var(--v11-display); font-weight: 400; font-size: clamp(34px, 10vw, 50px); line-height: .92; pointer-events: none; }
 .v11-stage-title small { display: block; font-family: var(--v11-body); font-weight: 700; font-size: 12px; letter-spacing: .06em; margin-top: 10px; line-height: 1.4; }
@@ -170,29 +170,33 @@ body.v11-locked { overflow: hidden; }
 /* V11-006 目前這場 */
 .v11-row { position: relative; overflow: visible; }
 .v11-row .v11-row-tag { border-radius: 15px 0 0 15px; }
-.v11-current-tag { position: absolute; left: -6px; top: -10px; z-index: 1; background: var(--v11-ink); color: var(--v11-cream); border: 2px solid var(--v11-cream); border-radius: 999px; padding: 0 9px; font-size: 12px; font-weight: 800; line-height: 1.6; }
+.v11-current-tag { position: absolute; left: -6px; top: -13px; z-index: 1; display: inline-flex; align-items: center; gap: 3px; background: #f6c21c; color: var(--v11-ink); border: 2px solid var(--v11-ink); border-radius: 999px; padding: 1px 10px 1px 6px; font-size: 14px; font-weight: 900; line-height: 1.5; box-shadow: 1px 2px 0 var(--v11-ink); }
+.v11-current-tag svg { width: 17px; height: 17px; fill: var(--v11-cream); stroke: var(--v11-ink); stroke-width: 1.6; stroke-linejoin: round; }
 .v11-dock button { position: relative; }
-.v11-dock-date { position: absolute; top: -6px; right: calc(50% - 32px); background: var(--v11-ink); color: var(--v11-cream); border-radius: 999px; padding: 0 6px; font-size: 10px; font-weight: 800; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.v11-dock-date { position: absolute; top: -6px; right: calc(50% - 32px); background: #f6c21c; color: var(--v11-ink); border: 1.5px solid var(--v11-ink); border-radius: 999px; padding: 0 6px; font-size: 10px; font-weight: 800; line-height: 1.6; font-variant-numeric: tabular-nums; }
 .v11-pick { display: grid; gap: 8px; margin-bottom: 10px; }
 .v11-pick-now { justify-self: start; display: inline-flex; align-items: baseline; gap: 6px; border: 2.5px solid #141414; background: #fffdf7; border-radius: 999px; padding: 5px 14px; font-weight: 900; font-size: 16px; box-shadow: 2px 3px 0 #141414; cursor: pointer; }
 .v11-pick-now span { font-size: 11px; }
 .v11-pick-now small { font-size: 12px; font-weight: 700; color: #5d5a52; }
-.v11-pick-list { display: flex; flex-wrap: wrap; gap: 6px; }
-.v11-pick-item { display: grid; justify-items: center; min-width: 58px; border: 2px solid #141414; background: #fffdf7; border-radius: 12px; padding: 4px 8px; font-weight: 900; font-size: 14px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.v11-pick-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.v11-pick-item { display: grid; justify-items: center; min-width: 0; border: 2px solid #141414; background: #fffdf7; border-radius: 12px; padding: 4px 8px; font-weight: 900; font-size: 14px; cursor: pointer; font-variant-numeric: tabular-nums; }
 .v11-pick-item small { font-size: 11px; font-weight: 700; color: #5d5a52; }
 .v11-pick-item.is-on { background: #ff5226; color: #fffdf7; }
 .v11-pick-item.is-on small { color: #fffdf7; }
-.v11-pick-sep { flex-basis: 100%; font-size: 12px; font-weight: 800; color: #5d5a52; }
+.v11-pick-item.is-ended { background: #e9e5dc; color: #5d5a52; }
+.v11-pick-item.is-ended.is-on { background: #5d5a52; color: #fffdf7; }
+.v11-pick-sep { grid-column: 1 / -1; margin-top: 4px; font-size: 12px; font-weight: 800; color: #5d5a52; }
 
 /* V11-007 墨糰's speech bubble on the stage */
 .v11-stage-bubble {
-  position: absolute; right: calc(30% + 6px); top: 12%; z-index: 3; margin: 0; max-width: 58%;
+  /* V11-012: below-left of 墨糰 (墨糰 is min(30% of the stage width, 150px)). */
+  position: absolute; right: calc(6px + min(30cqw, 150px) * .55); top: calc(6px + min(30cqw, 150px) * .86); z-index: 3; margin: 0; max-width: 52%;
   background: var(--v11-cream); border: 2.5px solid var(--v11-ink); border-radius: 16px; padding: 6px 12px;
   font-weight: 800; font-size: 13px; line-height: 1.4; box-shadow: 2px 3px 0 var(--v11-ink); pointer-events: none;
   animation: v11-bubble-in .28s cubic-bezier(.2,1.3,.4,1) both;
 }
-.v11-stage-bubble::after { content: ""; position: absolute; right: -9px; top: 12px; width: 12px; height: 12px; background: var(--v11-cream); border-right: 2.5px solid var(--v11-ink); border-top: 2.5px solid var(--v11-ink); transform: rotate(45deg); }
-@keyframes v11-bubble-in { from { opacity: 0; transform: scale(.6) translateX(14px); } to { opacity: 1; transform: none; } }
+.v11-stage-bubble::after { content: ""; position: absolute; right: 14px; top: -8px; width: 12px; height: 12px; background: var(--v11-cream); border-left: 2.5px solid var(--v11-ink); border-top: 2.5px solid var(--v11-ink); transform: rotate(45deg); }
+@keyframes v11-bubble-in { from { opacity: 0; transform: scale(.6) translate(10px, -10px); } to { opacity: 1; transform: none; } }
 
 /* V11-005 LINE login hint */
 .v11-authhint { display: grid; grid-template-columns: 52px minmax(0, 1fr) 32px; align-items: center; gap: 8px; background: var(--v11-cream); border: 2.5px solid var(--v11-ink); border-radius: 18px; padding: 8px 10px; box-shadow: var(--v11-hard); }

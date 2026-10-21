@@ -49,8 +49,6 @@ export function useV11Extras({
     const id = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(id);
   }, []);
-  // The 龍虎 sticker drops in on about one visit in three.
-  const [dragon] = useState(() => Math.random() < 0.35);
 
   const due = useV9BillDue({
     enabled: signedIn && profileComplete && Boolean(focus),
@@ -73,18 +71,28 @@ export function useV11Extras({
   const extras = useMemo<V11Extra[]>(() => {
     const list: V11Extra[] = [];
     if (focus && !focus.ended) {
+      // V11-011: 正取 x/上限, then 尚缺 while there is room, otherwise 備取.
       list.push({
-        kind: "tape",
-        id: "tape",
-        text: `${focus.date} 正取 ${focus.confirmed}/${focus.max}・備取 ${focus.waiting}・請假 ${focus.leave}`,
+        kind: "board",
+        id: "board",
+        date: focus.date,
+        confirmed: focus.confirmed,
+        max: focus.max,
+        side:
+          focus.remain > 0
+            ? { label: "尚缺", n: focus.remain }
+            : { label: "備取", n: focus.waiting },
+        full: focus.remain <= 0,
       });
     }
     if (focus) {
       const mine = focus.mine;
+      const [status = "", rank = ""] = v11MineLabel(mine, signedIn).split(" ");
       list.push({
         kind: "badge",
         id: "badge",
-        label: v11MineLabel(mine, signedIn).replace(" ", ""),
+        status,
+        rank,
         tone: !signedIn || !mine ? "none" : mine.status,
       });
     }
@@ -112,9 +120,8 @@ export function useV11Extras({
       list.push({ kind: "stamp", id: "stamp", cells });
     }
     list.push({ kind: "shuttle", id: "shuttle-1" }, { kind: "shuttle", id: "shuttle-2" });
-    if (dragon) list.push({ kind: "dragon", id: "dragon" });
     return list;
-  }, [focus, signedIn, amount, next, now, siteId, progress, dragon]);
+  }, [focus, signedIn, amount, next, now, siteId, progress]);
 
   // 墨糰's short lines about 目前這場 and what is due.
   const lines = useMemo(() => {
@@ -126,11 +133,11 @@ export function useV11Extras({
           focus.waiting ? `${focus.date} 額滿，備取 ${focus.waiting} 人` : `${focus.date} 剛好額滿`,
         );
       const mine = focus.mine;
-      if (signedIn && mine?.status === "confirmed" && mine.rank)
-        out.push(`你是正取第 ${mine.rank} 位`);
-      if (signedIn && mine?.status === "waiting" && mine.rank)
-        out.push(`你排備取第 ${mine.rank} 位`);
-      if (signedIn && mine?.status === "leave") out.push("這場你請假了");
+      // V11-012: say which meetup.
+      if (signedIn && mine?.status === "confirmed") out.push(`${focus.date} 你是正取喔！`);
+      if (signedIn && mine?.status === "waiting")
+        out.push(mine.rank ? `${focus.date} 你在備取第 ${mine.rank} 位` : `${focus.date} 你在備取`);
+      if (signedIn && mine?.status === "leave") out.push(`${focus.date} 你請假了`);
       if (typeof focus.event.tempFee === "number") out.push(`臨打費 $${focus.event.tempFee}`);
     }
     if (next) out.push(`下一場 ${countdown(next, now)}`);
