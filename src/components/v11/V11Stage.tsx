@@ -39,7 +39,7 @@ const isExtra = (kind: Spec["kind"]) => kind !== "meetup" && kind !== "more" && 
 
 // The stage holds the next few meetups; later ones fold into one
 // "之後 N 場" sticker, past ones into "已結束 N 場". Both open a list.
-export const V11_STAGE_MAX = 4;
+export const V11_STAGE_MAX = 3;
 type Item = {
   spec: Spec;
   position: { x: number; y: number };
@@ -49,7 +49,8 @@ type Item = {
   tilt: number;
 };
 
-const GRAVITY = 1.1;
+// V11-018: a quicker fall.
+const GRAVITY = 1.7;
 
 function loadMatter(): Promise<typeof MatterNS> {
   return import("matter-js").then(
@@ -160,8 +161,9 @@ export function V11Stage({
       for (const x of live.current.extras) list.push({ kind: x.kind, id: x.id });
       return list;
     };
-    const SW = () => S * 0.9;
-    const SH = () => S * 0.64;
+    // V11-018: a squarer calendar card.
+    const SW = () => S * 0.82;
+    const SH = () => S * 0.74;
     const ER = () => S * 0.3;
     const pad = () => Math.max(4, S * 0.045);
     const shapeOf = (spec: Spec): V11Shape =>
@@ -209,7 +211,8 @@ export function V11Stage({
 
     const spawn = (spec: Spec) => {
       if (!M || !engine) return;
-      const x = W * (0.18 + Math.random() * 0.52);
+      // V11-018: everything drops in on the left, away from 墨糰 (top right).
+      const x = W * (0.12 + Math.random() * 0.34);
       const y = live.current.still ? H * 0.5 : -S * 0.7;
       const light = spec.kind === "shuttle";
       const common = {

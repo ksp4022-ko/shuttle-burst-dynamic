@@ -34,7 +34,7 @@ export type V11Extra =
   // 帳單收據: only when something is due; opens 帳單.
   | { kind: "receipt"; id: "receipt"; amount: number }
   // 倒數票根: time to 下一場; opens its card.
-  | { kind: "ticket"; id: "ticket"; top: string; text: string }
+  | { kind: "ticket"; id: "ticket"; top: string; text: string; site: string }
   // 加場「＋」: 目前這場 has reached a 加場 band; opens 加場規則.
   | { kind: "plus"; id: "plus" }
   // 季打集點卡: this season's meetups; opens 球員卡.
@@ -58,7 +58,7 @@ export function v11ExtraShape(kind: V11ExtraKind, S: number): V11Shape {
     case "receipt":
       return { type: "rect", w: S * 0.5, h: S * 0.66, r: S * 0.03 };
     case "ticket":
-      return { type: "rect", w: S * 0.8, h: S * 0.36, r: S * 0.05 };
+      return { type: "rect", w: S * 0.84, h: S * 0.46, r: S * 0.05 };
     case "plus":
       return { type: "circle", r: S * 0.16 };
     case "stamp":
@@ -90,9 +90,9 @@ const TONE: Record<V11Meetup["tone"], { bg: string; fg: string }> = {
 };
 // V11-017: ink colours of my status stamp on the date card.
 const STAMP: Record<"confirmed" | "waiting" | "leave", string> = {
-  confirmed: "#1f9e45",
-  waiting: "#c48a00",
-  leave: "#7d776c",
+  confirmed: "#14803c",
+  waiting: "#9a6400",
+  leave: "#57534e",
 };
 const BADGE_BG: Record<Extract<V11Extra, { kind: "badge" }>["tone"], [string, string]> = {
   confirmed: [GREEN, "#1f9e45"],
@@ -336,12 +336,13 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
   }
 
   if (ex.kind === "ticket" && shape.type === "rect") {
-    // A ticket: side notches, a dashed tear line with notches top and
-    // bottom, and a cream stub with a barcode.
+    // V11-018: a ticket like the concept: side notches, a dashed tear line
+    // with notches top and bottom, two left-aligned lines on the blue, and a
+    // cream stub with the place and a barcode.
     const { w, h, r } = shape;
-    const n = h * 0.15;
-    const n2 = h * 0.08;
-    const tear = w / 2 - w * 0.2;
+    const n = h * 0.13;
+    const n2 = h * 0.07;
+    const tear = w / 2 - w * 0.26;
     const p = new Path2D();
     p.moveTo(-w / 2 + r, -h / 2);
     p.lineTo(tear - n2, -h / 2);
@@ -361,8 +362,9 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
     p.lineTo(-w / 2, -h / 2 + r);
     p.arcTo(-w / 2, -h / 2, -w / 2 + r, -h / 2, r);
     p.closePath();
-    const mainX = (-w / 2 + n + tear) / 2;
-    const mainW = tear - (-w / 2 + n) - w * 0.06;
+    const x0 = -w / 2 + n + w * 0.05;
+    const mainW = tear - x0 - w * 0.05;
+    const stubX = (tear + w / 2 - n * 0.5) / 2;
     return {
       outline: p,
       ext: w / 2,
@@ -376,27 +378,38 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         c.restore();
         ink(c);
         c.stroke(p);
-        c.setLineDash([thin * 1.5, thin * 1.5]);
-        c.lineWidth = thin;
+        c.setLineDash([lw * 0.9, lw * 0.9]);
+        c.lineWidth = lw * 0.8;
         c.beginPath();
-        c.moveTo(tear, -h / 2 + n2 + thin);
-        c.lineTo(tear, h / 2 - n2 - thin);
+        c.moveTo(tear, -h / 2 + n2 + lw);
+        c.lineTo(tear, h / 2 - n2 - lw);
         c.stroke();
         c.setLineDash([]);
-        // Stub barcode.
+        // Stub: the place, then a short barcode.
         c.fillStyle = INK;
-        const bars = [2, 1, 2, 1, 3, 1];
-        const unit = (w * 0.11) / bars.reduce((s, b) => s + b + 1, -1);
-        let x = (tear + w / 2) / 2 - w * 0.055 - n * 0.2;
+        fit(c, ex.site, w * 0.2, h * 0.17, "900 SIZEpx " + CJK);
+        c.fillText(ex.site, stubX, -h * 0.25);
+        const bars = [2, 1, 1, 2, 1, 3, 1, 1, 2];
+        const unit = (w * 0.13) / bars.reduce((s, b) => s + b + 1, -1);
+        let x = stubX - w * 0.065;
         for (const b of bars) {
-          c.fillRect(x, -h * 0.24, unit * b, h * 0.48);
+          c.fillRect(x, -h * 0.08, unit * b, h * 0.38);
           x += unit * (b + 1);
         }
+        // Main: 最近一場 over the countdown, a light rule under them.
         c.fillStyle = CREAM;
-        fit(c, ex.top, mainW, h * 0.2, "700 SIZEpx " + CJK);
-        c.fillText(ex.top, mainX, -h * 0.17);
-        fit(c, ex.text, mainW, h * 0.3, "900 SIZEpx " + CJK);
-        c.fillText(ex.text, mainX, h * 0.16);
+        c.textAlign = "left";
+        fit(c, ex.top, mainW, h * 0.24, "900 SIZEpx " + CJK);
+        c.fillText(ex.top, x0, -h * 0.17);
+        fit(c, ex.text, mainW, h * 0.25, "900 SIZEpx " + CJK);
+        c.fillText(ex.text, x0, h * 0.12);
+        c.textAlign = "center";
+        c.beginPath();
+        c.moveTo(x0, h * 0.31);
+        c.lineTo(tear - w * 0.05, h * 0.31);
+        c.lineWidth = thin;
+        c.strokeStyle = "rgba(255,253,247,.55)";
+        c.stroke();
       },
     };
   }
@@ -487,26 +500,34 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
   }
 
   if (ex.kind === "shuttle" && shape.type === "circle") {
-    // A shuttlecock: cork at the art's origin, feather skirt above it. Its
-    // physics body is the same outline (v11ShuttleHull).
+    // A shuttlecock: a small half-round cork (flat side up) with a red
+    // band, the feather skirt above it. Its physics body is the same
+    // outline (v11ShuttleHull).
     const r = shape.r;
     const tip = -r * 2.5;
     const half = r * 1.5;
     const tips = 6;
+    const neck = -r * 0.1;
+    const rc = r * 0.72;
     const skirt = new Path2D();
-    skirt.moveTo(-r * 0.62, -r * 0.35);
+    skirt.moveTo(-r * 0.58, -r * 0.24);
     skirt.lineTo(-half, tip);
     for (let i = 0; i < tips; i++) {
-      const x0 = -half + (2 * half * i) / tips;
-      const x1 = -half + (2 * half * (i + 1)) / tips;
-      skirt.quadraticCurveTo((x0 + x1) / 2, tip - r * 0.34, x1, tip);
+      const xa = -half + (2 * half * i) / tips;
+      const xb = -half + (2 * half * (i + 1)) / tips;
+      skirt.quadraticCurveTo((xa + xb) / 2, tip - r * 0.34, xb, tip);
     }
-    skirt.lineTo(r * 0.62, -r * 0.35);
+    skirt.lineTo(r * 0.58, -r * 0.24);
     skirt.closePath();
+    const band = new Path2D();
+    roundRect(band, -r * 0.66, -r * 0.27, r * 1.32, r * 0.2, r * 0.05);
     const cork = new Path2D();
-    cork.arc(0, 0, r, 0, TAU);
+    cork.moveTo(-rc, neck);
+    cork.arc(0, neck, rc, Math.PI, 0, true);
+    cork.closePath();
     const outline = new Path2D();
     outline.addPath(skirt);
+    outline.addPath(band);
     outline.addPath(cork);
     return {
       outline,
@@ -514,13 +535,13 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
       paint: (c) => {
         c.fillStyle = "#ffffff";
         c.fill(skirt);
-        // Feather shafts from the cork to the dips between the tips.
+        // Feather shafts from the base to the dips between the tips.
         c.strokeStyle = "rgba(20,20,20,.28)";
         c.lineWidth = thin * 0.8;
         c.beginPath();
         for (let i = 1; i < tips; i++) {
           const x = -half + (2 * half * i) / tips;
-          c.moveTo(x * 0.38, -r * 0.45);
+          c.moveTo(x * 0.36, -r * 0.3);
           c.lineTo(x, tip);
         }
         c.stroke();
@@ -528,8 +549,8 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         c.strokeStyle = RED;
         c.lineWidth = thin * 1.2;
         for (const k of [0.36, 0.6]) {
-          const y = -r * 0.35 + (tip + r * 0.35) * k;
-          const x = r * 0.62 + (half - r * 0.62) * k;
+          const y = -r * 0.24 + (tip + r * 0.24) * k;
+          const x = r * 0.58 + (half - r * 0.58) * k;
           c.beginPath();
           c.moveTo(-x, y);
           c.lineTo(x, y);
@@ -537,20 +558,19 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         }
         ink(c, lw * 0.8);
         c.stroke(skirt);
-        // Cork with a coloured band and one small shine.
+        // Half-round cork, then the band where the feathers go in.
         c.fillStyle = CREAM;
         c.fill(cork);
-        c.save();
-        c.clip(cork);
-        c.fillStyle = RED;
-        c.fillRect(-r, -r * 0.5, r * 2, r * 0.42);
-        c.restore();
         ink(c, lw * 0.8);
         c.stroke(cork);
         c.beginPath();
-        c.ellipse(-r * 0.36, r * 0.32, r * 0.2, r * 0.12, -0.6, 0, TAU);
-        c.fillStyle = "rgba(255,255,255,.85)";
+        c.ellipse(-rc * 0.38, neck + rc * 0.42, rc * 0.2, rc * 0.12, -0.5, 0, TAU);
+        c.fillStyle = "rgba(20,20,20,.08)";
         c.fill();
+        c.fillStyle = RED;
+        c.fill(band);
+        ink(c, lw * 0.7);
+        c.stroke(band);
       },
     };
   }
@@ -594,8 +614,10 @@ function meetupArt(
   const { w, h, lw, pad: p } = o;
   const thin = lw * 0.55;
   const tone = TONE[m.tone];
-  const cy0 = -h / 2 + h * 0.08;
-  const ch = h * 0.85;
+  // V11-018: a squarer card (w × h is 0.82S × 0.74S).
+  const cy0 = -h / 2 + h * 0.07;
+  const ch = h * 0.86;
+  const RX = w * 0.25;
   const rad = h * 0.13;
   const card = new Path2D();
   roundRect(card, -w / 2, cy0, w, ch, rad);
@@ -606,10 +628,10 @@ function meetupArt(
   };
   const sheets = [sheet(2), sheet(1)];
   const ringW = w * 0.065;
-  const ringH = h * 0.16;
+  const ringH = h * 0.14;
   const rings = [-1, 1].map((d) => {
     const ring = new Path2D();
-    roundRect(ring, d * w * 0.27 - ringW / 2, -h / 2, ringW, ringH, ringW / 2);
+    roundRect(ring, d * RX - ringW / 2, -h / 2, ringW, ringH, ringW / 2);
     return ring;
   });
   // V11-017: 最近一場 is a ㄇ-shaped tab on the top centre, between the rings.
@@ -624,9 +646,9 @@ function meetupArt(
   tab.closePath();
   const outline = new Path2D();
   for (const part of [card, ...sheets, ...rings, ...(m.next ? [tab] : [])]) outline.addPath(part);
-  const band = ch * 0.3;
+  const band = ch * 0.26;
   const stamped = Boolean(o.mine && m.mine);
-  const checkR = h * 0.2;
+  const checkR = h * 0.17;
   return {
     outline,
     ext: w / 2 + checkR + p,
@@ -667,7 +689,7 @@ function meetupArt(
       // Binder rings through two punched holes.
       for (const d of [-1, 1]) {
         c.beginPath();
-        c.ellipse(d * w * 0.27, cy0 + h * 0.065, ringW * 0.42, ringW * 0.26, 0, 0, TAU);
+        c.ellipse(d * RX, cy0 + h * 0.06, ringW * 0.42, ringW * 0.26, 0, 0, TAU);
         c.fillStyle = INK;
         c.fill();
       }
@@ -677,7 +699,7 @@ function meetupArt(
         c.lineWidth = thin * 1.3;
         c.strokeStyle = INK;
         c.stroke(ring);
-        const x = (i ? 1 : -1) * w * 0.27 - ringW * 0.16;
+        const x = (i ? 1 : -1) * RX - ringW * 0.16;
         c.beginPath();
         c.moveTo(x, -h / 2 + ringW * 0.45);
         c.lineTo(x, -h / 2 + ringH - ringW * 0.45);
@@ -690,45 +712,39 @@ function meetupArt(
       c.fillStyle = tone.fg;
       fit(c, m.tag, w * 0.4, band * 0.56, "800 SIZEpx " + CJK);
       c.fillText(m.tag, 0, cy0 + band * 0.55);
+      // The date stays the biggest and the same size on every card.
       c.fillStyle = INK;
-      // With my stamp the date moves left and the stamp takes its right side.
-      if (stamped) {
-        c.textAlign = "left";
-        fit(c, m.date, w * 0.47, h * 0.3, "400 SIZEpx " + DISP);
-        c.fillText(m.date, -w * 0.42, h * 0.02);
-        c.textAlign = "center";
-      } else {
-        fit(c, m.date, w * 0.84, h * 0.3, "400 SIZEpx " + DISP);
-        c.fillText(m.date, 0, h * 0.02);
-      }
+      fit(c, m.date, w * 0.84, h * 0.25, "400 SIZEpx " + DISP);
+      c.fillText(m.date, 0, -h * 0.08);
       c.beginPath();
-      c.moveTo(-w * 0.36, h * 0.19);
-      c.lineTo(w * 0.36, h * 0.19);
+      c.moveTo(-w * 0.36, h * 0.165);
+      c.lineTo(w * 0.36, h * 0.165);
       c.lineWidth = thin;
       c.strokeStyle = "rgba(20,20,20,.18)";
       c.stroke();
       c.fillStyle = MUTED;
       const time = `${m.weekday} ${m.time}`.trim();
-      fit(c, time, w * 0.8, h * 0.12, "700 SIZEpx " + CJK);
-      c.fillText(time, 0, h * 0.29);
+      fit(c, time, w * 0.82, h * 0.105, "700 SIZEpx " + CJK);
+      c.fillText(time, 0, h * 0.325);
       if (m.next) {
         c.fillStyle = CREAM;
         fit(c, "最近一場", tabW - w * 0.06, tabH * 0.66, "900 SIZEpx " + CJK);
         c.fillText("最近一場", 0, cy0 - tabH * 0.47);
       }
-      // V11-017: my status as an ink stamp (outline only) right of the date.
+      // V11-017 / V11-018: my status as a stamp on the rule between the
+      // date and the time, lower right; paper-filled so the rule stops at it.
       if (stamped && m.mine) {
         const color = STAMP[m.mine.status];
-        const th = h * 0.2;
+        const th = h * 0.16;
         c.save();
-        c.translate(w * 0.3, h * 0.02);
-        c.rotate(-0.18);
+        c.translate(w * 0.22, h * 0.165);
+        c.rotate(-0.08);
         const label = o.mine.replace(" ", "");
-        const size = fit(c, label, w * 0.3, th * 0.62, "900 SIZEpx " + CJK);
+        const size = fit(c, label, w * 0.38, th * 0.66, "900 SIZEpx " + CJK);
         const sw = c.measureText(label).width + size * 0.9;
         const outer = new Path2D();
         roundRect(outer, -sw / 2, -th / 2, sw, th, th * 0.18);
-        const inset = thin * 1.8;
+        const inset = lw * 0.9;
         const inner = new Path2D();
         roundRect(
           inner,
@@ -738,14 +754,15 @@ function meetupArt(
           th - inset * 2,
           th * 0.12,
         );
-        c.globalAlpha = 0.92;
+        c.fillStyle = CREAM;
+        c.fill(outer);
         c.strokeStyle = color;
-        c.lineWidth = lw * 0.75;
+        c.lineWidth = lw;
         c.stroke(outer);
-        c.lineWidth = thin * 0.7;
+        c.lineWidth = thin * 0.8;
         c.stroke(inner);
         c.fillStyle = color;
-        c.fillText(label, 0, th * 0.03);
+        c.fillText(label, 0, th * 0.04);
         c.restore();
       }
       // V11-015: 已選 is a green ✓ on the top-left corner.
@@ -796,17 +813,17 @@ function countArt(kind: "more" | "ended", n: number, r: number, lw: number): Art
       c.stroke();
       c.fillStyle = INK;
       c.textAlign = "center";
-      c.font = `800 ${r * 0.24}px ${CJK}`;
-      c.fillText(kind === "more" ? "之後" : "已結束", 0, -r * 0.38);
+      c.font = `900 ${r * 0.3}px ${CJK}`;
+      c.fillText(kind === "more" ? "之後" : "已結束", 0, -r * 0.36);
       const num = String(n);
-      const unitFont = `800 ${r * 0.24}px ${CJK}`;
+      const unitFont = `900 ${r * 0.32}px ${CJK}`;
       c.font = unitFont;
       const uw = c.measureText("場").width;
       const gap = r * 0.05;
-      const size = fit(c, num, r * 1.22 - uw - gap, r * 0.66, "400 SIZEpx " + DISP);
+      const size = fit(c, num, r * 1.3 - uw - gap, r * 0.6, "400 SIZEpx " + DISP);
       const nw = c.measureText(num).width;
       const x0 = -(nw + gap + uw) / 2;
-      const base = r * 0.18 + size * 0.36;
+      const base = r * 0.24 + size * 0.36;
       c.textAlign = "left";
       c.textBaseline = "alphabetic";
       c.fillText(num, x0, base);
@@ -926,11 +943,11 @@ export function v11ShuttleHull(S: number, pad: number) {
   const raw = [
     [-1.55, -2.72],
     [1.55, -2.72],
-    [1, 0],
-    [0.71, 0.71],
-    [0, 1],
-    [-0.71, 0.71],
-    [-1, 0],
+    [0.72, -0.1],
+    [0.51, 0.41],
+    [0, 0.62],
+    [-0.51, 0.41],
+    [-0.72, -0.1],
   ].map(([x = 0, y = 0]) => ({ x: x * r, y: y * r }));
   const centroid = (pts: { x: number; y: number }[]) => {
     let a = 0;

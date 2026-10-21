@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useV8SeasonProgress } from "@/hooks/use-v8-season-progress";
 import { V9_COURT_RULES } from "@/lib/v9-court-rules";
+import { parseMeetupName } from "@/lib/meetup-name";
 import { v9EventWindow } from "@/lib/v9-event-time";
 import { v11CourtLabel, v11MineLabel, type V11Meetup } from "@/lib/v11-meetups";
 import { useV9BillDue } from "@/components/v9/useV9BillDue";
@@ -101,7 +102,8 @@ export function useV11Extras({
       list.push({
         kind: "ticket",
         id: "ticket",
-        top: `最近一場 ${next.date}`,
+        top: "最近一場",
+        site: parseMeetupName(next.event.name).name || next.date,
         text: countdown(next, now),
       });
     if (focus && !focus.ended && v11CourtLabel(focus, V9_COURT_RULES[siteId]).boosted) {
