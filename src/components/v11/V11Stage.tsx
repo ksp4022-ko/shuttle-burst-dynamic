@@ -209,8 +209,19 @@ export function V11Stage({
         });
     };
 
-    const spawn = (spec: Spec) => {
-      if (!M || !engine) return;
+    // V11-019: a sticker is on the stage at most once. The first drop and
+    // the extras that arrive with late data (bill, season, …) can both have
+    // a spawn queued for the same id; whichever fires second does nothing.
+    // An extra that went away before its turn is not dropped either.
+    const spawn = (spec: Spec): Item | null => {
+      if (!M || !engine) return null;
+      if (items.some((it) => it.spec.id === spec.id)) return null;
+      if (
+        isExtra(spec.kind) &&
+        spec.kind !== "dragon" &&
+        !live.current.extras.some((x) => x.id === spec.id)
+      )
+        return null;
       // V11-018: everything drops in on the left, away from 墨糰 (top right).
       const x = W * (0.12 + Math.random() * 0.34);
       const y = live.current.still ? H * 0.5 : -S * 0.7;
@@ -245,6 +256,7 @@ export function V11Stage({
       };
       items.push(item);
       M.Composite.add(engine.world, body);
+      return item;
     };
 
     const build = () => {
@@ -345,8 +357,7 @@ export function V11Stage({
     // Once the roof is down, newcomers start just inside the top edge.
     const spawnInside = (spec: Spec) => {
       if (!M) return;
-      spawn(spec);
-      const it = items[items.length - 1];
+      const it = spawn(spec);
       if (it?.body) M.Body.setPosition(it.body, { x: it.body.position.x, y: S * 0.4 });
     };
 
