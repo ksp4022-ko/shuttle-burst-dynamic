@@ -59,11 +59,11 @@ type Item = {
 };
 
 // V11-018 / V11-025: a quicker fall.
-const GRAVITY = 2.4;
+const GRAVITY = 3;
 // V11-024: the floor's slope (radians) and the gap between drops (ms).
 // V11-031: the floor is level again (the drop still rolls right).
 const FLOOR_TILT = 0;
-const DROP_GAP = 300;
+const DROP_GAP = 140;
 
 function loadMatter(): Promise<typeof MatterNS> {
   return import("matter-js").then(
@@ -168,6 +168,8 @@ export function V11Stage({
     // V11-030: when the next idle wiggle may happen (ms); Infinity until the
     // drop has settled.
     let nextWiggle = Infinity;
+    // V11-032: where each sticker of this drop lands (x), for the L pile.
+    let plan = new Map<string, number>();
     // V11-001: when each sticker started resting on 墨糰 (body id → ms).
     const onMochi = new Map<number, number>();
     let press: { x: number; y: number; t: number; item: Item; moved: boolean } | null = null;
@@ -259,16 +261,19 @@ export function V11Stage({
       // the sloped floor.
       // V11-026: the meetup drops straight down the middle so it wedges in
       // the middle of the pile.
+      // V11-032: a planned sticker (the L-shaped pile) drops straight down
+      // onto its spot, nearly flat; anything else falls in at the top left.
       const meetup = spec.kind === "meetup";
-      const x = meetup ? W * (0.46 + Math.random() * 0.08) : W * (0.1 + Math.random() * 0.14);
-      const y = live.current.still ? H * 0.5 : -S * 0.7;
+      const target = plan.get(spec.id);
+      const x = target ?? W * (0.1 + Math.random() * 0.14);
+      const y = live.current.still ? H * 0.5 : -S * 0.6;
       const light = spec.kind === "shuttle";
       const common = {
-        restitution: light ? 0.5 : 0.32,
-        friction: 0.5,
+        restitution: light ? 0.4 : 0.08,
+        friction: 0.8,
         // Shuttles drift down like the real thing.
-        frictionAir: light ? 0.06 : 0.014,
-        angle: (Math.random() - 0.5) * 1.1,
+        frictionAir: light ? 0.06 : 0.01,
+        angle: target != null ? (Math.random() - 0.5) * 0.12 : (Math.random() - 0.5) * 1.1,
         ...(light ? { density: 0.0004 } : {}),
       };
       const shape = shapeOf(spec);
@@ -283,9 +288,14 @@ export function V11Stage({
               ...common,
               chamfer: { radius: shape.r + edge },
             });
-      M.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
-      if (!live.current.still && !meetup)
-        M.Body.setVelocity(body, { x: 2.5 + Math.random() * 2, y: 0 });
+      if (target == null) {
+        M.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.2);
+        if (!live.current.still && !meetup)
+          M.Body.setVelocity(body, { x: 2.5 + Math.random() * 2, y: 0 });
+      } else {
+        // Already falling fast, so it lands quickly.
+        M.Body.setVelocity(body, { x: 0, y: 8 });
+      }
       const item: Item = {
         spec,
         position: body.position,
@@ -314,7 +324,9 @@ export function V11Stage({
         layoutStatic();
         return;
       }
-      engine = M.Engine.create();
+      // V11-032: resting bodies go to sleep, so the pile stops moving as
+      // soon as it has landed (drags, taps and gravity wake them).
+      engine = M.Engine.create({ enableSleeping: true });
       engine.gravity.x = grav.x * GRAVITY;
       engine.gravity.y = grav.y * GRAVITY;
       const t = 200;
@@ -392,17 +404,49 @@ export function V11Stage({
         !still && list.some((x) => x.kind === "bag")
           ? list.filter((x) => x.kind === "shoe" || x.kind === "racket")
           : [];
-      const bySize = list
+      // V11-032: an L-shaped pile. The meetup takes the bottom-left corner
+      // and the column above it (up to just under the title); the rest fill
+      // the bottom row to its right, a second layer on top when it is full.
+      const p0 = pad();
+      const box = (spec: Spec) => {
+        const shape = shapeOf(spec);
+        return shape.type === "circle"
+          ? { w: shape.r * 2 + p0 * 2, h: shape.r * 2 + p0 * 2 }
+          : { w: shape.w + p0 * 2, h: shape.h + p0 * 2 };
+      };
+      const rest = list
         .filter((x) => x.kind !== "meetup" && !later.includes(x) && !bagged.includes(x))
         .sort((a, b) => area(b) - area(a));
-      const order: Spec[] = [];
-      while (bySize.length) {
-        order.push(bySize.shift()!);
-        const small = bySize.pop();
-        if (small) order.push(small);
+      const meetupSpec = list.find((x) => x.kind === "meetup");
+      const colW = meetupSpec ? box(meetupSpec).w : S;
+      const colTop = Math.min(H * 0.42, 190);
+      let colH = meetupSpec ? box(meetupSpec).h : 0;
+      plan = new Map();
+      if (meetupSpec) plan.set(meetupSpec.id, colW / 2 + 2);
+      const column: Spec[] = [];
+      const rows: Spec[][] = [[], []];
+      let rowX = [colW + 4, colW + 4];
+      for (const spec of rest) {
+        const b = box(spec);
+        if (b.w <= colW + 8 && colH + b.h <= H - colTop && column.length < 2) {
+          column.push(spec);
+          colH += b.h;
+          plan.set(spec.id, colW / 2 + 2 + (Math.random() - 0.5) * 8);
+          continue;
+        }
+        const r = rowX[0]! + b.w <= W - 2 ? 0 : 1;
+        // Out of room on both rows: drop it at the right end of the second.
+        const x = Math.min(rowX[r]! + b.w / 2, W - b.w / 2 - 2);
+        plan.set(spec.id, x);
+        rowX = rowX.map((v, i) => (i === r ? v + b.w + 2 : v));
+        rows[r]!.push(spec);
       }
-      // V11-026: the meetup goes in halfway through.
-      order.splice(Math.floor(order.length / 2), 0, ...list.filter((x) => x.kind === "meetup"));
+      const order: Spec[] = [
+        ...(meetupSpec ? [meetupSpec] : []),
+        ...rows[0]!,
+        ...column,
+        ...rows[1]!,
+      ];
       // V11-031: the bag is the second last to land.
       const bagAt0 = order.findIndex((x) => x.kind === "bag");
       if (bagAt0 >= 0) {
@@ -412,19 +456,17 @@ export function V11Stage({
       order.forEach((spec, i) =>
         timers.push(window.setTimeout(() => spawn(spec), (still ? 0 : DROP_GAP * i) + 120)),
       );
-      // V11-026: once everything is down, a quick side-to-side shake
-      // loosens the pile; then the roof comes down.
-      const settled = DROP_GAP * order.length + 900;
-      if (!still) timers.push(window.setTimeout(shake, settled));
+      // V11-032: no shake any more; the gear pops out right after the drop.
+      const settled = DROP_GAP * order.length + 500;
       later.forEach((spec, i) =>
-        timers.push(window.setTimeout(() => popOut(spec, "more"), settled + 700 + i * 320)),
+        timers.push(window.setTimeout(() => popOut(spec, "more"), settled + i * 250)),
       );
-      const bagAt = settled + 700 + later.length * 320 + 200;
+      const bagAt = settled + later.length * 250 + 100;
       bagged.forEach((spec, i) =>
-        timers.push(window.setTimeout(() => popOut(spec, "bag"), bagAt + i * 360)),
+        timers.push(window.setTimeout(() => popOut(spec, "bag"), bagAt + i * 250)),
       );
       const popsEnd =
-        later.length || bagged.length ? bagAt + bagged.length * 360 + 600 : settled + 800;
+        later.length || bagged.length ? bagAt + bagged.length * 250 + 500 : settled + 300;
       timers.push(window.setTimeout(raiseRoof, still ? 0 : popsEnd));
       timers.push(window.setTimeout(levelFloor, still ? 0 : popsEnd + 400));
     };
@@ -479,7 +521,8 @@ export function V11Stage({
         y: tube.position.y + uy * out,
       });
       M.Body.setAngle(it.body, spec.kind === "shuttle" ? a + Math.PI : a);
-      const speed = 13 + Math.random() * 3;
+      // V11-032: a softer pop, so the gear lands on the pile.
+      const speed = 9 + Math.random() * 2;
       M.Body.setVelocity(it.body, {
         x: ux * speed + (Math.random() - 0.5) * 4,
         y: uy * speed,
@@ -499,6 +542,7 @@ export function V11Stage({
       );
       const it = resting[Math.floor(Math.random() * resting.length)];
       if (!it?.body) return;
+      M.Sleeping.set(it.body, false);
       M.Body.setVelocity(it.body, { x: (Math.random() - 0.5) * 1.2, y: -3.2 });
       M.Body.setAngularVelocity(it.body, (Math.random() < 0.5 ? -1 : 1) * 0.07);
     };
@@ -607,30 +651,6 @@ export function V11Stage({
         if (bag?.body && M) M.Body.setVelocity(bag.body, { x: 0, y: -3 });
         mochi.react("happy", 600);
       }
-    };
-
-    const shake = () => {
-      if (!M || !engine) return;
-      const e = engine;
-      for (const it of items) {
-        const b = it.body;
-        if (b && !b.isStatic && b !== drag?.bodyB)
-          M.Body.setVelocity(b, { x: b.velocity.x, y: b.velocity.y - 2.5 });
-      }
-      mochi.react("surprised", 600);
-      const steps = [0.9, -0.9, 0.6, -0.4];
-      steps.forEach((k, i) =>
-        timers.push(
-          window.setTimeout(() => {
-            e.gravity.x = (grav.x + k) * GRAVITY;
-          }, i * 150),
-        ),
-      );
-      timers.push(
-        window.setTimeout(() => {
-          e.gravity.x = grav.x * GRAVITY;
-        }, steps.length * 150),
-      );
     };
 
     // V11-028: the sloped floor tilts back level over half a second, so the
@@ -866,6 +886,7 @@ export function V11Stage({
       }
       if (e.cancelable) e.preventDefault();
       press = { x: p.x, y: p.y, t: performance.now(), item: it, moved: false };
+      if (it.body && M) M.Sleeping.set(it.body, false);
       if (M && engine && it.body && !it.body.isStatic) {
         drag = M.Constraint.create({
           pointA: { x: p.x, y: p.y },
@@ -956,6 +977,7 @@ export function V11Stage({
         if (engine) {
           engine.gravity.x = grav.x * GRAVITY;
           engine.gravity.y = grav.y * GRAVITY;
+          for (const it of items) if (it.body && M) M.Sleeping.set(it.body, false);
         }
         // A big swing of the phone startles 墨糰.
         if (Math.hypot(grav.x - was.x, grav.y - was.y) > 0.9) mochi.react("surprised", 600);
@@ -987,7 +1009,7 @@ export function V11Stage({
         // A sticker in the finger keeps whatever angle it is dragged to.
         for (const it of items) {
           const b = it.body;
-          if (!b || b.isStatic || b === drag?.bodyB || b.speed > 6) continue;
+          if (!b || b.isStatic || b.isSleeping || b === drag?.bodyB || b.speed > 6) continue;
           let diff = (it.tilt - b.angle) % (Math.PI * 2);
           if (diff > Math.PI) diff -= Math.PI * 2;
           if (diff < -Math.PI) diff += Math.PI * 2;
@@ -1006,9 +1028,23 @@ export function V11Stage({
         const now = performance.now();
         for (const it of items) {
           const b = it.body;
-          const since = b ? onMochi.get(b.id) : undefined;
-          if (!b || since === undefined || now - since < 1000 || b.speed > 1.5) continue;
+          let since = b ? onMochi.get(b.id) : undefined;
+          // V11-032: a sticker that fell asleep on 墨糰 no longer reports
+          // contact, so check by distance too.
+          if (b && since === undefined && b.isSleeping) {
+            const r =
+              (mochiBody.circleRadius ?? 0) +
+              Math.max(b.bounds.max.x - b.bounds.min.x, b.bounds.max.y - b.bounds.min.y) / 2;
+            if (
+              Math.hypot(b.position.x - mochiBody.position.x, b.position.y - mochiBody.position.y) <
+              r
+            )
+              since = now - 1000;
+          }
+          if (!b || since === undefined || now - since < 1000 || (!b.isSleeping && b.speed > 1.5))
+            continue;
           if (b === drag?.bodyB) continue;
+          M.Sleeping.set(b, false);
           const dx = b.position.x - mochiBody.position.x;
           const dy = b.position.y - mochiBody.position.y;
           const d = Math.hypot(dx, dy) || 1;
