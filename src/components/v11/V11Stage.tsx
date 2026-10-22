@@ -8,6 +8,7 @@ import {
   v11DrawMeetup,
   v11CountShape,
   v11HullOf,
+  V11_BAG_EGGS,
   V11_DECOR,
   v11ExtraShape,
   type V11Extra,
@@ -39,6 +40,9 @@ const CJK = '"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-se
 
 type Spec = { kind: "meetup" | "more" | "ended" | V11ExtraKind; id: string };
 const DRAGON: V11Extra = { kind: "dragon", id: "dragon" };
+// Stickers that live on the stage only (not in the page's extras).
+const isLocal = (kind: Spec["kind"]) =>
+  kind === "dragon" || V11_BAG_EGGS.includes(kind as V11ExtraKind);
 const isExtra = (kind: Spec["kind"]) => kind !== "meetup" && kind !== "more" && kind !== "ended";
 
 // The stage holds the next few meetups; later ones fold into one
@@ -57,7 +61,8 @@ type Item = {
 // V11-018 / V11-025: a quicker fall.
 const GRAVITY = 2.4;
 // V11-024: the floor's slope (radians) and the gap between drops (ms).
-const FLOOR_TILT = 0.17;
+// V11-031: the floor is level again (the drop still rolls right).
+const FLOOR_TILT = 0;
 const DROP_GAP = 300;
 
 function loadMatter(): Promise<typeof MatterNS> {
@@ -245,7 +250,7 @@ export function V11Stage({
       if (items.some((it) => it.spec.id === spec.id)) return null;
       if (
         isExtra(spec.kind) &&
-        spec.kind !== "dragon" &&
+        !isLocal(spec.kind) &&
         !live.current.extras.some((x) => x.id === spec.id)
       )
         return null;
@@ -302,6 +307,7 @@ export function V11Stage({
       timers = [];
       held = null;
       nextWiggle = Infinity;
+      flying = [];
       dims();
       if (!M) {
         engine = null;
@@ -397,6 +403,12 @@ export function V11Stage({
       }
       // V11-026: the meetup goes in halfway through.
       order.splice(Math.floor(order.length / 2), 0, ...list.filter((x) => x.kind === "meetup"));
+      // V11-031: the bag is the second last to land.
+      const bagAt0 = order.findIndex((x) => x.kind === "bag");
+      if (bagAt0 >= 0) {
+        const [bag] = order.splice(bagAt0, 1);
+        if (bag) order.splice(Math.max(0, order.length - 1), 0, bag);
+      }
       order.forEach((spec, i) =>
         timers.push(window.setTimeout(() => spawn(spec), (still ? 0 : DROP_GAP * i) + 120)),
       );
@@ -423,7 +435,7 @@ export function V11Stage({
       if (!M || !engine) return;
       const want = new Set(live.current.extras.map((x) => x.id));
       for (const it of [...items]) {
-        if (!isExtra(it.spec.kind) || want.has(it.spec.id) || it.spec.kind === "dragon") continue;
+        if (!isExtra(it.spec.kind) || want.has(it.spec.id) || isLocal(it.spec.kind)) continue;
         if (it.body) M.Composite.remove(engine.world, it.body);
         items = items.filter((x) => x !== it);
       }
@@ -489,6 +501,112 @@ export function V11Stage({
       if (!it?.body) return;
       M.Body.setVelocity(it.body, { x: (Math.random() - 0.5) * 1.2, y: -3.2 });
       M.Body.setAngularVelocity(it.body, (Math.random() < 0.5 ? -1 : 1) * 0.07);
+    };
+
+    // V11-031: tap the bag and the next piece of gear (socks, bottle, towel,
+    // slides) pops out of it; when all are out the bag just shrugs.
+    let flying: { spec: Spec; x: number; y: number; angle: number; t0: number }[] = [];
+    const popEgg = () => {
+      if (!M) return;
+      const bag = items.find((x) => x.spec.kind === "bag");
+      const out = (k: V11ExtraKind) =>
+        items.some((x) => x.spec.kind === k) || flying.some((f) => f.spec.kind === k);
+      const kind = V11_BAG_EGGS.find((k) => !out(k));
+      if (!kind) {
+        if (bag?.body) M.Body.setVelocity(bag.body, { x: 0, y: -4 });
+        mochi.react("confused", 700);
+        return;
+      }
+      popOut({ kind, id: kind }, "bag");
+    };
+    // Tap a piece of gear: it lifts (bigger, a small turn), then flies along
+    // a curve into the bag, shrinking below the bag's size and slowly
+    // flipping like a playing card. Rare and playful, so it gets ~0.9s.
+    const RECALL_MS = 900;
+    const LIFT = 0.17;
+    const recall = (it: Item) => {
+      if (!M || !engine) return;
+      if (it.body) M.Composite.remove(engine.world, it.body);
+      items = items.filter((x) => x !== it);
+      if (live.current.still) return;
+      flying.push({
+        spec: it.spec,
+        x: it.position.x,
+        y: it.position.y,
+        angle: it.angle,
+        t0: performance.now(),
+      });
+    };
+    // cubic-bezier(0.77, 0, 0.175, 1): strong ease-in-out for on-screen
+    // movement; (0.23, 1, 0.32, 1): strong ease-out for the lift.
+    const bezier = (x1: number, y1: number, x2: number, y2: number) => (t: number) => {
+      let lo = 0;
+      let hi = 1;
+      let u = t;
+      for (let i = 0; i < 14; i++) {
+        u = (lo + hi) / 2;
+        const x = 3 * (1 - u) * (1 - u) * u * x1 + 3 * (1 - u) * u * u * x2 + u * u * u;
+        if (x < t) lo = u;
+        else hi = u;
+      }
+      return 3 * (1 - u) * (1 - u) * u * y1 + 3 * (1 - u) * u * u * y2 + u * u * u;
+    };
+    const easeInOut = bezier(0.77, 0, 0.175, 1);
+    const easeOut = bezier(0.23, 1, 0.32, 1);
+    const drawFlying = (ms: number) => {
+      if (!flying.length) return;
+      const bag = items.find((x) => x.spec.kind === "bag");
+      const p = pad();
+      const lw = Math.max(2, S * 0.018);
+      const done: typeof flying = [];
+      for (const f of flying) {
+        const k = Math.min(1, (ms - f.t0) / RECALL_MS);
+        const tx = bag?.position.x ?? f.x;
+        const ty = bag?.position.y ?? f.y;
+        let x = f.x;
+        let y = f.y;
+        let scale: number;
+        let flip = 1;
+        let angle = f.angle;
+        if (k < LIFT) {
+          const e = easeOut(k / LIFT);
+          scale = 1 + 0.3 * e;
+          angle = f.angle + 0.35 * e;
+        } else {
+          const e = easeInOut((k - LIFT) / (1 - LIFT));
+          // Quadratic curve with its peak above both ends.
+          const cx = (f.x + tx) / 2;
+          const cy = Math.min(f.y, ty) - S * 0.9;
+          x = (1 - e) * (1 - e) * f.x + 2 * (1 - e) * e * cx + e * e * tx;
+          y = (1 - e) * (1 - e) * f.y + 2 * (1 - e) * e * cy + e * e * ty;
+          // 1.3 → 0.25: well under the bag's size when it arrives.
+          scale = 1.3 - 1.05 * e;
+          angle = f.angle + 0.35 + 0.9 * e;
+          // One and a half slow card flips around the vertical axis.
+          flip = Math.cos(e * Math.PI * 3);
+          if (Math.abs(flip) < 0.08) flip = flip < 0 ? -0.08 : 0.08;
+        }
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.scale(scale * flip, scale);
+        v11DrawExtra(
+          ctx,
+          { kind: f.spec.kind, id: f.spec.kind } as V11Extra,
+          XS(f.spec.kind),
+          lw,
+          p,
+          logo,
+        );
+        ctx.restore();
+        if (k >= 1) done.push(f);
+      }
+      if (done.length) {
+        flying = flying.filter((f) => !done.includes(f));
+        // The bag catches it: a small bump, and 墨糰 is pleased.
+        if (bag?.body && M) M.Body.setVelocity(bag.body, { x: 0, y: -3 });
+        mochi.react("happy", 600);
+      }
     };
 
     const shake = () => {
@@ -603,7 +721,11 @@ export function V11Stage({
       ctx.rotate(it.angle);
       if (isExtra(it.spec.kind)) {
         const ex = live.current.extras.find((x) => x.id === it.spec.id);
-        const egg = it.spec.kind === "dragon" ? DRAGON : null;
+        const egg = isLocal(it.spec.kind)
+          ? it.spec.kind === "dragon"
+            ? DRAGON
+            : ({ kind: it.spec.kind, id: it.spec.kind } as V11Extra)
+          : null;
         // A hull body sits at the hull's centroid, not at the art's origin.
         const hull = v11HullOf(it.spec as { kind: V11ExtraKind; id: string }, XS(it.spec.kind), p);
         if (hull) ctx.translate(-hull.centre.x, -hull.centre.y);
@@ -798,6 +920,15 @@ export function V11Stage({
       if (!done.moved && performance.now() - done.t < 300) {
         const kind = done.item.spec.kind;
         const b = done.item.body;
+        // V11-031: the bag gives out its gear; the gear flies back in.
+        if (kind === "bag") {
+          popEgg();
+          return;
+        }
+        if (V11_BAG_EGGS.includes(kind as V11ExtraKind)) {
+          recall(done.item);
+          return;
+        }
         if (V11_DECOR.has(kind as V11ExtraKind)) {
           // Just for fun: a hop, and 墨糰 waves / jumps.
           if (b && M) M.Body.setVelocity(b, { x: (Math.random() - 0.5) * 6, y: -9 });
@@ -898,6 +1029,7 @@ export function V11Stage({
         else drawSticker(it);
       }
       late.sort((a) => (a.spec.id === curId ? 1 : -1)).forEach(drawSticker);
+      drawFlying(ms);
       drawMeetupHint(ms);
       if (ms > nextWiggle) wiggle(ms);
       mochi.frame(ms / 1000, dt / 1000, live.current.still);

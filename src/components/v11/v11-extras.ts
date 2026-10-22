@@ -39,12 +39,31 @@ export type V11Extra =
   | { kind: "dragon"; id: "dragon" }
   | { kind: "racket"; id: "racket" }
   | { kind: "bag"; id: "bag" }
-  | { kind: "shoe"; id: "shoe" };
+  | { kind: "shoe"; id: "shoe" }
+  // V11-031: tap the bag and these come out one by one; tap one and it
+  // flies back in.
+  | { kind: "sock"; id: "sock" }
+  | { kind: "bottle"; id: "bottle" }
+  | { kind: "towel"; id: "towel" }
+  | { kind: "slipper"; id: "slipper" };
 
 export type V11FlipPanel = { v: string; u: string };
 
 // Decorations: a tap makes them hop instead of opening anything.
-export const V11_DECOR = new Set<V11ExtraKind>(["shuttle", "dragon", "racket", "bag", "shoe"]);
+export const V11_DECOR = new Set<V11ExtraKind>([
+  "shuttle",
+  "dragon",
+  "racket",
+  "bag",
+  "shoe",
+  "sock",
+  "bottle",
+  "towel",
+  "slipper",
+]);
+
+// V11-031: the bag's easter-egg gear, in the order it comes out.
+export const V11_BAG_EGGS: V11ExtraKind[] = ["sock", "bottle", "towel", "slipper"];
 
 export type V11ExtraKind = V11Extra["kind"];
 
@@ -76,6 +95,14 @@ export function v11ExtraShape(kind: V11ExtraKind, S: number): V11Shape {
       return { type: "rect", w: S * 0.66, h: S * 0.32, r: S * 0.12 };
     case "shoe":
       return { type: "rect", w: S * 0.27, h: S * 0.18, r: S * 0.03 };
+    case "sock":
+      return { type: "rect", w: S * 0.25, h: S * 0.42, r: S * 0.05 };
+    case "bottle":
+      return { type: "rect", w: S * 0.2, h: S * 0.42, r: S * 0.04 };
+    case "towel":
+      return { type: "rect", w: S * 0.34, h: S * 0.28, r: S * 0.03 };
+    case "slipper":
+      return { type: "rect", w: S * 0.3, h: S * 0.16, r: S * 0.05 };
   }
 }
 
@@ -828,6 +855,110 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
           c.lineTo(x + Z * 0.02, Z * 0.14);
         }
         c.stroke();
+      },
+    };
+  }
+
+  if (V11_BAG_EGGS.includes(ex.kind)) {
+    // V11-031: the bag's easter-egg gear, in the reference set's cream /
+    // green / yellow with the shuttle mark. Units of S around the centre.
+    const u = (v: number) => v * S;
+    const parts: { path: Path2D; fill: string }[] = [];
+    const marks: { x: number; y: number; s: number }[] = [];
+    let stripes: (c: CanvasRenderingContext2D, clip: Path2D) => void = () => undefined;
+    // Which part the stripes / details go on.
+    let stripeOn = 0;
+    if (ex.kind === "sock") {
+      const p = new Path2D();
+      p.moveTo(u(-0.08), u(-0.2));
+      p.lineTo(u(0.05), u(-0.2));
+      p.lineTo(u(0.05), u(0.04));
+      p.quadraticCurveTo(u(0.05), u(0.09), u(0.1), u(0.11));
+      p.quadraticCurveTo(u(0.15), u(0.2), u(0.06), u(0.2));
+      p.lineTo(u(-0.04), u(0.2));
+      p.quadraticCurveTo(u(-0.09), u(0.2), u(-0.09), u(0.14));
+      p.closePath();
+      parts.push({ path: p, fill: CREAM });
+      marks.push({ x: u(-0.02), y: u(-0.01), s: u(0.08) });
+      stripes = (c, clip) => {
+        c.save();
+        c.clip(clip);
+        c.fillStyle = GEAR_GREEN;
+        c.fillRect(u(-0.1), u(-0.17), u(0.2), u(0.022));
+        c.fillRect(u(-0.1), u(-0.125), u(0.2), u(0.022));
+        c.beginPath();
+        c.ellipse(u(0.1), u(0.17), u(0.06), u(0.05), 0, 0, TAU);
+        c.fill();
+        c.restore();
+      };
+    } else if (ex.kind === "bottle") {
+      const cap = new Path2D();
+      roundRect(cap, u(-0.055), u(-0.2), u(0.11), u(0.08), u(0.02));
+      const body = new Path2D();
+      roundRect(body, u(-0.075), u(-0.125), u(0.15), u(0.33), u(0.035));
+      parts.push({ path: body, fill: CREAM }, { path: cap, fill: GEAR_GREEN });
+      marks.push({ x: 0, y: u(0.06), s: u(0.09) });
+      stripes = (c, clip) => {
+        c.save();
+        c.clip(clip);
+        c.fillStyle = "rgba(255,255,255,.7)";
+        c.fillRect(u(-0.055), u(-0.08), u(0.02), u(0.22));
+        c.restore();
+        // The carry loop on the cap.
+        c.beginPath();
+        c.arc(u(0.07), u(-0.175), u(0.03), 0, TAU);
+        c.lineWidth = lw * 1.4;
+        c.strokeStyle = INK;
+        c.stroke();
+        c.lineWidth = lw * 0.6;
+        c.strokeStyle = GEAR_GREEN;
+        c.stroke();
+      };
+    } else if (ex.kind === "towel") {
+      const back = new Path2D();
+      roundRect(back, u(-0.16), u(-0.13), u(0.32), u(0.26), u(0.025));
+      const fold = new Path2D();
+      roundRect(fold, u(-0.16), u(0.0), u(0.32), u(0.13), u(0.025));
+      parts.push({ path: back, fill: CREAM }, { path: fold, fill: "#efe9dc" });
+      marks.push({ x: u(0.09), y: u(-0.04), s: u(0.08) });
+      stripeOn = 1;
+      stripes = (c) => {
+        c.fillStyle = GEAR_GREEN;
+        c.fillRect(u(-0.16) + lw / 2, u(0.08), u(0.32) - lw, u(0.022));
+      };
+    } else {
+      // Slides: a green sole with a yellow line, a cream strap on top.
+      const sole = new Path2D();
+      roundRect(sole, u(-0.16), u(0.02), u(0.32), u(0.055), u(0.027));
+      const strap = new Path2D();
+      strap.moveTo(u(-0.06), u(0.025));
+      strap.quadraticCurveTo(u(-0.04), u(-0.07), u(0.06), u(-0.07));
+      strap.quadraticCurveTo(u(0.13), u(-0.06), u(0.13), u(0.025));
+      strap.closePath();
+      parts.push({ path: sole, fill: GEAR_GREEN }, { path: strap, fill: CREAM });
+      marks.push({ x: u(0.04), y: u(-0.005), s: u(0.06) });
+      stripes = (c, clip) => {
+        c.save();
+        c.clip(clip);
+        c.fillStyle = YELLOW;
+        c.fillRect(u(-0.17), u(0.02), u(0.34), u(0.014));
+        c.restore();
+      };
+    }
+    const outline = new Path2D();
+    for (const part of parts) outline.addPath(part.path);
+    return {
+      outline,
+      ext: u(0.24),
+      paint: (c) => {
+        parts.forEach((part, i) => {
+          c.fillStyle = part.fill;
+          c.fill(part.path);
+          if (i === stripeOn) stripes(c, part.path);
+          ink(c);
+          c.stroke(part.path);
+        });
+        for (const m of marks) miniShuttle(c, m.x, m.y + m.s * 0.25, m.s, thin * 0.8);
       },
     };
   }

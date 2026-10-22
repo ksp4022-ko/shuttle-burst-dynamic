@@ -11,6 +11,7 @@ import type { V11Extra, V11FlipPanel, V11StampCell } from "./v11-extras";
 // lines 墨糰 says now and then. Everything here only reads data the page
 // already uses (meetups, 帳單 total, 本季出席); no new rules.
 
+const SHOW_TICKET = false;
 const DAY_MS = 86_400_000;
 const TAIPEI_MS = 8 * 3_600_000;
 
@@ -109,7 +110,9 @@ export function useV11Extras({
       });
     }
     if (amount > 0) list.push({ kind: "receipt", id: "receipt", amount });
-    if (next)
+    // V11-031: the countdown ticket is hidden for now (the meetup card says
+    // 最近一場 already); flip SHOW_TICKET to bring it back.
+    if (next && SHOW_TICKET)
       list.push({
         kind: "ticket",
         id: "ticket",
