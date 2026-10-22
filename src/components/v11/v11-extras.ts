@@ -915,33 +915,65 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         c.stroke();
       };
     } else if (ex.kind === "towel") {
+      // V11-035: a towel folded over a bar: the back half leans one way,
+      // the front half crosses it the other way; green bands at the ends.
       const back = new Path2D();
-      roundRect(back, u(-0.16), u(-0.13), u(0.32), u(0.26), u(0.025));
+      back.moveTo(u(-0.13), u(-0.11));
+      back.lineTo(u(0.05), u(-0.11));
+      back.lineTo(u(-0.03), u(0.15));
+      back.lineTo(u(-0.18), u(0.15));
+      back.closePath();
+      const front = new Path2D();
+      front.moveTo(u(-0.07), u(-0.11));
+      front.lineTo(u(0.12), u(-0.11));
+      front.lineTo(u(0.17), u(0.13));
+      front.lineTo(u(0.0), u(0.13));
+      front.closePath();
       const fold = new Path2D();
-      roundRect(fold, u(-0.16), u(0.0), u(0.32), u(0.13), u(0.025));
-      parts.push({ path: back, fill: CREAM }, { path: fold, fill: "#efe9dc" });
-      marks.push({ x: u(0.09), y: u(-0.04), s: u(0.08) });
-      stripeOn = 1;
-      stripes = (c) => {
+      roundRect(fold, u(-0.15), u(-0.15), u(0.29), u(0.065), u(0.03));
+      parts.push(
+        { path: back, fill: "#ece6d9" },
+        { path: front, fill: CREAM },
+        { path: fold, fill: CREAM },
+      );
+      marks.push({ x: u(0.07), y: u(-0.01), s: u(0.07) });
+      stripeOn = -1;
+      stripes = (c, clip) => {
+        if (clip === fold) return;
+        c.save();
+        c.clip(clip);
         c.fillStyle = GEAR_GREEN;
-        c.fillRect(u(-0.16) + lw / 2, u(0.08), u(0.32) - lw, u(0.022));
+        c.fillRect(u(-0.2), clip === back ? u(0.09) : u(0.07), u(0.4), u(0.025));
+        c.restore();
       };
     } else {
-      // Slides: a green sole with a yellow line, a cream strap on top.
+      // Slides (V11-035): a green sole with a yellow line, a cream strap
+      // with two green bands across it.
       const sole = new Path2D();
       roundRect(sole, u(-0.16), u(0.02), u(0.32), u(0.055), u(0.027));
       const strap = new Path2D();
-      strap.moveTo(u(-0.06), u(0.025));
-      strap.quadraticCurveTo(u(-0.04), u(-0.07), u(0.06), u(-0.07));
-      strap.quadraticCurveTo(u(0.13), u(-0.06), u(0.13), u(0.025));
+      strap.moveTo(u(-0.07), u(0.025));
+      strap.quadraticCurveTo(u(-0.05), u(-0.075), u(0.05), u(-0.075));
+      strap.quadraticCurveTo(u(0.13), u(-0.065), u(0.13), u(0.025));
       strap.closePath();
       parts.push({ path: sole, fill: GEAR_GREEN }, { path: strap, fill: CREAM });
-      marks.push({ x: u(0.04), y: u(-0.005), s: u(0.06) });
+      stripeOn = -1;
       stripes = (c, clip) => {
         c.save();
         c.clip(clip);
-        c.fillStyle = YELLOW;
-        c.fillRect(u(-0.17), u(0.02), u(0.34), u(0.014));
+        if (clip === sole) {
+          c.fillStyle = YELLOW;
+          c.fillRect(u(-0.17), u(0.02), u(0.34), u(0.014));
+        } else {
+          c.strokeStyle = GEAR_GREEN;
+          c.lineWidth = u(0.022);
+          c.beginPath();
+          for (const x of [u(0.0), u(0.055)]) {
+            c.moveTo(x - u(0.02), u(-0.09));
+            c.lineTo(x + u(0.01), u(0.03));
+          }
+          c.stroke();
+        }
         c.restore();
       };
     }
@@ -954,7 +986,7 @@ function extraArt(ex: V11Extra, S: number, lw: number, logo: HTMLImageElement | 
         parts.forEach((part, i) => {
           c.fillStyle = part.fill;
           c.fill(part.path);
-          if (i === stripeOn) stripes(c, part.path);
+          if (stripeOn < 0 || i === stripeOn) stripes(c, part.path);
           ink(c);
           c.stroke(part.path);
         });

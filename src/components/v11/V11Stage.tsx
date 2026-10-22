@@ -64,6 +64,10 @@ const GRAVITY = 3;
 // V11-031: the floor is level again (the drop still rolls right).
 const FLOOR_TILT = 0;
 const DROP_GAP = 140;
+// V11-034: 墨糰's collision category; falling stickers skip it.
+const MOCHI_CAT = 0x0002;
+const ALL_CATS = 0xffffffff;
+const PASS_MOCHI = ALL_CATS ^ MOCHI_CAT;
 
 function loadMatter(): Promise<typeof MatterNS> {
   return import("matter-js").then(
@@ -276,6 +280,8 @@ export function V11Stage({
         // Planned stickers fall flat so neighbours do not catch corners.
         angle: target != null ? 0 : (Math.random() - 0.5) * 1.1,
         ...(light ? { density: 0.0004 } : {}),
+        // V11-034: on the way down it passes behind 墨糰 (re-armed in the loop).
+        collisionFilter: { mask: PASS_MOCHI },
       };
       const shape = shapeOf(spec);
       const edge = pad();
@@ -357,7 +363,7 @@ export function V11Stage({
         mr.left - sr.left + mr.width / 2,
         mr.top - sr.top + mr.height / 2,
         mr.width * 0.36,
-        { isStatic: true, restitution: 0.6 },
+        { isStatic: true, restitution: 0.6, collisionFilter: { category: MOCHI_CAT } },
       );
       M.Composite.add(engine.world, mochiBody);
       const touching = (pair: MatterNS.Pair) =>
@@ -1033,6 +1039,22 @@ export function V11Stage({
             it.position = it.body.position;
             it.angle = it.body.angle;
           }
+        }
+      }
+      // V11-034: a sticker that passed through 墨糰 on its way in collides
+      // with it again once it has landed clear of it.
+      if (M && mochiBody) {
+        const mr = mochiBody.circleRadius ?? 0;
+        for (const it of items) {
+          const b = it.body;
+          if (!b || b.collisionFilter.mask !== PASS_MOCHI) continue;
+          if (b === drag?.bodyB) continue;
+          const reach =
+            mr + Math.max(b.bounds.max.x - b.bounds.min.x, b.bounds.max.y - b.bounds.min.y) / 2;
+          const clear =
+            Math.hypot(b.position.x - mochiBody.position.x, b.position.y - mochiBody.position.y) >
+            reach;
+          if (clear && (b.isSleeping || b.speed < 1)) b.collisionFilter.mask = ALL_CATS;
         }
       }
       // V11-001: a sticker that has sat on 墨糰 for a second gets shrugged off.
