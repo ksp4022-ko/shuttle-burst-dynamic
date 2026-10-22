@@ -66,6 +66,7 @@ export function V11Card({
   onLogin,
   onRefresh,
   onCelebrate,
+  rosterLoading = false,
 }: {
   meetup: V11Meetup;
   siteId: string;
@@ -86,6 +87,9 @@ export function V11Card({
   onRefresh: () => Promise<void>;
   // Landed a 正取 seat (D15).
   onCelebrate: () => void;
+  // V11-037: this meetup's roster is still on its way (an ended meetup is
+  // read when its card opens), so 我的狀態 is not known yet.
+  rosterLoading?: boolean;
 }) {
   const signedIn = viewer.signedIn;
   const cardRef = useRef<HTMLElement>(null);
@@ -263,7 +267,8 @@ export function V11Card({
 
   const tone = TONE_BG[meetup.tone];
   const toneFg = meetup.tone === "open" ? "#fffdf7" : "#141414";
-  const mineLabel = v11MineLabel(meetup.mine, signedIn);
+  const mineLabel =
+    rosterLoading && signedIn && !meetup.mine ? "讀取中…" : v11MineLabel(meetup.mine, signedIn);
   const mineBg =
     meetup.mine?.status === "confirmed"
       ? "#3be46a"
