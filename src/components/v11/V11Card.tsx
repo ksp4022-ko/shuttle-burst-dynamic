@@ -227,6 +227,8 @@ export function V11Card({
     const canvas = mochiCanvas.current;
     if (!canvas) return;
     const mochi = new V11Mochi(canvas, "curious");
+    // V11-036: the card's guide is the dragon.
+    mochi.character = "dragon";
     mochiRef.current = mochi;
     mochi.bump();
     let raf = 0;

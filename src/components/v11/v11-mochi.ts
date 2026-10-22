@@ -1,7 +1,9 @@
 // 墨糰 (docs/V11_BASELINE.md D8): the round ink character from the user's
 // 墨糰頭像機 artifact, ported to TS. Drawn on a canvas every frame: blinks,
 // bobs, glances around, follows a finger, and can show the 思考中 orbiting
-// dots. Circle body only (no accessories in phase 1 of V11, D9).
+// dots. V11-036: three looks — the plain ink circle, the tiger (yellow, ears
+// and stripes) and the dragon (green hexagon, horns, mane, long whiskers),
+// with the artifact's accessory drawing ported as is.
 
 const TAU = Math.PI * 2;
 const EYE = 1.16;
@@ -107,6 +109,157 @@ function eye(c: CanvasRenderingContext2D, side: number, P: Pose, blink: number, 
   c.restore();
 }
 
+export type V11MochiLook = "ink" | "tiger" | "dragon";
+
+type Shape = {
+  path: (c: CanvasRenderingContext2D | Path2D) => void;
+  p2?: Path2D;
+  edge: Record<number, number>;
+};
+const CIRCLE: Shape = { path: (c) => c.arc(0, 0, 1, 0, TAU), edge: {} };
+const HEXAGON: Shape = {
+  path: (c) => {
+    const pts: [number, number][] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU;
+      pts.push([1.04 * Math.cos(a), 1.04 * Math.sin(a)]);
+    }
+    rpoly(c, pts, 0.22);
+  },
+  edge: {},
+};
+
+function rpoly(c: CanvasRenderingContext2D | Path2D, pts: [number, number][], r: number) {
+  const n = pts.length;
+  const mid = (a: [number, number], b: [number, number]) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const m = mid(pts[n - 1]!, pts[0]!);
+  c.moveTo(m[0]!, m[1]!);
+  for (let i = 0; i < n; i++) {
+    const p = pts[i]!;
+    const m2 = mid(p, pts[(i + 1) % n]!);
+    c.arcTo(p[0], p[1], m2[0]!, m2[1]!, r);
+  }
+  c.closePath();
+}
+
+// Accessories fit any shape: the outline is probed to find where they sit.
+let probe: CanvasRenderingContext2D | null = null;
+function edgeR(shape: Shape, a: number) {
+  if (!shape.p2) {
+    shape.p2 = new Path2D();
+    shape.path(shape.p2);
+  }
+  if (shape.edge[a] == null) {
+    probe ??= document.createElement("canvas").getContext("2d");
+    const q = a + 1e-3;
+    let r = 0;
+    while (
+      r < 2.2 &&
+      probe?.isPointInPath(shape.p2, Math.cos(q) * (r + 0.01), Math.sin(q) * (r + 0.01))
+    )
+      r += 0.01;
+    shape.edge[a] = r;
+  }
+  return shape.edge[a]!;
+}
+const polar = (shape: Shape, deg: number, off: number): [number, number] => {
+  const t = (deg * Math.PI) / 180;
+  const r = Math.max(0.05, edgeR(shape, t) + off);
+  return [Math.cos(t) * r, Math.sin(t) * r];
+};
+
+const GOLD = "#f5b82e";
+const RED = "#e23b2e";
+const GREY = "#d5d9e1";
+const ER = 0.32;
+const HW = 0.2;
+const WW = 0.06;
+const W = 0.07;
+
+type Gear = {
+  shape: Shape;
+  color: string;
+  ears?: [number, number, number][];
+  stripes?: boolean;
+  horns?: number[][];
+  mane?: Path2D;
+  whisk?: [number, number, number][];
+  scale: number;
+  tx: number;
+  ty: number;
+};
+const gearCache: Partial<Record<V11MochiLook, Gear>> = {};
+function gearOf(look: V11MochiLook): Gear {
+  const hit = gearCache[look];
+  if (hit) return hit;
+  let g: Gear;
+  if (look === "tiger") {
+    const shape = CIRCLE;
+    g = {
+      shape,
+      color: "#f2c230",
+      ears: [-1, 1].map((s) => {
+        const a = ((-90 + s * 40) * Math.PI) / 180;
+        const r = Math.max(0.2, edgeR(shape, a) - 0.1);
+        return [Math.cos(a) * r, Math.sin(a) * r, s];
+      }),
+      stripes: true,
+      scale: 1,
+      tx: 0,
+      ty: 0,
+    };
+  } else if (look === "dragon") {
+    const shape = HEXAGON;
+    const horns: number[][] = [];
+    [-1, 1].forEach((s) => {
+      const b = polar(shape, -90 + s * 24, -0.14);
+      const cs = Math.cos(s * 0.22);
+      const sn = Math.sin(s * 0.22);
+      const L = (x: number, y: number) => [b[0] + x * cs - y * sn, b[1] + x * sn + y * cs];
+      [
+        [0, 0, -s * 0.02, -0.42, s * 0.15, -0.76],
+        [s * 0.03, -0.3, s * 0.2, -0.28, s * 0.34, -0.44],
+        [s * 0.07, -0.52, -s * 0.03, -0.54, -s * 0.1, -0.68],
+      ].forEach((q) => horns.push([...L(q[0]!, q[1]!), ...L(q[2]!, q[3]!), ...L(q[4]!, q[5]!)]));
+    });
+    const mane = new Path2D();
+    const n = 6;
+    const A0 = 160;
+    const DA = 16;
+    const b0 = polar(shape, A0, -0.02);
+    mane.moveTo(b0[0], b0[1]);
+    for (let i = 0; i < n; i++) {
+      const t0 = A0 + i * DA;
+      const env = Math.pow(Math.sin((Math.PI * (i + 0.5)) / n), 0.6);
+      const c1 = polar(shape, t0 + DA * 0.6, 0.22 + 0.34 * env);
+      const e = polar(shape, t0 + DA, i === n - 1 ? -0.02 : 0.08 + 0.05 * env);
+      mane.quadraticCurveTo(c1[0], c1[1], e[0], e[1]);
+    }
+    for (let d = A0 + n * DA; d >= A0; d -= 4) {
+      const q = polar(shape, d, -0.16);
+      mane.lineTo(q[0], q[1]);
+    }
+    mane.closePath();
+    g = {
+      shape,
+      color: "#3fae5a",
+      horns,
+      mane,
+      whisk: [1, -1].map((s) => {
+        const a = polar(shape, s > 0 ? 60 : 120, -0.2);
+        return [a[0], a[1], s];
+      }),
+      scale: Math.min(0.8, 0.94, 0.86),
+      tx: 0.07,
+      ty: 0.28,
+    };
+  } else {
+    g = { shape: CIRCLE, color: INK, scale: 1, tx: 0, ty: 0 };
+  }
+  gearCache[look] = g;
+  return g;
+}
+
 type DrawOpts = {
   k: number;
   bobY: number;
@@ -116,9 +269,188 @@ type DrawOpts = {
   rot: number;
   sx: number;
   sy: number;
+  sway: number;
 };
 
-function drawBody(c: CanvasRenderingContext2D, S: number, P: Pose, o: DrawOpts) {
+function drawBody(
+  c: CanvasRenderingContext2D,
+  S: number,
+  P: Pose,
+  o: DrawOpts,
+  look: V11MochiLook,
+) {
+  if (look === "ink") {
+    drawInk(c, S, P, o);
+    return;
+  }
+  const g = gearOf(look);
+  const u = S * 0.3 * o.k * g.scale;
+  c.save();
+  c.translate(S / 2, S / 2);
+  c.scale(u, u);
+  c.translate(g.tx, g.ty);
+  c.translate(o.tx, -o.bobY);
+  c.rotate(P.bTilt + o.rot);
+  c.scale(o.sx, o.sy);
+  c.lineJoin = "round";
+  c.lineCap = "round";
+  const lw = 2 * W;
+  const body = () => {
+    c.beginPath();
+    g.shape.path(c);
+  };
+  const earPath = () => {
+    c.beginPath();
+    g.ears?.forEach((e) => {
+      c.moveTo(e[0] + ER, e[1]);
+      c.arc(e[0], e[1], ER, 0, TAU);
+    });
+  };
+  const hornPath = () => {
+    c.beginPath();
+    g.horns?.forEach((q) => {
+      c.moveTo(q[0]!, q[1]!);
+      c.quadraticCurveTo(q[2]!, q[3]!, q[4]!, q[5]!);
+    });
+  };
+  const whiskPath = () => {
+    c.beginPath();
+    g.whisk?.forEach(([x, y, s]) => {
+      const w = Math.sin(o.sway - (s > 0 ? 0 : 0.9));
+      c.moveTo(x, y);
+      c.bezierCurveTo(
+        x + s * 0.34,
+        y + 0.26 + w * 0.04,
+        x + s * 0.5,
+        y - 0.3 - w * 0.1,
+        x + s * (0.92 - w * 0.03),
+        y - 0.06 + w * 0.15,
+      );
+    });
+  };
+  // Sticker frame: every part stroked wide, grey under white.
+  const pass = (col: string, extra: number) => {
+    c.strokeStyle = col;
+    c.lineWidth = lw + extra;
+    body();
+    c.stroke();
+    if (g.ears) {
+      earPath();
+      c.stroke();
+    }
+    if (g.mane) c.stroke(g.mane);
+    if (g.horns) {
+      c.lineWidth = HW + lw + extra;
+      hornPath();
+      c.stroke();
+    }
+    if (g.whisk) {
+      c.lineWidth = WW + lw + extra;
+      whiskPath();
+      c.stroke();
+    }
+  };
+  c.save();
+  c.shadowColor = "rgba(20,20,20,.3)";
+  c.shadowBlur = S * 0.035;
+  c.shadowOffsetY = S * 0.012;
+  pass("#c3c7d2", 0.25);
+  c.restore();
+  pass("#ffffff", 0.2);
+  // Back to front: mane, horns, ears, face, stripes, whiskers, eyes.
+  if (g.mane) {
+    c.strokeStyle = INK;
+    c.lineWidth = lw;
+    c.stroke(g.mane);
+    c.fillStyle = RED;
+    c.fill(g.mane);
+  }
+  if (g.horns) {
+    c.strokeStyle = INK;
+    c.lineWidth = HW + lw;
+    hornPath();
+    c.stroke();
+    c.strokeStyle = GOLD;
+    c.lineWidth = HW;
+    hornPath();
+    c.stroke();
+  }
+  if (g.ears) {
+    c.strokeStyle = INK;
+    c.lineWidth = lw;
+    earPath();
+    c.stroke();
+    g.ears.forEach(([ex, ey, s]) => {
+      const d = -s;
+      c.save();
+      c.beginPath();
+      c.arc(ex, ey, ER, 0, TAU);
+      c.clip();
+      c.fillStyle = GREY;
+      c.fillRect(ex - 0.4, ey - 0.4, 0.8, 0.8);
+      c.translate(ex - s * 0.05, ey);
+      c.rotate(s * 0.6);
+      c.fillStyle = g.color;
+      c.beginPath();
+      c.moveTo(0, -0.6);
+      c.quadraticCurveTo(d * 0.17, 0, 0, 0.6);
+      c.lineTo(d * 0.8, 0.6);
+      c.lineTo(d * 0.8, -0.6);
+      c.closePath();
+      c.fill();
+      c.restore();
+    });
+  }
+  c.strokeStyle = INK;
+  c.lineWidth = lw;
+  body();
+  c.stroke();
+  c.fillStyle = g.color;
+  body();
+  c.fill();
+  if (g.stripes) {
+    c.save();
+    body();
+    c.clip();
+    c.fillStyle = INK;
+    c.strokeStyle = INK;
+    c.lineWidth = 0.05;
+    [133, 152, 171].forEach((dg) => {
+      const t = (dg * Math.PI) / 180;
+      const w = 0.085;
+      const R = edgeR(g.shape, t);
+      const pt = (r: number, q: number) => [Math.cos(q) * r, Math.sin(q) * r] as const;
+      const p1 = pt(R + 0.15, t - w);
+      const p2 = pt(R + 0.15, t + w);
+      const p3 = pt(Math.max(0.1, R - 0.34), t);
+      c.beginPath();
+      c.moveTo(p1[0], p1[1]);
+      c.lineTo(p2[0], p2[1]);
+      c.lineTo(p3[0], p3[1]);
+      c.closePath();
+      c.fill();
+      c.stroke();
+    });
+    c.restore();
+  }
+  if (g.whisk) {
+    c.strokeStyle = INK;
+    c.lineWidth = WW + lw;
+    whiskPath();
+    c.stroke();
+    c.strokeStyle = GOLD;
+    c.lineWidth = WW;
+    whiskPath();
+    c.stroke();
+  }
+  c.scale(EYE * (look === "dragon" ? 0.92 : 1), EYE * (look === "dragon" ? 0.92 : 1));
+  c.fillStyle = INK;
+  eye(c, -1, P, o.blink, o.turn);
+  eye(c, 1, P, o.blink, o.turn);
+  c.restore();
+}
+
+function drawInk(c: CanvasRenderingContext2D, S: number, P: Pose, o: DrawOpts) {
   const u = S * 0.3 * o.k;
   c.save();
   c.translate(S / 2, S / 2);
@@ -176,6 +508,8 @@ function bobOf(phase: number, P: Pose) {
 export class V11Mochi {
   expr: V11MochiExpr;
   think = false;
+  // V11-036: which character to draw.
+  character: V11MochiLook = "ink";
   private ctx: CanvasRenderingContext2D | null;
   private cur: Pose;
   private tmp: V11MochiExpr | null = null;
@@ -328,16 +662,23 @@ export class V11Mochi {
       c.fill();
     };
     dots?.filter((d) => d.z < 0).forEach(dot);
-    drawBody(c, S, q.P, {
-      k: 1 - 0.2 * this.thinkK,
-      bobY,
-      blink,
-      turn: q.turn,
-      tx: this.look[0] * 0.18,
-      rot: this.look[0] * 0.16 + jx,
-      sx: 1 + br + this.pop * 0.09,
-      sy: 1 - br - this.pop * 0.11,
-    });
+    drawBody(
+      c,
+      S,
+      q.P,
+      {
+        k: 1 - 0.2 * this.thinkK,
+        bobY,
+        blink,
+        turn: q.turn,
+        tx: this.look[0] * 0.18,
+        rot: this.look[0] * 0.16 + jx,
+        sx: 1 + br + this.pop * 0.09,
+        sy: 1 - br - this.pop * 0.11,
+        sway: still ? 0 : t * 2.6,
+      },
+      this.character,
+    );
     dots?.filter((d) => d.z >= 0).forEach(dot);
   }
 }

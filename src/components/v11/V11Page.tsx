@@ -18,6 +18,7 @@ import { V11_STAGE_MAX, V11Stage, type V11SrcRect, type V11StageApi } from "./V1
 import { V11Styles } from "./V11Styles";
 import { useV11Meetups } from "./useV11Meetups";
 import { useV11Bubble, useV11Extras } from "./useV11Extras";
+import type { V11MochiExpr } from "./v11-mochi";
 
 // V11 (docs/V11_BASELINE.md): each meetup is a falling sticker and 墨糰 is
 // the guide: live meetups on a stage (or a list), a card per meetup where
@@ -25,7 +26,7 @@ import { useV11Bubble, useV11Extras } from "./useV11Extras";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/22-4";
+export const V11_TEST_BUILD = "10/22-5";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -233,6 +234,29 @@ function V11App() {
     meetups?.find((m) => !m.ended) ??
     meetups?.[meetups.length - 1] ??
     null;
+  // V11-036: 墨糰's resting face follows 最近一場 (and the hour).
+  const [hour, setHour] = useState(12);
+  useEffect(() => {
+    const tick = () => setHour(new Date().getHours());
+    tick();
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const nearest = meetups?.find((m) => m.next) ?? null;
+  const mood: V11MochiExpr =
+    hour < 6
+      ? "sleepy"
+      : !signedIn || !nearest
+        ? "neutral"
+        : nearest.mine?.status === "confirmed"
+          ? "happy"
+          : nearest.mine?.status === "waiting"
+            ? "curious"
+            : nearest.mine?.status === "leave"
+              ? "sad"
+              : nearest.remain > 0
+                ? "attentive"
+                : "neutral";
   const onDock = (kind: V11SheetKind) => setPanel((last) => (last === kind ? null : kind));
   // V11-007 / V11-008: the small stickers and 墨糰's lines.
   const { extras, lines } = useV11Extras({
@@ -341,6 +365,7 @@ function V11App() {
             // The pile drops in once the opening screen has gone (D13).
             meetups={introDone ? (meetups ?? []) : []}
             intro={!introDone}
+            mood={mood}
             extras={introDone ? extras : []}
             currentId={focus?.id ?? null}
             bubble={bubble}

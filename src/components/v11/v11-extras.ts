@@ -1067,7 +1067,9 @@ function meetupArt(
   const outline = new Path2D();
   for (const part of [card, ...sheets, ...rings, ...(m.next ? [tab] : [])]) outline.addPath(part);
   const band = ch * 0.26;
-  const stamped = Boolean(o.mine && m.mine);
+  const stamped = Boolean(o.mine);
+  // V11-036: no seat on a meetup still to come: a grey dashed 未報名 stamp.
+  const unsigned = stamped && !m.mine;
   const checkR = h * 0.17;
   return {
     outline,
@@ -1156,8 +1158,8 @@ function meetupArt(
       }
       // V11-017 / V11-018: my status as a stamp on the rule between the
       // date and the time, lower right; paper-filled so the rule stops at it.
-      if (stamped && m.mine) {
-        const color = STAMP[m.mine.status];
+      if (stamped) {
+        const color = m.mine ? STAMP[m.mine.status] : "#8c857a";
         const th = h * 0.18;
         c.save();
         c.translate(w * 0.22, h * 0.15);
@@ -1181,9 +1183,13 @@ function meetupArt(
         c.fill(outer);
         c.strokeStyle = color;
         c.lineWidth = lw;
+        if (unsigned) c.setLineDash([lw * 1.6, lw * 1.2]);
         c.stroke(outer);
-        c.lineWidth = thin * 0.8;
-        c.stroke(inner);
+        c.setLineDash([]);
+        if (!unsigned) {
+          c.lineWidth = thin * 0.8;
+          c.stroke(inner);
+        }
         c.fillStyle = color;
         c.fillText(label, 0, th * 0.04);
         c.restore();
@@ -1407,7 +1413,7 @@ export function v11DrawMeetup(
   m: V11Meetup,
   o: { w: number; h: number; lw: number; pad: number; picked: boolean; signedIn: boolean },
 ) {
-  const mine = o.signedIn && m.mine ? v11MineLabel(m.mine, true) : "";
+  const mine = !o.signedIn ? "" : m.mine ? v11MineLabel(m.mine, true) : m.ended ? "" : "未報名";
   const key = [
     "m",
     m.tone,

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type MutableRefObject } from "react";
 import type MatterNS from "matter-js";
 import type { V11Meetup } from "@/lib/v11-meetups";
-import { V11Mochi } from "./v11-mochi";
+import { V11Mochi, type V11MochiExpr } from "./v11-mochi";
 import {
   v11DrawCount,
   v11DrawExtra,
@@ -84,6 +84,7 @@ export function V11Stage({
   bubble,
   signedIn,
   intro,
+  mood = "neutral",
   hiddenId,
   still,
   apiRef,
@@ -100,6 +101,8 @@ export function V11Stage({
   signedIn: boolean;
   // The opening screen is up: 墨糰 is still on it (D13).
   intro: boolean;
+  // V11-036: 墨糰's resting expression (from 最近一場).
+  mood?: V11MochiExpr;
   hiddenId: string | null;
   still: boolean;
   apiRef: MutableRefObject<V11StageApi | null>;
@@ -121,6 +124,7 @@ export function V11Stage({
     onPhysicsFail,
     still,
     intro,
+    mood,
   });
   live.current = {
     meetups,
@@ -132,9 +136,14 @@ export function V11Stage({
     onPhysicsFail,
     still,
     intro,
+    mood,
   };
   const rebuildRef = useRef<() => void>(() => {});
   const syncRef = useRef<() => void>(() => {});
+  const mochiRef2 = useRef<V11Mochi | null>(null);
+  useEffect(() => {
+    mochiRef2.current?.set(mood);
+  }, [mood]);
   // Extras come and go without re-dropping the pile.
   const extrasKey = extras.map((x) => x.id).join(",");
 
@@ -160,7 +169,10 @@ export function V11Stage({
     const ctx = cv.getContext("2d");
     const cctx = court.getContext("2d");
     if (!ctx || !cctx) return;
-    const mochi = new V11Mochi(mc, "neutral");
+    const mochi = new V11Mochi(mc, live.current.mood);
+    // V11-036: the stage's 墨糰 is the tiger.
+    mochi.character = "tiger";
+    mochiRef2.current = mochi;
     let M: typeof MatterNS | null = null;
     let engine: MatterNS.Engine | null = null;
     let mochiBody: MatterNS.Body | null = null;
