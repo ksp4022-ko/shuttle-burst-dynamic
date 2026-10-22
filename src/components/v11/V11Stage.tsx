@@ -273,7 +273,8 @@ export function V11Stage({
         friction: 0.8,
         // Shuttles drift down like the real thing.
         frictionAir: light ? 0.06 : 0.01,
-        angle: target != null ? (Math.random() - 0.5) * 0.12 : (Math.random() - 0.5) * 1.1,
+        // Planned stickers fall flat so neighbours do not catch corners.
+        angle: target != null ? 0 : (Math.random() - 0.5) * 1.1,
         ...(light ? { density: 0.0004 } : {}),
       };
       const shape = shapeOf(spec);
@@ -419,40 +420,49 @@ export function V11Stage({
         .sort((a, b) => area(b) - area(a));
       const meetupSpec = list.find((x) => x.kind === "meetup");
       const colW = meetupSpec ? box(meetupSpec).w : S;
-      const colTop = Math.min(H * 0.42, 190);
-      let colH = meetupSpec ? box(meetupSpec).h : 0;
       plan = new Map();
       if (meetupSpec) plan.set(meetupSpec.id, colW / 2 + 2);
-      const column: Spec[] = [];
       const rows: Spec[][] = [[], []];
-      let rowX = [colW + 4, colW + 4];
+      // V11-033: the bottom row runs the full width; its lowest sticker
+      // goes at the left end, under the meetup, which lands last on top of
+      // it (so the meetup stays clear of the title). What does not fit
+      // makes a second layer from the right.
+      const GAP = 8;
+      let used = 4;
       for (const spec of rest) {
         const b = box(spec);
-        if (b.w <= colW + 8 && colH + b.h <= H - colTop && column.length < 2) {
-          column.push(spec);
-          colH += b.h;
-          plan.set(spec.id, colW / 2 + 2 + (Math.random() - 0.5) * 8);
-          continue;
-        }
-        const r = rowX[0]! + b.w <= W - 2 ? 0 : 1;
-        // Out of room on both rows: drop it at the right end of the second.
-        const x = Math.min(rowX[r]! + b.w / 2, W - b.w / 2 - 2);
-        plan.set(spec.id, x);
-        rowX = rowX.map((v, i) => (i === r ? v + b.w + 2 : v));
+        const r = used + b.w <= W - 4 ? 0 : 1;
+        if (r === 0) used += b.w + GAP;
         rows[r]!.push(spec);
       }
-      const order: Spec[] = [
-        ...(meetupSpec ? [meetupSpec] : []),
-        ...rows[0]!,
-        ...column,
-        ...rows[1]!,
-      ];
+      const low = rows[0]!.reduce<Spec | null>(
+        (m, x) => (m === null || box(x).h < box(m).h ? x : m),
+        null,
+      );
+      if (low) rows[0] = [low, ...rows[0]!.filter((x) => x !== low)];
+      let rx = 4;
+      for (const spec of rows[0]!) {
+        const b = box(spec);
+        plan.set(spec.id, Math.min(rx + b.w / 2, W - b.w / 2 - 2));
+        rx += b.w + GAP;
+      }
+      let lx = W - 2;
+      for (const spec of rows[1]!) {
+        const b = box(spec);
+        // Never further left than just right of the meetup.
+        plan.set(spec.id, Math.max(lx - b.w / 2, colW + 4 + b.w / 2));
+        lx -= b.w + GAP;
+      }
+      // V11-033: the meetup lands last, into the corner kept free for it,
+      // so nothing ends up on top of it.
+      const order: Spec[] = [...rows[0]!, ...rows[1]!];
       // V11-031: the bag is the second last to land.
       const bagAt0 = order.findIndex((x) => x.kind === "bag");
       if (bagAt0 >= 0) {
         const [bag] = order.splice(bagAt0, 1);
-        if (bag) order.splice(Math.max(0, order.length - 1), 0, bag);
+        if (bag) order.push(bag);
       }
+      if (meetupSpec) order.push(meetupSpec);
       order.forEach((spec, i) =>
         timers.push(window.setTimeout(() => spawn(spec), (still ? 0 : DROP_GAP * i) + 120)),
       );
@@ -522,10 +532,12 @@ export function V11Stage({
       });
       M.Body.setAngle(it.body, spec.kind === "shuttle" ? a + Math.PI : a);
       // V11-032: a softer pop, so the gear lands on the pile.
-      const speed = 9 + Math.random() * 2;
+      // V11-033: up out of the top, but always leaning left (away from 墨糰
+      // in the top right corner), so nothing lands on its head.
+      const speed = 8 + Math.random() * 2;
       M.Body.setVelocity(it.body, {
-        x: ux * speed + (Math.random() - 0.5) * 4,
-        y: uy * speed,
+        x: Math.min(ux * speed, 0) - 2 - Math.random() * 2.5,
+        y: Math.min(uy * speed, -5),
       });
       M.Body.setAngularVelocity(it.body, (Math.random() - 0.5) * 0.3);
       mochi.react("excited", 700);
@@ -1048,7 +1060,8 @@ export function V11Stage({
           const dx = b.position.x - mochiBody.position.x;
           const dy = b.position.y - mochiBody.position.y;
           const d = Math.hypot(dx, dy) || 1;
-          M.Body.setVelocity(b, { x: (dx / d) * 7 - 2, y: (dy / d) * 4 - 6 });
+          // V11-033: always off to the lower left, never into the corner.
+          M.Body.setVelocity(b, { x: -5 - Math.abs(dx / d) * 2, y: -3 });
           M.Body.setAngularVelocity(b, (Math.random() - 0.5) * 0.3);
           onMochi.set(b.id, now + 600);
           mochi.react("surprised", 700);
