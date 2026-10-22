@@ -26,7 +26,7 @@ import type { V11MochiExpr } from "./v11-mochi";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/22-6";
+export const V11_TEST_BUILD = "10/22-7";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";
@@ -234,6 +234,16 @@ function V11App() {
     meetups?.find((m) => !m.ended) ??
     meetups?.[meetups.length - 1] ??
     null;
+  // V11-038: opening the ended list (or the 已結束 tube) reads every ended
+  // meetup's roster not read yet, so each row shows my status.
+  const loadEnded = useCallback(() => {
+    for (const m of meetups ?? []) if (m.ended && !rosters[m.id]) void ensureRoster(m.id);
+  }, [meetups, rosters, ensureRoster]);
+  useEffect(() => {
+    if (listSheet === "ended") loadEnded();
+    // Only when the sheet opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listSheet]);
   // V11-037: only meetups still to come are read with the page; an ended one
   // is read when its card opens, so 我的狀態 is right without the 名單 panel.
   const openId = open?.id ?? null;
@@ -390,6 +400,8 @@ function V11App() {
               signedIn={signedIn}
               currentId={focus?.id ?? null}
               onOpen={openMeetup}
+              isLoading={(id) => !rosters[id]}
+              onEndedOpen={loadEnded}
             />
           ) : (
             <p className="v11-notice">讀取聚會中…</p>
@@ -453,6 +465,7 @@ function V11App() {
                 key={m.id}
                 meetup={m}
                 signedIn={signedIn}
+                loading={m.ended && !rosters[m.id]}
                 onOpen={(id, rect) => {
                   setListSheet(null);
                   openMeetup(id, rect);

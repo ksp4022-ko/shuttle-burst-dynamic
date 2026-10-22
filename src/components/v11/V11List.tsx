@@ -22,12 +22,15 @@ export function V11Row({
   meetup,
   signedIn,
   current = false,
+  loading = false,
   onOpen,
 }: {
   meetup: V11Meetup;
   signedIn: boolean;
   // V11-006 / V11-015: 目前這場 wears a green ✓ (已選).
   current?: boolean;
+  // V11-038: this (ended) meetup's roster is still being read.
+  loading?: boolean;
   onOpen: (id: string, rect: V11SrcRect) => void;
 }) {
   const tone = TONE[meetup.tone];
@@ -68,6 +71,10 @@ export function V11Row({
       </span>
       {signedIn && meetup.mine ? (
         <span className="v11-row-mine">{v11MineLabel(meetup.mine, signedIn)}</span>
+      ) : signedIn && loading ? (
+        <span className="v11-row-mine is-loading" aria-label="讀取中">
+          …
+        </span>
       ) : (
         <span />
       )}
@@ -80,11 +87,16 @@ export function V11List({
   signedIn,
   currentId,
   onOpen,
+  isLoading,
+  onEndedOpen,
 }: {
   meetups: V11Meetup[];
   signedIn: boolean;
   currentId: string | null;
   onOpen: (id: string, rect: V11SrcRect) => void;
+  // V11-038: ended rows show their status once their rosters are read.
+  isLoading?: (id: string) => boolean;
+  onEndedOpen?: () => void;
 }) {
   const upcoming = meetups.filter((m) => !m.ended);
   const ended = meetups.filter((m) => m.ended);
@@ -104,7 +116,12 @@ export function V11List({
         <p className="v11-empty">目前沒有開放中的聚會。</p>
       )}
       {ended.length ? (
-        <details className="v11-ended">
+        <details
+          className="v11-ended"
+          onToggle={(e) => {
+            if (e.currentTarget.open) onEndedOpen?.();
+          }}
+        >
           <summary>已結束 {ended.length} 場</summary>
           {ended.map((m) => (
             <V11Row
@@ -112,6 +129,7 @@ export function V11List({
               meetup={m}
               signedIn={signedIn}
               current={m.id === currentId}
+              loading={isLoading?.(m.id) ?? false}
               onOpen={onOpen}
             />
           ))}

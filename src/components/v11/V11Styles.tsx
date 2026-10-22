@@ -65,6 +65,7 @@ const V11_CSS = `
 .v11-row-mid { padding: 10px 12px; min-width: 0; display: grid; }
 .v11-row-d { font-family: var(--v11-display); font-size: 24px; line-height: 1; }
 .v11-row-w { font-size: 13px; color: var(--v11-muted); font-weight: 700; }
+.v11-row-mine.is-loading { border-color: transparent; color: #8c857a; }
 .v11-row-mine { align-self: center; margin-right: 12px; font-size: 12px; font-weight: 800; border: 2px solid var(--v11-ink); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
 .v11-row { width: 100%; }
 .v11-ended { display: grid; gap: 10px; }
