@@ -43,6 +43,8 @@ const DRAGON: V11Extra = { kind: "dragon", id: "dragon" };
 // Stickers that live on the stage only (not in the page's extras).
 const isLocal = (kind: Spec["kind"]) =>
   kind === "dragon" || V11_BAG_EGGS.includes(kind as V11ExtraKind);
+// V11-040: everything the bag holds, in the order it comes back out.
+const BAG_GEAR: V11ExtraKind[] = ["racket", "shoe", ...V11_BAG_EGGS];
 const isExtra = (kind: Spec["kind"]) => kind !== "meetup" && kind !== "more" && kind !== "ended";
 
 // The stage holds the next few meetups; later ones fold into one
@@ -64,6 +66,8 @@ const GRAVITY = 3;
 // V11-031: the floor is level again (the drop still rolls right).
 const FLOOR_TILT = 0;
 const DROP_GAP = 140;
+// V11-040: time between two pieces of gear popping out of a tube / the bag.
+const POP_GAP = 420;
 // V11-034: 墨糰's collision category; falling stickers skip it.
 const MOCHI_CAT = 0x0002;
 const ALL_CATS = 0xffffffff;
@@ -186,6 +190,10 @@ export function V11Stage({
     let nextWiggle = Infinity;
     // V11-032: where each sticker of this drop lands (x), for the L pile.
     let plan = new Map<string, number>();
+    // V11-040: racket / shoe ids put back into the bag (until 重新掉落).
+    const stowed = new Set<string>();
+    // The side the last piece of gear popped out to (they alternate).
+    let popSide = Math.random() < 0.5 ? -1 : 1;
     // V11-001: when each sticker started resting on 墨糰 (body id → ms).
     const onMochi = new Map<number, number>();
     let press: { x: number; y: number; t: number; item: Item; moved: boolean } | null = null;
@@ -214,9 +222,17 @@ export function V11Stage({
     const SH = () => S * 0.74 * 1.3;
     const XS = (kind: Spec["kind"]) => (V11_DECOR.has(kind as V11ExtraKind) ? S * 0.85 : S);
     const pad = () => Math.max(4, S * 0.045);
+    // V11-040: the 最近一場 tab pokes 0.12h above the card; the body grows
+    // by that much at the top so other stickers rest on the tab, not under
+    // it. TAB(spec) is the extra height; the card is drawn TAB/2 lower than
+    // the body's centre.
+    const TAB = (spec: Spec) =>
+      spec.kind === "meetup" && live.current.meetups.find((m) => m.id === spec.id)?.next
+        ? SH() * 0.13
+        : 0;
     const shapeOf = (spec: Spec): V11Shape =>
       spec.kind === "meetup"
-        ? { type: "rect", w: SW(), h: SH(), r: SH() * 0.16 }
+        ? { type: "rect", w: SW(), h: SH() + TAB(spec), r: SH() * 0.16 }
         : spec.kind === "more" || spec.kind === "ended"
           ? v11CountShape(S)
           : v11ExtraShape(spec.kind, XS(spec.kind));
@@ -337,6 +353,7 @@ export function V11Stage({
       held = null;
       nextWiggle = Infinity;
       flying = [];
+      stowed.clear();
       dims();
       if (!M) {
         engine = null;
@@ -487,14 +504,14 @@ export function V11Stage({
       // V11-032: no shake any more; the gear pops out right after the drop.
       const settled = DROP_GAP * order.length + 500;
       later.forEach((spec, i) =>
-        timers.push(window.setTimeout(() => popOut(spec, "more"), settled + i * 250)),
+        timers.push(window.setTimeout(() => popOut(spec, "more"), settled + i * POP_GAP)),
       );
-      const bagAt = settled + later.length * 250 + 100;
+      const bagAt = settled + later.length * POP_GAP + 100;
       bagged.forEach((spec, i) =>
-        timers.push(window.setTimeout(() => popOut(spec, "bag"), bagAt + i * 250)),
+        timers.push(window.setTimeout(() => popOut(spec, "bag"), bagAt + i * POP_GAP)),
       );
       const popsEnd =
-        later.length || bagged.length ? bagAt + bagged.length * 250 + 500 : settled + 300;
+        later.length || bagged.length ? bagAt + bagged.length * POP_GAP + 500 : settled + 300;
       timers.push(window.setTimeout(raiseRoof, still ? 0 : popsEnd));
       timers.push(window.setTimeout(levelFloor, still ? 0 : popsEnd + 400));
     };
@@ -506,16 +523,17 @@ export function V11Stage({
       const want = new Set(live.current.extras.map((x) => x.id));
       for (const it of [...items]) {
         if (!isExtra(it.spec.kind) || want.has(it.spec.id) || isLocal(it.spec.kind)) continue;
+        stowed.delete(it.spec.id);
         if (it.body) M.Composite.remove(engine.world, it.body);
         items = items.filter((x) => x !== it);
       }
       const have = new Set(items.map((it) => it.spec.id));
       live.current.extras
-        .filter((x) => !have.has(x.id))
+        .filter((x) => !have.has(x.id) && !stowed.has(x.id))
         .forEach((x, i) =>
           timers.push(
             window.setTimeout(() => {
-              if (!engine || items.some((it) => it.spec.id === x.id)) return;
+              if (!engine || stowed.has(x.id) || items.some((it) => it.spec.id === x.id)) return;
               spawnInside({ kind: x.kind, id: x.id });
             }, 160 * i),
           ),
@@ -550,11 +568,15 @@ export function V11Stage({
       });
       M.Body.setAngle(it.body, spec.kind === "shuttle" ? a + Math.PI : a);
       // V11-032: a softer pop, so the gear lands on the pile.
-      // V11-033: up out of the top, but always leaning left (away from 墨糰
-      // in the top right corner), so nothing lands on its head.
+      // V11-040: up out of the top, to the left or the right in turn (from a
+      // random start, random strength) so the pieces spread out; never into
+      // a wall the tube / bag stands next to. Falling gear passes 墨糰.
+      popSide = -popSide;
+      if (tube.position.x < W * 0.2) popSide = 1;
+      else if (tube.position.x > W * 0.8) popSide = -1;
       const speed = 8 + Math.random() * 2;
       M.Body.setVelocity(it.body, {
-        x: Math.min(ux * speed, 0) - 2 - Math.random() * 2.5,
+        x: ux * speed * 0.3 + popSide * (1.8 + Math.random() * 2.7),
         y: Math.min(uy * speed, -5),
       });
       M.Body.setAngularVelocity(it.body, (Math.random() - 0.5) * 0.3);
@@ -585,12 +607,17 @@ export function V11Stage({
       const bag = items.find((x) => x.spec.kind === "bag");
       const out = (k: V11ExtraKind) =>
         items.some((x) => x.spec.kind === k) || flying.some((f) => f.spec.kind === k);
-      const kind = V11_BAG_EGGS.find((k) => !out(k));
+      // V11-040: the racket and the shoe come back out first (only if they
+      // were put away), then the easter-egg gear.
+      const kind = BAG_GEAR.find((k) =>
+        V11_BAG_EGGS.includes(k) ? !out(k) : stowed.has(k) && !out(k),
+      );
       if (!kind) {
         if (bag?.body) M.Body.setVelocity(bag.body, { x: 0, y: -4 });
         mochi.react("confused", 700);
         return;
       }
+      stowed.delete(kind);
       popOut({ kind, id: kind }, "bag");
     };
     // Tap a piece of gear: it lifts (bigger, a small turn), then flies along
@@ -602,6 +629,7 @@ export function V11Stage({
       if (!M || !engine) return;
       if (it.body) M.Composite.remove(engine.world, it.body);
       items = items.filter((x) => x !== it);
+      if (!isLocal(it.spec.kind)) stowed.add(it.spec.id);
       if (live.current.still) return;
       flying.push({
         spec: it.spec,
@@ -664,6 +692,9 @@ export function V11Stage({
         ctx.translate(x, y);
         ctx.rotate(angle);
         ctx.scale(scale * flip, scale);
+        // Racket / shoe bodies sit at their hull's centroid (as in drawSticker).
+        const hull = v11HullOf(f.spec as { kind: V11ExtraKind; id: string }, XS(f.spec.kind), p);
+        if (hull) ctx.translate(-hull.centre.x, -hull.centre.y);
         v11DrawExtra(
           ctx,
           { kind: f.spec.kind, id: f.spec.kind } as V11Extra,
@@ -788,6 +819,7 @@ export function V11Stage({
         v11DrawCount(ctx, more ? "more" : "ended", n, S, lw, p);
       } else {
         const m = live.current.meetups.find((x) => x.id === it.spec.id);
+        ctx.translate(0, TAB(it.spec) / 2);
         if (m)
           v11DrawMeetup(ctx, m, {
             w: SW(),
@@ -827,7 +859,7 @@ export function V11Stage({
       const tw = ctx.measureText(text).width + 22;
       const th = 28;
       const x = Math.max(6, Math.min(W - tw - 6, it.position.x - tw / 2));
-      const y = Math.max(6, it.position.y - SH() / 2 - pad() - th - 14);
+      const y = Math.max(6, it.position.y - (SH() + TAB(it.spec)) / 2 - pad() - th - 14);
       const tipX = Math.max(x + 14, Math.min(x + tw - 14, it.position.x));
       ctx.translate(tipX, y + th);
       ctx.scale(k, k);
@@ -897,11 +929,13 @@ export function V11Stage({
     const rectOfItem = (it: Item): V11SrcRect => {
       const r = cv.getBoundingClientRect();
       const shape = shapeOf(it.spec);
+      // V11-040: the card itself, not the tab above it.
+      const tab = TAB(it.spec);
       return {
-        cx: r.left + it.position.x,
-        cy: r.top + it.position.y,
+        cx: r.left + it.position.x - (Math.sin(it.angle) * tab) / 2,
+        cy: r.top + it.position.y + (Math.cos(it.angle) * tab) / 2,
         w: shape.type === "circle" ? shape.r * 2 : shape.w,
-        h: shape.type === "circle" ? shape.r * 2 : shape.h,
+        h: shape.type === "circle" ? shape.r * 2 : shape.h - tab,
         angle: it.angle,
       };
     };
@@ -976,7 +1010,8 @@ export function V11Stage({
           popEgg();
           return;
         }
-        if (V11_BAG_EGGS.includes(kind as V11ExtraKind)) {
+        // V11-040: the racket and the shoe go back into the bag too.
+        if (BAG_GEAR.includes(kind as V11ExtraKind) && items.some((x) => x.spec.kind === "bag")) {
           recall(done.item);
           return;
         }
