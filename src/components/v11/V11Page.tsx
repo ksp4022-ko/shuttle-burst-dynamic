@@ -26,7 +26,7 @@ import type { V11MochiExpr } from "./v11-mochi";
 // dock (phase 4). The whole page sits behind V9's 季打確認 gate.
 
 // /v11test build label, bumped with each /v11test push.
-export const V11_TEST_BUILD = "10/22-7";
+export const V11_TEST_BUILD = "10/23-1";
 
 const SITE_LABELS: Record<string, string> = { kangxuan: "康軒", rian: "日安" };
 type View = "stage" | "list";

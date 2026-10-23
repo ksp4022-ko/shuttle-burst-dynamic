@@ -24,6 +24,8 @@ export function V11Celebrate({ playKey, still }: { playKey: number; still: boole
     const root = rootRef.current;
     if (!canvas || !root) return;
     const mochi = new V11Mochi(canvas, "excited");
+    // V11-039: the card's dragon cheers the seat it helped book.
+    mochi.character = "dragon";
     mochi.react("excited", SHOW_MS);
     let raf = 0;
     let last = performance.now();

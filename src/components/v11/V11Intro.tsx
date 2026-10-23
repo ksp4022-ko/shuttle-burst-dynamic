@@ -34,6 +34,8 @@ export function V11Intro({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const mochi = new V11Mochi(canvas, "curious");
+    // V11-039: the tiger, so it lands on the stage as the stage's 墨糰.
+    mochi.character = "tiger";
     mochi.think = true;
     mochiRef.current = mochi;
     let raf = 0;
