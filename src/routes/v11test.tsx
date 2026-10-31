@@ -12,9 +12,9 @@ export const Route = createFileRoute("/v11test")({
         rel: "icon",
         type: "image/png",
         sizes: "32x32",
-        href: `${import.meta.env.BASE_URL}v9/brand/favicon-32.png`,
+        href: `${import.meta.env.BASE_URL}v11/brand/favicon-32.png`,
       },
-      { rel: "apple-touch-icon", href: `${import.meta.env.BASE_URL}v9/brand/icon-180.png` },
+      { rel: "apple-touch-icon", href: `${import.meta.env.BASE_URL}v11/brand/icon-180.png` },
       // D12: Dela Gothic One for the English / digit display type only.
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
