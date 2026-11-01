@@ -134,6 +134,15 @@ body.v11-locked { overflow: hidden; }
 
 /* dock (phase 4) */
 .v11-wrap { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+/* V11-043: on the stage view the stage grows to fill the screen down to the
+   bar above the dock (a tall PWA screen left a blank band); 4:5 / 64vh is
+   its minimum, about 1.9× its width its maximum. */
+.v11-wrap.is-stage { display: flex; flex-direction: column; min-height: 100dvh; }
+.v11-wrap.is-stage > .v11-stage {
+  flex: 1 0 auto; aspect-ratio: auto;
+  min-height: min(calc((min(100vw, 520px) - 32px) * 1.25), 64vh);
+  max-height: calc((min(100vw, 520px) - 32px) * 1.9);
+}
 /* V11-028: back to the stage, over the list, above the dock. */
 .v11-back {
   position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); z-index: 21;
