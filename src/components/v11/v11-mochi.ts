@@ -505,6 +505,39 @@ function bobOf(phase: number, P: Pose) {
   );
 }
 
+// V11-042: a small shuttle (white skirt, red band, cream cork) at x, y,
+// L long, its cork pointing along dir.
+function miniShuttle(c: CanvasRenderingContext2D, x: number, y: number, L: number, dir: number) {
+  c.save();
+  c.translate(x, y);
+  c.rotate(dir);
+  c.lineJoin = "round";
+  c.lineWidth = Math.max(1, L * 0.07);
+  c.strokeStyle = INK;
+  const skirt = new Path2D();
+  skirt.moveTo(L * 0.22, -L * 0.17);
+  skirt.lineTo(-L * 0.5, -L * 0.38);
+  skirt.quadraticCurveTo(-L * 0.58, 0, -L * 0.5, L * 0.38);
+  skirt.lineTo(L * 0.22, L * 0.17);
+  skirt.closePath();
+  c.fillStyle = "#ffffff";
+  c.fill(skirt);
+  c.save();
+  c.clip(skirt);
+  c.fillStyle = RED;
+  c.fillRect(-L * 0.08, -L, L * 0.1, L * 2);
+  c.restore();
+  c.stroke(skirt);
+  const cork = new Path2D();
+  cork.moveTo(L * 0.2, -L * 0.2);
+  cork.arc(L * 0.2, 0, L * 0.2, -Math.PI / 2, Math.PI / 2);
+  cork.closePath();
+  c.fillStyle = CREAM;
+  c.fill(cork);
+  c.stroke(cork);
+  c.restore();
+}
+
 export class V11Mochi {
   expr: V11MochiExpr;
   think = false;
@@ -621,7 +654,9 @@ export class V11Mochi {
       }
     }
     // 思考中: three dots orbit on a tilted ring; the eyes follow the lead dot.
-    type Dot = { x: number; y: number; r: number; z: number };
+    // V11-042: the dots are small shuttles flying cork first (dir = their
+    // heading on the ring).
+    type Dot = { x: number; y: number; r: number; z: number; dir: number };
     let dots: Dot[] | null = null;
     if (this.thinkK > 0.02) {
       const cs = Math.cos(-0.22);
@@ -632,11 +667,15 @@ export class V11Mochi {
         const ex = Math.cos(a) * S * 0.43;
         const ey = Math.sin(a) * S * 0.09;
         const z = Math.sin(a);
+        // The ring's tangent (the way a moves), turned with the ring.
+        const vx = -Math.sin(a) * 0.43;
+        const vy = Math.cos(a) * 0.09;
         return {
           x: S / 2 + (ex * cs - ey * sn),
           y: S * 0.53 + (ex * sn + ey * cs),
           r: S * 0.034 * (1 + 0.38 * z) * this.thinkK,
           z,
+          dir: Math.atan2(vx * sn + vy * cs, vx * cs - vy * sn),
         };
       });
       if (this.think) {
@@ -653,13 +692,7 @@ export class V11Mochi {
     c.clearRect(0, 0, S, S);
     const dot = (d: Dot) => {
       if (d.r < 0.5) return;
-      c.beginPath();
-      c.arc(d.x, d.y, d.r, 0, TAU);
-      c.strokeStyle = CREAM;
-      c.lineWidth = d.r * 0.9;
-      c.stroke();
-      c.fillStyle = INK;
-      c.fill();
+      miniShuttle(c, d.x, d.y, d.r * 3.9, d.dir);
     };
     dots?.filter((d) => d.z < 0).forEach(dot);
     drawBody(
