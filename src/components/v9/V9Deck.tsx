@@ -10,6 +10,7 @@ import { V9MeetupNav } from "./V9MeetupNav";
 import { V9PreviewBadge } from "./V9PreviewBadge";
 import { V9DragonCameo } from "./V9DragonCameo";
 import { V9Roll } from "./V9Roll";
+import { isV9TestRoute } from "@/lib/v9-route";
 import { v9MascotSprite, v9StatusLine } from "@/lib/v9-display";
 import { v9CourtHours, v9CourtRuleFor, type V9CourtRule } from "@/lib/v9-court-rules";
 import type { V9RosterTab } from "./V9RosterSheet";
@@ -35,20 +36,31 @@ type RailItem = { icon: "time" | "shuttle" | "fee" | "court"; label: string; val
 // roll.
 type CourtPart = { text: string; from?: string; red?: boolean };
 
-function courtBoostParts(rule: V9CourtRule, courtCount: number, hours: number): CourtPart[] {
+// V9-075 (/v9test until accepted): spaced "3面 2hr + 1面 1hr" instead of
+// "3面 / 2hr＋1面/1hr".
+function courtBoostParts(
+  rule: V9CourtRule,
+  courtCount: number,
+  hours: number,
+  spaced = false,
+): CourtPart[] {
   const digit = (to: number, from: number): CourtPart =>
     to === from ? { text: String(to) } : { text: String(to), from: String(from), red: true };
   const parts: CourtPart[] = [
     digit(rule.main.courts, courtCount),
-    { text: "面 / " },
+    { text: spaced ? "面\u00a0" : "面 / " },
     digit(rule.main.hours, hours),
     { text: "hr" },
   ];
   // The admin value has no extra part, so all of it turns in from blank.
   if (rule.extra) {
     parts.push(
-      { text: `＋${rule.extra.courts}`, from: "", red: true },
-      { text: "面/", from: "" },
+      {
+        text: spaced ? `\u00a0+\u00a0${rule.extra.courts}` : `＋${rule.extra.courts}`,
+        from: "",
+        red: true,
+      },
+      { text: spaced ? "面\u00a0" : "面/", from: "" },
       { text: String(rule.extra.hours), from: "", red: true },
       { text: "hr", from: "" },
     );
@@ -155,7 +167,10 @@ export function V9Hero({
   const baseHours = typeof event.hours === "number" ? event.hours : (boostRule?.main.hours ?? 0);
   const boost =
     boostRule && (event.courtCount ?? 0) * baseHours < v9CourtHours(boostRule) ? boostRule : null;
-  const boostParts = boost ? courtBoostParts(boost, event.courtCount ?? 0, baseHours) : null;
+  const longHold = isV9TestRoute();
+  const boostParts = boost
+    ? courtBoostParts(boost, event.courtCount ?? 0, baseHours, longHold)
+    : null;
   // eventNote may carry a literal "\\n" for V8's two-line sun; one line here.
   const note = (event.eventNote || "").replace(/\\n|\n/g, " ").trim();
   const statusHint =
@@ -283,7 +298,7 @@ export function V9Hero({
                 </dt>
                 {item.icon === "court" && boostParts ? (
                   <dd
-                    className={`v9-court-boost${hintPaused || busy ? " is-paused" : ""}`}
+                    className={`v9-court-boost${longHold ? " is-long" : ""}${hintPaused || busy ? " is-paused" : ""}`}
                     aria-label={boostParts.map((part) => part.text).join("")}
                   >
                     {(() => {

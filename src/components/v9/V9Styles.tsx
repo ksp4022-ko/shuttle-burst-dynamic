@@ -283,6 +283,14 @@ const V9_CSS = `
 .v9-court-boost ~ .v9-court-plus { bottom: 5px; }
 .v9-rail-item .v9-court-boost { text-overflow: clip; }
 .v9-court-boost.is-paused .v9-slot-track { animation-play-state: paused; }
+/* V9-075 (/v9test until accepted): 6s a round, the 加場 value holds ~3.4s
+   (admin value 1s and both 0.8s turns unchanged). */
+.v9-court-boost.is-long .v9-slot-track { animation-name: v9-slot-roll-long; animation-duration: 6s; }
+@keyframes v9-slot-roll-long {
+  0%, 16.6667% { transform: translateY(0); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
+  30%, 86.6667% { transform: translateY(-33.3333%); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
+  100% { transform: translateY(-66.6667%); }
+}
 @keyframes v9-slot-roll {
   0%, 25% { transform: translateY(0); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
   45%, 80% { transform: translateY(-33.3333%); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
