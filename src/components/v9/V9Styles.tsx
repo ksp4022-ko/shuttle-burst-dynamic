@@ -269,13 +269,14 @@ const V9_CSS = `
   25% { opacity: .9; }
   45%, 100% { opacity: 0; }
 }
-/* V9-052: combination-lock roller, 4s a round - admin value ~1s, it turns
-   up and out as the 加場 value (red) turns in from below (0.8s, fast then
-   slow, 0.08s apart), holds ~1.4s, then turns on to the admin value again.
+/* V9-052: combination-lock roller - admin value ~1s, it turns up and out
+   as the 加場 value (red) turns in from below (0.8s, fast then slow, 0.08s
+   apart), holds, then turns on to the admin value again. V9-075: 6s a
+   round, the 加場 value holds ~3.4s (was 4s / 1.4s).
    The track is [admin, 加場, admin] so the loop restart is invisible.
    Resting transform is the 加場 value, so reduced motion shows it still. */
 .v9-slot { display: inline-block; height: 1.25em; vertical-align: bottom; clip-path: inset(0 -.3em); }
-.v9-slot-track { display: block; transform: translateY(-33.3333%); animation: v9-slot-roll 4s linear infinite both; animation-delay: calc(var(--v9-slot-i, 0) * .08s); }
+.v9-slot-track { display: block; transform: translateY(-33.3333%); animation: v9-slot-roll 6s linear infinite both; animation-delay: calc(var(--v9-slot-i, 0) * .08s); }
 .v9-slot-track > span { display: block; height: 1.25em; }
 /* red 加場 glyphs ~1.15x, drawn bigger without taking more room */
 .v9-slot.is-red .v9-slot-track > span:nth-child(2) { color: var(--v9-red); transform: scale(1.15); transform-origin: 50% 88%; }
@@ -283,17 +284,9 @@ const V9_CSS = `
 .v9-court-boost ~ .v9-court-plus { bottom: 5px; }
 .v9-rail-item .v9-court-boost { text-overflow: clip; }
 .v9-court-boost.is-paused .v9-slot-track { animation-play-state: paused; }
-/* V9-075 (/v9test until accepted): 6s a round, the 加場 value holds ~3.4s
-   (admin value 1s and both 0.8s turns unchanged). */
-.v9-court-boost.is-long .v9-slot-track { animation-name: v9-slot-roll-long; animation-duration: 6s; }
-@keyframes v9-slot-roll-long {
+@keyframes v9-slot-roll {
   0%, 16.6667% { transform: translateY(0); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
   30%, 86.6667% { transform: translateY(-33.3333%); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
-  100% { transform: translateY(-66.6667%); }
-}
-@keyframes v9-slot-roll {
-  0%, 25% { transform: translateY(0); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
-  45%, 80% { transform: translateY(-33.3333%); animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1); }
   100% { transform: translateY(-66.6667%); }
 }
 @media (prefers-reduced-motion: reduce) {
